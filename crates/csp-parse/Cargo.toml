@@ -2,7 +2,7 @@
 name = "csp-parse"
 version = "0.1.0"
 edition = "2024"
-description = "A pure-Rust parser for the Content Security Policy (CSP) directive grammar"
+description = "A parser for the Content Security Policy (CSP) directive grammar"
 license = "MIT"
 repository = "https://github.com/casoon/csp-parse"
 

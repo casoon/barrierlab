@@ -1,5 +1,5 @@
-//! A pure-Rust parser for the Content Security Policy (CSP) directive
-//! grammar.
+//! A parser for the Content Security Policy (CSP) directive grammar,
+//! written in 100% safe Rust.
 //!
 //! Phases 02-05 (see `plan/`): the generic top-level split (policy-list
 //! -> policy -> directive name/raw value), the `serialized-source-list`
