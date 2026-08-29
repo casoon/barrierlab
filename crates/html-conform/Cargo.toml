@@ -9,7 +9,7 @@ homepage = "https://github.com/casoon/html-conform"
 readme = "README.md"
 rust-version = "1.85.0"
 keywords = ["html", "html5", "validator", "conformance", "vnu"]
-categories = ["web-programming", "parser-implementations", "development-tools::validation"]
+categories = ["web-programming", "parser-implementations", "development-tools"]
 exclude = ["/tests/corpus"]
 
 [dependencies]
