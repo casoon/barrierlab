@@ -1,0 +1,25 @@
+[package]
+name = "html-conform"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "HTML5 conformance checking as a pure Rust dependency (vnu-comparable, no JVM runtime)."
+repository = "https://github.com/casoon/html-conform"
+homepage = "https://github.com/casoon/html-conform"
+readme = "README.md"
+rust-version = "1.85.0"
+keywords = ["html", "html5", "validator", "conformance", "vnu"]
+categories = ["web-programming", "parser-implementations", "development-tools::validation"]
+exclude = ["/tests/corpus"]
+
+[dependencies]
+csp-parse = "=0.1.0"
+encoding_rs = "0.8"
+html5-parser = "=0.2.0"
+media-query-parse = "=0.1.0"
+relax-ng = "=0.2.0"
+schematron-engine = "0.2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+xpath-eval = "0.2.1"
