@@ -288,6 +288,17 @@ const MML3_ROOT_MODULE: (&str, &str) = (
 /// outside the repo. This two-line composition is the smallest faithful
 /// substitute: `html5/html5.rnc` unchanged, patched by
 /// `html5-svg-mathml.rnc` unchanged, exactly like the real driver does.
+///
+/// Note on that missing file's own name: vnu's real default schema entry
+/// point is literally `html5full-**rdfa**`, not `html5full` — i.e. vnu's
+/// actual default schema does ship RDFa awareness baked in, which this
+/// vendoring couldn't capture since the generating file isn't in the
+/// source tree. `meta.rnc`'s own `RDFa Lite Property Metadata` block
+/// (appended at the end of that file, not vendored) closes that specific,
+/// confirmed gap for `<meta property>` (Open Graph) — see its own doc
+/// comment for why it lives there instead of in a separate module here
+/// (a cross-file `|=` combine for it did not actually take effect, A/B
+/// tested directly; combining it into `meta.rnc` itself did).
 const ROOT_ENTRY: &str = "include \"html5/html5.rnc\"\ninclude \"html5-svg-mathml.rnc\"\n";
 
 /// Resolves every `include` href in the combined schema against the

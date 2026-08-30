@@ -430,3 +430,57 @@ datatypes w = "http://whattf.org/datatype-draft"
 			}
 
 	common.elem.metadata |= ( meta.charset.elem | meta.http-equiv.content-type.elem )
+
+## RDFa Lite Property Metadata: <meta property> (Open Graph et al.)
+#
+# NOT VENDORED — hand-added by this crate, not part of the upstream
+# validator/validator schema tree. Plain HTML5 has no RDFa vocabulary
+# awareness at all, so <meta property="og:title" content="..."> (Open
+# Graph — used on nearly every real site for social-share previews, a
+# de facto universal extension, not an error) matched none of this
+# file's other <meta> alternatives (all require name/http-equiv/charset,
+# not property) and was reported as an "unexpected attribute" +
+# "missing required content" pair per tag. The real Nu Html Checker
+# (vnu) has built-in RDFa Lite awareness for exactly this reason (see
+# schema.rs's ROOT_ENTRY doc comment: vnu's actual default schema entry
+# point is literally named "html5full-rdfa", not "html5full" — that
+# specific file just doesn't exist in the vendored source tree at the
+# pinned commit). This gives this crate equivalent, minimal coverage
+# (property+content on <meta> only, not the full RDFa Lite attribute
+# set on arbitrary elements — Open Graph/Twitter Card meta tags are the
+# overwhelmingly common real-world case).
+#
+# Deliberately appended here (not in a separate include`d file) rather
+# than left as an isolated non-vendored module: a standalone file's
+# `common.elem.metadata |= meta.property.elem` combine did not actually
+# take effect when compiled — confirmed by direct A/B test, `<meta
+# property>` still failed validation from a separate file despite an
+# otherwise byte-identical pattern validating cleanly once co-located
+# here. If `xtask/vendor-schema.sh` ever regenerates this file from
+# upstream, this block must be manually re-appended afterward.
+
+	meta.property.elem =
+		element meta { meta.inner & meta.property.attrs }
+	meta.property.attrs =
+		(	common.attrs.basic
+		&	common.attrs.i18n
+		&	common.attrs.present
+		&	common.attrs.other
+		&	meta.property.attrs.property
+		&	meta.property.attrs.content?
+		&	common.attrs.microdata.itemref?
+		&	common.attrs.microdata.itemscope?
+		&	common.attrs.microdata.itemtype?
+		&	common.attrs.microdata.itemid?
+		&	shared-hyperlink.attrs.media?
+		)
+		meta.property.attrs.property =
+			attribute property {
+				w:non-empty-string
+			}
+		meta.property.attrs.content =
+			attribute content {
+				string
+			}
+
+	common.elem.metadata |= meta.property.elem
