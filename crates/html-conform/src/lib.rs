@@ -1,6 +1,6 @@
 //! HTML5 conformance checking with browser-style error recovery.
 //!
-//! `check`/`check_with_options` combine five finding sources, in order:
+//! `check`/`check_with_options` combine six finding sources, in order:
 //! HTML parser diagnostics, RELAX NG schema (content-model) validation,
 //! Schematron-style assertion (co-constraint) checking,
 //! `<script type="importmap"|"speculationrules">` JSON content validation
@@ -10,7 +10,10 @@
 //! inline script/style content elsewhere in the document
 //! (`src/csp_enforcement.rs` — a genuine cross-element check needing a
 //! real CSP source-list parser, not expressible as a `rules/*.sch` rule
-//! or a `w:*` datatype).
+//! or a `w:*` datatype), and table cell-grid integrity
+//! (`src/table_integrity.rs` — laying a table out over its
+//! `colspan`/`rowspan` values needs mutable state carried forward across
+//! cells, which XPath 1.0 has no way to express).
 
 mod assertions;
 mod csp_enforcement;
@@ -20,6 +23,7 @@ mod infoset;
 mod parse;
 mod schema;
 mod scripts;
+mod table_integrity;
 
 use assertions::SchematronEngine;
 
@@ -87,6 +91,7 @@ pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckRepo
 
     findings.extend(scripts::findings(parsed.document()));
     findings.extend(csp_enforcement::findings(parsed.document()));
+    findings.extend(table_integrity::findings(parsed.document()));
 
     Ok(CheckReport { findings })
 }
@@ -97,7 +102,7 @@ mod tests {
 
     #[test]
     fn valid_html_has_no_parser_findings() {
-        let report = check("<!doctype html><title>Example</title><p>Hello</p>")
+        let report = check(r#"<!doctype html><html lang="en"><title>Example</title><p>Hello</p>"#)
             .expect("HTML5 parsing should recover");
 
         assert!(report.findings.is_empty());
@@ -113,7 +118,7 @@ mod tests {
         // actually about (the `include_parse_errors` toggle), rather than
         // also depending on schema/assertion behavior.
         let report = check_with_options(
-            "<!doctype html><title>Example</title><p>&notAnEntity;</p>",
+            r#"<!doctype html><html lang="en"><title>Example</title><p>&notAnEntity;</p>"#,
             CheckOptions {
                 include_parse_errors: false,
             },
@@ -125,8 +130,9 @@ mod tests {
 
     #[test]
     fn parser_diagnostics_are_included_by_default() {
-        let report = check("<!doctype html><title>Example</title><p>&notAnEntity;</p>")
-            .expect("HTML5 parsing should recover");
+        let report =
+            check(r#"<!doctype html><html lang="en"><title>Example</title><p>&notAnEntity;</p>"#)
+                .expect("HTML5 parsing should recover");
 
         assert_eq!(report.findings.len(), 1);
         assert_eq!(report.findings[0].rule_id, "parser.html5");
@@ -140,7 +146,7 @@ mod tests {
         // `schema_violation_location_is_populated_for_an_explicit_element`
         // below for the populated case.
         let report = check_with_options(
-            "<!doctype html><p>Hello</p>",
+            r#"<!doctype html><html lang="en"><p>Hello</p>"#,
             CheckOptions {
                 include_parse_errors: false,
             },
@@ -160,7 +166,7 @@ mod tests {
         // directly) — a schema.html5 finding against an *explicit*
         // element now carries a real, structured position, not `None`.
         let report = check_with_options(
-            r#"<!doctype html><title>x</title><p bogus="1">hi</p>"#,
+            r#"<!doctype html><html lang="en"><title>x</title><p bogus="1">hi</p>"#,
             CheckOptions {
                 include_parse_errors: false,
             },
@@ -173,8 +179,8 @@ mod tests {
             report.findings[0].location,
             Some(SourceLocation {
                 line: 1,
-                column: 32,
-                byte_offset: 31,
+                column: 48,
+                byte_offset: 47,
             })
         );
     }
@@ -182,7 +188,7 @@ mod tests {
     #[test]
     fn assertion_violation_is_reported_as_a_finding() {
         let report = check_with_options(
-            r#"<!doctype html><title>Example</title><div aria-hidden="true" tabindex="0">x</div>"#,
+            r#"<!doctype html><html lang="en"><title>Example</title><div aria-hidden="true" tabindex="0">x</div>"#,
             CheckOptions {
                 include_parse_errors: false,
             },

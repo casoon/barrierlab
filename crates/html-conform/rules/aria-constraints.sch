@@ -254,4 +254,47 @@
       </assert>
     </rule>
   </pattern>
+
+  <!--
+    An *active* tab needs a tabpanel it is actually wired to.
+
+    A first attempt at this (removed again, see `plan/DECISIONS.md`'s
+    "roles-tab-needs-tabpanel" entry) read the message text as "every
+    `role=tab` needs a `role=tabpanel` somewhere in the document" and
+    regressed 12 fixtures in `html-aria/roles-properties-supported*/`
+    that use an isolated `role="tab"` to test unrelated ARIA property
+    support. The real condition comes from vnu's `Assertions.java` (its
+    `tabElementsActive`/`tabpanelElements` maps and the `tabElements:`
+    labelled loop that reconciles them at end-of-document, read from
+    `validator/validator`'s source rather than inferred), and is
+    considerably narrower on both ends:
+
+    - "active" means literally `aria-selected="true"` — that is the only
+      condition under which a `role=tab` element is recorded at all, so
+      `aria-selected="false"`/`"undefined"`/absent is never flagged. This
+      alone is what the earlier attempt was missing.
+    - "corresponding" means *wired up*, not merely co-present: either the
+      tab's `aria-controls` is the `id` of a `role=tabpanel` element, or
+      some `role=tabpanel` element's `aria-labelledby` is the tab's own
+      `id`. A tabpanel that neither references nor is referenced by the
+      tab does not satisfy it.
+
+    Both `id`-keyed lookups are skipped when the id in question is absent
+    (vnu keys its maps by the `id` attribute, and a `null` key can never
+    equal a real `aria-controls`/`aria-labelledby` value), hence the
+    `!= ''` guards. `role` is matched as a space-separated token list
+    (vnu splits it), so `role="tablist"` correctly does not count as a
+    tab.
+  -->
+  <pattern id="aria-active-tab-needs-tabpanel">
+    <rule context="*[@aria-selected = 'true'][contains(concat(' ', normalize-space(@role), ' '), ' tab ')]">
+      <let name="tab-id" value="string(@id)"/>
+      <let name="controls" value="string(@aria-controls)"/>
+      <assert id="aria.active-tab-needs-tabpanel" role="error"
+        test="($controls != '' and //*[contains(concat(' ', normalize-space(@role), ' '), ' tabpanel ')][@id = $controls])
+              or ($tab-id != '' and //*[contains(concat(' ', normalize-space(@role), ' '), ' tabpanel ')][@aria-labelledby = $tab-id])">
+        Every active "role=tab" element must have a corresponding "role=tabpanel" element.
+      </assert>
+    </rule>
+  </pattern>
 </schema>

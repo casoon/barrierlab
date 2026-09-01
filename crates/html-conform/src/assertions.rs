@@ -194,6 +194,15 @@ mod tests {
     use crate::infoset::normalize;
     use crate::parse::parse;
 
+    /// Wraps `body` in a minimal document carrying `lang` on `<html>`, so
+    /// that `rules/elements.sch`'s `elements-html-missing-lang` — which
+    /// fires on *every* document without one, by design — doesn't add a
+    /// warning to every rule test below. Tests that are about that rule
+    /// call [`check_html`] directly.
+    fn check_body(body: &str) -> Vec<AssertionFailure> {
+        check_html(&format!(r#"<html lang="en">{body}"#))
+    }
+
     fn check_html(html: &str) -> Vec<AssertionFailure> {
         let parsed = parse(html);
         let document = normalize(parsed.document(), parsed.source());
@@ -212,7 +221,7 @@ mod tests {
 
     #[test]
     fn aria_hidden_with_tabindex_fires() {
-        let failures = check_html(r#"<div aria-hidden="true" tabindex="0">x</div>"#);
+        let failures = check_body(r#"<div aria-hidden="true" tabindex="0">x</div>"#);
         assert_eq!(failures.len(), 1);
         assert_eq!(failures[0].rule_id, "aria.hidden-not-focusable");
         assert_eq!(failures[0].severity, Severity::Error);
@@ -220,21 +229,21 @@ mod tests {
 
     #[test]
     fn aria_hidden_without_tabindex_is_clean() {
-        let failures = check_html(r#"<div aria-hidden="true">x</div>"#);
+        let failures = check_body(r#"<div aria-hidden="true">x</div>"#);
         assert!(failures.is_empty());
     }
 
     #[test]
     fn th_scope_enum_valid_and_invalid() {
-        assert!(check_html(r#"<table><tr><th scope="col">A</th></tr></table>"#).is_empty());
-        let failures = check_html(r#"<table><tr><th scope="column">A</th></tr></table>"#);
+        assert!(check_body(r#"<table><tr><th scope="col">A</th></tr></table>"#).is_empty());
+        let failures = check_body(r#"<table><tr><th scope="column">A</th></tr></table>"#);
         assert_eq!(failures.len(), 1);
         assert_eq!(failures[0].rule_id, "tables.th-scope-enum");
     }
 
     #[test]
     fn obsolete_elements_fire_and_ordinary_elements_dont() {
-        let failures = check_html("<font>x</font><center>y</center>");
+        let failures = check_body("<font>x</font><center>y</center>");
         assert_eq!(failures.len(), 2);
         assert!(
             failures
@@ -242,12 +251,27 @@ mod tests {
                 .all(|f| f.rule_id == "obsolete-elements.deprecated")
         );
 
-        assert!(check_html("<p>ordinary</p>").is_empty());
+        assert!(check_body("<p>ordinary</p>").is_empty());
+    }
+
+    /// `rules/elements.sch`'s `elements-html-missing-lang`. vnu's
+    /// `LanguageDetectingChecker.warnIfMissingLang()` keys off the mere
+    /// *presence* of a `lang` attribute on `html`, so an empty value is
+    /// silent too — asserted here so the distinction can't erode.
+    #[test]
+    fn html_missing_lang_warns_and_any_lang_value_is_silent() {
+        let failures = check_html("<html><title>x</title>");
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].rule_id, "elements.html-missing-lang");
+        assert_eq!(failures[0].severity, Severity::Warning);
+
+        assert!(check_html(r#"<html lang="en"><title>x</title>"#).is_empty());
+        assert!(check_html(r#"<html lang=""><title>x</title>"#).is_empty());
     }
 
     #[test]
     fn multiple_rule_files_fire_independently_in_one_document() {
-        let failures = check_html(
+        let failures = check_body(
             r#"<div aria-hidden="true" tabindex="0">x</div><table><tr><th scope="column">A</th></tr></table><font>x</font>"#,
         );
         let rule_ids: Vec<&str> = failures.iter().map(|f| f.rule_id.as_str()).collect();

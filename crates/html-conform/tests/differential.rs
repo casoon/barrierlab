@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use html_conform::check;
+use html_conform::{CheckReport, check};
 
 fn corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/corpus")
@@ -49,6 +49,47 @@ fn collect_html_fixtures(dir: &Path, corpus_root: &Path, out: &mut Vec<String>) 
             out.push(relative);
         }
     }
+}
+
+/// The one fixture whose expected result was generated with the
+/// missing-`lang` check switched ON — see [`has_findings_for_comparison`].
+const MISSING_LANG_FIXTURE: &str = "html/attributes/lang/missing-lang-attribute-haswarn.html";
+
+/// The rule that check corresponds to here (`rules/elements.sch`'s
+/// `elements-html-missing-lang`, prefixed by `src/assertions.rs`).
+const MISSING_LANG_RULE_ID: &str = "assertion.elements.html-missing-lang";
+
+/// Whether `report` counts as "this crate found something" for the
+/// agreement metrics.
+///
+/// Normally that is just "the finding list is non-empty". The single
+/// exception is `assertion.elements.html-missing-lang`, and it is a
+/// property of *the corpus*, not of this crate:
+///
+/// vnu's `TestRunner.java` — the tool that produced the vendored
+/// `messages.json` — sets `nu.validator.checker.ignoreMissingLang=true`
+/// globally and flips it to `false` only for files whose *name* contains
+/// `missing-lang`. So all 4654 other fixtures' expected results were
+/// recorded with the check disabled, and 752 of them have no `lang`
+/// attribute on `<html>` at all. Real, production vnu *does* warn on those
+/// — the corpus's silence is a harness artifact, not a verdict this crate
+/// should match. Comparing against it unfiltered would report 752 false
+/// positives for behaviour that is in fact correct.
+///
+/// So: for every fixture except the one the harness enables the check for,
+/// findings from that one rule are dropped before deciding `has_findings`;
+/// for [`MISSING_LANG_FIXTURE`] the findings are used as-is. Deliberately
+/// pinned to this one rule id rather than built out into a general ignore
+/// list — no other rule has this problem. See `plan/DECISIONS.md`'s
+/// Batch 24 and Batch 25 entries.
+fn has_findings_for_comparison(relative_path: &str, report: &CheckReport) -> bool {
+    if relative_path == MISSING_LANG_FIXTURE {
+        return !report.findings.is_empty();
+    }
+    report
+        .findings
+        .iter()
+        .any(|finding| finding.rule_id != MISSING_LANG_RULE_ID)
 }
 
 #[derive(Default)]
@@ -105,7 +146,7 @@ fn differential_against_vendored_vnu_corpus() {
 
         match check(&html) {
             Ok(report) => {
-                let has_findings = !report.findings.is_empty();
+                let has_findings = has_findings_for_comparison(relative_path, &report);
                 match (expects_findings, has_findings) {
                     (true, true) => metrics.true_positive += 1,
                     (false, false) => metrics.true_negative += 1,
@@ -1000,6 +1041,94 @@ fn differential_against_vendored_vnu_corpus() {
 /// `ParseErrorKind` variants. `false_positive` unchanged (0); `false_negative`
 /// 55→12 (−43, 0 regressions).
 /// New baseline: `true_positive=3734 true_negative=909 false_positive=0 false_negative=12 not_comparable=0`.
+///
+/// Updated again 2026-09-01 (Batch 24 — the table cell grid as a new
+/// `src/table_integrity.rs`, three Schematron rule fixes, and three
+/// deliberate declines), closing 10 of the 12 remaining false negatives:
+/// (1) `src/table_integrity.rs` (new, sixth finding source): a port of
+/// vnu's own `nu/validator/checker/table/` classes (`TableChecker`,
+/// `Table`, `RowGroup`, `Cell`, `ColumnRange` and the two cell
+/// comparators, read from `validator/validator`'s source rather than
+/// reconstructed from the message texts). Laying a table out means
+/// carrying mutable state forward across cells — a per-row insertion
+/// point, the set of cells still spanning down from earlier rows, and a
+/// shrinking list of column ranges no cell has begun in — which XPath 1.0
+/// has no loops, recursion or accumulators to express; the same
+/// justification `src/scripts.rs` and `src/csp_enforcement.rs` already
+/// carry, and the backlog's own long-standing "bewusst noch nicht in
+/// XPath 1.0 erzwungen" note. Deliberately reports only the three checks
+/// that actually need the grid (horizontal cell overlap, `rowspan`
+/// reaching past its row group, columns with no cell beginning in them);
+/// the row-width, empty-row and `headers` messages vnu's same classes also
+/// produce stay with the existing zero-false-positive `rules/tables.sch`
+/// rules rather than being duplicated. (2) `rules/elements.sch`'s
+/// `elements-dl-duplicate-dt` was comparing against
+/// `normalize-space(following-sibling::h:dt)` — `normalize-space()` on a
+/// node-set only ever takes the *first* node in document order, so the
+/// rule silently only caught two *adjacent* `dt`s with the same name;
+/// rewritten against `preceding::h:dt` scoped to the same innermost `dl`
+/// (vnu's `DuplicateDtChecker.java` semantics). (3) New
+/// `elements-ruby-tabular-rb`/`elements-rtc-positioning` (the first rules
+/// in this crate to use `role="info"`, matching vnu's `info()` level for
+/// both). (4) New `aria-active-tab-needs-tabpanel` in
+/// `rules/aria-constraints.sch` — the rule a previous attempt removed
+/// after it regressed 12 fixtures. vnu's actual `Assertions.java`
+/// (`tabElementsActive`/`tabpanelElements` and the `tabElements:` labelled
+/// loop) shows the condition is much narrower than the message text
+/// suggests on *both* ends: "active" is literally `aria-selected="true"`
+/// (which is what the earlier attempt was missing), and "corresponding"
+/// means wired up by `aria-controls`→tabpanel `id` or by a tabpanel's
+/// `aria-labelledby`→tab `id`, not merely co-present.
+///
+/// Deliberately NOT attempted, for reasons recorded rather than as silent
+/// gaps: `html/elements/style/css-property-error-novalid.html` (one
+/// fixture, a `colr` typo; vnu delegates `<style>` content to a vendored
+/// W3C CSS Validator, so matching it means a real CSS parser plus the full
+/// property registry — a scan of the corpus's own `<style>` blocks turns
+/// up 87 declaration-looking names in expected-clean fixtures, many of
+/// which are selectors, pseudo-classes and at-rule contents rather than
+/// properties, i.e. exactly the false-positive surface a regex-level
+/// approximation would hit; same "insufficient evidence, decline" call as
+/// `img/missing-alt-in-figure`), and
+/// `html/attributes/lang/missing-lang-attribute-haswarn.html` (confirmed
+/// at the source: vnu's `TestRunner.java` sets
+/// `nu.validator.checker.ignoreMissingLang=true` globally and flips it to
+/// `false` only for files whose *name* contains `missing-lang` — the
+/// expected results for the other 4654 fixtures were produced with the
+/// check off, and 752 expected-clean fixtures have no `lang` attribute at
+/// all, so a general rule would be 752 false positives, not a fix).
+/// `false_positive` unchanged (0) at every step, `true_negative` unchanged
+/// (909) — no fixture flipped the other way. `false_negative` 12 → 8
+/// (`dl`/ruby rules) → 3 (table grid) → **2** (`role=tab`).
+/// New baseline: `true_positive=3744 true_negative=909 false_positive=0 false_negative=2 not_comparable=0`.
+///
+/// Updated again 2026-09-01 (Batch 25 — the missing-`lang` warning, and the
+/// reversal of Batch 24's decline of it). Batch 24 declined the check
+/// because a general rule would show up as 752 false positives against this
+/// corpus. That reasoning was right about the corpus and wrong about the
+/// conclusion: the 752 are an artifact of vnu's own `TestRunner.java`
+/// (`nu.validator.checker.ignoreMissingLang=true` globally, flipped to
+/// `false` only for files whose *name* contains `missing-lang`), so the
+/// corpus simply has no opinion on 4654 of the 4655 fixtures for this one
+/// check. Real, production vnu warns — `SimpleCommandLineValidator` never
+/// sets the property, and its `--no-langdetect` flag is opt-in. Declining
+/// meant shipping deliberately less than vnu to satisfy a measurement
+/// artifact.
+/// (1) `rules/elements.sch`: new `elements-html-missing-lang`, a port of
+/// `LanguageDetectingChecker.warnIfMissingLang()` — fires on `html` with no
+/// `lang` attribute at all; any value including the empty string is silent
+/// there (`htmlElementHasLang` keys off attribute *presence*), and so is it
+/// here.
+/// (2) This file: `has_findings_for_comparison` drops that one rule id from
+/// the finding list for every fixture except the one the harness enables the
+/// check for, so the artifact is corrected in the *comparison* rather than
+/// by hand-editing vendored `messages.json` or by not implementing the rule.
+/// (3) `src/lib.rs` / `src/assertions.rs` unit tests grew an explicit
+/// `<html lang="en">` (and `check_body` wraps rule tests in one), since the
+/// new rule otherwise fires on every bare test fragment.
+/// `false_positive` unchanged (0), `true_negative` unchanged (909),
+/// `not_comparable` unchanged (0); `false_negative` 2→1.
+/// New baseline: `true_positive=3745 true_negative=909 false_positive=0 false_negative=1 not_comparable=0`.
 const BASELINE_FALSE_POSITIVE: usize = 0;
-const BASELINE_FALSE_NEGATIVE: usize = 12;
+const BASELINE_FALSE_NEGATIVE: usize = 1;
 const BASELINE_NOT_COMPARABLE: usize = 0;

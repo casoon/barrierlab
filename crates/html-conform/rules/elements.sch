@@ -795,10 +795,71 @@
     </rule>
   </pattern>
 
+  <!--
+    https://html.spec.whatwg.org/#the-dl-element — "Within a single dl
+    element, there should not be more than one dt element for each name."
+    Ported from vnu's own `DuplicateDtChecker.java` (fetched from
+    `validator/validator`, not inferred from the message text): the scope
+    is the *innermost open* `dl` (so a nested `dl`'s `dt` belongs to the
+    inner one, and a `dt` inside a `dl > div` wrapper still belongs to the
+    outer `dl`), the compared name is the `dt`'s full descendant text, and
+    an empty name is skipped.
+
+    The earlier version of this rule only compared against
+    `following-sibling::h:dt` as a *string* — `normalize-space()` on a
+    node-set only ever takes the FIRST node in document order, so it
+    silently only caught two *adjacent* `dt`s with the same name and
+    missed both corpus fixtures with non-adjacent duplicates
+    (`duplicate-dt-multiple`, `duplicate-dt-multiple-before-dd`). Reports
+    on the second and any later occurrence (like vnu, which warns on the
+    duplicate and only points back at the first occurrence), hence
+    `preceding::` rather than a symmetric any-other-`dt` test.
+
+    vnu compares `.trim()`ed text (leading/trailing whitespace only);
+    `normalize-space()` additionally collapses interior runs, the closest
+    XPath 1.0 has. Two `dt`s differing *only* in interior whitespace would
+    be a duplicate here and not in vnu — no corpus fixture exercises that,
+    and the alternative (no check at all) is worse.
+  -->
   <pattern id="elements-dl-duplicate-dt">
-    <rule context="h:dt[normalize-space(.) != '' and normalize-space(.) = normalize-space(following-sibling::h:dt)]">
-      <report id="elements.dl-duplicate-dt" role="warning" test="true()">
-        Within a single "dl" element, there should not be more than one "dt" element for each name.
+    <rule context="h:dt[ancestor::h:dl]">
+      <let name="dt-name" value="normalize-space(.)"/>
+      <let name="dl" value="ancestor::h:dl[1]"/>
+      <report id="elements.dl-duplicate-dt" role="warning"
+        test="$dt-name != '' and preceding::h:dt[normalize-space(.) = $dt-name][count(ancestor::h:dl[1] | $dl) = 1]">
+        Duplicate "dt" name in "dl" element. Within a single "dl" element, there should not be more than one "dt" element for each name.
+      </report>
+    </rule>
+  </pattern>
+
+  <!--
+    Ruby markup rendering hints — ported from vnu's `Assertions.java`
+    (`hasTabularRubyMarkup()` / the `"rtc"` branch), both `info()`-level
+    there, hence `role="info"` here.
+
+    "Tabular markup" is vnu's consecutive-`rb` counter: within a `ruby`,
+    an `rb` increments it and an `rt` resets it, and >1 means tabular
+    (`<rb>a<rb>b<rt>x<rt>y`) as opposed to interleaved (`<rb>a<rt>x<rb>b<rt>y`,
+    valid and silent — `rb/rb-interleaved-isvalid.html`). Expressed here
+    as "an `rb` whose nearest preceding `rb`-or-`rt` sibling is itself an
+    `rb`" — `rb`/`rt` auto-close each other during HTML5 parsing, so they
+    are always siblings in the tree. The `[1]` picks proximity position 1
+    along `preceding-sibling`'s own reverse order (nearest), which is what
+    a bare location step's predicate means; see `elements-autofocus-multiple`
+    for the parenthesized-expression trap this deliberately avoids.
+  -->
+  <pattern id="elements-ruby-tabular-rb">
+    <rule context="h:ruby[h:rb[preceding-sibling::*[self::h:rb or self::h:rt][1][self::h:rb]]]">
+      <report id="elements.ruby-tabular-rb" role="info" test="true()">
+        Not all browsers position items appropriately when "tabular markup" is used with the "rb" element. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
+      </report>
+    </rule>
+  </pattern>
+
+  <pattern id="elements-rtc-positioning">
+    <rule context="h:rtc">
+      <report id="elements.rtc-positioning" role="info" test="true()">
+        Not all browsers position items appropriately when the "rtc" element is used. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
       </report>
     </rule>
   </pattern>
@@ -1066,6 +1127,52 @@
       <assert id="elements.meta-charset-not-utf8" role="error" test="false()">
         Internal encoding declaration "iso-8859-1" disagrees with the actual encoding of the document ("utf-8").
       </assert>
+    </rule>
+  </pattern>
+
+  <!--
+    Ported from vnu's `nu/validator/checker/LanguageDetectingChecker.java`
+    (fetched from `validator/validator`, not inferred from the message
+    text). Its `warnIfMissingLang()` is exactly:
+
+        hasHtmlElement && !htmlElementHasLang
+            && !"true".equals(System.getProperty(
+                   "nu.validator.checker.ignoreMissingLang"))
+
+    and `htmlElementHasLang` is set in `startElement()` by the mere
+    *presence* of an attribute whose local name is `lang` on the `html`
+    element, whatever its value. So `<html lang="">` is silent in vnu and
+    is silent here too — `not(@lang)`, not `not(@lang) or @lang = ''`.
+    `xml:lang` does not count: this crate keeps `xml:lang` on ordinary
+    HTML elements as one unsplit, no-namespace attribute name (see
+    `rules/attributes.sch` and `rules/aria-html-restrictions.sch`), so
+    `@lang` cannot match it.
+
+    Two deliberate divergences from the Java, both documented rather than
+    silently approximated:
+
+    - vnu only reaches `warnIfMissingLang()` from `endDocument()` when the
+      document has *fewer* than `MIN_CHARS` (1024) non-whitespace,
+      non-digit characters, or when language detection is switched off.
+      Longer documents go down `detectLanguageAndCheckAgainstDeclaredLanguage()`
+      instead, which emits a *different* message ("This document appears
+      to be written in X. Consider adding lang=\"xx\" ...") — that branch
+      needs a statistical language detector, which this crate has no
+      business shipping. Reporting the generic warning for long documents
+      too is the strictly more useful of the two available behaviours.
+    - vnu's own corpus harness hides this check: `TestRunner.java` sets
+      `nu.validator.checker.ignoreMissingLang=true` globally and flips it
+      to `false` only for files whose *name* contains `missing-lang`. The
+      differential test compensates for that harness artifact in Rust
+      (see `tests/differential.rs`'s `has_findings_for_comparison`); the
+      rule itself deliberately matches real, production vnu, which does
+      warn.
+  -->
+  <pattern id="elements-html-missing-lang">
+    <rule context="h:html[not(@lang)]">
+      <report id="elements.html-missing-lang" role="warning" test="true()">
+        Consider adding a "lang" attribute to the "html" start tag to declare the language of this document.
+      </report>
     </rule>
   </pattern>
 </schema>

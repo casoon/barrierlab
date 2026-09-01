@@ -9,20 +9,22 @@ A pure Rust library for HTML5 specification conformance checking — comparable 
 `html-conform` is validated continuously against the official W3C/vnu differential test suite (**4,655 test fixtures** vendored from [`validator/validator@388cb36`](https://github.com/validator/validator/commit/388cb36)).
 
 - **Precision Floor:** **0 False Positives (`BASELINE_FALSE_POSITIVE = 0`)** — zero false alarms across all 4,655 test cases.
-- **Accuracy:** **99.7 % overall accuracy** across the entire corpus (**3,734 True Positives**, **909 True Negatives**).
-- **Residual False Negatives:** **12 / 4,655** — 5 need a full 2D table grid model with `colspan`/`rowspan` overlap detection (not reasonably expressible in the Schematron/XPath 1.0 layer), and 7 are smaller individually-researched gaps (an ARIA tab/tabpanel heuristic, `dl` duplicate-term edge cases, ruby markup advisories, inline CSS property validation). None of these are false alarms — each is a documented, deliberate limitation, not a silent gap. (Real tree-construction-error tracking, formerly the largest gap at 43 fixtures, landed via [`html5-parser`](https://crates.io/crates/html5-parser) 0.3.0.)
+- **Accuracy:** **99.98 % overall accuracy** across the entire corpus (**3,745 True Positives**, **909 True Negatives**).
+- **Residual False Negatives:** **1 / 4,655**, deliberate rather than unimplemented: flagging a mistyped property name inside `<style>` needs a real CSS parser plus the full CSS property registry (vnu delegates this to a vendored W3C CSS Validator; a single corpus fixture is too little evidence for that surface area). It is a documented, deliberate limitation, not a silent gap. (The 2D table cell grid, formerly the largest remaining gap, landed as `src/table_integrity.rs`; real tree-construction-error tracking landed earlier via [`html5-parser`](https://crates.io/crates/html5-parser) 0.3.0.)
+- **One measured deviation from the corpus, by design:** the missing-`lang` warning. vnu's own test runner sets `nu.validator.checker.ignoreMissingLang=true` globally and flips it to `false` only for the single fixture whose filename contains `missing-lang`, so 752 expected-clean fixtures have no `lang` attribute merely because the check was switched off when their expectations were recorded. Real, production vnu warns on all of them, and so does `html-conform` — the differential test corrects for the harness artifact in its comparison (`tests/differential.rs`'s `has_findings_for_comparison`) instead of the checker shipping less than vnu.
 
 ---
 
 ## 🔍 Validation Layers
 
-`html-conform` combines **five independent finding sources** into a single, unified `CheckReport`:
+`html-conform` combines **six independent finding sources** into a single, unified `CheckReport`:
 
 1. **HTML5 Tree Construction (`parser.html5`)** — Spec-compliant, error-tolerant tree parsing via [`html5-parser`](https://crates.io/crates/html5-parser). Emits tokenizer, DOCTYPE, and tree-construction parse findings with line, column, and byte offset locations.
 2. **Grammar & Content Model (`schema.html5`)** — Validation against the full vendored W3C RELAX NG schema ([`relax-ng`](https://crates.io/crates/relax-ng)), including SVG 1.1 and MathML 3 subtrees.
 3. **Custom Datatype Micro-Syntaxes (`w:*`)** — Full spec-compliant datatype validation for 50 custom W3C attribute microsyntaxes (`w:image-candidate-strings` for `srcset`, `w:content-security-policy`, `w:media-query`, `w:datetime`, `w:iri-ref`, BCP 47 language tags, etc.).
 4. **Schematron Co-Constraints (`rules/*.sch`)** — High-precision assertion rules via [`schematron-engine`](https://crates.io/crates/schematron-engine) and [`xpath-eval`](https://crates.io/crates/xpath-eval) (ARIA 1.2 constraints, structural HTML restrictions, heading hierarchy, link/script attribute combinations).
 5. **Script & CSP Validation (`scripts.import-map`, `scripts.speculation-rules`, `csp.meta-enforcement`)** — Dedicated JSON validation for `<script type="importmap">` / `<script type="speculationrules">` contents, and Content Security Policy (`<meta http-equiv="Content-Security-Policy">`) enforcement against inline scripts/styles via [`csp-parse`](https://crates.io/crates/csp-parse).
+6. **Table Cell Grid (`tables.integrity`)** — Lays every table out over its `colspan`/`rowspan` values to detect overlapping cells, cells spanning past the end of their row group, and columns that no cell ever begins in — a stateful 2D grid walk that the declarative XPath 1.0 rule layer cannot express.
 
 ---
 
