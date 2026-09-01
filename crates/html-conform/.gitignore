@@ -1,5 +1,7 @@
 /target
 /plan/
+/xtask/.cache/
+/xtask/check-file/target
 
 
 # Added by cargo

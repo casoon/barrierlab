@@ -1,0 +1,9 @@
+[package]
+name = "check-file"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+html-conform = { path = "../.." }
+serde_json = "1"
