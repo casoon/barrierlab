@@ -15,7 +15,7 @@ exclude = ["/tests/corpus", "/xtask"]
 [dependencies]
 csp-parse = "=0.1.0"
 encoding_rs = "0.8"
-html5-parser = "=0.2.0"
+html5-parser = "=0.3.0"
 media-query-parse = "=0.1.0"
 relax-ng = "=0.2.0"
 schematron-engine = "0.2.0"

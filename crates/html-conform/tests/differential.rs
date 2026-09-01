@@ -989,6 +989,17 @@ fn differential_against_vendored_vnu_corpus() {
 /// (3) `rules/headings.sch`: `headings-no-top-level` (missing h1 warning) and `headings-skip-level` (h1 to h3 skip error).
 /// `false_positive` unchanged (0); `false_negative` 71→55 (−16, 0 regressions).
 /// New baseline: `true_positive=3691 true_negative=909 false_positive=0 false_negative=55 not_comparable=0`.
+/// Updated again 2026-09-01 (Batch 23 — real tree-construction parse-error tracking via `html5-parser` 0.3.0, closing backlog item 2 from `plan/00-STATUS.md`):
+/// `html5-parser` 0.3.0 adds 15 `ParseErrorKind` variants for WHATWG §13.2.6
+/// tree-construction conditions (stray/implied end tags, "no p element in
+/// scope", self-closing flag acknowledgement on non-void elements, table
+/// insertion-mode misplacements, EOF-with-unclosed-elements, etc.), each
+/// verified against the live spec text and individually regression-tested
+/// in that crate; `html-conform`'s own `src/parse.rs` needed no changes,
+/// since its `ParseError` → `Finding` mapping was already generic across
+/// `ParseErrorKind` variants. `false_positive` unchanged (0); `false_negative`
+/// 55→12 (−43, 0 regressions).
+/// New baseline: `true_positive=3734 true_negative=909 false_positive=0 false_negative=12 not_comparable=0`.
 const BASELINE_FALSE_POSITIVE: usize = 0;
-const BASELINE_FALSE_NEGATIVE: usize = 55;
+const BASELINE_FALSE_NEGATIVE: usize = 12;
 const BASELINE_NOT_COMPARABLE: usize = 0;

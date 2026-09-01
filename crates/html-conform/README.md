@@ -9,8 +9,8 @@ A pure Rust library for HTML5 specification conformance checking — comparable 
 `html-conform` is validated continuously against the official W3C/vnu differential test suite (**4,655 test fixtures** vendored from [`validator/validator@388cb36`](https://github.com/validator/validator/commit/388cb36)).
 
 - **Precision Floor:** **0 False Positives (`BASELINE_FALSE_POSITIVE = 0`)** — zero false alarms across all 4,655 test cases.
-- **Accuracy:** **98.8 % overall accuracy** across the entire corpus (**3,691 True Positives**, **909 True Negatives**).
-- **Residual False Negatives:** **55 / 4,655** — 43 need real tree-construction-error tracking during parsing (a separate `html5-parser` change, not expressible by inspecting the finished tree), 5 need a full 2D table grid model with `colspan`/`rowspan` overlap detection (not reasonably expressible in the Schematron/XPath 1.0 layer), and 7 are smaller individually-researched gaps (an ARIA tab/tabpanel heuristic, `dl` duplicate-term edge cases, ruby markup advisories, inline CSS property validation). None of these are false alarms — each is a documented, deliberate limitation, not a silent gap.
+- **Accuracy:** **99.7 % overall accuracy** across the entire corpus (**3,734 True Positives**, **909 True Negatives**).
+- **Residual False Negatives:** **12 / 4,655** — 5 need a full 2D table grid model with `colspan`/`rowspan` overlap detection (not reasonably expressible in the Schematron/XPath 1.0 layer), and 7 are smaller individually-researched gaps (an ARIA tab/tabpanel heuristic, `dl` duplicate-term edge cases, ruby markup advisories, inline CSS property validation). None of these are false alarms — each is a documented, deliberate limitation, not a silent gap. (Real tree-construction-error tracking, formerly the largest gap at 43 fixtures, landed via [`html5-parser`](https://crates.io/crates/html5-parser) 0.3.0.)
 
 ---
 
@@ -18,7 +18,7 @@ A pure Rust library for HTML5 specification conformance checking — comparable 
 
 `html-conform` combines **five independent finding sources** into a single, unified `CheckReport`:
 
-1. **HTML5 Tree Construction (`parser.html5`)** — Spec-compliant, error-tolerant tree parsing via [`html5-parser`](https://crates.io/crates/html5-parser). Emits tokenizer & DOCTYPE parse findings with line, column, and byte offset locations.
+1. **HTML5 Tree Construction (`parser.html5`)** — Spec-compliant, error-tolerant tree parsing via [`html5-parser`](https://crates.io/crates/html5-parser). Emits tokenizer, DOCTYPE, and tree-construction parse findings with line, column, and byte offset locations.
 2. **Grammar & Content Model (`schema.html5`)** — Validation against the full vendored W3C RELAX NG schema ([`relax-ng`](https://crates.io/crates/relax-ng)), including SVG 1.1 and MathML 3 subtrees.
 3. **Custom Datatype Micro-Syntaxes (`w:*`)** — Full spec-compliant datatype validation for 50 custom W3C attribute microsyntaxes (`w:image-candidate-strings` for `srcset`, `w:content-security-policy`, `w:media-query`, `w:datetime`, `w:iri-ref`, BCP 47 language tags, etc.).
 4. **Schematron Co-Constraints (`rules/*.sch`)** — High-precision assertion rules via [`schematron-engine`](https://crates.io/crates/schematron-engine) and [`xpath-eval`](https://crates.io/crates/xpath-eval) (ARIA 1.2 constraints, structural HTML restrictions, heading hierarchy, link/script attribute combinations).
@@ -107,10 +107,11 @@ let report = check_with_options(html, options).unwrap();
 
 ## 🔄 Maintenance & Refinement Loops
 
-`html-conform` enforces quality through two structured maintenance loops:
+`html-conform` enforces quality through structured maintenance loops:
 
 - **Loop A (Schema Sync):** Mechanical updates when W3C RELAX NG schemas or vnu upstream specifications update (`xtask/vendor-corpus.sh`).
 - **Loop B (Assertion Refinement Loop):** Iterative refinement of Schematron rules and datatype checkers against the 4,655-fixture differential test suite, strictly maintaining the **0 False Positive floor**.
+- **Loop C (Real-World Sanity Check):** Supplementary, manual/non-CI signal that fetches real websites and diffs `html-conform`'s findings against a locally-run Nu Html Checker (vnu) jar (`xtask/fetch-real-world.sh` + `xtask/compare-real-world.sh`, see [`xtask/README.md`](xtask/README.md)). Not part of the pinned 4,655-fixture corpus baseline, and not expected to hit 0 false positives — real pages carry their own unrelated markup errors.
 
 ---
 
