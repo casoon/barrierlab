@@ -1,6 +1,6 @@
 # html-conform
 
-A pure Rust library for HTML5 specification conformance checking — comparable in precision and output to the [Nu Html Checker (vnu)](https://validator.github.io/validator/), but without a JVM, subprocesses, or HTTP network requests. Embeddable directly into any Rust application, CLI, or web service.
+A Rust library for HTML5 specification conformance checking — comparable in precision and output to the [Nu Html Checker (vnu)](https://validator.github.io/validator/), but without a JVM, subprocesses, or HTTP network requests. Embeddable directly into any Rust application, CLI, or web service.
 
 ---
 

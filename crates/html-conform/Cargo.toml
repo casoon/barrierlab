@@ -1,9 +1,9 @@
 [package]
 name = "html-conform"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
-description = "HTML5 conformance checking as a pure Rust dependency (vnu-comparable, no JVM runtime)."
+description = "HTML5 conformance checking as a Rust dependency (vnu-comparable, no JVM runtime)."
 repository = "https://github.com/casoon/html-conform"
 homepage = "https://github.com/casoon/html-conform"
 readme = "README.md"

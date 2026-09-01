@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "csp-parse",
  "encoding_rs",
