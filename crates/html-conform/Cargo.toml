@@ -1,6 +1,6 @@
 [package]
 name = "html-conform"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "MIT"
 description = "HTML5 conformance checking as a Rust dependency (vnu-comparable, no JVM runtime)."
@@ -10,7 +10,7 @@ readme = "README.md"
 rust-version = "1.85.0"
 keywords = ["html", "html5", "validator", "conformance", "vnu"]
 categories = ["web-programming", "parser-implementations", "development-tools"]
-exclude = ["/tests/corpus", "/xtask"]
+exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches"]
 
 [dependencies]
 csp-parse = "=0.1.0"
@@ -23,3 +23,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 url = "2"
 xpath-eval = "0.2.1"
+
+[dev-dependencies]
+criterion = "0.8"
+
+[[bench]]
+name = "check"
+harness = false

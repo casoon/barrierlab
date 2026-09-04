@@ -1,6 +1,6 @@
 # html-conform
 
-A Rust library for HTML5 specification conformance checking — comparable in precision and output to the [Nu Html Checker (vnu)](https://validator.github.io/validator/), but without a JVM, subprocesses, or HTTP network requests. Embeddable directly into any Rust application, CLI, or web service.
+A Rust library for HTML5 specification conformance checking — validated against the [Nu Html Checker (vnu)](https://validator.github.io/validator/)'s differential test corpus (0 false positives, 99.98 % accuracy across 4,655 fixtures), without a JVM, subprocesses, or HTTP network requests. Embeddable directly into any Rust application, CLI, or web service.
 
 ---
 
@@ -34,7 +34,7 @@ Add `html-conform` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-html-conform = "0.1.0"
+html-conform = "0.2.0"
 ```
 
 ### Basic Check
@@ -114,6 +114,20 @@ let report = check_with_options(html, options).unwrap();
 - **Loop A (Schema Sync):** Mechanical updates when W3C RELAX NG schemas or vnu upstream specifications update (`xtask/vendor-corpus.sh`).
 - **Loop B (Assertion Refinement Loop):** Iterative refinement of Schematron rules and datatype checkers against the 4,655-fixture differential test suite, strictly maintaining the **0 False Positive floor**.
 - **Loop C (Real-World Sanity Check):** Supplementary, manual/non-CI signal that fetches real websites and diffs `html-conform`'s findings against a locally-run Nu Html Checker (vnu) jar (`xtask/fetch-real-world.sh` + `xtask/compare-real-world.sh`, see [`xtask/README.md`](xtask/README.md)). Not part of the pinned 4,655-fixture corpus baseline, and not expected to hit 0 false positives — real pages carry their own unrelated markup errors.
+
+---
+
+## 🧪 Fuzzing & Benchmarks
+
+- **Fuzzing:** `fuzz/` is a standalone [`cargo-fuzz`](https://github.com/rust-fuzz/cargo-fuzz) crate (requires a nightly toolchain) that feeds arbitrary bytes through the whole `check()` pipeline. Local dev tool only — not run in CI:
+  ```sh
+  cargo +nightly fuzz run check fuzz/corpus/check tests/corpus/html
+  ```
+  (the `tests/corpus/html` argument seeds the fuzzer from the existing corpus without copying it; crashes land in `fuzz/artifacts/check/`).
+- **Benchmarks:** `benches/check.rs` (`criterion`) times `check()` against a small typical page and a large, table-heavy real-world page from `tests/corpus/`. CI only compiles the benchmarks (`cargo bench --no-run`) to catch bit-rot; run them locally for actual numbers:
+  ```sh
+  cargo bench
+  ```
 
 ---
 

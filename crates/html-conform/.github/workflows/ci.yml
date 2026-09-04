@@ -20,7 +20,14 @@ jobs:
       - run: cargo test --release --test differential -- --ignored
       - run: cargo fmt --check
       - run: cargo clippy -- -D warnings
+      - run: cargo bench --no-run
       - uses: fsfe/reuse-action@v5
       - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check licenses
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - run: cargo build --all-targets
+      - run: cargo test
