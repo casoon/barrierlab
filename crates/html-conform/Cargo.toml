@@ -10,7 +10,7 @@ readme = "README.md"
 rust-version = "1.85.0"
 keywords = ["html", "html5", "validator", "conformance", "vnu"]
 categories = ["web-programming", "parser-implementations", "development-tools"]
-exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches"]
+exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches", "/site", "/docs", "/examples"]
 
 [dependencies]
 csp-parse = "=0.1.0"

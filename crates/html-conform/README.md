@@ -1,5 +1,7 @@
 # html-conform
 
+**Website and documentation:** [casoon.github.io/html-conform](https://casoon.github.io/html-conform/)
+
 A Rust library for HTML5 specification conformance checking — validated against the [Nu Html Checker (vnu)](https://validator.github.io/validator/)'s differential test corpus (0 false positives, 99.98 % accuracy across 4,655 fixtures), without a JVM, subprocesses, or HTTP network requests. Embeddable directly into any Rust application, CLI, or web service.
 
 ---

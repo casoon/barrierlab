@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "missing required content at 9:3",
+      "location": {
+        "line": 9,
+        "column": 3,
+        "byte_offset": 178
+      }
+    },
+    {
+      "rule_id": "assertion.aria.hidden-not-focusable",
+      "severity": "Error",
+      "message": "An element with aria-hidden=\"true\" must not also have a tabindex attribute.",
+      "location": {
+        "line": 8,
+        "column": 3,
+        "byte_offset": 112
+      }
+    },
+    {
+      "rule_id": "assertion.ids.duplicate",
+      "severity": "Error",
+      "message": "Duplicate ID.",
+      "location": {
+        "line": 10,
+        "column": 3,
+        "byte_offset": 234
+      }
+    },
+    {
+      "rule_id": "assertion.ids.duplicate",
+      "severity": "Error",
+      "message": "Duplicate ID.",
+      "location": {
+        "line": 11,
+        "column": 3,
+        "byte_offset": 270
+      }
+    }
+  ]
+}
