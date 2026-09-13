@@ -19,8 +19,8 @@ html-conform = "0.2.1"
 
 ## Requirements
 
-- Rust **1.85** or newer (`rust-version = "1.85.0"`, edition 2024). CI builds and tests on
-  exactly that version as well as on stable.
+- Rust **1.85** or newer, as declared in `Cargo.toml` (`rust-version = "1.85.0"`, edition
+  2024).
 - Nothing at runtime. The HTML schema and the Schematron rules are compiled into the crate,
   so there are no files to ship next to your binary, and no Java, subprocess or network
   access is involved.
