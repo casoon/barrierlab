@@ -269,6 +269,61 @@ mod tests {
         assert!(check_html(r#"<html lang=""><title>x</title>"#).is_empty());
     }
 
+    /// `rules/elements.sch`'s `elements-img-missing-alt`, with vnu's
+    /// exemptions: any `alt` (even empty), `aria-label`/`aria-labelledby`,
+    /// a non-empty `title`, and `figure` (left to the figure rule).
+    #[test]
+    fn img_missing_alt_fires_outside_figure_and_respects_exemptions() {
+        let failures = check_body(r#"<img src="a.png">"#);
+        assert_eq!(failures.len(), 1);
+        assert_eq!(failures[0].rule_id, "elements.img-missing-alt");
+        assert_eq!(failures[0].severity, Severity::Error);
+
+        assert!(check_body(r#"<img src="a.png" alt="">"#).is_empty());
+        assert!(check_body(r#"<img src="a.png" aria-label="Logo">"#).is_empty());
+        assert!(check_body(r#"<img src="a.png" title="Logo">"#).is_empty());
+        assert!(
+            check_body(r#"<figure><img src="a.png"><figcaption>Logo</figcaption></figure>"#)
+                .is_empty()
+        );
+        assert_eq!(
+            check_body(r#"<img src="a.png" title="">"#)[0].rule_id,
+            "elements.img-missing-alt"
+        );
+    }
+
+    /// `rules/elements.sch`'s `elements-interactive-in-a`.
+    #[test]
+    fn interactive_content_inside_a_fires_once_per_element() {
+        let rule_ids = |body: &str| -> Vec<String> {
+            check_body(body).into_iter().map(|f| f.rule_id).collect()
+        };
+        assert_eq!(
+            rule_ids(r#"<a href="/"><button>x</button></a>"#),
+            ["elements.button-in-a"]
+        );
+        assert_eq!(
+            rule_ids(r#"<a href="/"><span><select><option>x</option></select></span></a>"#),
+            ["elements.select-in-a"]
+        );
+        // An `input` with `tabindex` is reported as an `input` only.
+        assert_eq!(
+            rule_ids(r#"<a href="/"><input tabindex="0"></a>"#),
+            ["elements.input-in-a"]
+        );
+        assert_eq!(
+            rule_ids(r#"<a href="/"><span tabindex="0">x</span></a>"#),
+            ["elements.tabindex-in-a"]
+        );
+        assert_eq!(
+            rule_ids(r#"<a href="/"><span role="switch checkbox">x</span></a>"#),
+            ["elements.interactive-role-in-a"]
+        );
+
+        assert!(rule_ids(r#"<a href="/"><span>x</span><input type="HIDDEN"></a>"#).is_empty());
+        assert!(rule_ids(r#"<a href="/"><video></video><span role="img">x</span></a>"#).is_empty());
+    }
+
     #[test]
     fn multiple_rule_files_fire_independently_in_one_document() {
         let failures = check_body(

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `assertion.elements.img-missing-alt`: an `img` without `alt` is now an error outside `figure`, with vnu's exemptions (`aria-label`, `aria-labelledby`, a non-empty `title`; `role` and other `aria-*` attributes keep their more specific accessible-name rules). Previously only the `figure`-without-`figcaption` case was checked.
+- `assertion.elements.*-in-a`: interactive content inside `a` (`button`, `select`, `textarea`, `label`, `details`, `dialog`, `embed`, `iframe`, `a`, non-hidden `input`, `video`/`audio` with `controls`, `img`/`object` with `usemap`, any element with `tabindex` or an interactive `role`), matching vnu's list.
+
+### Changed
+- Bumped `html5-parser` to 0.4.0. `parser.html5` now also reports stray end tags with no matching element in scope (`</div>`, `</li>`, `</h2>`, …), start tags the parser ignores (a second `<body>`, `<td>` outside a table, …) and misnested formatting elements (`<b><i>…</b></i>`), all of which 0.3.0 dropped silently. Documents containing them get additional `parser.html5` errors. The differential corpus result is unchanged (0 false positives).
+- README and docs no longer imply complete tree-construction error coverage; "What's not covered" lists the parse errors `html5-parser` 0.4.0 still does not record (e.g. `<div><span></div>`).
+
 ## [0.2.1] - 2026-09-04
 
 ### Added

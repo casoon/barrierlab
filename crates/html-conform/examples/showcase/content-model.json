@@ -29,6 +29,26 @@
         "column": 11,
         "byte_offset": 233
       }
+    },
+    {
+      "rule_id": "assertion.elements.img-missing-alt",
+      "severity": "Error",
+      "message": "An \"img\" element must have an \"alt\" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.",
+      "location": {
+        "line": 14,
+        "column": 6,
+        "byte_offset": 278
+      }
+    },
+    {
+      "rule_id": "assertion.elements.button-in-a",
+      "severity": "Error",
+      "message": "The element \"button\" must not appear as a descendant of the \"a\" element.",
+      "location": {
+        "line": 15,
+        "column": 20,
+        "byte_offset": 323
+      }
     }
   ]
 }

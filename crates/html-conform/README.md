@@ -12,7 +12,7 @@ A Rust library for HTML5 specification conformance checking — validated agains
 
 - **Precision Floor:** **0 False Positives (`BASELINE_FALSE_POSITIVE = 0`)** — zero false alarms across all 4,655 test cases.
 - **Accuracy:** **99.98 % overall accuracy** across the entire corpus (**3,745 True Positives**, **909 True Negatives**).
-- **Residual False Negatives:** **1 / 4,655**, deliberate rather than unimplemented: flagging a mistyped property name inside `<style>` needs a real CSS parser plus the full CSS property registry (vnu delegates this to a vendored W3C CSS Validator; a single corpus fixture is too little evidence for that surface area). It is a documented, deliberate limitation, not a silent gap. (The 2D table cell grid, formerly the largest remaining gap, landed as `src/table_integrity.rs`; real tree-construction-error tracking landed earlier via [`html5-parser`](https://crates.io/crates/html5-parser) 0.3.0.)
+- **Residual False Negatives:** **1 / 4,655**, deliberate rather than unimplemented: flagging a mistyped property name inside `<style>` needs a real CSS parser plus the full CSS property registry (vnu delegates this to a vendored W3C CSS Validator; a single corpus fixture is too little evidence for that surface area). It is a documented, deliberate limitation, not a silent gap. (The 2D table cell grid, formerly the largest remaining gap, landed as `src/table_integrity.rs`; tree-construction-error tracking landed via [`html5-parser`](https://crates.io/crates/html5-parser) 0.3.0 and was extended in 0.4.0 to every token the parser ignores and to misnested formatting elements; it still covers a subset of the spec's tree-construction errors, see [What's not covered](#-whats-not-covered).)
 - **One measured deviation from the corpus, by design:** the missing-`lang` warning. vnu's own test runner sets `nu.validator.checker.ignoreMissingLang=true` globally and flips it to `false` only for the single fixture whose filename contains `missing-lang`, so 752 expected-clean fixtures have no `lang` attribute merely because the check was switched off when their expectations were recorded. Real, production vnu warns on all of them, and so does `html-conform` — the differential test corrects for the harness artifact in its comparison (`tests/differential.rs`'s `has_findings_for_comparison`) instead of the checker shipping less than vnu.
 
 ---
@@ -21,12 +21,23 @@ A Rust library for HTML5 specification conformance checking — validated agains
 
 `html-conform` combines **six independent finding sources** into a single, unified `CheckReport`:
 
-1. **HTML5 Tree Construction (`parser.html5`)** — Spec-compliant, error-tolerant tree parsing via [`html5-parser`](https://crates.io/crates/html5-parser). Emits tokenizer, DOCTYPE, and tree-construction parse findings with line, column, and byte offset locations.
+1. **HTML5 Tree Construction (`parser.html5`)** — Spec-compliant, error-tolerant tree parsing via [`html5-parser`](https://crates.io/crates/html5-parser). Emits tokenizer, DOCTYPE, and tree-construction parse findings with line, column, and byte offset locations. Tokenizer errors are complete; tree-construction errors are a subset (see [What's not covered](#-whats-not-covered)).
 2. **Grammar & Content Model (`schema.html5`)** — Validation against the full vendored W3C RELAX NG schema ([`relax-ng`](https://crates.io/crates/relax-ng)), including SVG 1.1 and MathML 3 subtrees.
 3. **Custom Datatype Micro-Syntaxes (`w:*`)** — Full spec-compliant datatype validation for 50 custom W3C attribute microsyntaxes (`w:image-candidate-strings` for `srcset`, `w:content-security-policy`, `w:media-query`, `w:datetime`, `w:iri-ref`, BCP 47 language tags, etc.).
 4. **Schematron Co-Constraints (`rules/*.sch`)** — High-precision assertion rules via [`schematron-engine`](https://crates.io/crates/schematron-engine) and [`xpath-eval`](https://crates.io/crates/xpath-eval) (ARIA 1.2 constraints, structural HTML restrictions, heading hierarchy, link/script attribute combinations).
 5. **Script & CSP Validation (`scripts.import-map`, `scripts.speculation-rules`, `csp.meta-enforcement`)** — Dedicated JSON validation for `<script type="importmap">` / `<script type="speculationrules">` contents, and Content Security Policy (`<meta http-equiv="Content-Security-Policy">`) enforcement against inline scripts/styles via [`csp-parse`](https://crates.io/crates/csp-parse).
 6. **Table Cell Grid (`tables.integrity`)** — Lays every table out over its `colspan`/`rowspan` values to detect overlapping cells, cells spanning past the end of their row group, and columns that no cell ever begins in — a stateful 2D grid walk that the declarative XPath 1.0 rule layer cannot express.
+
+---
+
+## 🚧 What's not covered
+
+The corpus numbers above only measure what the vendored fixtures exercise. Known gaps that real documents hit:
+
+- **Some tree-construction parse errors.** `html5-parser` 0.4.0 records a parse error wherever it ignores a token (a stray `</div>`, `</li>` or `</h2>`, a second `<body>`, `<td>` outside a table, …) and when the adoption agency algorithm repairs misnested formatting elements (`<b><i>…</b></i>`). It still records nothing for the spec's parse errors on tokens it keeps: an end tag that closes an element while other elements inside it are still open (`<div><span></div>`), content after `</html>`, and the obsolete frameset modes. vnu reports these; the repaired tree carries no trace of them, so `html-conform` cannot detect them afterwards.
+- **CSS inside `<style>`** — see the one residual false negative above.
+
+The [comparison with vnu](https://casoon.github.io/html-conform/docs/guides/vnu-comparison/) lists the full set of differences.
 
 ---
 

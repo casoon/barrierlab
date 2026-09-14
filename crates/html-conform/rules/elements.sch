@@ -1092,6 +1092,23 @@
     </rule>
   </pattern>
 
+  <!--
+    vnu Assertions.java's general missing-`alt` branch: an `img` with no
+    `alt` and no other name source (`aria-label`, `aria-labelledby`, a
+    non-empty `title`) is an error. `role`, or any `aria-*` other than
+    `aria-hidden`, routes to the two more specific accessible-name
+    messages in rules/aria-constraints.sch instead, the same else-if
+    order vnu uses. Inside a `figure`, vnu defers the decision until the
+    figure closes (a figcaption can supply the alternative), which is
+    what `elements-img-missing-alt-in-figure` below approximates.
+  -->
+  <pattern id="elements-img-missing-alt">
+    <rule context="h:img[not(@alt) and not(@aria-label) and not(@aria-labelledby) and not(@role) and not(@*[starts-with(name(), 'aria-') and name() != 'aria-hidden']) and (not(@title) or @title = '') and not(ancestor::h:figure)]">
+      <assert id="elements.img-missing-alt" role="error" test="false()">
+        An "img" element must have an "alt" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.
+      </assert>
+    </rule>
+  </pattern>
   <pattern id="elements-img-missing-alt-in-figure">
     <rule context="h:img[not(@alt) and ancestor::h:figure[not(h:figcaption)]]">
       <assert id="elements.img-missing-alt-in-figure" role="error" test="false()">
@@ -1103,6 +1120,103 @@
     <rule context="h:a[@href and ancestor::h:button]">
       <assert id="elements.a-href-in-button" role="error" test="false()">
         The element "a" with the attribute "href" must not appear as a descendant of the "button" element.
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--
+    Interactive content inside `a` (vnu Assertions.java: every
+    INTERACTIVE_ELEMENTS entry is a registered prohibited descendant of
+    `a`, and the attribute-dependent cases share A_BUTTON_MASK). One
+    pattern, so only the first matching rule fires per element — the
+    same else-if order vnu evaluates them in (an `input` with `tabindex`
+    is reported once, as an `input`). Elements with a static message are
+    listed one rule each, since the rule layer has no `value-of`.
+  -->
+  <pattern id="elements-interactive-in-a">
+    <rule context="h:a[@href and ancestor::h:a]">
+      <assert id="elements.a-href-in-a" role="error" test="false()">
+        The element "a" with the attribute "href" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:a[ancestor::h:a]">
+      <assert id="elements.a-in-a" role="error" test="false()">
+        The element "a" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:button[ancestor::h:a]">
+      <assert id="elements.button-in-a" role="error" test="false()">
+        The element "button" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:details[ancestor::h:a]">
+      <assert id="elements.details-in-a" role="error" test="false()">
+        The element "details" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:dialog[ancestor::h:a]">
+      <assert id="elements.dialog-in-a" role="error" test="false()">
+        The element "dialog" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:embed[ancestor::h:a]">
+      <assert id="elements.embed-in-a" role="error" test="false()">
+        The element "embed" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:iframe[ancestor::h:a]">
+      <assert id="elements.iframe-in-a" role="error" test="false()">
+        The element "iframe" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:label[ancestor::h:a]">
+      <assert id="elements.label-in-a" role="error" test="false()">
+        The element "label" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:select[ancestor::h:a]">
+      <assert id="elements.select-in-a" role="error" test="false()">
+        The element "select" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:textarea[ancestor::h:a]">
+      <assert id="elements.textarea-in-a" role="error" test="false()">
+        The element "textarea" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:video[@controls and ancestor::h:a]">
+      <assert id="elements.video-controls-in-a" role="error" test="false()">
+        The element "video" with the attribute "controls" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:audio[@controls and ancestor::h:a]">
+      <assert id="elements.audio-controls-in-a" role="error" test="false()">
+        The element "audio" with the attribute "controls" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:img[@usemap and ancestor::h:a]">
+      <assert id="elements.img-usemap-in-a" role="error" test="false()">
+        The element "img" with the attribute "usemap" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:object[@usemap and ancestor::h:a]">
+      <assert id="elements.object-usemap-in-a" role="error" test="false()">
+        The element "object" with the attribute "usemap" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="h:input[not(translate(@type, 'HIDEN', 'hiden') = 'hidden') and ancestor::h:a]">
+      <assert id="elements.input-in-a" role="error" test="false()">
+        The element "input" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="*[@tabindex and ancestor::h:a]">
+      <assert id="elements.tabindex-in-a" role="error" test="false()">
+        An element with the attribute "tabindex" must not appear as a descendant of the "a" element.
+      </assert>
+    </rule>
+    <rule context="*[@role and ancestor::h:a and contains(' button checkbox combobox grid gridcell listbox menu menubar menuitem menuitemcheckbox menuitemradio option radio scrollbar searchbox slider spinbutton switch tab textbox treeitem ', concat(' ', substring-before(concat(normalize-space(@role), ' '), ' '), ' '))]">
+      <assert id="elements.interactive-role-in-a" role="error" test="false()">
+        An element with an interactive "role" attribute value must not appear as a descendant of the "a" element.
       </assert>
     </rule>
   </pattern>
