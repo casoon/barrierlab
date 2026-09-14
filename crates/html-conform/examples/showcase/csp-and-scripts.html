@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+  <title>CSP and scripts</title>
+  <script type="importmap">{ "imports": { "app": "./app.js" }, "scope": {} }</script>
+</head>
+<body>
+  <script>document.body.classList.add("js");</script>
+  <script type="speculationrules">{ "prerender": [{ "source": "list", "urls": "/next/" }] }</script>
+</body>
+</html>
