@@ -110,7 +110,7 @@ pub(crate) fn check_polyline(value: &str) -> Result<(), String> {
     if parts.len() < 6 {
         return Err("polyline coords must have at least six comma-separated integers".to_string());
     }
-    if parts.len() % 2 != 0 {
+    if !parts.len().is_multiple_of(2) {
         return Err(
             "polyline coords must have an even number of comma-separated integers".to_string(),
         );

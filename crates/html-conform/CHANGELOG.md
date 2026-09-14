@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Bumped `html5-parser` to 0.4.0. `parser.html5` now also reports stray end tags with no matching element in scope (`</div>`, `</li>`, `</h2>`, …), start tags the parser ignores (a second `<body>`, `<td>` outside a table, …) and misnested formatting elements (`<b><i>…</b></i>`), all of which 0.3.0 dropped silently. Documents containing them get additional `parser.html5` errors. The differential corpus result is unchanged (0 false positives).
 - README and docs no longer imply complete tree-construction error coverage; "What's not covered" lists the parse errors `html5-parser` 0.4.0 still does not record (e.g. `<div><span></div>`).
+- MSRV raised from 1.85 to 1.88 (`rust-version = "1.88.0"`). 1.85 was never actually buildable: `html5-parser` 0.4.0, `csp-parse` 0.1.0 and `xpath-eval` use `let` chains (stable since 1.88), and `url` → `idna` → `idna_adapter` 1.2.2 pulls in the `icu_*` 2.3 crates, which require 1.88. The CI MSRV job now builds with 1.88.0.
 
 ## [0.2.1] - 2026-09-04
 
