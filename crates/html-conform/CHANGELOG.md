@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `assertion.elements.img-missing-alt`: an `img` without `alt` is now an error outside `figure`, with vnu's exemptions (`aria-label`, `aria-labelledby`, a non-empty `title`; `role` and other `aria-*` attributes keep their more specific accessible-name rules). Previously only the `figure`-without-`figcaption` case was checked.
+- `assertion.elements.*-in-a`: interactive content inside `a` (`button`, `select`, `textarea`, `label`, `details`, `dialog`, `embed`, `iframe`, `a`, non-hidden `input`, `video`/`audio` with `controls`, `img`/`object` with `usemap`, any element with `tabindex` or an interactive `role`), matching vnu's list.
+
+### Changed
+- README and docs no longer imply complete tree-construction error coverage. `html5-parser` 0.3.0 does not report a stray end tag outside the "any other end tag" path (e.g. `</div>`) or misnested formatting elements (`<b><i>…</b></i>`); both are now listed under what's not covered.
+
 ## [0.2.1] - 2026-09-04
 
 ### Added

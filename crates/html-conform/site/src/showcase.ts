@@ -93,7 +93,7 @@ const catalogue = [
     slug: 'content-model',
     title: 'Content model',
     description:
-      'A span directly inside a list and the obsolete align attribute fail the RELAX NG schema; a footer inside a footer is caught by a Schematron rule.',
+      'A span directly inside a list and the obsolete align attribute fail the RELAX NG schema; a footer inside a footer, an image without alt and a button inside a link are caught by Schematron rules.',
   },
   {
     slug: 'attribute-values',

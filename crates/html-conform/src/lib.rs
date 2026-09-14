@@ -201,4 +201,57 @@ mod tests {
             "assertion.aria.hidden-not-focusable"
         );
     }
+
+    /// `body` alone inside an otherwise valid document, so any finding is
+    /// about `body` — the shape the four cases below were reported in.
+    fn rule_ids_for_body(body: &str) -> Vec<String> {
+        let html = format!(
+            "<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\
+             <title>t</title></head>\n<body>{body}</body>\n</html>\n"
+        );
+        check(&html)
+            .expect("HTML5 parsing should recover")
+            .findings
+            .into_iter()
+            .map(|finding| finding.rule_id)
+            .collect()
+    }
+
+    #[test]
+    fn img_without_alt_is_reported() {
+        assert_eq!(
+            rule_ids_for_body(r#"<p><img src="a.png"></p>"#),
+            ["assertion.elements.img-missing-alt"]
+        );
+    }
+
+    #[test]
+    fn button_inside_a_is_reported() {
+        assert_eq!(
+            rule_ids_for_body(r#"<a href="/"><button>x</button></a>"#),
+            ["assertion.elements.button-in-a"]
+        );
+    }
+
+    /// Known gap: html5-parser 0.3.0 records `StrayEndTag` only on the "any
+    /// other end tag" path (`</span>`), not for block-level end tags with
+    /// no matching element in scope (§13.2.6.4.7). Ignored until the
+    /// parser records it; see docs/guides/vnu-comparison.md.
+    #[test]
+    #[ignore = "known gap: html5-parser 0.3.0 does not record this parse error"]
+    fn stray_div_end_tag_is_reported() {
+        assert_eq!(rule_ids_for_body("<p>x</p></div>"), ["parser.html5"]);
+    }
+
+    /// Known gap: html5-parser 0.3.0's adoption agency algorithm repairs
+    /// misnested formatting elements without recording the parse error.
+    #[test]
+    #[ignore = "known gap: html5-parser 0.3.0 does not record this parse error"]
+    fn misnested_formatting_elements_are_reported() {
+        assert!(
+            rule_ids_for_body("<p><b><i>x</b></i></p>")
+                .iter()
+                .any(|rule_id| rule_id == "parser.html5")
+        );
+    }
 }
