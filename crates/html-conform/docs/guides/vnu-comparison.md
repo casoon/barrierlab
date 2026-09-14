@@ -55,15 +55,16 @@ finding-by-finding parity.
 ## Not covered, or different
 
 - **Some tree-construction parse errors.** [`html5-parser`](https://crates.io/crates/html5-parser)
-  0.3.0 records every tokenizer error but only part of the tree-construction errors. A stray
-  end tag is reported only on the "any other end tag" path (`</span>`, `</b>`); a stray
-  `</div>`, `</li>` or `</h2>` with no matching open element is dropped silently, and
-  misnested formatting elements such as `<b><i>…</b></i>` are repaired by the adoption agency
-  algorithm without a parse error. vnu reports both. The dropped tokens leave no trace in the
-  tree, so html-conform cannot find them after parsing; the fix is for html5-parser to record
-  the error at the remaining "in body" end-tag branches and adoption agency steps. The
-  differential test does not show this: the fixtures vnu flags for a stray `</header>` or
-  `</td>` still count as true positives, through unrelated heading and table findings.
+  0.4.0 records every tokenizer error, and a tree-construction error wherever it ignores a
+  token (a stray `</div>`, `</li>` or `</h2>`, a second `<body>`, `<td>` outside a table, …)
+  or repairs misnested formatting elements such as `<b><i>…</b></i>` with the adoption agency
+  algorithm. It still records nothing for the spec's parse errors on tokens it keeps: an end
+  tag that closes an element while other elements inside it are still open
+  (`<div><span></div>`), content after `</html>`, and the obsolete frameset modes. vnu reports
+  these; the repaired tree carries no trace of them, so html-conform cannot find them after
+  parsing. The differential test did not move with 0.4.0: the fixtures vnu flags for a stray
+  `</header>` or `</td>` already counted as true positives through unrelated heading and table
+  findings.
 - **CSS inside `<style>`.** vnu hands style sheets to a vendored copy of the W3C CSS
   Validator. html-conform has no CSS parser for this, so a mistyped property such as `colr`
   goes unreported. This is the one false negative

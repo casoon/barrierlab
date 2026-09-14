@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `assertion.elements.*-in-a`: interactive content inside `a` (`button`, `select`, `textarea`, `label`, `details`, `dialog`, `embed`, `iframe`, `a`, non-hidden `input`, `video`/`audio` with `controls`, `img`/`object` with `usemap`, any element with `tabindex` or an interactive `role`), matching vnu's list.
 
 ### Changed
-- README and docs no longer imply complete tree-construction error coverage. `html5-parser` 0.3.0 does not report a stray end tag outside the "any other end tag" path (e.g. `</div>`) or misnested formatting elements (`<b><i>…</b></i>`); both are now listed under what's not covered.
+- Bumped `html5-parser` to 0.4.0. `parser.html5` now also reports stray end tags with no matching element in scope (`</div>`, `</li>`, `</h2>`, …), start tags the parser ignores (a second `<body>`, `<td>` outside a table, …) and misnested formatting elements (`<b><i>…</b></i>`), all of which 0.3.0 dropped silently. Documents containing them get additional `parser.html5` errors. The differential corpus result is unchanged (0 false positives).
+- README and docs no longer imply complete tree-construction error coverage; "What's not covered" lists the parse errors `html5-parser` 0.4.0 still does not record (e.g. `<div><span></div>`).
 
 ## [0.2.1] - 2026-09-04
 

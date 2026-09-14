@@ -233,20 +233,19 @@ mod tests {
         );
     }
 
-    /// Known gap: html5-parser 0.3.0 records `StrayEndTag` only on the "any
-    /// other end tag" path (`</span>`), not for block-level end tags with
-    /// no matching element in scope (§13.2.6.4.7). Ignored until the
-    /// parser records it; see docs/guides/vnu-comparison.md.
+    /// A block-level end tag with no matching element in scope
+    /// (§13.2.6.4.7). html5-parser 0.3.0 dropped it silently; 0.4.0
+    /// records `StrayEndTag`.
     #[test]
-    #[ignore = "known gap: html5-parser 0.3.0 does not record this parse error"]
     fn stray_div_end_tag_is_reported() {
         assert_eq!(rule_ids_for_body("<p>x</p></div>"), ["parser.html5"]);
     }
 
-    /// Known gap: html5-parser 0.3.0's adoption agency algorithm repairs
-    /// misnested formatting elements without recording the parse error.
+    /// Misnested formatting elements, repaired by the adoption agency
+    /// algorithm. html5-parser 0.3.0 recorded no parse error; 0.4.0
+    /// records `MisnestedFormattingElement` (and `StrayEndTag` for the
+    /// already-closed `</i>`).
     #[test]
-    #[ignore = "known gap: html5-parser 0.3.0 does not record this parse error"]
     fn misnested_formatting_elements_are_reported() {
         assert!(
             rule_ids_for_body("<p><b><i>x</b></i></p>")

@@ -24,8 +24,9 @@ Diagnostics the HTML5 parser records while it recovers, for example an unknown n
 character reference or a duplicate attribute. Set `include_parse_errors: false` to leave them
 out of the report.
 
-Tokenizer errors are covered completely, tree-construction errors only in part: a stray
-`</div>` and misnested `<b><i>…</b></i>` are repaired silently. See
+Tokenizer errors are covered completely, tree-construction errors in part: stray end tags
+such as `</div>`, ignored start tags and misnested `<b><i>…</b></i>` are reported, but an end
+tag that closes an element with others still open inside it (`<div><span></div>`) is not. See
 [Comparison with vnu](../vnu-comparison/#not-covered-or-different).
 
 ## `schema.html5`
