@@ -285,9 +285,9 @@ dependencies = [
 
 [[package]]
 name = "html5-parser"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b851f35c29d28aaba06e9b0022d2110e5339bf34b343766821e5d65dc49be2c"
+checksum = "2813e1598b78703c3339b10ee9ea6e55c41935cba69129046a13653c0c856d84"
 
 [[package]]
 name = "icu_collections"
