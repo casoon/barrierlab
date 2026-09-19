@@ -1161,3 +1161,55 @@ fn viewport_unterscheidet_verstoss_von_begrenzung() {
     assert!(fall("maximum-scale=5").is_empty());
     assert!(fall("width=device-width, initial-scale=1").is_empty());
 }
+
+#[test]
+fn listeneintrag_ausserhalb_einer_liste() {
+    // Die Listenpruefung laeuft ueber Listen und sieht nur, was darin steht.
+    // Ein verwaistes <li> wird dabei nie besucht.
+    let doc = sauber()
+        .open("body")
+        .open("ul")
+        .open("li")
+        .text("drin")
+        .close()
+        .close()
+        .open("div")
+        .open("li")
+        .text("verwaist")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert_eq!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id == "lists/item-outside-list")
+            .count(),
+        1,
+        "nur der verwaiste Eintrag: {:?}",
+        ids(&r)
+    );
+}
+
+#[test]
+fn ein_verschachtelter_eintrag_gilt_nicht_als_verwaist() {
+    // <li> in einer Unterliste hat die aeussere Liste als Vorfahren.
+    let doc = sauber()
+        .open("body")
+        .open("ul")
+        .open("li")
+        .text("a")
+        .open("ul")
+        .open("li")
+        .text("a1")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&doc), "lists/item-outside-list"));
+}

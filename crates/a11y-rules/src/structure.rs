@@ -595,6 +595,33 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     }
 
     beschreibungslisten(doc, out);
+    verwaiste_eintraege(doc, out);
+}
+
+/// Ein Listeneintrag ohne Liste.
+///
+/// Die Prüfung oben läuft über Listen und sieht deshalb nur, was *in* einer
+/// steht. Ein `<li>`, das gar keine Liste über sich hat, wird dabei nie
+/// besucht — für die Assistenztechnik kündigt es aber eine Aufzählung an, die
+/// es nicht gibt.
+fn verwaiste_eintraege<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if !ist_listeneintrag(n) {
+            continue;
+        }
+        let in_liste = a11y_dom::ancestors(n).any(ist_liste);
+        if !in_liste {
+            out.push(
+                Finding::fail(
+                    "lists/item-outside-list",
+                    "Der Listeneintrag steht außerhalb einer Liste.",
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
+            );
+        }
+    }
 }
 
 /// Ob dieser Knoten ein Definitionsbegriff ist — als `<dt>` oder per `role`.
