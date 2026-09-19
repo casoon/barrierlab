@@ -196,20 +196,36 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         // Kleinschreiben vor dem Vergleich: HTML-Attributwerte sind nicht
         // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
         let c = content.to_ascii_lowercase().replace(' ', "");
-        let locked = c.contains("user-scalable=no")
-            || c.contains("user-scalable=0")
-            || c.split(',').any(|p| {
-                p.strip_prefix("maximum-scale=")
-                    .and_then(|v| v.parse::<f32>().ok())
-                    .is_some_and(|v| v < 2.0)
-            });
-        if locked {
+        let gesperrt = c.contains("user-scalable=no") || c.contains("user-scalable=0");
+        let max = c.split(',').find_map(|p| {
+            p.strip_prefix("maximum-scale=")
+                .and_then(|v| v.parse::<f32>().ok())
+        });
+
+        // Unter 200 %: verletzt 1.4.4 unmittelbar.
+        if gesperrt || max.is_some_and(|v| v < 2.0) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-locked",
                     "Der Viewport verhindert oder begrenzt das Zoomen.",
                 )
                 .with_severity(Severity::High)
+                .with_wcag(["1.4.4"])
+                .at(at(n.id())),
+            );
+            continue;
+        }
+
+        // Zwischen 200 % und 500 %: 1.4.4 ist erfüllt, aber die Begrenzung
+        // trifft alle, die stärker vergrößern müssen. Eigene Kennung statt
+        // derselben, weil der eine Fall ein Verstoß ist und der andere nicht.
+        if max.is_some_and(|v| v < 5.0) {
+            out.push(
+                Finding::fail(
+                    "zoom/viewport-scale-limited",
+                    "Der Viewport begrenzt die Vergrößerung auf weniger als 500 %.",
+                )
+                .with_severity(Severity::Low)
                 .with_wcag(["1.4.4"])
                 .at(at(n.id())),
             );
@@ -577,23 +593,103 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             );
         }
     }
+
+    beschreibungslisten(doc, out);
+}
+
+/// Ob dieser Knoten ein Definitionsbegriff ist — als `<dt>` oder per `role`.
+fn ist_begriff<'a, N: Node<'a>>(n: N) -> bool {
+    n.local_name() == "dt" || n.attr("role") == Some("term")
+}
+
+/// Ob dieser Knoten eine Definition ist.
+fn ist_definition<'a, N: Node<'a>>(n: N) -> bool {
+    n.local_name() == "dd" || n.attr("role") == Some("definition")
+}
+
+/// Ein Begriff ohne Definition.
+///
+/// In einer Beschreibungsliste gehört zu jedem `<dt>` mindestens ein `<dd>`.
+/// Fehlt es, kündigt die Auszeichnung eine Zuordnung an, die es nicht gibt —
+/// die Assistenztechnik liest einen Begriff vor, zu dem nichts folgt.
+///
+/// Geprüft wird unter demselben Elternknoten, weil HTML seit einiger Zeit auch
+/// `<div>`-Gruppen innerhalb einer `<dl>` erlaubt. Ein `<dt>` in einer solchen
+/// Gruppe braucht sein `<dd>` dort, nicht irgendwo in der Liste.
+fn beschreibungslisten<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if !ist_begriff(n) {
+            continue;
+        }
+        let Some(eltern) = n.parent() else { continue };
+        let hat_definition = eltern
+            .children()
+            .filter(|c| c.kind() == a11y_dom::NodeKind::Element)
+            .any(ist_definition);
+
+        if !hat_definition {
+            out.push(
+                Finding::fail(
+                    "lists/term-without-definition",
+                    "Zu diesem Begriff gibt es keine Definition.",
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
+            );
+        }
+    }
+}
+
+/// Ob im Teilbaum eine Kopfzelle steckt — als `<th>` oder per Rolle.
+fn hat_kopfzelle<'a, N: Node<'a>>(n: N) -> bool {
+    a11y_dom::descendants(n).any(|d| {
+        d.is_element("th") || matches!(d.attr("role"), Some("columnheader") | Some("rowheader"))
+    })
 }
 
 fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     for n in elements(doc)
         .filter(|n| n.is_element("table") || matches!(n.attr("role"), Some("table") | Some("grid")))
     {
-        // Layouttabellen sind explizit ausgezeichnet und nicht gemeint.
+        // Als präsentational ausgezeichnet: keine Datentabelle. Dann dürfen
+        // dort aber auch keine Kopfzellen stehen — die Auszeichnung sagt „das
+        // ist keine Tabelle", die Kopfzellen sagen das Gegenteil, und die
+        // Assistenztechnik bekommt widersprüchliche Angaben.
         if matches!(n.attr("role"), Some("presentation") | Some("none")) {
+            if hat_kopfzelle(n) {
+                out.push(
+                    Finding::fail(
+                        "tables/presentational-with-headers",
+                        "Die Tabelle ist als präsentational ausgezeichnet, enthält aber Kopfzellen.",
+                    )
+                    .with_severity(Severity::Medium)
+                    .with_wcag(["1.3.1"])
+                    .at(at(n.id())),
+                );
+            }
             continue;
         }
-        // Eine Kopfzelle kann `<th>` sein oder per Rolle ausgezeichnet. Ohne
-        // die Rollen meldete die Regel eine Tabelle als kopflos, deren Koepfe
-        // fuer die Assistenztechnik da sind -- ein falscher Befund.
-        let hat_th = a11y_dom::descendants(n).any(|d| {
-            d.is_element("th") || matches!(d.attr("role"), Some("columnheader") | Some("rowheader"))
-        });
-        if !hat_th {
+
+        // Ein Name macht aus einer Tabelle erst eine auffindbare Tabelle: Wer
+        // sich eine Tabellenliste ausgeben lässt, sieht sonst nur „Tabelle".
+        // Heuristisch, weil eine Tabelle ohne Namen nicht zwingend falsch ist
+        // — deshalb Review, nicht Fail.
+        let benannt = n.children().any(|c| c.is_element("caption"))
+            || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+            || n.has_attr("aria-labelledby");
+        if !benannt {
+            out.push(
+                Finding::review(
+                    "tables/name-missing",
+                    "Die Tabelle hat weder <caption> noch aria-label.",
+                )
+                .with_severity(Severity::Low)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
+            );
+        }
+        if !hat_kopfzelle(n) {
             out.push(
                 Finding::fail(
                     "tables/header-missing",
@@ -626,7 +722,7 @@ pub const METAS: &[Meta] = &[
         help: "Jede Seite braucht einen aussagekräftigen <title>.",
     },
     Meta {
-        ids: &["zoom/viewport-locked"],
+        ids: &["zoom/viewport-locked", "zoom/viewport-scale-limited"],
         tier: Tier::Structure,
         wcag: &["1.4.4"],
         severity: Severity::High,
@@ -693,14 +789,22 @@ pub const METAS: &[Meta] = &[
         help: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
     },
     Meta {
-        ids: &["lists/invalid-structure", "lists/empty"],
+        ids: &[
+            "lists/invalid-structure",
+            "lists/empty",
+            "lists/term-without-definition",
+        ],
         tier: Tier::Structure,
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
     },
     Meta {
-        ids: &["tables/header-missing"],
+        ids: &[
+            "tables/header-missing",
+            "tables/name-missing",
+            "tables/presentational-with-headers",
+        ],
         tier: Tier::Structure,
         wcag: &["1.3.1"],
         severity: Severity::High,

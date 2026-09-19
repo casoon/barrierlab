@@ -3,7 +3,7 @@ members = ["crates/a11y-report", "crates/a11y-dom", "crates/accname", "crates/a1
 resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/casoon/a11y-core"
@@ -12,9 +12,9 @@ authors = ["Jörn Seidel <info@casoon.de>"]
 categories = ["accessibility", "web-programming"]
 
 [workspace.dependencies]
-a11y-report = { version = "0.4.0", path = "crates/a11y-report" }
-a11y-dom = { version = "0.4.0", path = "crates/a11y-dom" }
-accname = { version = "0.4.0", path = "crates/accname" }
+a11y-report = { version = "0.5.0", path = "crates/a11y-report" }
+a11y-dom = { version = "0.5.0", path = "crates/a11y-dom" }
+accname = { version = "0.5.0", path = "crates/accname" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
