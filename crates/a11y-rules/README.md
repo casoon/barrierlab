@@ -48,14 +48,17 @@ Vermerk haben.
 
 ## Regeln
 
-**Tier 1** (Struktur), 20 Kennungen: `document/lang-missing`,
+**Tier 1** (Struktur), 24 Kennungen: `document/lang-missing`,
 `document/lang-invalid`, `document/title-missing`, `document/title-empty`,
-`zoom/viewport-locked`, `headings/empty`, `headings/skip-level`,
-`headings/h1-missing`, `images/alt-missing`, `images/alt-suspicious`,
-`forms/label-missing`, `forms/placeholder-as-label`, `aria/role-invalid`,
-`aria/role-abstract`, `aria/reference-missing`, `ids/duplicate`,
-`keyboard/positive-tabindex`, `keyboard/hidden-focusable`,
-`lists/invalid-structure`, `tables/header-missing`.
+`zoom/viewport-locked`, `zoom/viewport-scale-limited`, `headings/empty`,
+`headings/skip-level`, `headings/h1-missing`, `images/alt-missing`,
+`images/alt-suspicious`, `forms/label-missing`, `forms/placeholder-as-label`,
+`aria/role-invalid`, `aria/role-abstract`, `aria/reference-missing`,
+`ids/duplicate`, `keyboard/positive-tabindex`, `keyboard/hidden-focusable`,
+`lists/invalid-structure`, `lists/empty`, `lists/term-without-definition`,
+`tables/header-missing`, `tables/name-missing`,
+`tables/presentational-with-headers`.
+
 
 **Tier 2** (Semantik), 4 Kennungen: `links/name-missing`,
 `buttons/name-missing`, `svg/name-missing`, `links/ambiguous-name`.

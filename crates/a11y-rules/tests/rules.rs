@@ -948,3 +948,216 @@ fn einstufungen_bleiben_wo_sie_begruendet_wurden() {
     // Ein Feld ohne Label ist fuer Screenreader-Nutzer unbenutzbar.
     assert_eq!(sev("forms/label-missing"), Severity::Critical);
 }
+
+// --- Die Luecken, die beim Abloesen der auditmysite-Regeln auffielen -----
+
+#[test]
+fn begriff_ohne_definition() {
+    let doc = sauber()
+        .open("body")
+        .open("dl")
+        // Vollstaendig: Begriff mit Definition.
+        .open("dt")
+        .attr("id", "gut")
+        .text("HTML")
+        .close()
+        .open("dd")
+        .text("Auszeichnungssprache")
+        .close()
+        .close()
+        .open("dl")
+        // Unvollstaendig: Begriff allein.
+        .open("dt")
+        .attr("id", "schlecht")
+        .text("CSS")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let treffer: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "lists/term-without-definition")
+        .collect();
+    assert_eq!(
+        treffer.len(),
+        1,
+        "nur der zweite Begriff ist unvollstaendig: {:?}",
+        ids(&r)
+    );
+}
+
+#[test]
+fn begriff_in_einer_div_gruppe_braucht_seine_definition_dort() {
+    // HTML erlaubt <div>-Gruppen in einer <dl>. Ein <dt> in einer solchen
+    // Gruppe braucht sein <dd> dort, nicht irgendwo in der Liste.
+    let doc = sauber()
+        .open("body")
+        .open("dl")
+        .open("div")
+        .open("dt")
+        .text("A")
+        .close()
+        .close()
+        .open("div")
+        .open("dt")
+        .text("B")
+        .close()
+        .open("dd")
+        .text("b")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert_eq!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id == "lists/term-without-definition")
+            .count(),
+        1,
+        "nur die erste Gruppe ist unvollstaendig"
+    );
+}
+
+#[test]
+fn rollen_zaehlen_auch_bei_begriff_und_definition() {
+    let doc = sauber()
+        .open("body")
+        .open("div")
+        .open("div")
+        .attr("role", "term")
+        .text("A")
+        .close()
+        .open("div")
+        .attr("role", "definition")
+        .text("a")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&doc), "lists/term-without-definition"));
+}
+
+#[test]
+fn praesentationale_tabelle_mit_kopfzellen() {
+    let doc = sauber()
+        .open("body")
+        // Sauber: Layouttabelle ohne Koepfe.
+        .open("table")
+        .attr("role", "presentation")
+        .open("tr")
+        .open("td")
+        .text("x")
+        .close()
+        .close()
+        .close()
+        // Widerspruechlich: als praesentational ausgezeichnet, aber mit Kopf.
+        .open("table")
+        .attr("role", "none")
+        .open("tr")
+        .open("th")
+        .text("Kopf")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert_eq!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id == "tables/presentational-with-headers")
+            .count(),
+        1
+    );
+    // Und keine der beiden wird als kopflose Datentabelle gemeldet.
+    assert!(!hat(&r, "tables/header-missing"));
+}
+
+#[test]
+fn tabelle_ohne_namen_ist_review_nicht_fail() {
+    let doc = sauber()
+        .open("body")
+        .open("table")
+        .open("caption")
+        .text("Umsätze")
+        .close()
+        .open("tr")
+        .open("th")
+        .text("Jahr")
+        .close()
+        .close()
+        .close()
+        .open("table")
+        .attr("aria-label", "Kosten")
+        .open("tr")
+        .open("th")
+        .text("Jahr")
+        .close()
+        .close()
+        .close()
+        .open("table")
+        .open("tr")
+        .open("th")
+        .text("Jahr")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let treffer: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "tables/name-missing")
+        .collect();
+    assert_eq!(treffer.len(), 1, "caption und aria-label zaehlen als Name");
+    // Ob eine Tabelle einen Namen braucht, ist nicht zwingend entscheidbar.
+    assert_eq!(treffer[0].outcome, Outcome::Review);
+}
+
+#[test]
+fn viewport_unterscheidet_verstoss_von_begrenzung() {
+    let fall = |content: &str| {
+        let doc = Arena::builder()
+            .open("html")
+            .attr("lang", "de")
+            .open("head")
+            .open("title")
+            .text("x")
+            .close()
+            .open("meta")
+            .attr("name", "viewport")
+            .attr("content", content)
+            .close()
+            .close()
+            .close()
+            .build();
+        let r = run(&doc);
+        ids(&r)
+            .iter()
+            .filter(|i| i.starts_with("zoom/"))
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+    };
+
+    // Unter 200 %: Verstoss gegen 1.4.4.
+    assert_eq!(fall("maximum-scale=1.5"), vec!["zoom/viewport-locked"]);
+    assert_eq!(fall("user-scalable=NO"), vec!["zoom/viewport-locked"]);
+
+    // Zwischen 200 und 500 %: erfuellt 1.4.4, begrenzt aber. Eigene Kennung,
+    // und nicht beide zugleich.
+    assert_eq!(fall("maximum-scale=3"), vec!["zoom/viewport-scale-limited"]);
+
+    // Ab 500 % oder ohne Begrenzung: nichts.
+    assert!(fall("maximum-scale=5").is_empty());
+    assert!(fall("width=device-width, initial-scale=1").is_empty());
+}
