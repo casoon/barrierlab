@@ -773,3 +773,178 @@ fn keine_kennung_ist_doppelt_deklariert() {
     alle.dedup();
     assert_eq!(alle.len(), anzahl, "doppelt deklarierte Kennung");
 }
+
+// --- Verschaerfungen gegenueber 0.3.0 ------------------------------------
+
+/// HTML-Attributwerte sind nicht normiert. `user-scalable=NO` sperrt den Zoom
+/// genauso wie die Kleinschreibung -- bis 0.3.0 verglich die Regel den
+/// `content`-Wert unveraendert und sah darueber hinweg.
+#[test]
+fn viewport_sperre_ist_schreibweisenunabhaengig() {
+    for content in [
+        "width=device-width, user-scalable=NO",
+        "width=device-width, User-Scalable=No",
+        "width=device-width, MAXIMUM-SCALE=1.0",
+    ] {
+        let doc = Arena::builder()
+            .open("html")
+            .attr("lang", "de")
+            .open("head")
+            .open("title")
+            .text("x")
+            .close()
+            .open("meta")
+            .attr("name", "viewport")
+            .attr("content", content)
+            .close()
+            .close()
+            .close()
+            .build();
+        assert!(hat(&run(&doc), "zoom/viewport-locked"), "{content}");
+    }
+}
+
+/// `role="list"` steht im Markup und ist damit Tier-1-entscheidbar. Bis 0.3.0
+/// sah die Regel nur `<ul>`/`<ol>` und war fuer ARIA-Listen blind.
+#[test]
+fn liste_per_rolle_wird_geprueft() {
+    let doc = sauber()
+        .open("body")
+        .open("div")
+        .attr("role", "list")
+        .open("span")
+        .text("kein Eintrag")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&doc), "lists/invalid-structure"));
+}
+
+/// ... und eine korrekt ausgezeichnete ARIA-Liste darf nicht auffallen.
+#[test]
+fn korrekte_rollenliste_erzeugt_keinen_befund() {
+    let doc = sauber()
+        .open("body")
+        .open("div")
+        .attr("role", "list")
+        .open("div")
+        .attr("role", "listitem")
+        .text("Eintrag")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+}
+
+/// Eine Liste ohne Eintraege kuendigt der Assistenztechnik eine Struktur an,
+/// die es nicht gibt. Neue Kennung `lists/empty`.
+#[test]
+fn leere_liste_wird_gemeldet() {
+    let doc = sauber()
+        .open("body")
+        .open("ul")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&doc), "lists/empty"));
+}
+
+/// `role="presentation"` sagt ausdruecklich, dass hier keine Liste gemeint
+/// ist -- ein Strukturbefund darauf waere falsch.
+#[test]
+fn praesentationsliste_erzeugt_keinen_strukturbefund() {
+    let doc = sauber()
+        .open("body")
+        .open("ul")
+        .attr("role", "presentation")
+        .open("div")
+        .text("Layout")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+}
+
+/// Eine Kopfzelle kann per Rolle ausgezeichnet sein. Bis 0.3.0 suchte die
+/// Regel nur `<th>` und meldete solche Tabellen faelschlich als kopflos.
+#[test]
+fn kopfzelle_per_rolle_zaehlt_als_kopf() {
+    let doc = sauber()
+        .open("body")
+        .open("table")
+        .open("tr")
+        .open("td")
+        .attr("role", "columnheader")
+        .text("Spalte")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "tables/header-missing"), "{:?}", r.findings);
+}
+
+/// ... und eine Tabelle, die nur per Rolle eine ist, wird ueberhaupt geprueft.
+#[test]
+fn rollentabelle_ohne_kopf_faellt_auf() {
+    let doc = sauber()
+        .open("body")
+        .open("div")
+        .attr("role", "table")
+        .open("div")
+        .attr("role", "row")
+        .open("div")
+        .attr("role", "cell")
+        .text("x")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&doc), "tables/header-missing"));
+}
+
+/// Die Einstufungen, bei denen eine stille Absenkung fachlich etwas kaputt
+/// machen würde. Nicht der ganze Katalog — nur die Fälle, über die schon
+/// einmal entschieden wurde.
+#[test]
+fn einstufungen_bleiben_wo_sie_begruendet_wurden() {
+    use a11y_report::Severity;
+
+    let metas: Vec<_> = a11y_rules::structure_metas()
+        .iter()
+        .chain(a11y_rules::semantics_metas())
+        .collect();
+    let sev = |id: &str| {
+        metas
+            .iter()
+            .find(|m| m.ids.contains(&id))
+            .unwrap_or_else(|| panic!("Kennung {id} nicht deklariert"))
+            .severity
+    };
+
+    // Bricht die Tabreihenfolge reproduzierbar und fuer jeden, der mit der
+    // Tastatur navigiert.
+    assert_eq!(sev("keyboard/positive-tabindex"), Severity::High);
+
+    // WCAG 4.1.1 wurde in WCAG 2.2 entfernt; der echte Schaden entsteht erst
+    // bei einer Referenz, und dafuer gibt es aria/reference-missing.
+    assert_eq!(sev("ids/duplicate"), Severity::Medium);
+
+    // Ein Feld ohne Label ist fuer Screenreader-Nutzer unbenutzbar.
+    assert_eq!(sev("forms/label-missing"), Severity::Critical);
+}

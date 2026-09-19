@@ -193,7 +193,9 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         let Some(content) = n.attr("content") else {
             continue;
         };
-        let c = content.replace(' ', "");
+        // Kleinschreiben vor dem Vergleich: HTML-Attributwerte sind nicht
+        // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
+        let c = content.to_ascii_lowercase().replace(' ', "");
         let locked = c.contains("user-scalable=no")
             || c.contains("user-scalable=0")
             || c.split(',').any(|p| {
@@ -474,7 +476,10 @@ fn tabindex<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                     "keyboard/positive-tabindex",
                     format!("tabindex=\"{value}\" bricht die natürliche Tabreihenfolge."),
                 )
-                .with_severity(Severity::Medium)
+                // Hoch, nicht mittel: Ein positiver tabindex bricht die
+                // Tabreihenfolge reproduzierbar und für jeden, der mit der
+                // Tastatur navigiert — das ist kein Schönheitsfehler.
+                .with_severity(Severity::High)
                 .with_wcag(["2.4.3"])
                 .at(at(n.id())),
             );
@@ -514,16 +519,38 @@ fn hidden_focusable<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- Listen und Tabellen --------------------------------------------------
 
+/// Ob dieser Knoten eine Liste ist -- als Tag oder per `role`-Attribut.
+///
+/// Das `role`-Attribut gehoert zu Tier 1: Es steht im Markup und braucht keine
+/// berechnete Semantik. Ohne diese Zeile waere `<div role="list">` fuer die
+/// Regel unsichtbar, obwohl es fuer die Assistenztechnik eine Liste ist.
+fn ist_liste<'a, N: Node<'a>>(n: N) -> bool {
+    matches!(n.local_name(), "ul" | "ol") || n.attr("role") == Some("list")
+}
+
+/// Ob dieser Knoten als Listeneintrag zaehlt.
+fn ist_listeneintrag<'a, N: Node<'a>>(n: N) -> bool {
+    n.local_name() == "li" || n.attr("role") == Some("listitem")
+}
+
 fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let tag = n.local_name();
-        if !matches!(tag, "ul" | "ol") {
+        if !ist_liste(n) {
             continue;
         }
-        let fremd = n
+        // Der Autor sagt ausdruecklich, dass hier keine Liste gemeint ist.
+        if matches!(n.attr("role"), Some("presentation") | Some("none")) {
+            continue;
+        }
+        let tag = n.local_name();
+        let kinder: Vec<_> = n
             .children()
             .filter(|c| c.kind() == a11y_dom::NodeKind::Element)
-            .any(|c| !matches!(c.local_name(), "li" | "script" | "template"));
+            .collect();
+
+        let fremd = kinder
+            .iter()
+            .any(|c| !ist_listeneintrag(*c) && !matches!(c.local_name(), "script" | "template"));
         if fremd {
             out.push(
                 Finding::fail(
@@ -535,16 +562,37 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                 .at(at(n.id())),
             );
         }
+
+        // Eine Liste ohne Eintraege kuendigt der Assistenztechnik eine
+        // Struktur an, die es nicht gibt.
+        if !kinder.iter().any(|c| ist_listeneintrag(*c)) {
+            out.push(
+                Finding::fail(
+                    "lists/empty",
+                    format!("<{tag}> enthält keine Listeneinträge."),
+                )
+                .with_severity(Severity::Low)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
+            );
+        }
     }
 }
 
 fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
-    for n in elements(doc).filter(|n| n.is_element("table")) {
+    for n in elements(doc)
+        .filter(|n| n.is_element("table") || matches!(n.attr("role"), Some("table") | Some("grid")))
+    {
         // Layouttabellen sind explizit ausgezeichnet und nicht gemeint.
         if matches!(n.attr("role"), Some("presentation") | Some("none")) {
             continue;
         }
-        let hat_th = a11y_dom::descendants(n).any(|d| d.is_element("th"));
+        // Eine Kopfzelle kann `<th>` sein oder per Rolle ausgezeichnet. Ohne
+        // die Rollen meldete die Regel eine Tabelle als kopflos, deren Koepfe
+        // fuer die Assistenztechnik da sind -- ein falscher Befund.
+        let hat_th = a11y_dom::descendants(n).any(|d| {
+            d.is_element("th") || matches!(d.attr("role"), Some("columnheader") | Some("rowheader"))
+        });
         if !hat_th {
             out.push(
                 Finding::fail(
@@ -634,7 +682,7 @@ pub const METAS: &[Meta] = &[
         ids: &["keyboard/positive-tabindex"],
         tier: Tier::Structure,
         wcag: &["2.4.3"],
-        severity: Severity::Medium,
+        severity: Severity::High,
         help: "Positive tabindex-Werte brechen die Tabreihenfolge.",
     },
     Meta {
@@ -645,11 +693,11 @@ pub const METAS: &[Meta] = &[
         help: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
     },
     Meta {
-        ids: &["lists/invalid-structure"],
+        ids: &["lists/invalid-structure", "lists/empty"],
         tier: Tier::Structure,
         wcag: &["1.3.1"],
         severity: Severity::Medium,
-        help: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben.",
+        help: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
     },
     Meta {
         ids: &["tables/header-missing"],
