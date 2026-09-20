@@ -340,6 +340,64 @@ fn ueberschriften_luecke_und_leere_ueberschrift() {
 }
 
 #[test]
+fn eine_ueberschrift_mit_benanntem_bild_ist_nicht_leer() {
+    // Eine Überschrift, die aus einem beschrifteten Logo besteht, trägt einen
+    // Namen. Bis 0.10.0 meldete die Regel sie als leer, weil sie nur nach Text
+    // und `aria-label` an der Überschrift selbst sah.
+    let doc = sauber()
+        .open("body")
+        .open("main")
+        .open("h1")
+        .open("img")
+        .attr("src", "logo.png")
+        .attr("alt", "Firmenlogo")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "headings/empty"), "{:?}", r.findings);
+}
+
+#[test]
+fn eine_ueberschrift_mit_aria_labelledby_ist_nicht_leer() {
+    let doc = sauber()
+        .open("body")
+        .open("main")
+        .open("span")
+        .attr("id", "titel")
+        .text("Der Name steht hier")
+        .close()
+        .open("h1")
+        .attr("aria-labelledby", "titel")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "headings/empty"), "{:?}", r.findings);
+}
+
+#[test]
+fn eine_wirklich_leere_ueberschrift_faellt_weiterhin_auf() {
+    // Die Gegenprobe: ein Bild ohne Alternativtext stiftet keinen Namen.
+    let doc = sauber()
+        .open("body")
+        .open("main")
+        .open("h1")
+        .open("img")
+        .attr("src", "logo.png")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(hat(&r, "headings/empty"));
+}
+
+#[test]
 fn label_zuordnung_ueber_alle_vier_wege() {
     let doc = sauber()
         .open("body")

@@ -2,7 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use a11y_dom::{closest, elements, subtree_text, Document, Node, NodeId, Tier};
+use a11y_dom::{
+    closest, elements, has_text, self_and_descendants, subtree_text, Document, Node, NodeId, Tier,
+};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::registry::{Meta, StructureRule};
@@ -252,6 +254,28 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- Überschriften --------------------------------------------------------
 
+/// Ob eine Überschrift leer ist — entschieden allein aus der Struktur.
+///
+/// „Leer" hieß bis 0.10.0: kein Text im Teilbaum und kein `aria-label`. Das
+/// übersah zwei Wege, auf denen eine Überschrift sehr wohl einen Namen trägt —
+/// `aria-labelledby` und ein Bild mit Alternativtext. Eine Überschrift, die aus
+/// einem beschrifteten Logo besteht, ist keine leere Überschrift, und der
+/// Befund dagegen war schlicht falsch.
+///
+/// Der Accessible Name wäre die genauere Auskunft, aber er ist Tier 2. Diese
+/// Regel gilt Tier 1 und nähert ihn deshalb strukturell an: Sie fragt nicht,
+/// *wie* der Name lautet, sondern ob überhaupt einer gestiftet wird.
+fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
+    if has_text(n) || n.has_attr("aria-label") || n.has_attr("aria-labelledby") {
+        return false;
+    }
+    !self_and_descendants(n).any(|d| {
+        d.attr("alt").is_some_and(|v| !v.trim().is_empty())
+            || d.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+            || d.has_attr("aria-labelledby")
+    })
+}
+
 fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     let mut last = 0u8;
     let mut any = false;
@@ -265,7 +289,7 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         if level == 1 {
             h1s.push(n.id());
         }
-        if subtree_text(n).trim().is_empty() && !n.has_attr("aria-label") {
+        if heading_is_empty(n) {
             out.push(
                 Finding::fail("headings/empty", "Die Überschrift hat keinen Text.")
                     .with_severity(Severity::Medium)
