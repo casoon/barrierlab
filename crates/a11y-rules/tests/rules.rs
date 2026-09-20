@@ -1683,3 +1683,68 @@ fn mehrere_h1_sind_review_nicht_fail() {
         .expect("muss gemeldet werden");
     assert_eq!(f.outcome, Outcome::Review);
 }
+
+/// Nichtssagender Linktext und mehrdeutiger Linktext sind zwei verschiedene
+/// Regeln. Der eine Befund sagt „dieser Text hilft niemandem", der andere
+/// „zwei Links heißen gleich, führen aber woandershin".
+#[test]
+fn nichtssagender_linktext_ist_eine_eigene_regel() {
+    let arena = vollstaendig()
+        .open("a")
+        .attr("href", "/eins")
+        .text("mehr")
+        .close()
+        .open("a")
+        .attr("href", "/zwei")
+        .text("Click here")
+        .close()
+        .close()
+        .build();
+    let doc = MitSemantik::new(&arena);
+    let r = run_with_semantics(&doc);
+
+    let generisch: Vec<&str> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "links/generic-name")
+        .map(|f| f.message.as_str())
+        .collect();
+    assert_eq!(generisch.len(), 2, "{:?}", ids(&r));
+    // Heuristisch -- die Liste kann einen Namen treffen, der im Zusammenhang
+    // doch eindeutig ist.
+    assert!(r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "links/generic-name")
+        .all(|f| f.outcome == Outcome::Review));
+    // Verschiedene Ziele, verschiedene Namen -- nicht mehrdeutig.
+    assert!(!hat(&r, "links/ambiguous-name"));
+}
+
+/// Ein ausdruecklich dekoratives Bild braucht kein alt. Ihm eins abzuverlangen
+/// hiesse, eine bewusste Angabe des Autors zu ignorieren.
+#[test]
+fn ausdruecklich_dekorative_bilder_brauchen_kein_alt() {
+    let doc = vollstaendig()
+        .open("img")
+        .attr("src", "spacer.gif")
+        .attr("role", "presentation")
+        .close()
+        .open("img")
+        .attr("src", "bg.jpg")
+        .attr("aria-hidden", "true")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "images/alt-missing"), "{:?}", ids(&r));
+
+    // Ein gewoehnliches Bild ohne alt faellt weiterhin auf.
+    let ohne = vollstaendig()
+        .open("img")
+        .attr("src", "foto.jpg")
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&ohne), "images/alt-missing"));
+}

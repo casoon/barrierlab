@@ -507,8 +507,27 @@ fn skip_link<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- Bilder ---------------------------------------------------------------
 
+/// Ob dieses Element ausdrücklich aus dem Accessibility-Tree genommen wurde.
+///
+/// Ein Bild mit `role="presentation"` oder `aria-hidden="true"` ist erklärt
+/// dekorativ. Ihm ein `alt` abzuverlangen hieße, eine bewusste Angabe des
+/// Autors zu ignorieren und einen Befund zu melden, den niemand beheben kann,
+/// ohne die Angabe zurückzunehmen.
+fn ausdruecklich_dekorativ<'a, N: Node<'a>>(n: N) -> bool {
+    if n.attr("aria-hidden") == Some("true") {
+        return true;
+    }
+    n.attr("role").is_some_and(|r| {
+        r.split_whitespace()
+            .any(|x| x.eq_ignore_ascii_case("presentation") || x.eq_ignore_ascii_case("none"))
+    })
+}
+
 fn images<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     for n in elements(doc).filter(|n| n.is_element("img")) {
+        if ausdruecklich_dekorativ(n) {
+            continue;
+        }
         match n.attr("alt") {
             None => out.push(
                 Finding::fail("images/alt-missing", "Das Bild hat kein alt-Attribut.")

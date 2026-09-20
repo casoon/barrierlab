@@ -91,6 +91,73 @@ fn svg_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
 
 /// Gleicher Linktext, unterschiedliches Ziel — für Screenreader-Nutzer, die
 /// sich eine Linkliste ausgeben lassen, nicht unterscheidbar.
+/// Namen, die für sich genommen nichts über das Ziel sagen.
+///
+/// Wer eine Liste aller Links abruft — Screenreader können das —, hört eine
+/// Folge von „mehr", „hier", „weiterlesen". Welcher wohin führt, steht nur im
+/// umgebenden Text, den diese Liste nicht mitliefert.
+/// Bewusst eng gehalten. „Start" oder „Info" sind als Navigationsbeschriftung
+/// völlig in Ordnung — aufgenommen ist nur, was auf den umgebenden Satz
+/// angewiesen ist („hier", „dieser Link") oder gar nichts benennt („mehr",
+/// „weiterlesen").
+const NICHTSSAGEND: &[&str] = &[
+    "hier",
+    "hier klicken",
+    "klick hier",
+    "klicken sie hier",
+    "siehe hier",
+    "mehr",
+    "mehr dazu",
+    "mehr erfahren",
+    "mehr lesen",
+    "weiterlesen",
+    "weiter",
+    "dieser link",
+    "link",
+    "click here",
+    "click",
+    "here",
+    "more",
+    "read more",
+    "learn more",
+    "see more",
+    "continue",
+    "this link",
+    "link here",
+];
+
+/// Heuristisch: Die Liste kann einen Namen treffen, der im Zusammenhang doch
+/// eindeutig ist. Deshalb `REVIEW`, nicht `FAIL`.
+fn generic_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if !n.is_element("a") || !n.has_attr("href") || doc.is_ignored(n) {
+            continue;
+        }
+        let Some(name) = doc.accessible_name(n) else {
+            continue;
+        };
+        let key = name
+            .trim()
+            .trim_end_matches(['.', '!', '…', '>', '›', '→'])
+            .trim()
+            .to_lowercase();
+        if NICHTSSAGEND.contains(&key.as_str()) {
+            out.push(
+                Finding::review(
+                    "links/generic-name",
+                    format!(
+                        "Der Linktext \"{}\" sagt nichts über das Ziel.",
+                        name.trim()
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["2.4.4"])
+                .at(at(n.id())),
+            );
+        }
+    }
+}
+
 fn ambiguous_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
     use std::collections::HashMap;
     let mut nach_name: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
@@ -166,11 +233,24 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
     },
+    Meta {
+        ids: &["links/generic-name"],
+        tier: Tier::Semantics,
+        wcag: &["2.4.4"],
+        severity: Severity::Medium,
+        help: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, &mut Vec<Finding>); 4] {
-    [link_names, button_names, svg_names, ambiguous_link_names]
+fn funktionen<D: Semantics>() -> [fn(&D, &mut Vec<Finding>); 5] {
+    [
+        link_names,
+        button_names,
+        svg_names,
+        ambiguous_link_names,
+        generic_link_names,
+    ]
 }
 
 /// Alle Tier-2-Regeln.

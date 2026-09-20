@@ -28,7 +28,7 @@ assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 
 // Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
 // Semantik noch Darstellung liefert.
-assert_eq!(report.summary.rules_not_run, 6);
+assert_eq!(report.summary.rules_not_run, 7);
 ```
 
 Mit einem Host, der `Semantics` erfüllt, laufen die über `run_with_semantics`
@@ -84,8 +84,14 @@ Seite darf ohne Navigation auskommen. `landmarks/navigation-missing`,
 über Linktext und Klassennamen erkennen.
 
 
-**Tier 2** (Semantik), 4 Kennungen: `links/name-missing`,
-`buttons/name-missing`, `svg/name-missing`, `links/ambiguous-name`.
+**Tier 2** (Semantik), 5 Kennungen: `links/name-missing`,
+`buttons/name-missing`, `svg/name-missing`, `links/ambiguous-name`,
+`links/generic-name`.
+
+`links/ambiguous-name` und `links/generic-name` sind zwei verschiedene Regeln:
+Die eine sagt „zwei Links heißen gleich, führen aber woandershin", die andere
+„dieser Text sagt für sich genommen nichts über das Ziel". Beide liefern
+`REVIEW`.
 
 **Tier 3** (Darstellung), 2 Kennungen: `contrast/text-insufficient`,
 `contrast/text-undetermined`.
