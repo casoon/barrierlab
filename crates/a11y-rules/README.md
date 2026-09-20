@@ -26,13 +26,23 @@ let doc = Arena::builder()
 let report = run(&doc);
 assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 
-// Nicht beurteilt: die Tier-2-Regeln, weil dieser Host keine Semantik liefert.
-assert_eq!(report.summary.rules_not_run, 4);
+// Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
+// Semantik noch Darstellung liefert.
+assert_eq!(report.summary.rules_not_run, 6);
 ```
 
 Mit einem Host, der `Semantics` erfüllt, laufen die über `run_with_semantics`
-mit. Die Trennung ist keine Formalie: Regeln, die einen echten Accessible Name
-brauchen — Links, Buttons, SVG —, dürfen ohne ihn nicht raten.
+mit; ein Host mit `Semantics` **und** `Rendering` nimmt `run_full`. Die Trennung
+ist keine Formalie: Regeln, die einen echten Accessible Name brauchen — Links,
+Buttons, SVG —, dürfen ohne ihn nicht raten, und Kontrast lässt sich aus
+statischem Markup überhaupt nicht bestimmen.
+
+| Host liefert | Einstieg |
+|---|---|
+| nur Struktur | `run` |
+| + Semantik | `run_with_semantics` |
+| + Darstellung | `run_with_rendering` |
+| beides | `run_full` |
 
 ## Eine Namensmenge für Befunde und Vermerke
 
@@ -63,6 +73,16 @@ Vermerk haben.
 
 **Tier 2** (Semantik), 4 Kennungen: `links/name-missing`,
 `buttons/name-missing`, `svg/name-missing`, `links/ambiguous-name`.
+
+**Tier 3** (Darstellung), 2 Kennungen: `contrast/text-insufficient`,
+`contrast/text-undetermined`.
+
+Zu Tier 3 gehört eine Auflage an den Host: `ComputedStyle::background_color` ist
+die **effektive** Hintergrundfarbe, über die Vorfahren aufgelöst. Kann der Host
+sie nicht bestimmen — Hintergrundbild, Verlauf, `background-blend-mode` —,
+liefert er `None`, und die Regel meldet `contrast/text-undetermined` mit
+`UNTESTED`. Eine Prüfung gegen geratenes Weiß wäre schlimmer als keine Aussage:
+Sie erzeugt ein `PASS`, auf das sich jemand verlässt.
 
 ## Lizenz
 

@@ -7,7 +7,7 @@
 //!
 //! [`Semantics`]: a11y_dom::Semantics
 
-use a11y_dom::{Document, Semantics, Tier};
+use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
 /// Was über eine Regel unabhängig vom Host feststeht.
@@ -59,3 +59,17 @@ impl<D: Semantics> Clone for SemanticsRule<D> {
 }
 
 impl<D: Semantics> Copy for SemanticsRule<D> {}
+
+/// Eine Regel auf [`Tier::Rendering`] — braucht berechnete Stile und Geometrie.
+pub struct RenderingRule<D: Rendering> {
+    pub meta: Meta,
+    pub run: fn(&D, &mut Vec<Finding>),
+}
+
+impl<D: Rendering> Clone for RenderingRule<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<D: Rendering> Copy for RenderingRule<D> {}

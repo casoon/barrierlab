@@ -48,6 +48,11 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
+/// Wie viele Befund-Kennungen diese Deklarationen zusammen tragen.
+fn kennungen_in(metas: &'static [a11y_rules::Meta]) -> usize {
+    metas.iter().map(|m| m.ids.len()).sum()
+}
+
 /// Ein Dokument, das möglichst viele Regeln auslöst — Grundlage der
 /// Zusicherungen über die Namensmenge.
 fn fehlerhaft() -> Arena {
@@ -552,7 +557,10 @@ fn ohne_semantik_werden_tier2_regeln_als_nicht_gelaufen_vermerkt() {
         .build();
     let r = run(&doc);
 
-    assert_eq!(r.summary.rules_not_run, 4);
+    assert_eq!(
+        r.summary.rules_not_run,
+        kennungen_in(a11y_rules::semantics_metas()) + kennungen_in(a11y_rules::rendering_metas())
+    );
     assert!(
         !hat(&r, "links/name-missing"),
         "ohne Accessible Name darf die Regel nicht raten"
@@ -592,7 +600,11 @@ fn mit_semantik_laufen_tier2_regeln_mit() {
     let doc = MitSemantik::new(&arena);
     let r = run_with_semantics(&doc);
 
-    assert_eq!(r.summary.rules_not_run, 0);
+    // Tier 2 laeuft, Tier 3 nicht -- dieser Host liefert keine Darstellung.
+    assert_eq!(
+        r.summary.rules_not_run,
+        kennungen_in(a11y_rules::rendering_metas())
+    );
     assert_eq!(
         r.findings
             .iter()
@@ -679,6 +691,7 @@ fn jede_kennung_hinterlaesst_genau_einen_ausfuehrungsvermerk() {
     let deklariert: usize = a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
+        .chain(a11y_rules::rendering_metas())
         .map(|m| m.ids.len())
         .sum();
     assert_eq!(anzahl, deklariert, "ein Vermerk je deklarierter Kennung");
@@ -1212,4 +1225,198 @@ fn ein_verschachtelter_eintrag_gilt_nicht_als_verwaist() {
         .close()
         .build();
     assert!(!hat(&run(&doc), "lists/item-outside-list"));
+}
+
+// ===========================================================================
+// Tier 3 — Kontrast
+// ===========================================================================
+
+/// Ein Tier-3-Host für die Tests: die Arena plus eine Stiltabelle je Knoten.
+///
+/// Die Stile kommen als Tabelle herein, nicht aus einer CSS-Engine — geprüft
+/// wird die Regel, nicht das Auflösen der Kaskade. Genau die Aufteilung gilt
+/// auch in echt: Der Host löst auf, die Regel rechnet.
+struct MitDarstellung<'a> {
+    doc: &'a Arena,
+    stile: std::collections::HashMap<u32, a11y_dom::ComputedStyle>,
+}
+
+impl a11y_dom::Document for MitDarstellung<'_> {
+    type N<'n>
+        = ArenaNode<'n>
+    where
+        Self: 'n;
+
+    fn root(&self) -> Self::N<'_> {
+        self.doc.root()
+    }
+}
+
+impl a11y_dom::Rendering for MitDarstellung<'_> {
+    fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::ComputedStyle> {
+        self.stile.get(&node.id().0).cloned()
+    }
+
+    fn bounds<'n>(&'n self, _node: Self::N<'n>) -> Option<a11y_dom::Rect> {
+        None
+    }
+}
+
+fn farbe(r: u8, g: u8, b: u8) -> a11y_dom::Color {
+    a11y_dom::Color { r, g, b, a: 255 }
+}
+
+/// Stil für normalen Text in den übergebenen Farben.
+fn stil(
+    vorn: Option<a11y_dom::Color>,
+    hinten: Option<a11y_dom::Color>,
+    px: f32,
+) -> a11y_dom::ComputedStyle {
+    a11y_dom::ComputedStyle {
+        color: vorn,
+        background_color: hinten,
+        font_size_px: Some(px),
+        font_weight: Some(400),
+        display: Some("block".into()),
+        visibility: Some("visible".into()),
+    }
+}
+
+/// Baut ein Dokument mit einem `<p>` im Body und legt dessen Stil fest.
+fn mit_absatz(
+    text: &str,
+    s: a11y_dom::ComputedStyle,
+) -> (
+    Arena,
+    std::collections::HashMap<u32, a11y_dom::ComputedStyle>,
+) {
+    let arena = sauber()
+        .open("body")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .open("p")
+        .text(text)
+        .close()
+        .close()
+        .close()
+        .build();
+    // Der Absatz ist das einzige Element mit eigenem Text außer h1 und title.
+    let mut stile = std::collections::HashMap::new();
+    for n in elements(&arena) {
+        if n.is_element("p") {
+            stile.insert(n.id().0, s.clone());
+        }
+    }
+    (arena, stile)
+}
+
+#[test]
+fn schwacher_kontrast_faellt_auf() {
+    let (arena, stile) = mit_absatz(
+        "Kaum zu lesen",
+        stil(
+            Some(farbe(0x99, 0x99, 0x99)),
+            Some(farbe(255, 255, 255)),
+            16.0,
+        ),
+    );
+    let doc = MitDarstellung { doc: &arena, stile };
+    let r = a11y_rules::run_with_rendering(&doc);
+    assert!(
+        hat(&r, "contrast/text-insufficient"),
+        "unerwartet: {:?}",
+        ids(&r)
+    );
+}
+
+#[test]
+fn ausreichender_kontrast_meldet_nichts() {
+    let (arena, stile) = mit_absatz(
+        "Gut zu lesen",
+        stil(
+            Some(farbe(0x33, 0x33, 0x33)),
+            Some(farbe(255, 255, 255)),
+            16.0,
+        ),
+    );
+    let doc = MitDarstellung { doc: &arena, stile };
+    let r = a11y_rules::run_with_rendering(&doc);
+    assert!(!hat(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
+}
+
+#[test]
+fn grosser_text_darf_schwaecher_sein() {
+    // 3,5:1 — zu wenig für normalen Text, genug für großen.
+    let grau = farbe(0x8C, 0x8C, 0x8C);
+    let weiss = farbe(255, 255, 255);
+
+    let (arena, stile) = mit_absatz("Klein", stil(Some(grau), Some(weiss), 16.0));
+    let klein = MitDarstellung { doc: &arena, stile };
+    assert!(hat(
+        &a11y_rules::run_with_rendering(&klein),
+        "contrast/text-insufficient"
+    ));
+
+    let (arena2, stile2) = mit_absatz("Gross", stil(Some(grau), Some(weiss), 32.0));
+    let gross = MitDarstellung {
+        doc: &arena2,
+        stile: stile2,
+    };
+    assert!(!hat(
+        &a11y_rules::run_with_rendering(&gross),
+        "contrast/text-insufficient"
+    ));
+}
+
+/// Der fachliche Kern: Ein Host, der die Hintergrundfarbe nicht auflösen kann,
+/// bekommt `UNTESTED` — nicht `PASS` und nicht Schweigen.
+#[test]
+fn unbestimmbarer_hintergrund_ist_untested_nicht_bestanden() {
+    let (arena, stile) = mit_absatz("Auf einem Bild", stil(Some(farbe(0, 0, 0)), None, 16.0));
+    let doc = MitDarstellung { doc: &arena, stile };
+    let r = a11y_rules::run_with_rendering(&doc);
+
+    let befund = r
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "contrast/text-undetermined")
+        .expect("unbestimmbarer Hintergrund muss einen Befund erzeugen");
+    assert_eq!(befund.outcome, Outcome::Untested);
+    assert!(
+        !hat(&r, "contrast/text-insufficient"),
+        "kein geratenes FAIL"
+    );
+}
+
+#[test]
+fn unsichtbarer_text_ist_kein_kontrastproblem() {
+    let mut s = stil(
+        Some(farbe(0xEE, 0xEE, 0xEE)),
+        Some(farbe(255, 255, 255)),
+        16.0,
+    );
+    s.display = Some("none".into());
+    let (arena, stile) = mit_absatz("Versteckt", s);
+    let doc = MitDarstellung { doc: &arena, stile };
+    let r = a11y_rules::run_with_rendering(&doc);
+    assert!(!hat(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
+    assert!(!hat(&r, "contrast/text-undetermined"), "{:?}", ids(&r));
+}
+
+/// Ohne Tier 3 liefert die Regel `UNTESTED` als Vermerk, nicht als Schweigen.
+#[test]
+fn ohne_darstellung_wird_kontrast_als_nicht_gelaufen_vermerkt() {
+    let doc = sauber().open("body").close().close().build();
+    let r = run(&doc);
+    let vermerk = r
+        .rule_runs
+        .iter()
+        .find(|x| x.rule_id == "contrast/text-insufficient")
+        .expect("die Kennung muss im Bericht stehen");
+    assert!(!vermerk.did_run());
+    assert_eq!(
+        vermerk.not_run,
+        Some(a11y_report::NotRun::CapabilityMissing)
+    );
 }
