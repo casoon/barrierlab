@@ -58,17 +58,30 @@ Vermerk haben.
 
 ## Regeln
 
-**Tier 1** (Struktur), 25 Kennungen: `document/lang-missing`,
+**Tier 1** (Struktur), 34 Kennungen: `document/lang-missing`,
 `document/lang-invalid`, `document/title-missing`, `document/title-empty`,
-`zoom/viewport-locked`, `zoom/viewport-scale-limited`, `headings/empty`,
-`headings/skip-level`, `headings/h1-missing`, `images/alt-missing`,
+`zoom/viewport-locked`, `zoom/viewport-scale-limited`, `zoom/viewport-missing`,
+`headings/empty`, `headings/skip-level`, `headings/h1-missing`,
+`headings/h1-multiple`, `images/alt-missing`,
 `images/alt-suspicious`, `forms/label-missing`, `forms/placeholder-as-label`,
 `aria/role-invalid`, `aria/role-abstract`, `aria/reference-missing`,
+`aria/required-attribute-missing`,
 `ids/duplicate`, `keyboard/positive-tabindex`, `keyboard/hidden-focusable`,
+`keyboard/skip-link-missing`,
+`landmarks/main-missing`, `landmarks/main-duplicate`,
+`landmarks/navigation-missing`, `landmarks/banner-missing`,
+`landmarks/contentinfo-missing`,
 `lists/invalid-structure`, `lists/empty`, `lists/term-without-definition`,
 `lists/item-outside-list`,
 `tables/header-missing`, `tables/name-missing`,
 `tables/presentational-with-headers`.
+
+Nicht jede fehlende Landmark ist ein Verstoß: `main` muss da sein, aber eine
+Seite darf ohne Navigation auskommen. `landmarks/navigation-missing`,
+`landmarks/banner-missing`, `landmarks/contentinfo-missing`,
+`headings/h1-multiple` und `keyboard/skip-link-missing` liefern deshalb
+`REVIEW`, nicht `FAIL` — der Sprunglink lässt sich ohnehin nur heuristisch
+über Linktext und Klassennamen erkennen.
 
 
 **Tier 2** (Semantik), 4 Kennungen: `links/name-missing`,

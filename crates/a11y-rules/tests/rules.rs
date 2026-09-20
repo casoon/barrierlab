@@ -131,11 +131,58 @@ fn sauber() -> a11y_dom::ArenaBuilder {
         .open("title")
         .text("Seite")
         .close()
+        .open("meta")
+        .attr("name", "viewport")
+        .attr("content", "width=device-width, initial-scale=1")
+        .close()
+        .close()
+}
+
+/// Ein Dokument, das auch die Landmark- und Sprunglink-Regeln zufriedenstellt.
+///
+/// Ein bloß wohlgeformtes Dokument genügt dafür nicht mehr: main, navigation,
+/// banner und contentinfo sind eigene Erwartungen, und der Sprunglink ist es
+/// auch. Die Vorlage hält fest, was „vollständig" heißt.
+fn vollstaendig() -> a11y_dom::ArenaBuilder {
+    sauber()
+        .open("body")
+        .open("a")
+        .attr("href", "#inhalt")
+        .attr("class", "skip-link")
+        .text("Zum Inhalt springen")
+        .close()
+        .open("header")
+        .open("nav")
+        .open("a")
+        .attr("href", "/")
+        .text("Start")
+        .close()
+        .close()
+        .close()
+        .open("main")
+        .attr("id", "inhalt")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .close()
+        .open("footer")
+        .text("Impressum")
+        .close()
         .close()
 }
 
 #[test]
-fn sauberes_dokument_erzeugt_nur_h1_hinweis_nicht() {
+fn vollstaendiges_dokument_erzeugt_keinen_befund() {
+    let doc = vollstaendig().close().build();
+    let r = run(&doc);
+    assert!(r.findings.is_empty(), "unerwartet: {:?}", ids(&r));
+}
+
+/// Was einem bloß wohlgeformten Dokument fehlt, wird benannt — und zwar
+/// getrennt nach „belegt" und „erwartet": main fehlt nachweislich, eine
+/// Navigation zu erwarten ist dagegen eine Annahme.
+#[test]
+fn minimaldokument_meldet_landmarks_als_review_ausser_main() {
     let doc = sauber()
         .open("body")
         .open("h1")
@@ -145,7 +192,26 @@ fn sauberes_dokument_erzeugt_nur_h1_hinweis_nicht() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(r.findings.is_empty(), "unerwartet: {:?}", ids(&r));
+
+    let outcome = |id: &str| {
+        r.findings
+            .iter()
+            .find(|f| f.rule_id == id)
+            .map(|f| f.outcome)
+    };
+    assert_eq!(outcome("landmarks/main-missing"), Some(Outcome::Fail));
+    assert_eq!(
+        outcome("landmarks/navigation-missing"),
+        Some(Outcome::Review)
+    );
+    assert_eq!(outcome("landmarks/banner-missing"), Some(Outcome::Review));
+    assert_eq!(
+        outcome("landmarks/contentinfo-missing"),
+        Some(Outcome::Review)
+    );
+    assert_eq!(outcome("keyboard/skip-link-missing"), Some(Outcome::Review));
+    // Der Viewport steht in sauber() -- diese Regel darf hier nicht feuern.
+    assert_eq!(outcome("zoom/viewport-missing"), None);
 }
 
 #[test]
@@ -1419,4 +1485,201 @@ fn ohne_darstellung_wird_kontrast_als_nicht_gelaufen_vermerkt() {
         vermerk.not_run,
         Some(a11y_report::NotRun::CapabilityMissing)
     );
+}
+
+// ===========================================================================
+// Landmarks, Sprunglink, erforderliche ARIA-Attribute
+// ===========================================================================
+
+#[test]
+fn rolle_zaehlt_vor_dem_tag_bei_landmarks() {
+    // <div role="main"> ist eine main-Landmark, <main role="presentation">
+    // ist keine. Wer nur auf den Tagnamen sieht, liegt in beiden Faellen falsch.
+    let mit_rolle = sauber()
+        .open("body")
+        .open("div")
+        .attr("role", "main")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&mit_rolle), "landmarks/main-missing"));
+
+    let umdeklariert = sauber()
+        .open("body")
+        .open("main")
+        .attr("role", "presentation")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&umdeklariert), "landmarks/main-missing"));
+}
+
+#[test]
+fn zwei_main_landmarks_fallen_auf() {
+    let doc = vollstaendig()
+        .open("main")
+        .text("noch eine")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(hat(&r, "landmarks/main-duplicate"), "{:?}", ids(&r));
+}
+
+/// Ein `<footer>` in einem `<article>` gehoert zu diesem Artikel, nicht zum
+/// Dokument. Ein `<div>` dazwischen disqualifiziert dagegen nicht.
+#[test]
+fn footer_im_artikel_ist_keine_contentinfo_landmark() {
+    let im_artikel = sauber()
+        .open("body")
+        .open("main")
+        .open("h1")
+        .text("T")
+        .close()
+        .open("article")
+        .open("footer")
+        .text("Autor")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&im_artikel), "landmarks/contentinfo-missing"));
+
+    let im_div = sauber()
+        .open("body")
+        .open("main")
+        .open("h1")
+        .text("T")
+        .close()
+        .close()
+        .open("div")
+        .open("footer")
+        .text("Impressum")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&im_div), "landmarks/contentinfo-missing"));
+}
+
+#[test]
+fn sprunglink_wird_an_text_oder_klasse_erkannt() {
+    let ueber_text = sauber()
+        .open("body")
+        .open("a")
+        .attr("href", "#inhalt")
+        .text("Skip to content")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&ueber_text), "keyboard/skip-link-missing"));
+
+    // Ein gewoehnlicher Anker ist kein Sprunglink.
+    let anker = sauber()
+        .open("body")
+        .open("a")
+        .attr("href", "#kapitel-3")
+        .text("Kapitel 3")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&anker), "keyboard/skip-link-missing"));
+}
+
+/// Der Sprunglink ist heuristisch erkannt — der Befund ist deshalb REVIEW.
+#[test]
+fn fehlender_sprunglink_ist_review_nicht_fail() {
+    let doc = sauber().open("body").close().close().build();
+    let f = run(&doc)
+        .findings
+        .into_iter()
+        .find(|f| f.rule_id == "keyboard/skip-link-missing")
+        .expect("muss gemeldet werden");
+    assert_eq!(f.outcome, Outcome::Review);
+}
+
+#[test]
+fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
+    let doc = vollstaendig()
+        .open("div")
+        .attr("role", "checkbox")
+        .text("Newsletter")
+        .close()
+        .open("div")
+        .attr("role", "slider")
+        .attr("aria-valuenow", "3")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let befunde: Vec<&str> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "aria/required-attribute-missing")
+        .map(|f| f.message.as_str())
+        .collect();
+    assert_eq!(befunde.len(), 2, "{:?}", ids(&r));
+    assert!(befunde.iter().any(|m| m.contains("aria-checked")));
+    // Der Slider hat valuenow, es fehlen valuemin und valuemax.
+    assert!(befunde
+        .iter()
+        .any(|m| m.contains("aria-valuemin") && m.contains("aria-valuemax")));
+}
+
+#[test]
+fn vollstaendige_rolle_meldet_nichts() {
+    let doc = vollstaendig()
+        .open("div")
+        .attr("role", "checkbox")
+        .attr("aria-checked", "false")
+        .text("Newsletter")
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&doc), "aria/required-attribute-missing"));
+}
+
+#[test]
+fn fehlender_viewport_faellt_auf() {
+    let doc = Arena::builder()
+        .open("html")
+        .attr("lang", "de")
+        .open("head")
+        .open("title")
+        .text("Seite")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&doc), "zoom/viewport-missing"));
+}
+
+/// Mehrere h1 sind in HTML zulaessig — das ist eine Erwartung, kein Verstoss.
+#[test]
+fn mehrere_h1_sind_review_nicht_fail() {
+    let doc = vollstaendig()
+        .open("h1")
+        .text("Noch ein Titel")
+        .close()
+        .close()
+        .build();
+    let f = run(&doc)
+        .findings
+        .into_iter()
+        .find(|f| f.rule_id == "headings/h1-multiple")
+        .expect("muss gemeldet werden");
+    assert_eq!(f.outcome, Outcome::Review);
 }

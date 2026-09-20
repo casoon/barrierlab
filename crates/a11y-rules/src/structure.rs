@@ -186,10 +186,12 @@ fn title<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 }
 
 fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    let mut gefunden = false;
     for n in elements(doc).filter(|n| n.is_element("meta")) {
         if n.attr("name") != Some("viewport") {
             continue;
         }
+        gefunden = true;
         let Some(content) = n.attr("content") else {
             continue;
         };
@@ -231,14 +233,29 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             );
         }
     }
+
+    // Ohne Viewport-Angabe legen mobile Browser eine Desktop-Breite zugrunde
+    // und verkleinern die Seite. Der Text landet damit unter jeder lesbaren
+    // Größe, und Zoomen holt ihn nur teilweise zurück.
+    if !gefunden {
+        out.push(
+            Finding::fail(
+                "zoom/viewport-missing",
+                "Das Dokument hat keine Viewport-Angabe.",
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.4.4", "1.4.10"])
+            .at(at(doc.root().id())),
+        );
+    }
 }
 
 // --- Überschriften --------------------------------------------------------
 
 fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     let mut last = 0u8;
-    let mut has_h1 = false;
     let mut any = false;
+    let mut h1s: Vec<NodeId> = Vec::new();
 
     for n in elements(doc) {
         let Some(level) = heading_level(n.local_name()) else {
@@ -246,7 +263,7 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         };
         any = true;
         if level == 1 {
-            has_h1 = true;
+            h1s.push(n.id());
         }
         if subtree_text(n).trim().is_empty() && !n.has_attr("aria-label") {
             out.push(
@@ -270,7 +287,7 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         last = level;
     }
 
-    if any && !has_h1 {
+    if any && h1s.is_empty() {
         out.push(
             Finding::fail(
                 "headings/h1-missing",
@@ -278,6 +295,212 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             )
             .with_severity(Severity::Medium)
             .with_wcag(["1.3.1"]),
+        );
+    }
+
+    // Mehrere h1 sind in HTML zulässig und je nach Gliederung sogar richtig.
+    // Meist sind sie es nicht — das ist eine Erwartung, kein Verstoß, also
+    // REVIEW. Der Befund zeigt auf die zweite, die überzählige.
+    if h1s.len() > 1 {
+        out.push(
+            Finding::review(
+                "headings/h1-multiple",
+                format!("Das Dokument hat {} h1-Überschriften.", h1s.len()),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["1.3.1"])
+            .at(at(h1s[1])),
+        );
+    }
+}
+
+// --- ARIA: erforderliche Attribute ---------------------------------------
+
+/// Welche Attribute eine Rolle zwingend braucht, damit ihr Zustand überhaupt
+/// übermittelt wird. Eine Checkbox ohne `aria-checked` wird als Checkbox
+/// angesagt, deren Zustand niemand erfährt.
+const ERFORDERLICH: &[(&str, &[&str])] = &[
+    ("checkbox", &["aria-checked"]),
+    ("switch", &["aria-checked"]),
+    ("radio", &["aria-checked"]),
+    ("combobox", &["aria-expanded"]),
+    (
+        "slider",
+        &["aria-valuenow", "aria-valuemin", "aria-valuemax"],
+    ),
+    ("spinbutton", &["aria-valuenow"]),
+    ("scrollbar", &["aria-controls", "aria-valuenow"]),
+    ("option", &["aria-selected"]),
+];
+
+fn aria_required_attributes<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        let Some(rolle) = n.attr("role").map(str::trim) else {
+            continue;
+        };
+        // Bei mehreren Rollen gilt die erste, die der Browser kennt.
+        let Some(erste) = rolle.split_whitespace().next() else {
+            continue;
+        };
+        let Some((_, noetig)) = ERFORDERLICH
+            .iter()
+            .find(|(r, _)| r.eq_ignore_ascii_case(erste))
+        else {
+            continue;
+        };
+
+        let fehlend: Vec<&str> = noetig.iter().copied().filter(|a| !n.has_attr(a)).collect();
+        if fehlend.is_empty() {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "aria/required-attribute-missing",
+                format!(
+                    "role=\"{erste}\" braucht {}, aber {} fehlt.",
+                    noetig.join(", "),
+                    fehlend.join(", ")
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["4.1.2"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+// --- Landmarks ------------------------------------------------------------
+
+/// Ob dieser Knoten eine Landmark der gesuchten Art ist.
+///
+/// Die Rolle zählt vor dem Tag: `<div role="main">` ist eine Main-Landmark,
+/// `<main role="presentation">` ist keine.
+fn ist_landmark<'a, N: Node<'a>>(n: N, tag: &str, rolle: &str) -> bool {
+    match n.attr("role").map(str::trim) {
+        Some(r) => r.split_whitespace().any(|x| x.eq_ignore_ascii_case(rolle)),
+        None => n.is_element(tag),
+    }
+}
+
+/// `<header>` und `<footer>` sind nur dann banner bzw. contentinfo, wenn sie
+/// nicht in einem Sectioning-Element stecken — ein `<footer>` in einem
+/// `<article>` gehört zu diesem Artikel, nicht zum Dokument. Ein `<div>`
+/// dazwischen disqualifiziert dagegen nicht.
+const SECTIONING: &[&str] = &["article", "aside", "main", "nav", "section"];
+
+fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
+    a11y_dom::ancestors(n).all(|a| !SECTIONING.contains(&a.local_name()))
+}
+
+fn landmarks<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    let wurzel = doc.root().id();
+    let mains: Vec<_> = elements(doc)
+        .filter(|n| ist_landmark(*n, "main", "main"))
+        .collect();
+
+    match mains.len() {
+        0 => out.push(
+            Finding::fail(
+                "landmarks/main-missing",
+                "Das Dokument hat keine main-Landmark.",
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.3.1", "2.4.1"])
+            .at(at(wurzel)),
+        ),
+        1 => {}
+        n => out.push(
+            Finding::fail(
+                "landmarks/main-duplicate",
+                format!("Das Dokument hat {n} main-Landmarks; genau eine ist zulässig."),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.3.1"])
+            // Die zweite ist die überzählige — dorthin zeigt der Befund.
+            .at(at(mains[1].id())),
+        ),
+    }
+
+    // Navigation, banner und contentinfo sind Erwartungen, keine beweisbaren
+    // Verstöße: Eine Seite darf ohne Navigation auskommen. Deshalb REVIEW und
+    // nicht FAIL -- eine dritte Achse „Gewissheit" gibt es bewusst nicht.
+    for (tag, rolle, kennung, text) in [
+        (
+            "nav",
+            "navigation",
+            "landmarks/navigation-missing",
+            "Das Dokument hat keine navigation-Landmark.",
+        ),
+        (
+            "header",
+            "banner",
+            "landmarks/banner-missing",
+            "Das Dokument hat keine banner-Landmark.",
+        ),
+        (
+            "footer",
+            "contentinfo",
+            "landmarks/contentinfo-missing",
+            "Das Dokument hat keine contentinfo-Landmark.",
+        ),
+    ] {
+        let vorhanden = elements(doc).any(|n| {
+            ist_landmark(n, tag, rolle) && (n.attr("role").is_some() || ist_dokumentweit(n))
+        });
+        if !vorhanden {
+            out.push(
+                Finding::review(kennung, text)
+                    .with_severity(Severity::Low)
+                    .with_wcag(["1.3.1", "2.4.1"])
+                    .at(at(wurzel)),
+            );
+        }
+    }
+}
+
+// --- Sprunglink -----------------------------------------------------------
+
+/// Ob dieser Link nach Textlage ein Sprunglink ist.
+///
+/// Das ist eine Heuristik über Linktext, `class` und `id` — es gibt kein
+/// Merkmal, an dem ein Sprunglink sicher zu erkennen wäre. Der Befund ist
+/// deshalb `REVIEW`, nicht `FAIL`.
+fn sieht_aus_wie_sprunglink<'a, N: Node<'a>>(n: N) -> bool {
+    const MARKER: &[&str] = &[
+        "skip",
+        "sprung",
+        "zum inhalt",
+        "zum hauptinhalt",
+        "direkt zum inhalt",
+    ];
+    let text = subtree_text(n).to_lowercase();
+    let marker = format!(
+        "{} {}",
+        n.attr("class").unwrap_or(""),
+        n.attr("id").unwrap_or("")
+    )
+    .to_lowercase();
+    MARKER
+        .iter()
+        .any(|m| text.contains(m) || marker.contains(m))
+}
+
+fn skip_link<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+    let vorhanden = elements(doc).any(|n| {
+        n.is_element("a")
+            && n.attr("href")
+                .is_some_and(|h| h.starts_with('#') && h.len() > 1)
+            && sieht_aus_wie_sprunglink(n)
+    });
+    if !vorhanden {
+        out.push(
+            Finding::review(
+                "keyboard/skip-link-missing",
+                "Kein Sprunglink gefunden, der wiederkehrende Bereiche überspringt.",
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["2.4.1"])
+            .at(at(doc.root().id())),
         );
     }
 }
@@ -749,17 +972,22 @@ pub const METAS: &[Meta] = &[
         help: "Jede Seite braucht einen aussagekräftigen <title>.",
     },
     Meta {
-        ids: &["zoom/viewport-locked", "zoom/viewport-scale-limited"],
+        ids: &[
+            "zoom/viewport-locked",
+            "zoom/viewport-scale-limited",
+            "zoom/viewport-missing",
+        ],
         tier: Tier::Structure,
-        wcag: &["1.4.4"],
+        wcag: &["1.4.4", "1.4.10"],
         severity: Severity::High,
-        help: "Der Viewport darf Zoomen nicht verhindern.",
+        help: "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
     },
     Meta {
         ids: &[
             "headings/empty",
             "headings/skip-level",
             "headings/h1-missing",
+            "headings/h1-multiple",
         ],
         tier: Tier::Structure,
         wcag: &["1.3.1", "2.4.6"],
@@ -793,6 +1021,13 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
+    },
+    Meta {
+        ids: &["aria/required-attribute-missing"],
+        tier: Tier::Structure,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
     },
     Meta {
         ids: &["ids/duplicate"],
@@ -837,10 +1072,30 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Datentabellen brauchen <th>-Kopfzellen.",
     },
+    Meta {
+        ids: &[
+            "landmarks/main-missing",
+            "landmarks/main-duplicate",
+            "landmarks/navigation-missing",
+            "landmarks/banner-missing",
+            "landmarks/contentinfo-missing",
+        ],
+        tier: Tier::Structure,
+        wcag: &["1.3.1", "2.4.1"],
+        severity: Severity::High,
+        help: "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    },
+    Meta {
+        ids: &["keyboard/skip-link-missing"],
+        tier: Tier::Structure,
+        wcag: &["2.4.1"],
+        severity: Severity::Medium,
+        help: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, &mut Vec<Finding>); 13] {
+fn funktionen<D: Document>() -> [fn(&D, &mut Vec<Finding>); 16] {
     [
         lang,
         title,
@@ -850,11 +1105,14 @@ fn funktionen<D: Document>() -> [fn(&D, &mut Vec<Finding>); 13] {
         form_labels,
         aria_roles,
         aria_references,
+        aria_required_attributes,
         duplicate_ids,
         tabindex,
         hidden_focusable,
         list_structure,
         table_headers,
+        landmarks,
+        skip_link,
     ]
 }
 
