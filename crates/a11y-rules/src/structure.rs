@@ -557,6 +557,12 @@ fn suspicious_alt(alt: &str) -> bool {
         // Leeres alt ist die korrekte Auszeichnung für dekorative Bilder.
         return false;
     }
+    // Ein oder zwei Zeichen beschreiben kein Bild. Der Befund ist ohnehin
+    // REVIEW — wenn `alt="5"` am Bild einer Fünf steht, bestätigt das der
+    // Mensch in einem Schritt.
+    if a.chars().count() < 3 {
+        return true;
+    }
     const ENDINGS: &[&str] = &[".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif"];
     const FILLERS: &[&str] = &[
         "bild",
