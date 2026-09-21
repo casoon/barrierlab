@@ -1,0 +1,156 @@
+---
+import {
+  Badge,
+  Badges,
+  BuildOutput,
+  CodeBlock,
+  Facts,
+  Features,
+  Hero,
+  Install,
+  Quickstart,
+} from '@casoon/pages-theme/components';
+import Base from '@casoon/pages-theme/layouts/Base.astro';
+import { url } from '@casoon/pages-theme/url';
+import { report, reportHtml, rules } from '../showcase';
+
+// Echte Ausgabe aus examples/: dasselbe Dokument, einmal mit Semantik geprüft.
+const teaser = report('teaser.semantik.json');
+const excerpt = JSON.stringify(
+  { findings: teaser.findings.slice(0, 1), summary: teaser.summary },
+  null,
+  2,
+);
+
+// Gezählt aus rules.json, das die Deklarationen aus a11y-rules ausgibt.
+const declared = rules.length;
+const tier = (t: string) => rules.filter((r) => r.tier === t).length;
+
+// Aus der Doku von a11y-rules (lib.rs), dort als Doctest geprüft.
+const mainRs = `use a11y_dom::Arena;
+use a11y_rules::run;
+
+let doc = Arena::builder()
+    .open("html")
+        .open("body")
+            .open("img").attr("src", "logo.png").close()
+        .close()
+    .close()
+    .build();
+
+let report = run(&doc);
+
+// Gefunden: kein lang, kein title, kein alt.
+assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
+
+// Nicht beurteilt: Tier 2 und Tier 3 stehen mit
+// NotRun::CapabilityMissing im Bericht.
+assert_eq!(report.summary.rules_not_run, 7);`;
+---
+
+<Base>
+  <Hero
+    eyebrow="CASOON Open Source · Rust"
+    title="Eine Regelbasis für drei Oberflächen."
+    lead="a11y-core sind die gemeinsamen Bausteine der CASOON-Accessibility-Werkzeuge: Dokumentmodell, Accessible-Name-Berechnung, Regeln und Berichtsmodell. Build-Zeit, CI und laufende Seite melden dieselben Regelkennungen im selben JSON."
+  >
+    <Install
+      label="Crates"
+      commands={[
+        { label: 'Regeln', command: 'cargo add a11y-rules@0.10.0 a11y-dom@0.10.0 a11y-report@0.10.0' },
+        { label: 'accname', command: 'cargo add accname@0.10.0 a11y-dom@0.10.0' },
+        { label: 'Bericht', command: 'cargo add a11y-report@0.10.0' },
+      ]}
+    />
+    <Badges>
+      <Badge>MIT</Badge>
+      <Badge>crates.io 0.10.0</Badge>
+      <Badge>Rust 1.85+</Badge>
+      <Badge>forbid(unsafe_code)</Badge>
+    </Badges>
+    <CodeBlock slot="output" code={excerpt} lang="json" title="examples/teaser.semantik.json" label="Auszug" />
+  </Hero>
+
+  <Facts
+    items={[
+      { value: '42', label: 'Regelkennungen, im Quelltext von a11y-rules gezählt' },
+      { value: `${tier('structure')} · ${tier('semantics')} · ${tier('rendering')}`, label: `deklarierte Kennungen je Tier: Struktur, Semantik, Darstellung (${declared} gesamt)` },
+      { value: '4', label: 'Zustände je Befund: fail, review, pass, untested' },
+      { value: '4', label: 'Crates, auf crates.io veröffentlicht' },
+    ]}
+  />
+
+  <section class="surfaces" aria-labelledby="surfaces-title">
+    <h2 id="surfaces-title" class="cp-label">Drei Oberflächen</h2>
+    <div class="cp-prose">
+      <table>
+        <thead>
+          <tr><th scope="col">Oberfläche</th><th scope="col">Werkzeug</th><th scope="col">Substrat</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Build-Zeit</td><td><a href="https://github.com/casoon/astro-post-audit">astro-post-audit</a></td><td>statisches HTML aus <code>dist/</code></td></tr>
+          <tr><td>CI / Crawl</td><td><a href="https://github.com/casoon/auditmysite">auditmysite</a></td><td>Chrome via CDP, nativer Accessibility-Tree</td></tr>
+          <tr><td>laufende Seite</td><td><a href="https://liveaudit.casoon.de">liveaudit</a></td><td>DOM der Seite, über WASM</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <Features
+    heading="Was es ausmacht"
+    items={[
+      {
+        title: 'Fähigkeiten statt Optionen',
+        body: 'Struktur, Semantik, Darstellung und Interaktion sind eigene Traits. Jede Regel deklariert ihren Tier, jeder Host implementiert, was er bedienen kann. Eine Tier-2-Regel lässt sich mit einem Host ohne Semantics gar nicht erst aufrufen.',
+      },
+      {
+        title: 'Nicht gelaufen ist nicht bestanden',
+        body: 'Eine Regel, deren Tier fehlt, verschwindet nicht aus dem Bericht. Sie steht als RuleRun mit NotRun::CapabilityMissing darin, samt der WCAG-Kriterien, die ungeprüft blieben.',
+      },
+      {
+        title: 'Zwei Achsen, kein Score',
+        body: 'Outcome sagt, wie sicher eine Aussage ist, Severity, wie schwer das Problem wiegt. Was eine Regel nur vermuten kann, meldet sie als review statt als fail. Eine Gesamtnote gibt es bewusst nicht.',
+      },
+      {
+        title: 'accname als eigenes Crate',
+        body: 'Accessible Name und Rolle nach accname 1.2 und HTML-AAM, gegen die Spezifikation geschrieben. Mit aria-labelledby-Ketten, eingebetteten Steuerelementen und Rollen, für die ein Name verboten ist.',
+      },
+    ]}
+  />
+
+  <BuildOutput
+    heading="Echte Ausgabe"
+    caption="Ein Teaser-Dokument, geprüft mit run_with_semantics und accname. Erzeugt von examples/ mit den Crates aus diesem Repository; die Seite liest nur das JSON."
+    file="examples/teaser.semantik.json"
+  >
+    <Fragment set:html={reportHtml(teaser)} />
+  </BuildOutput>
+
+  <Quickstart
+    title="Schnellstart"
+    lead="Vom Dokument zum Bericht. Die ausführliche Anleitung steht in der Dokumentation."
+    steps={[
+      '<code>a11y-rules</code>, <code>a11y-dom</code> und <code>a11y-report</code> hinzufügen.',
+      'Das Dokument als <code>Arena</code> aufbauen oder <code>Document</code> für den eigenen Baum implementieren.',
+      'Mit <code>run</code>, <code>run_with_semantics</code> oder <code>run_full</code> prüfen. Der <code>Report</code> ist mit serde serialisierbar.',
+    ]}
+  >
+    <CodeBlock code={mainRs} lang="rust" title="main.rs" label="Rust" />
+  </Quickstart>
+
+  <div class="more cp-prose">
+    <p>
+      Alle Regelkennungen mit Tier, WCAG-Kriterium und Vorgabeschwere stehen in der
+      <a href={url('docs/reference/regeln/')}>Regelreferenz</a>.
+    </p>
+  </div>
+</Base>
+
+<style>
+  .surfaces,
+  .more {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 24px 24px 32px;
+  }
+</style>

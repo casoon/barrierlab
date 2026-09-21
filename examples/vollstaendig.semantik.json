@@ -1,0 +1,184 @@
+{
+  "findings": [],
+  "rule_runs": [
+    {
+      "rule_id": "document/lang-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/lang-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/title-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/title-empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-locked",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-scale-limited",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/skip-level",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/h1-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/h1-multiple",
+      "findings": 0
+    },
+    {
+      "rule_id": "images/alt-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "images/alt-suspicious",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/label-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/placeholder-as-label",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/role-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/role-abstract",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/reference-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/required-attribute-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "ids/duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/positive-tabindex",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/hidden-focusable",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/invalid-structure",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/term-without-definition",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/header-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/presentational-with-headers",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/main-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/main-duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/navigation-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/banner-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/contentinfo-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/skip-link-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "buttons/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "svg/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/ambiguous-name",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/generic-name",
+      "findings": 0
+    },
+    {
+      "rule_id": "contrast/text-insufficient",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+    },
+    {
+      "rule_id": "contrast/text-undetermined",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+    }
+  ],
+  "summary": {
+    "fail": 0,
+    "review": 0,
+    "pass": 0,
+    "untested": 0,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "rules_not_run": 2
+  }
+}

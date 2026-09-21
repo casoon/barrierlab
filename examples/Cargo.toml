@@ -1,0 +1,16 @@
+# Erzeugt die Beispielausgaben der Projektseite (site/) mit den Crates aus diesem
+# Repository. Kein Teil des Workspaces und nicht veröffentlicht.
+[package]
+name = "a11y-core-examples"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+a11y-dom = { path = "../crates/a11y-dom" }
+a11y-report = { path = "../crates/a11y-report" }
+a11y-rules = { path = "../crates/a11y-rules" }
+accname = { path = "../crates/accname" }
+serde_json = "1"
