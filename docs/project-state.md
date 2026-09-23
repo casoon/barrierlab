@@ -15,6 +15,14 @@ handeln → Snapshot → Differenz). Dieser Motor kommt als Paket `a11y-percepti
 hierher; ein eigenständiger Host dafür bekommt ein eigenes Repository. Der
 Kenntnisstand dazu steht in `plan/reader/`.
 
+## Stand
+
+Phase 3 ist durch: die vier a11y-Crates liegen hier, mit ihrer Historie, und
+0.10.2 ist **aus diesem Repository** auf crates.io veröffentlicht — inklusive
+korrigierter `repository`-Metadaten. Die Veröffentlichung lief lokal mit
+`cargo publish`; der Workflow erkennt die Pakete und die Tags, sein Upload-Weg
+ist aber noch ohne Anmeldung (Trusted Publishing je Crate steht aus).
+
 ## Was im Repository liegt
 
 ```
@@ -24,15 +32,16 @@ Kenntnisstand dazu steht in `plan/reader/`.
 ├── pnpm-workspace.yaml     # packages/*, site
 ├── release-plz.toml        # ein Tag je Paket: <paket>-vX.Y.Z
 ├── .github/workflows/      # ci.yml, release-plz.yml (bis Phase 3 nur manuell)
-├── crates/                 # leer — die Pakete ziehen einzeln mit Historie ein
+├── crates/                 # a11y-report, a11y-dom, accname, a11y-rules (0.10.2)
 ├── packages/               # leer — npm kommt mit a11y-wasm
-├── docs/                   # diese Doku
+├── examples/a11y/          # Beispielgenerator der a11y-Crates (eigener Workspace)
+├── docs/                   # diese Doku, docs/a11y/ die ausführliche a11y-Doku
 └── plan/                   # lokal, gitignored
 ```
 
-**Es ist noch kein Paket importiert.** Ein virtuelles Manifest ohne Member lässt
-sich nicht bauen; die Rust- und Node-Schritte in CI prüfen deshalb erst, ob es
-etwas zu bauen gibt. Diese Bedingung fällt mit dem ersten Crate weg.
+Die Node-Schritte in CI prüfen weiter, ob es überhaupt etwas zu bauen gibt —
+`packages/` ist bis Phase 5 leer. Die Rust-Schritte laufen seit dem Import
+vollständig: fmt, clippy und Tests über den Workspace.
 
 ## Wo die Arbeit liegt
 
