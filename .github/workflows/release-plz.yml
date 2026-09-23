@@ -1,33 +1,39 @@
 name: Release
 
-# Bis Phase 3 nur von Hand ausloesbar, damit nichts versehentlich
-# veroeffentlicht wird. Danach kommt hier `push: branches: [main]` dazu.
+# Kein Release-PR: Actions duerfen in diesem Repo keine Pull Requests anlegen,
+# und fuer ein Repo mit einem Betreuer braucht es den Umweg nicht. Versionen und
+# Changelog-Eintraege kommen als normaler Commit; release-plz veroeffentlicht
+# danach, was noch nicht in der Registry steht, und setzt Tag und GitHub-Release.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Nur anzeigen, was passieren wuerde"
+        description: "Nur anzeigen, was veroeffentlicht wuerde"
         type: boolean
         default: true
 
 permissions:
   contents: write
-  pull-requests: write
   # Fuer crates.io Trusted Publishing (OIDC) statt CARGO_REGISTRY_TOKEN.
   id-token: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  release-plz:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
 
       # release-plz bricht ohne veroeffentlichbare Pakete ab ("no public
-      # packages found"). Bis zum ersten Import ist das der Normalfall, kein
-      # Fehler. Die Bedingung faellt mit dem ersten Crate weg.
+      # packages found").
       - name: Workspace hat Member?
         id: members
         run: |
@@ -35,20 +41,21 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "Noch kein Crate in crates/ — release-plz uebersprungen."
+            echo "Noch kein Crate in crates/ - release-plz uebersprungen."
           fi
 
-      - name: Release-PR aktualisieren
-        if: steps.members.outputs.present == 'true'
-        uses: release-plz/action@v0.5.139
-        with:
-          command: release-pr
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Veroeffentlichen
-        if: steps.members.outputs.present == 'true' && inputs.dry_run == false
+        if: steps.members.outputs.present == 'true' && inputs.dry_run != true
         uses: release-plz/action@v0.5.139
         with:
           command: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Anzeigen, was veroeffentlicht wuerde
+        if: steps.members.outputs.present == 'true' && inputs.dry_run == true
+        run: |
+          echo "Versionen im Repo:"
+          cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json,sys; [print(" ", p["name"], p["version"]) for p in json.load(sys.stdin)["packages"]]'
+          echo "Veroeffentlicht wird, was davon noch nicht auf crates.io steht."
