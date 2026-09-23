@@ -25,14 +25,14 @@ jobs:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
       - name: Release-PR aktualisieren
-        uses: release-plz/action@v0
+        uses: release-plz/action@v0.5.139
         with:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Veroeffentlichen
         if: ${{ inputs.dry_run == false }}
-        uses: release-plz/action@v0
+        uses: release-plz/action@v0.5.139
         with:
           command: release
         env:
