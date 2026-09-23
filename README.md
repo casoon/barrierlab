@@ -13,10 +13,10 @@ bedient drei Oberflächen mit identischen Regelkennungen und identischem JSON:
 
 | Crate | Zweck | Stand |
 |---|---|---|
-| [`a11y-report`](crates/a11y-report) | Befund- und Berichtsmodell, JSON-Vertrag | 0.10.1 |
-| [`a11y-dom`](crates/a11y-dom) | Dokumentmodell-Abstraktion plus Fähigkeits-Tiers | 0.10.1 |
-| [`accname`](crates/accname) | WAI-ARIA Accessible Name und Role Computation | 0.10.1 |
-| [`a11y-rules`](crates/a11y-rules) | die Regeln, generisch über das Dokumentmodell | 0.10.1, 42 Kennungen über drei Tiers |
+| [`a11y-report`](crates/a11y-report) | Befund- und Berichtsmodell, JSON-Vertrag | 0.11.0 |
+| [`a11y-dom`](crates/a11y-dom) | Dokumentmodell-Abstraktion plus Fähigkeits-Tiers | 0.11.0 |
+| [`accname`](crates/accname) | WAI-ARIA Accessible Name und Role Computation | 0.11.0 |
+| [`a11y-rules`](crates/a11y-rules) | die Regeln, generisch über das Dokumentmodell | 0.11.0, 42 Kennungen über drei Tiers |
 | `a11y-conformance` | geteiltes Fixture-Korpus gegen Auseinanderlaufen | geplant |
 
 ## Fähigkeiten statt Optionen

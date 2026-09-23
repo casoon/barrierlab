@@ -6,6 +6,15 @@ Git-Historie nachgetragen.
 
 ## [Unreleased]
 
+### Changed
+
+- **Alle Befundtexte und Regel-Hinweise sind englisch.** `message` und `help` kommen aus einem
+  Regelkern, der drei Oberflächen und beliebige fremde Seiten bedient; deutsche Sätze in einer
+  englischen Oberfläche waren ein sichtbarer Bruch. Rule-IDs, Outcomes und Schweregrade sind
+  unverändert — wer auf Kennungen prüft, merkt nichts. Wer **Meldungstexte** vergleicht (Snapshots
+  in `astro-post-audit` oder `auditmysite`), muss sie neu abnehmen. Deshalb 0.11.0 und nicht 0.10.2.
+- Kommentare, Tests und `docs/` bleiben deutsch. Übersetzt ist, was ein Werkzeug ausgibt.
+
 ### Fixed
 
 - `headings/empty` meldet eine Überschrift nicht mehr als leer, wenn sie ihren Namen über
