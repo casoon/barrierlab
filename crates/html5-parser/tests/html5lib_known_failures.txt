@@ -1,0 +1,15 @@
+# Known-failing html5lib-tests tree-construction cases (see
+# tests/html5lib_conformance.rs and tests/html5lib-tests/README.md).
+#
+# One `<file>#<index>` key per line (0-based index of the case within
+# that .dat file, counting every case the file parses into — including
+# ones the harness skips for fragment/scripting reasons, so the index is
+# stable regardless of how many of those precede it) — everything after
+# the key is an optional, ignored comment for humans.
+#
+# Regenerate with `HTML5LIB_BLESS=1 cargo test --test html5lib_conformance`
+# after investigating *why* each entry fails (frameset/template gaps are
+# expected per README.md's "Known limitations"; anything else may be a
+# real bug) — never hand-add an entry just to silence a failure.
+# --- entries below, one per line ---
+
