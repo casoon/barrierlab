@@ -2,7 +2,7 @@
 name = "a11y-dom"
 description = "Document model abstraction for accessibility rules: a DOM-shaped tree trait plus opt-in capability tiers for semantics, rendering and interaction."
 keywords = ["accessibility", "a11y", "dom", "tree", "abstraction"]
-version = "0.10.2"
+version = "0.11.0"
 edition = "2021"
 license.workspace = true
 repository.workspace = true

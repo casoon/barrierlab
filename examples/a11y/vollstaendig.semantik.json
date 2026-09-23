@@ -161,13 +161,13 @@
       "rule_id": "contrast/text-insufficient",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     },
     {
       "rule_id": "contrast/text-undetermined",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     }
   ],
   "summary": {

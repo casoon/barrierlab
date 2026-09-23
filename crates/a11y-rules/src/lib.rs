@@ -106,8 +106,8 @@ fn nicht_gelaufen(metas: &'static [Meta], grund: &'static str, report: &mut Repo
     }
 }
 
-const OHNE_SEMANTIK: &str = "Host liefert keine Rolle und keinen Accessible Name";
-const OHNE_DARSTELLUNG: &str = "Host liefert keine berechneten Stile und keine Geometrie";
+const OHNE_SEMANTIK: &str = "host provides no role and no accessible name";
+const OHNE_DARSTELLUNG: &str = "host provides no computed styles and no geometry";
 
 fn run_structure<D: Document>(doc: &D, report: &mut Report) {
     for rule in structure_rules::<D>() {

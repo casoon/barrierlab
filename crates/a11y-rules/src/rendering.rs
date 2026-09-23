@@ -117,13 +117,9 @@ fn text_kontrast<D: Rendering>(doc: &D, out: &mut Vec<Finding>) {
                         Finding::fail(
                             "contrast/text-insufficient",
                             format!(
-                                "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
-                                 gefordert sind {schwelle:.1}:1 für {}.",
-                                if gross {
-                                    "großen Text"
-                                } else {
-                                    "normalen Text"
-                                }
+                                "The text reaches a contrast ratio of {wert:.2}:1; \
+                                 {schwelle:.1}:1 is required for {}.",
+                                if gross { "large text" } else { "normal text" }
                             ),
                         )
                         .with_severity(Severity::High)
@@ -139,8 +135,8 @@ fn text_kontrast<D: Rendering>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::untested(
                         "contrast/text-undetermined",
-                        "Der Kontrast ist automatisiert nicht bestimmbar — der Host konnte \
-                         Vorder- oder Hintergrundfarbe nicht auflösen. Von Hand prüfen.",
+                        "The contrast cannot be determined automatically — the host could not \
+                         resolve the foreground or background colour. Check it by hand.",
                     )
                     .with_severity(Severity::Medium)
                     .with_wcag(["1.4.3"])
@@ -156,9 +152,8 @@ pub(crate) const METAS: &[Meta] = &[Meta {
     tier: Tier::Rendering,
     wcag: &["1.4.3"],
     severity: Severity::High,
-    help: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
-           mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
-           fettem Schnitt ab 14 pt.",
+    help: "Text needs a contrast ratio against its background of at least 4.5:1, \
+           or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
 }];
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {

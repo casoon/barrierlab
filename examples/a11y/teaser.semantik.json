@@ -4,7 +4,7 @@
       "rule_id": "headings/skip-level",
       "outcome": "fail",
       "severity": "medium",
-      "message": "Die Gliederung springt von h1 auf h3.",
+      "message": "The outline skips from h1 to h3.",
       "location": {
         "node": "13"
       },
@@ -16,7 +16,7 @@
       "rule_id": "images/alt-missing",
       "outcome": "fail",
       "severity": "high",
-      "message": "Das Bild hat kein alt-Attribut.",
+      "message": "The image has no alt attribute.",
       "location": {
         "node": "15"
       },
@@ -28,7 +28,7 @@
       "rule_id": "images/alt-suspicious",
       "outcome": "review",
       "severity": "medium",
-      "message": "Der Alt-Text \"hose.jpg\" beschreibt das Bild vermutlich nicht.",
+      "message": "The alt text \"hose.jpg\" probably does not describe the image.",
       "location": {
         "node": "20"
       },
@@ -40,7 +40,7 @@
       "rule_id": "forms/label-missing",
       "outcome": "fail",
       "severity": "critical",
-      "message": "Das Eingabefeld hat kein Label.",
+      "message": "The input has no label.",
       "location": {
         "node": "24"
       },
@@ -54,7 +54,7 @@
       "rule_id": "keyboard/skip-link-missing",
       "outcome": "review",
       "severity": "medium",
-      "message": "Kein Sprunglink gefunden, der wiederkehrende Bereiche überspringt.",
+      "message": "No skip link found that bypasses repeated blocks.",
       "location": {
         "node": "0"
       },
@@ -66,7 +66,7 @@
       "rule_id": "buttons/name-missing",
       "outcome": "fail",
       "severity": "critical",
-      "message": "Der Button hat keinen zugänglichen Namen.",
+      "message": "The button has no accessible name.",
       "location": {
         "node": "25"
       },
@@ -78,7 +78,7 @@
       "rule_id": "svg/name-missing",
       "outcome": "fail",
       "severity": "high",
-      "message": "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet.",
+      "message": "The SVG has no accessible name and is not marked decorative.",
       "location": {
         "node": "26"
       },
@@ -90,7 +90,7 @@
       "rule_id": "links/ambiguous-name",
       "outcome": "review",
       "severity": "medium",
-      "message": "Mehrere Links heißen \"mehr\", zeigen aber auf verschiedene Ziele.",
+      "message": "Several links are named \"mehr\" but point to different targets.",
       "location": {
         "node": "16"
       },
@@ -102,7 +102,7 @@
       "rule_id": "links/ambiguous-name",
       "outcome": "review",
       "severity": "medium",
-      "message": "Mehrere Links heißen \"mehr\", zeigen aber auf verschiedene Ziele.",
+      "message": "Several links are named \"mehr\" but point to different targets.",
       "location": {
         "node": "21"
       },
@@ -114,7 +114,7 @@
       "rule_id": "links/generic-name",
       "outcome": "review",
       "severity": "medium",
-      "message": "Der Linktext \"mehr\" sagt nichts über das Ziel.",
+      "message": "The link text \"mehr\" says nothing about its target.",
       "location": {
         "node": "16"
       },
@@ -126,7 +126,7 @@
       "rule_id": "links/generic-name",
       "outcome": "review",
       "severity": "medium",
-      "message": "Der Linktext \"mehr\" sagt nichts über das Ziel.",
+      "message": "The link text \"mehr\" says nothing about its target.",
       "location": {
         "node": "21"
       },
@@ -296,13 +296,13 @@
       "rule_id": "contrast/text-insufficient",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     },
     {
       "rule_id": "contrast/text-undetermined",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     }
   ],
   "summary": {

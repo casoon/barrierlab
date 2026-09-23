@@ -200,10 +200,12 @@ mod tests {
         let s = spalten(arena.len(), 0x3333_33ff, 0xffff_ffff);
         let host = RenderArena::new(&arena, &s);
         let report = a11y_rules::run_full(&host);
-        assert!(!report
-            .findings
-            .iter()
-            .any(|f| f.rule_id == "contrast/text-insufficient"));
+        assert!(
+            !report
+                .findings
+                .iter()
+                .any(|f| f.rule_id == "contrast/text-insufficient")
+        );
     }
 
     /// Der fachliche Kern: Was der Collector nicht auflösen konnte, wird

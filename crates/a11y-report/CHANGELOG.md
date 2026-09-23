@@ -5,6 +5,14 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.11.0] - 2026-09-23
+
+### Changed
+
+- Befundtexte und Regel-Hinweise auf Englisch. Entstanden im Repository
+  `casoon/a11y-core` und hier nachgezogen; ab jetzt ist dieses Monorepo die
+  einzige Quelle.
+
 ## [0.10.2] - 2026-09-23
 
 ### Changed

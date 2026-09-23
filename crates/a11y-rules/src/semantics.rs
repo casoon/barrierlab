@@ -32,13 +32,10 @@ fn link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
         }
         if !named(doc, n) {
             out.push(
-                Finding::fail(
-                    "links/name-missing",
-                    "Der Link hat keinen zugänglichen Namen.",
-                )
-                .with_severity(Severity::Critical)
-                .with_wcag(["2.4.4", "4.1.2"])
-                .at(at(n.id())),
+                Finding::fail("links/name-missing", "The link has no accessible name.")
+                    .with_severity(Severity::Critical)
+                    .with_wcag(["2.4.4", "4.1.2"])
+                    .at(at(n.id())),
             );
         }
     }
@@ -52,13 +49,10 @@ fn button_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
         }
         if !named(doc, n) {
             out.push(
-                Finding::fail(
-                    "buttons/name-missing",
-                    "Der Button hat keinen zugänglichen Namen.",
-                )
-                .with_severity(Severity::Critical)
-                .with_wcag(["4.1.2"])
-                .at(at(n.id())),
+                Finding::fail("buttons/name-missing", "The button has no accessible name.")
+                    .with_severity(Severity::Critical)
+                    .with_wcag(["4.1.2"])
+                    .at(at(n.id())),
             );
         }
     }
@@ -79,7 +73,7 @@ fn svg_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "svg/name-missing",
-                    "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet.",
+                    "The SVG has no accessible name and is not marked decorative.",
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.1.1"])
@@ -146,7 +140,7 @@ fn generic_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
                 Finding::review(
                     "links/generic-name",
                     format!(
-                        "Der Linktext \"{}\" sagt nichts über das Ziel.",
+                        "The link text \"{}\" says nothing about its target.",
                         name.trim()
                     ),
                 )
@@ -192,7 +186,7 @@ fn ambiguous_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::review(
                     "links/ambiguous-name",
-                    format!("Mehrere Links heißen \"{name}\", zeigen aber auf verschiedene Ziele."),
+                    format!("Several links are named \"{name}\" but point to different targets."),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["2.4.4"])
@@ -210,35 +204,35 @@ pub const METAS: &[Meta] = &[
         tier: Tier::Semantics,
         wcag: &["2.4.4", "4.1.2"],
         severity: Severity::Critical,
-        help: "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
+        help: "Every link needs a name that describes its target.",
     },
     Meta {
         ids: &["buttons/name-missing"],
         tier: Tier::Semantics,
         wcag: &["4.1.2"],
         severity: Severity::Critical,
-        help: "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
+        help: "Every button needs a name that describes what it does.",
     },
     Meta {
         ids: &["svg/name-missing"],
         tier: Tier::Semantics,
         wcag: &["1.1.1"],
         severity: Severity::High,
-        help: "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
+        help: "Informative SVGs need a name, decorative ones role=\"presentation\".",
     },
     Meta {
         ids: &["links/ambiguous-name"],
         tier: Tier::Semantics,
         wcag: &["2.4.4"],
         severity: Severity::Medium,
-        help: "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
+        help: "Links with the same name should point to the same target.",
     },
     Meta {
         ids: &["links/generic-name"],
         tier: Tier::Semantics,
         wcag: &["2.4.4"],
         severity: Severity::Medium,
-        help: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+        help: "Link text should say where it leads without the surrounding sentence.",
     },
 ];
 
