@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2024"
 description = "A pure-Rust RELAX NG schema parser and validator"
 license = "MIT"
-repository = "https://github.com/casoon/relax-ng"
+repository.workspace = true
 
 [dependencies]
 regex = "1"

@@ -8,11 +8,11 @@ readme = "README.md"
 keywords = ["schematron", "xml", "validation", "xpath"]
 categories = ["parser-implementations"]
 license = "MIT"
-repository = "https://github.com/casoon/schematron-engine"
+repository.workspace = true
 
 [dependencies]
 roxmltree = "0.21.1"
-xpath-eval = "0.2.1"
+xpath-eval = { workspace = true }
 
 [[bench]]
 name = "evaluate"
