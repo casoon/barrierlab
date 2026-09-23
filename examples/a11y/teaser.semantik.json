@@ -1,0 +1,319 @@
+{
+  "findings": [
+    {
+      "rule_id": "headings/skip-level",
+      "outcome": "fail",
+      "severity": "medium",
+      "message": "Die Gliederung springt von h1 auf h3.",
+      "location": {
+        "node": "13"
+      },
+      "wcag": [
+        "1.3.1"
+      ]
+    },
+    {
+      "rule_id": "images/alt-missing",
+      "outcome": "fail",
+      "severity": "high",
+      "message": "Das Bild hat kein alt-Attribut.",
+      "location": {
+        "node": "15"
+      },
+      "wcag": [
+        "1.1.1"
+      ]
+    },
+    {
+      "rule_id": "images/alt-suspicious",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Der Alt-Text \"hose.jpg\" beschreibt das Bild vermutlich nicht.",
+      "location": {
+        "node": "20"
+      },
+      "wcag": [
+        "1.1.1"
+      ]
+    },
+    {
+      "rule_id": "forms/label-missing",
+      "outcome": "fail",
+      "severity": "critical",
+      "message": "Das Eingabefeld hat kein Label.",
+      "location": {
+        "node": "24"
+      },
+      "wcag": [
+        "1.3.1",
+        "3.3.2",
+        "4.1.2"
+      ]
+    },
+    {
+      "rule_id": "keyboard/skip-link-missing",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Kein Sprunglink gefunden, der wiederkehrende Bereiche überspringt.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "2.4.1"
+      ]
+    },
+    {
+      "rule_id": "buttons/name-missing",
+      "outcome": "fail",
+      "severity": "critical",
+      "message": "Der Button hat keinen zugänglichen Namen.",
+      "location": {
+        "node": "25"
+      },
+      "wcag": [
+        "4.1.2"
+      ]
+    },
+    {
+      "rule_id": "svg/name-missing",
+      "outcome": "fail",
+      "severity": "high",
+      "message": "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet.",
+      "location": {
+        "node": "26"
+      },
+      "wcag": [
+        "1.1.1"
+      ]
+    },
+    {
+      "rule_id": "links/ambiguous-name",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Mehrere Links heißen \"mehr\", zeigen aber auf verschiedene Ziele.",
+      "location": {
+        "node": "16"
+      },
+      "wcag": [
+        "2.4.4"
+      ]
+    },
+    {
+      "rule_id": "links/ambiguous-name",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Mehrere Links heißen \"mehr\", zeigen aber auf verschiedene Ziele.",
+      "location": {
+        "node": "21"
+      },
+      "wcag": [
+        "2.4.4"
+      ]
+    },
+    {
+      "rule_id": "links/generic-name",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Der Linktext \"mehr\" sagt nichts über das Ziel.",
+      "location": {
+        "node": "16"
+      },
+      "wcag": [
+        "2.4.4"
+      ]
+    },
+    {
+      "rule_id": "links/generic-name",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "Der Linktext \"mehr\" sagt nichts über das Ziel.",
+      "location": {
+        "node": "21"
+      },
+      "wcag": [
+        "2.4.4"
+      ]
+    }
+  ],
+  "rule_runs": [
+    {
+      "rule_id": "document/lang-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/lang-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/title-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/title-empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-locked",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-scale-limited",
+      "findings": 0
+    },
+    {
+      "rule_id": "zoom/viewport-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/skip-level",
+      "findings": 1
+    },
+    {
+      "rule_id": "headings/h1-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/h1-multiple",
+      "findings": 0
+    },
+    {
+      "rule_id": "images/alt-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "images/alt-suspicious",
+      "findings": 1
+    },
+    {
+      "rule_id": "forms/label-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "forms/placeholder-as-label",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/role-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/role-abstract",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/reference-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/required-attribute-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "ids/duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/positive-tabindex",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/hidden-focusable",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/invalid-structure",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/empty",
+      "findings": 0
+    },
+    {
+      "rule_id": "lists/term-without-definition",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/header-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/presentational-with-headers",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/main-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/main-duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/navigation-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/banner-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/contentinfo-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/skip-link-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "links/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "buttons/name-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "svg/name-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "links/ambiguous-name",
+      "findings": 2
+    },
+    {
+      "rule_id": "links/generic-name",
+      "findings": 2
+    },
+    {
+      "rule_id": "contrast/text-insufficient",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+    },
+    {
+      "rule_id": "contrast/text-undetermined",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+    }
+  ],
+  "summary": {
+    "fail": 5,
+    "review": 6,
+    "pass": 0,
+    "untested": 0,
+    "critical": 2,
+    "high": 2,
+    "medium": 7,
+    "low": 0,
+    "rules_not_run": 2
+  }
+}

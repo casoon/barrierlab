@@ -4,6 +4,7 @@ plan/
 # Rust
 /target/
 **/target/
+Cargo.lock.bak
 
 # Node
 node_modules/

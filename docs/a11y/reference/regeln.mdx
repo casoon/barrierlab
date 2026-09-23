@@ -1,0 +1,91 @@
+---
+title: Regelkennungen
+description: Alle Befund-Kennungen aus a11y-rules 0.10 mit Tier, WCAG-Kriterium und Vorgabeschwere.
+order: 1
+---
+
+Die Kennungen sind über alle Oberflächen stabil. Die Tabellen geben die Deklarationen wieder, die
+`structure_metas`, `semantics_metas` und `rendering_metas` liefern; `examples/rules.json` ist ihre
+Ausgabe. Die Schwere ist die Vorgabe der Regel, einzelne Befunde dürfen davon abweichen.
+
+## Tier 1: Struktur
+
+35 Kennungen, `Document`, läuft auf jedem Host.
+
+| Kennung | WCAG | Schwere | Hinweis der Regel |
+|---|---|---|---|
+| `document/lang-missing` | 3.1.1 | high | Das `<html>`-Element braucht ein gültiges lang-Attribut. |
+| `document/lang-invalid` | 3.1.1 | high | Das `<html>`-Element braucht ein gültiges lang-Attribut. |
+| `document/title-missing` | 2.4.2 | high | Jede Seite braucht einen aussagekräftigen `<title>`. |
+| `document/title-empty` | 2.4.2 | high | Jede Seite braucht einen aussagekräftigen `<title>`. |
+| `zoom/viewport-locked` | 1.4.4, 1.4.10 | high | Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern. |
+| `zoom/viewport-scale-limited` | 1.4.4, 1.4.10 | high | Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern. |
+| `zoom/viewport-missing` | 1.4.4, 1.4.10 | high | Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern. |
+| `headings/empty` | 1.3.1, 2.4.6 | medium | Überschriften bilden die Gliederung; Ebenen nicht überspringen. |
+| `headings/skip-level` | 1.3.1, 2.4.6 | medium | Überschriften bilden die Gliederung; Ebenen nicht überspringen. |
+| `headings/h1-missing` | 1.3.1, 2.4.6 | medium | Überschriften bilden die Gliederung; Ebenen nicht überspringen. |
+| `headings/h1-multiple` | 1.3.1, 2.4.6 | medium | Überschriften bilden die Gliederung; Ebenen nicht überspringen. |
+| `images/alt-missing` | 1.1.1 | high | Informative Bilder brauchen einen beschreibenden Alt-Text. |
+| `images/alt-suspicious` | 1.1.1 | high | Informative Bilder brauchen einen beschreibenden Alt-Text. |
+| `forms/label-missing` | 1.3.1, 3.3.2, 4.1.2 | critical | Jedes Eingabefeld braucht ein zugeordnetes Label. |
+| `forms/placeholder-as-label` | 1.3.1, 3.3.2, 4.1.2 | critical | Jedes Eingabefeld braucht ein zugeordnetes Label. |
+| `aria/role-invalid` | 4.1.2 | high | Nur Rollen aus der ARIA-Spezifikation verwenden. |
+| `aria/role-abstract` | 4.1.2 | high | Nur Rollen aus der ARIA-Spezifikation verwenden. |
+| `aria/reference-missing` | 1.3.1, 4.1.2 | high | ARIA-Verweise müssen auf vorhandene IDs zeigen. |
+| `aria/required-attribute-missing` | 4.1.2 | high | Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt. |
+| `ids/duplicate` | 4.1.1 | medium | IDs müssen im Dokument eindeutig sein. |
+| `keyboard/positive-tabindex` | 2.4.3 | high | Positive tabindex-Werte brechen die Tabreihenfolge. |
+| `keyboard/hidden-focusable` | 1.3.1, 4.1.2 | high | Fokussierbare Elemente dürfen nicht aria-hidden sein. |
+| `lists/invalid-structure` | 1.3.1 | medium | `<ul>` und `<ol>` dürfen als direkte Kinder nur `<li>` haben und nicht leer sein. |
+| `lists/empty` | 1.3.1 | medium | `<ul>` und `<ol>` dürfen als direkte Kinder nur `<li>` haben und nicht leer sein. |
+| `lists/term-without-definition` | 1.3.1 | medium | `<ul>` und `<ol>` dürfen als direkte Kinder nur `<li>` haben und nicht leer sein. |
+| `tables/header-missing` | 1.3.1 | high | Datentabellen brauchen `<th>`-Kopfzellen. |
+| `tables/name-missing` | 1.3.1 | high | Datentabellen brauchen `<th>`-Kopfzellen. |
+| `tables/presentational-with-headers` | 1.3.1 | high | Datentabellen brauchen `<th>`-Kopfzellen. |
+| `landmarks/main-missing` | 1.3.1, 2.4.1 | high | Landmarks gliedern die Seite für alle, die sie nicht sehen können. |
+| `landmarks/main-duplicate` | 1.3.1, 2.4.1 | high | Landmarks gliedern die Seite für alle, die sie nicht sehen können. |
+| `landmarks/navigation-missing` | 1.3.1, 2.4.1 | high | Landmarks gliedern die Seite für alle, die sie nicht sehen können. |
+| `landmarks/banner-missing` | 1.3.1, 2.4.1 | high | Landmarks gliedern die Seite für alle, die sie nicht sehen können. |
+| `landmarks/contentinfo-missing` | 1.3.1, 2.4.1 | high | Landmarks gliedern die Seite für alle, die sie nicht sehen können. |
+| `keyboard/skip-link-missing` | 2.4.1 | medium | Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt. |
+| `lists/item-outside-list` | 1.3.1 | medium | nicht deklariert, siehe unten |
+
+## Tier 2: Semantik
+
+5 Kennungen, braucht `Semantics`, also Rolle und Accessible Name.
+
+| Kennung | WCAG | Schwere | Hinweis der Regel |
+|---|---|---|---|
+| `links/name-missing` | 2.4.4, 4.1.2 | critical | Jeder Link braucht einen Namen, der sein Ziel beschreibt. |
+| `buttons/name-missing` | 4.1.2 | critical | Jeder Button braucht einen Namen, der seine Wirkung beschreibt. |
+| `svg/name-missing` | 1.1.1 | high | Informative SVGs brauchen einen Namen, dekorative role="presentation". |
+| `links/ambiguous-name` | 2.4.4 | medium | Gleich benannte Links sollten auf dasselbe Ziel zeigen. |
+| `links/generic-name` | 2.4.4 | medium | Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt. |
+
+## Tier 3: Darstellung
+
+2 Kennungen, braucht `Rendering`, also berechnete Stile und Geometrie.
+
+| Kennung | WCAG | Schwere | Hinweis der Regel |
+|---|---|---|---|
+| `contrast/text-insufficient` | 1.4.3 | high | Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt. |
+| `contrast/text-undetermined` | 1.4.3 | high | Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt. |
+
+<Callout type="caution" title="Eine Kennung ohne Deklaration">
+
+`lists/item-outside-list` meldet einen Listeneintrag ohne umgebende Liste. Die Regel erzeugt die
+Kennung, in 0.10 steht sie aber in keinem `Meta::ids`. Befunde mit dieser Kennung erscheinen deshalb
+ohne passenden `RuleRun`. Zusammen mit ihr kommt der Regelbestand auf 42 Kennungen, deklariert
+sind 41.
+
+</Callout>
+
+## review statt fail
+
+Nicht jede fehlende Angabe ist ein Verstoß. `landmarks/navigation-missing`,
+`landmarks/banner-missing`, `landmarks/contentinfo-missing`, `headings/h1-multiple` und
+`keyboard/skip-link-missing` liefern `review`: `main` muss da sein, aber eine Seite darf ohne
+Navigation auskommen, und ein Sprunglink lässt sich nur über Linktext und Klassennamen erkennen.
+`links/ambiguous-name` und `links/generic-name` sind zwei verschiedene Regeln und liefern beide
+`review`: Die eine sagt „zwei Links heißen gleich, führen aber woandershin“, die andere „dieser Text
+sagt für sich genommen nichts über das Ziel“.

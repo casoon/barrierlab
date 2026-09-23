@@ -1,0 +1,390 @@
+[
+  {
+    "help": "Das <html>-Element braucht ein gültiges lang-Attribut.",
+    "id": "document/lang-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "3.1.1"
+    ]
+  },
+  {
+    "help": "Das <html>-Element braucht ein gültiges lang-Attribut.",
+    "id": "document/lang-invalid",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "3.1.1"
+    ]
+  },
+  {
+    "help": "Jede Seite braucht einen aussagekräftigen <title>.",
+    "id": "document/title-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.4.2"
+    ]
+  },
+  {
+    "help": "Jede Seite braucht einen aussagekräftigen <title>.",
+    "id": "document/title-empty",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.4.2"
+    ]
+  },
+  {
+    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "id": "zoom/viewport-locked",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.4.4",
+      "1.4.10"
+    ]
+  },
+  {
+    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "id": "zoom/viewport-scale-limited",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.4.4",
+      "1.4.10"
+    ]
+  },
+  {
+    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "id": "zoom/viewport-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.4.4",
+      "1.4.10"
+    ]
+  },
+  {
+    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "id": "headings/empty",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.6"
+    ]
+  },
+  {
+    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "id": "headings/skip-level",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.6"
+    ]
+  },
+  {
+    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "id": "headings/h1-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.6"
+    ]
+  },
+  {
+    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "id": "headings/h1-multiple",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.6"
+    ]
+  },
+  {
+    "help": "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+    "id": "images/alt-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+    "id": "images/alt-suspicious",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+    "id": "forms/label-missing",
+    "severity": "critical",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "3.3.2",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+    "id": "forms/placeholder-as-label",
+    "severity": "critical",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "3.3.2",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+    "id": "aria/role-invalid",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+    "id": "aria/role-abstract",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
+    "id": "aria/reference-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
+    "id": "aria/required-attribute-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "IDs müssen im Dokument eindeutig sein.",
+    "id": "ids/duplicate",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "4.1.1"
+    ]
+  },
+  {
+    "help": "Positive tabindex-Werte brechen die Tabreihenfolge.",
+    "id": "keyboard/positive-tabindex",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.4.3"
+    ]
+  },
+  {
+    "help": "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
+    "id": "keyboard/hidden-focusable",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "id": "lists/invalid-structure",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "id": "lists/empty",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "id": "lists/term-without-definition",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "id": "tables/header-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "id": "tables/name-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "id": "tables/presentational-with-headers",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "id": "landmarks/main-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "id": "landmarks/main-duplicate",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "id": "landmarks/navigation-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "id": "landmarks/banner-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "id": "landmarks/contentinfo-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
+    "id": "keyboard/skip-link-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "2.4.1"
+    ]
+  },
+  {
+    "help": "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
+    "id": "links/name-missing",
+    "severity": "critical",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.4",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
+    "id": "buttons/name-missing",
+    "severity": "critical",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
+    "id": "svg/name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
+    "id": "links/ambiguous-name",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.4"
+    ]
+  },
+  {
+    "help": "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+    "id": "links/generic-name",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.4"
+    ]
+  },
+  {
+    "help": "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt.",
+    "id": "contrast/text-insufficient",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.3"
+    ]
+  },
+  {
+    "help": "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt.",
+    "id": "contrast/text-undetermined",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.3"
+    ]
+  }
+]

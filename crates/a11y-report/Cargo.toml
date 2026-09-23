@@ -1,0 +1,17 @@
+[package]
+name = "a11y-report"
+description = "Shared finding and report model for accessibility tooling: four outcome states, severity, WCAG mapping and a stable JSON contract."
+keywords = ["accessibility", "a11y", "wcag", "report", "audit"]
+version = "0.10.1"
+edition = "2021"
+license.workspace = true
+repository.workspace = true
+rust-version = "1.85"
+authors.workspace = true
+categories.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

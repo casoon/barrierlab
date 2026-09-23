@@ -81,7 +81,7 @@ flowchart BT
 
 | Schritt | Paket | Woher | Zustand |
 |---|---|---|---|
-| 1 | `a11y-report`, `a11y-dom`, `accname`, `a11y-rules` | `casoon/a11y-core` | veröffentlicht (0.10.1) |
+| 1 | `a11y-report`, `a11y-dom`, `accname`, `a11y-rules` | `casoon/a11y-core` | **importiert** (0.10.1), Historie mitgekommen |
 | 2 | `html-conform` + `html5-parser`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng`, `schematron-engine` | eigene Repositories | veröffentlicht |
 | 3 | `a11y-wasm` | `casoon/liveaudit`, `packages/core` | unveröffentlicht, Adapter |
 | 4 | `a11y-perception` | `casoon/auditmysite` | Code vorhanden, noch nicht gelöst |
