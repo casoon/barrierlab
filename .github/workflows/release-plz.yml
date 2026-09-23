@@ -24,14 +24,29 @@ jobs:
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+
+      # release-plz bricht ohne veroeffentlichbare Pakete ab ("no public
+      # packages found"). Bis zum ersten Import ist das der Normalfall, kein
+      # Fehler. Die Bedingung faellt mit dem ersten Crate weg.
+      - name: Workspace hat Member?
+        id: members
+        run: |
+          if ls crates/*/Cargo.toml >/dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Noch kein Crate in crates/ — release-plz uebersprungen."
+          fi
+
       - name: Release-PR aktualisieren
+        if: steps.members.outputs.present == 'true'
         uses: release-plz/action@v0.5.139
         with:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Veroeffentlichen
-        if: ${{ inputs.dry_run == false }}
+        if: steps.members.outputs.present == 'true' && inputs.dry_run == false
         uses: release-plz/action@v0.5.139
         with:
           command: release
