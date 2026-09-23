@@ -3,7 +3,8 @@
 git_tag_name = "{{ package }}-v{{ version }}"
 git_release_name = "{{ package }} {{ version }}"
 git_release_body = "{{ changelog }}"
-# Veroeffentlicht wird nur, wenn ein Release-PR gemergt wurde; kein Release
-# bei jedem Push.
-release_always = false
+# Ohne Release-PR (siehe docs/releasing.md) muss release-plz auch bei einem
+# normalen Push veroeffentlichen duerfen. Es nimmt nur, was noch nicht in der
+# Registry steht; unveraenderte Versionen uebergeht es.
+release_always = true
 changelog_update = true
