@@ -179,7 +179,7 @@ impl<'a> Node<'a> for ArenaNode<'a> {
 
     fn parent(self) -> Option<Self> {
         let p = self.entry().parent;
-        (p >= 0).then(|| ArenaNode {
+        (p >= 0).then_some(ArenaNode {
             arena: self.arena,
             idx: p as u32,
         })
@@ -296,7 +296,11 @@ mod tests {
     #[test]
     fn dokument_ohne_text_hat_keine_textkennung() {
         let d = build(|b| {
-            b.open("html").open("img").attr("src", "a.png").close().close();
+            b.open("html")
+                .open("img")
+                .attr("src", "a.png")
+                .close()
+                .close();
         });
         assert!(d.text_tag.is_none());
         assert_eq!(elements(&d).count(), 2);

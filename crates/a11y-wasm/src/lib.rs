@@ -265,7 +265,10 @@ mod tests {
             .filter(|r| r.not_run.is_some())
             .map(|r| r.rule_id.as_str())
             .collect();
-        assert_eq!(offen, ["contrast/text-insufficient", "contrast/text-undetermined"]);
+        assert_eq!(
+            offen,
+            ["contrast/text-insufficient", "contrast/text-undetermined"]
+        );
 
         // Kein Befund wird als bestanden ausgegeben, den niemand geprüft hat.
         assert_eq!(report.summary.pass, 0);

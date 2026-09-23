@@ -141,43 +141,43 @@
       "rule_id": "links/name-missing",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine Rolle und keinen Accessible Name"
+      "reason": "host provides no role and no accessible name"
     },
     {
       "rule_id": "buttons/name-missing",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine Rolle und keinen Accessible Name"
+      "reason": "host provides no role and no accessible name"
     },
     {
       "rule_id": "svg/name-missing",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine Rolle und keinen Accessible Name"
+      "reason": "host provides no role and no accessible name"
     },
     {
       "rule_id": "links/ambiguous-name",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine Rolle und keinen Accessible Name"
+      "reason": "host provides no role and no accessible name"
     },
     {
       "rule_id": "links/generic-name",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine Rolle und keinen Accessible Name"
+      "reason": "host provides no role and no accessible name"
     },
     {
       "rule_id": "contrast/text-insufficient",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     },
     {
       "rule_id": "contrast/text-undetermined",
       "not_run": "capability_missing",
       "findings": 0,
-      "reason": "Host liefert keine berechneten Stile und keine Geometrie"
+      "reason": "host provides no computed styles and no geometry"
     }
   ],
   "summary": {

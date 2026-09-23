@@ -65,7 +65,7 @@ impl Semantics for SemanticArena<'_> {
 mod tests {
     use super::*;
     use crate::testing::build;
-    use a11y_dom::{elements, Node};
+    use a11y_dom::{Node, elements};
 
     #[test]
     fn name_kommt_ueber_aria_labelledby() {

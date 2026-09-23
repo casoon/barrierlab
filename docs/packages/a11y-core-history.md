@@ -8,13 +8,24 @@ Alle nennenswerten Änderungen an den vier Crates. Sie werden im Gleichschritt v
 Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Einträge sind aus der
 Git-Historie nachgetragen.
 
-## [Unreleased]
+## [0.11.0] - 2026-09-23
+
+### Changed
+
+- **Alle Befundtexte und Regel-Hinweise sind englisch.** `message` und `help` kommen aus einem
+  Regelkern, der drei Oberflächen und beliebige fremde Seiten bedient; deutsche Sätze in einer
+  englischen Oberfläche waren ein sichtbarer Bruch. Rule-IDs, Outcomes und Schweregrade sind
+  unverändert — wer auf Kennungen prüft, merkt nichts. Wer **Meldungstexte** vergleicht (Snapshots
+  in `astro-post-audit` oder `auditmysite`), muss sie neu abnehmen. Deshalb 0.11.0 und nicht 0.10.2.
+- Kommentare, Tests und `docs/` bleiben deutsch. Übersetzt ist, was ein Werkzeug ausgibt.
+
+## [0.10.2] - 2026-09-23
 
 ### Fixed
 
 - `headings/empty` meldet eine Überschrift nicht mehr als leer, wenn sie ihren Namen über
-  `aria-labelledby` oder ein Bild mit Alternativtext bekommt. Im Repository als 0.10.1 geführt,
-  noch nicht auf crates.io.
+  `aria-labelledby` oder ein Bild mit Alternativtext bekommt. Dieselbe Quelle steht auf crates.io
+  auch als 0.10.1; 0.10.2 ist die Fassung, auf die sich Abhängigkeiten stützen sollten.
 
 ## [0.10.0] - 2026-09-20
 

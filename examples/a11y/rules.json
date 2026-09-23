@@ -1,6 +1,6 @@
 [
   {
-    "help": "Das <html>-Element braucht ein gültiges lang-Attribut.",
+    "help": "The <html> element needs a valid lang attribute.",
     "id": "document/lang-missing",
     "severity": "high",
     "tier": "structure",
@@ -9,7 +9,7 @@
     ]
   },
   {
-    "help": "Das <html>-Element braucht ein gültiges lang-Attribut.",
+    "help": "The <html> element needs a valid lang attribute.",
     "id": "document/lang-invalid",
     "severity": "high",
     "tier": "structure",
@@ -18,7 +18,7 @@
     ]
   },
   {
-    "help": "Jede Seite braucht einen aussagekräftigen <title>.",
+    "help": "Every page needs a meaningful <title>.",
     "id": "document/title-missing",
     "severity": "high",
     "tier": "structure",
@@ -27,7 +27,7 @@
     ]
   },
   {
-    "help": "Jede Seite braucht einen aussagekräftigen <title>.",
+    "help": "Every page needs a meaningful <title>.",
     "id": "document/title-empty",
     "severity": "high",
     "tier": "structure",
@@ -36,7 +36,7 @@
     ]
   },
   {
-    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "help": "A viewport must be present and must not prevent zooming.",
     "id": "zoom/viewport-locked",
     "severity": "high",
     "tier": "structure",
@@ -46,7 +46,7 @@
     ]
   },
   {
-    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "help": "A viewport must be present and must not prevent zooming.",
     "id": "zoom/viewport-scale-limited",
     "severity": "high",
     "tier": "structure",
@@ -56,7 +56,7 @@
     ]
   },
   {
-    "help": "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+    "help": "A viewport must be present and must not prevent zooming.",
     "id": "zoom/viewport-missing",
     "severity": "high",
     "tier": "structure",
@@ -66,7 +66,7 @@
     ]
   },
   {
-    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "help": "Headings form the outline; do not skip levels.",
     "id": "headings/empty",
     "severity": "medium",
     "tier": "structure",
@@ -76,7 +76,7 @@
     ]
   },
   {
-    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "help": "Headings form the outline; do not skip levels.",
     "id": "headings/skip-level",
     "severity": "medium",
     "tier": "structure",
@@ -86,7 +86,7 @@
     ]
   },
   {
-    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "help": "Headings form the outline; do not skip levels.",
     "id": "headings/h1-missing",
     "severity": "medium",
     "tier": "structure",
@@ -96,7 +96,7 @@
     ]
   },
   {
-    "help": "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+    "help": "Headings form the outline; do not skip levels.",
     "id": "headings/h1-multiple",
     "severity": "medium",
     "tier": "structure",
@@ -106,7 +106,7 @@
     ]
   },
   {
-    "help": "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+    "help": "Informative images need descriptive alt text.",
     "id": "images/alt-missing",
     "severity": "high",
     "tier": "structure",
@@ -115,7 +115,7 @@
     ]
   },
   {
-    "help": "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+    "help": "Informative images need descriptive alt text.",
     "id": "images/alt-suspicious",
     "severity": "high",
     "tier": "structure",
@@ -124,7 +124,7 @@
     ]
   },
   {
-    "help": "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+    "help": "Every input needs an associated label.",
     "id": "forms/label-missing",
     "severity": "critical",
     "tier": "structure",
@@ -135,7 +135,7 @@
     ]
   },
   {
-    "help": "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+    "help": "Every input needs an associated label.",
     "id": "forms/placeholder-as-label",
     "severity": "critical",
     "tier": "structure",
@@ -146,7 +146,7 @@
     ]
   },
   {
-    "help": "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+    "help": "Use only roles from the ARIA specification.",
     "id": "aria/role-invalid",
     "severity": "high",
     "tier": "structure",
@@ -155,7 +155,7 @@
     ]
   },
   {
-    "help": "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+    "help": "Use only roles from the ARIA specification.",
     "id": "aria/role-abstract",
     "severity": "high",
     "tier": "structure",
@@ -164,7 +164,7 @@
     ]
   },
   {
-    "help": "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
+    "help": "ARIA references must point to IDs that exist.",
     "id": "aria/reference-missing",
     "severity": "high",
     "tier": "structure",
@@ -174,7 +174,7 @@
     ]
   },
   {
-    "help": "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
+    "help": "A role that announces a state needs the attribute carrying it.",
     "id": "aria/required-attribute-missing",
     "severity": "high",
     "tier": "structure",
@@ -183,7 +183,7 @@
     ]
   },
   {
-    "help": "IDs müssen im Dokument eindeutig sein.",
+    "help": "IDs must be unique within the document.",
     "id": "ids/duplicate",
     "severity": "medium",
     "tier": "structure",
@@ -192,7 +192,7 @@
     ]
   },
   {
-    "help": "Positive tabindex-Werte brechen die Tabreihenfolge.",
+    "help": "Positive tabindex values break the tab order.",
     "id": "keyboard/positive-tabindex",
     "severity": "high",
     "tier": "structure",
@@ -201,7 +201,7 @@
     ]
   },
   {
-    "help": "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
+    "help": "Focusable elements must not be aria-hidden.",
     "id": "keyboard/hidden-focusable",
     "severity": "high",
     "tier": "structure",
@@ -211,7 +211,7 @@
     ]
   },
   {
-    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "help": "<ul> and <ol> may only have <li> as direct children and must not be empty.",
     "id": "lists/invalid-structure",
     "severity": "medium",
     "tier": "structure",
@@ -220,7 +220,7 @@
     ]
   },
   {
-    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "help": "<ul> and <ol> may only have <li> as direct children and must not be empty.",
     "id": "lists/empty",
     "severity": "medium",
     "tier": "structure",
@@ -229,7 +229,7 @@
     ]
   },
   {
-    "help": "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+    "help": "<ul> and <ol> may only have <li> as direct children and must not be empty.",
     "id": "lists/term-without-definition",
     "severity": "medium",
     "tier": "structure",
@@ -238,7 +238,7 @@
     ]
   },
   {
-    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "help": "Data tables need <th> header cells.",
     "id": "tables/header-missing",
     "severity": "high",
     "tier": "structure",
@@ -247,7 +247,7 @@
     ]
   },
   {
-    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "help": "Data tables need <th> header cells.",
     "id": "tables/name-missing",
     "severity": "high",
     "tier": "structure",
@@ -256,7 +256,7 @@
     ]
   },
   {
-    "help": "Datentabellen brauchen <th>-Kopfzellen.",
+    "help": "Data tables need <th> header cells.",
     "id": "tables/presentational-with-headers",
     "severity": "high",
     "tier": "structure",
@@ -265,7 +265,7 @@
     ]
   },
   {
-    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "help": "Landmarks structure the page for everyone who cannot see it.",
     "id": "landmarks/main-missing",
     "severity": "high",
     "tier": "structure",
@@ -275,7 +275,7 @@
     ]
   },
   {
-    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "help": "Landmarks structure the page for everyone who cannot see it.",
     "id": "landmarks/main-duplicate",
     "severity": "high",
     "tier": "structure",
@@ -285,7 +285,7 @@
     ]
   },
   {
-    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "help": "Landmarks structure the page for everyone who cannot see it.",
     "id": "landmarks/navigation-missing",
     "severity": "high",
     "tier": "structure",
@@ -295,7 +295,7 @@
     ]
   },
   {
-    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "help": "Landmarks structure the page for everyone who cannot see it.",
     "id": "landmarks/banner-missing",
     "severity": "high",
     "tier": "structure",
@@ -305,7 +305,7 @@
     ]
   },
   {
-    "help": "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+    "help": "Landmarks structure the page for everyone who cannot see it.",
     "id": "landmarks/contentinfo-missing",
     "severity": "high",
     "tier": "structure",
@@ -315,7 +315,7 @@
     ]
   },
   {
-    "help": "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
+    "help": "A skip link bypasses blocks that repeat before the content.",
     "id": "keyboard/skip-link-missing",
     "severity": "medium",
     "tier": "structure",
@@ -324,7 +324,7 @@
     ]
   },
   {
-    "help": "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
+    "help": "Every link needs a name that describes its target.",
     "id": "links/name-missing",
     "severity": "critical",
     "tier": "semantics",
@@ -334,7 +334,7 @@
     ]
   },
   {
-    "help": "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
+    "help": "Every button needs a name that describes what it does.",
     "id": "buttons/name-missing",
     "severity": "critical",
     "tier": "semantics",
@@ -343,7 +343,7 @@
     ]
   },
   {
-    "help": "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
+    "help": "Informative SVGs need a name, decorative ones role=\"presentation\".",
     "id": "svg/name-missing",
     "severity": "high",
     "tier": "semantics",
@@ -352,7 +352,7 @@
     ]
   },
   {
-    "help": "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
+    "help": "Links with the same name should point to the same target.",
     "id": "links/ambiguous-name",
     "severity": "medium",
     "tier": "semantics",
@@ -361,7 +361,7 @@
     ]
   },
   {
-    "help": "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+    "help": "Link text should say where it leads without the surrounding sentence.",
     "id": "links/generic-name",
     "severity": "medium",
     "tier": "semantics",
@@ -370,7 +370,7 @@
     ]
   },
   {
-    "help": "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt.",
+    "help": "Text needs a contrast ratio against its background of at least 4.5:1, or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
     "id": "contrast/text-insufficient",
     "severity": "high",
     "tier": "rendering",
@@ -379,7 +379,7 @@
     ]
   },
   {
-    "help": "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei fettem Schnitt ab 14 pt.",
+    "help": "Text needs a contrast ratio against its background of at least 4.5:1, or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
     "id": "contrast/text-undetermined",
     "severity": "high",
     "tier": "rendering",

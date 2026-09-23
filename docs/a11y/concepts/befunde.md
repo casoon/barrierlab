@@ -52,7 +52,7 @@ fällt weg, wenn es nicht gesetzt ist:
   "rule_id": "images/alt-missing",
   "outcome": "fail",
   "severity": "high",
-  "message": "Das Bild hat kein alt-Attribut.",
+  "message": "The image has no alt attribute.",
   "location": {
     "node": "15"
   },
