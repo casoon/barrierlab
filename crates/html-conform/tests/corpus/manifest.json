@@ -1,0 +1,15 @@
+{
+  "source_repo": "https://github.com/validator/validator",
+  "source_commit": "388cb365257d1410d4d32af960dba1cbd1b9af91",
+  "source_tag": "26.8.20",
+  "vendored_trees": ["tests/html", "tests/html-aria"],
+  "excluded_trees": [
+    "tests/css", "tests/xhtml", "tests/svg", "tests/html-rdfa",
+    "tests/html-rdfalite", "tests/html-math", "tests/html-its",
+    "tests/langdetect", "tests/normalization", "tests/schema-validation"
+  ],
+  "html_fixture_count": 3845,
+  "html_aria_fixture_count": 810,
+  "messages_json_entry_count": 3746,
+  "expectation_model": "a fixture path present as a messages.json key is expected to produce at least one finding; a path absent from messages.json is expected to produce none"
+}

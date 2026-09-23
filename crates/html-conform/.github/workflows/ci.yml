@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo build --all-targets
+      - run: cargo test
+      - run: cargo test --release --test differential -- --ignored
+      - run: cargo fmt --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo bench --no-run
+      - uses: fsfe/reuse-action@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - run: cargo build --all-targets
+      - run: cargo test

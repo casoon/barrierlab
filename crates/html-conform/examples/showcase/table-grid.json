@@ -1,0 +1,44 @@
+{
+  "findings": [
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `rows` for attribute `scope` at 10:9",
+      "location": {
+        "line": 10,
+        "column": 9,
+        "byte_offset": 162
+      }
+    },
+    {
+      "rule_id": "assertion.tables.th-scope-enum",
+      "severity": "Error",
+      "message": "A th element's scope attribute must be one of row, col, rowgroup, or colgroup.",
+      "location": {
+        "line": 10,
+        "column": 9,
+        "byte_offset": 162
+      }
+    },
+    {
+      "rule_id": "tables.integrity",
+      "severity": "Error",
+      "message": "Table cell is overlapped by later table cell.",
+      "location": {
+        "line": 11,
+        "column": 23,
+        "byte_offset": 233
+      }
+    },
+    {
+      "rule_id": "tables.integrity",
+      "severity": "Error",
+      "message": "Table cell overlaps an earlier table cell.",
+      "location": {
+        "line": 12,
+        "column": 9,
+        "byte_offset": 270
+      }
+    }
+  ]
+}

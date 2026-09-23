@@ -1,0 +1,18 @@
+version = 1
+SPDX-PackageName = "html-conform"
+SPDX-PackageSupplier = "CASOON"
+SPDX-PackageDownloadLocation = "https://github.com/casoon/html-conform"
+
+# This crate's own files.
+[[annotations]]
+path = ["**"]
+SPDX-FileCopyrightText = "2026 CASOON"
+SPDX-License-Identifier = "MIT"
+
+# Vendored from validator/validator (Nu Html Checker / vnu), MIT-licensed —
+# see THIRD-PARTY-NOTICES.md. More specific than, and therefore overriding,
+# the bulk "**" rule above (REUSE.toml: "the last matching table... is used").
+[[annotations]]
+path = ["schema/**", "tests/corpus/**"]
+SPDX-FileCopyrightText = "2007-2026 Mozilla Foundation, Henri Sivonen, and the W3C"
+SPDX-License-Identifier = "MIT"

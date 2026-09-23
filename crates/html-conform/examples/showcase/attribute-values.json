@@ -1,0 +1,64 @@
+{
+  "findings": [
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `print and (` for attribute `media` at 6:3",
+      "location": {
+        "line": 6,
+        "column": 3,
+        "byte_offset": 101
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `en_US` for attribute `{http://www.w3.org/XML/1998/namespace}lang` at 9:3",
+      "location": {
+        "line": 9,
+        "column": 3,
+        "byte_offset": 179
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `2026-13-01` for attribute `datetime` at 10:16",
+      "location": {
+        "line": 10,
+        "column": 16,
+        "byte_offset": 244
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `hero.png 1x, hero@2x.png 2y` for attribute `srcset` at 11:3",
+      "location": {
+        "line": 11,
+        "column": 3,
+        "byte_offset": 304
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `https://exa mple.com/` for attribute `href` at 12:3",
+      "location": {
+        "line": 12,
+        "column": 3,
+        "byte_offset": 375
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "invalid value `colour` for attribute `type` at 13:3",
+      "location": {
+        "line": 13,
+        "column": 3,
+        "byte_offset": 431
+      }
+    }
+  ]
+}
