@@ -11,6 +11,9 @@ node_modules/
 dist/
 .astro/
 
+# WASM-Bauartefakt (packages/a11y-wasm/build.mjs erzeugt es)
+packages/*/pkg/
+
 # Bauartefakte der Doku (Mermaid → SVG, E7)
 docs/**/*.generated.svg
 
