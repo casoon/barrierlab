@@ -43,7 +43,7 @@ media-query-parse = { version = "0.1.0", path = "crates/media-query-parse" }
 xpath-eval = { version = "0.2.2", path = "crates/xpath-eval" }
 relax-ng = { version = "0.2.0", path = "crates/relax-ng" }
 schematron-engine = { version = "0.2.0", path = "crates/schematron-engine" }
-html-conform = { version = "0.2.1", path = "crates/html-conform" }
+html-conform = { version = "0.3.0", path = "crates/html-conform" }
 a11y-report = { version = "0.10.2", path = "crates/a11y-report" }
 a11y-dom = { version = "0.10.2", path = "crates/a11y-dom" }
 accname = { version = "0.10.2", path = "crates/accname" }

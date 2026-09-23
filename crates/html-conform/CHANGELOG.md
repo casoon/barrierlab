@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-23
+
+### Changed
+- Das Crate liegt jetzt im Monorepo `casoon/barrierlab`, zusammen mit
+  `html5-parser`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng` und
+  `schematron-engine`. Die `=`-Pins auf diese Pakete sind damit weg; sie stehen
+  als Workspace-Abhängigkeiten. `repository` und `homepage` zeigen hierher.
 
 ### Added
 - `assertion.elements.img-missing-alt`: an `img` without `alt` is now an error outside `figure`, with vnu's exemptions (`aria-label`, `aria-labelledby`, a non-empty `title`; `role` and other `aria-*` attributes keep their more specific accessible-name rules). Previously only the `figure`-without-`figcaption` case was checked.
