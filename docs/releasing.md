@@ -10,11 +10,18 @@ weil sie einen gemeinsamen Vertrag bilden. Alles andere versioniert eigenständi
 
 ## crates.io
 
-`release-plz` führt Changelog und Version je Crate, öffnet einen Release-PR und
-veröffentlicht nach dem Merge in Abhängigkeitsreihenfolge.
+**Kein Release-PR.** Actions dürfen in diesem Repo keine Pull Requests anlegen,
+und bei einem Betreuer braucht es den Umweg nicht. Der Ablauf:
 
-- Workflow: `.github/workflows/release-plz.yml`. Bis zum ersten Import nur von
-  Hand auslösbar, mit `dry_run` als Standard.
+1. Version im Crate-Manifest anheben und den Changelog-Eintrag schreiben —
+   normaler Commit auf `main`.
+2. `.github/workflows/release-plz.yml` läuft bei jedem Push auf `main` und
+   veröffentlicht in Abhängigkeitsreihenfolge, was noch nicht in der Registry
+   steht. Unveränderte Versionen übergeht es.
+3. Tag (`<paket>-vX.Y.Z`) und GitHub-Release legt release-plz dabei selbst an.
+
+Mit `workflow_dispatch` und `dry_run` (Standard) zeigt der Workflow nur die
+Versionen im Repo, ohne etwas zu veröffentlichen.
 - Veröffentlichung über **crates.io Trusted Publishing** (GitHub OIDC), nicht
   über `CARGO_REGISTRY_TOKEN`. Dafür muss jedes Crate einmalig auf crates.io
   einen Trusted Publisher für dieses Repository und diesen Workflow eintragen.
