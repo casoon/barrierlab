@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      # Bis zum ersten Import (Phase 3) hat der Workspace keine Member; ein
+      # virtuelles Manifest ohne Member laesst sich nicht bauen. Die Bedingung
+      # faellt mit dem ersten Crate von selbst weg.
+      - name: Workspace hat Member?
+        id: members
+        run: |
+          if ls crates/*/Cargo.toml >/dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Noch kein Crate in crates/ — Rust-Schritte uebersprungen."
+          fi
+
+      - if: steps.members.outputs.present == 'true'
+        run: cargo fmt --all --check
+      - if: steps.members.outputs.present == 'true'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - if: steps.members.outputs.present == 'true'
+        run: cargo test --workspace
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm-Pakete vorhanden?
+        id: pkgs
+        run: |
+          if ls packages/*/package.json >/dev/null 2>&1 || [ -d site ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Noch kein npm-Paket und keine Site — Node-Schritte uebersprungen."
+          fi
+      - if: steps.pkgs.outputs.present == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - if: steps.pkgs.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.pkgs.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile

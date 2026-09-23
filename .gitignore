@@ -1,0 +1,16 @@
+# lokales Task-/Ideen-Tracking, nicht versioniert
+plan/
+
+# Rust
+/target/
+**/target/
+
+# Node
+node_modules/
+dist/
+.astro/
+
+# Bauartefakte der Doku (Mermaid → SVG, E7)
+docs/**/*.generated.svg
+
+.DS_Store

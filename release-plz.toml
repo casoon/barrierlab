@@ -1,0 +1,9 @@
+[workspace]
+# Ein Tag je Paket, nicht ein gemeinsamer Repo-Tag (E2/Release-Konvention).
+git_tag_name = "{{ package }}-v{{ version }}"
+git_release_name = "{{ package }} {{ version }}"
+git_release_body = "{{ changelog }}"
+# Veroeffentlicht wird nur, wenn ein Release-PR gemergt wurde; kein Release
+# bei jedem Push.
+release_always = false
+changelog_update = true
