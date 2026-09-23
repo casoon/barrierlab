@@ -38,6 +38,32 @@ jobs:
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      # Die CLI muss zur Crate-Version von wasm-bindgen passen, sonst bricht der
+      # Schritt mit einem Schema-Fehler ab.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.128,wasm-opt
+      - run: node packages/a11y-wasm/build.mjs
+      - name: Groessenbudget (100 KB gzip)
+        run: |
+          python3 - <<'EOF'
+          import gzip, sys
+          p = "packages/a11y-wasm/pkg/a11y_wasm_bg.wasm"
+          raw = open(p, "rb").read()
+          gz = len(gzip.compress(raw, 9)) / 1024
+          print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
+          if gz > 100:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 100 KB")
+          EOF
+
   node:
     runs-on: ubuntu-latest
     steps:

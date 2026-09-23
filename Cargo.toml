@@ -14,6 +14,8 @@ members = [
     # L2 — Berechnung
     "crates/accname",
     "crates/a11y-rules",
+    # L3 — Auslieferung
+    "crates/a11y-wasm",
 ]
 # Eigene Workspaces, die vor dem Umzug schon getrennt waren: Fuzz-Ziele, das
 # xtask-Hilfsprogramm und der Beispielgenerator.
@@ -45,6 +47,7 @@ relax-ng = { version = "0.2.0", path = "crates/relax-ng" }
 schematron-engine = { version = "0.2.0", path = "crates/schematron-engine" }
 html-conform = { version = "0.3.0", path = "crates/html-conform" }
 a11y-report = { version = "0.10.2", path = "crates/a11y-report" }
+a11y-rules = { version = "0.10.2", path = "crates/a11y-rules" }
 a11y-dom = { version = "0.10.2", path = "crates/a11y-dom" }
 accname = { version = "0.10.2", path = "crates/accname" }
 
