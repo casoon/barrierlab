@@ -1,0 +1,24 @@
+{
+  "findings": [
+    {
+      "rule_id": "parser.html5",
+      "severity": "Error",
+      "message": "an unknown named character reference",
+      "location": {
+        "line": 8,
+        "column": 17,
+        "byte_offset": 126
+      }
+    },
+    {
+      "rule_id": "parser.html5",
+      "severity": "Error",
+      "message": "a duplicate attribute on a tag",
+      "location": {
+        "line": 9,
+        "column": 25,
+        "byte_offset": 168
+      }
+    }
+  ]
+}

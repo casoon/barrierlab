@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "rule_id": "scripts.import-map",
+      "severity": "Error",
+      "message": "A \"script\" element with a \"type\" attribute whose value is \"importmap\" must contain a JSON object with no properties other than \"imports\", \"scopes\", and \"integrity\".",
+      "location": {
+        "line": 7,
+        "column": 3,
+        "byte_offset": 174
+      }
+    },
+    {
+      "rule_id": "scripts.speculation-rules",
+      "severity": "Error",
+      "message": "The \"urls\" property in a speculation rule must be a JSON array.",
+      "location": {
+        "line": 11,
+        "column": 3,
+        "byte_offset": 329
+      }
+    },
+    {
+      "rule_id": "csp.meta-enforcement",
+      "severity": "Warning",
+      "message": "Inline script violates Content Security Policy (meta tag): blocked by \"script-src\" directive (missing \"'unsafe-inline'\" or nonce/hash).",
+      "location": {
+        "line": 7,
+        "column": 3,
+        "byte_offset": 174
+      }
+    },
+    {
+      "rule_id": "csp.meta-enforcement",
+      "severity": "Warning",
+      "message": "Inline script violates Content Security Policy (meta tag): blocked by \"script-src\" directive (missing \"'unsafe-inline'\" or nonce/hash).",
+      "location": {
+        "line": 10,
+        "column": 3,
+        "byte_offset": 275
+      }
+    },
+    {
+      "rule_id": "csp.meta-enforcement",
+      "severity": "Warning",
+      "message": "Inline script violates Content Security Policy (meta tag): blocked by \"script-src\" directive (missing \"'unsafe-inline'\" or nonce/hash).",
+      "location": {
+        "line": 11,
+        "column": 3,
+        "byte_offset": 329
+      }
+    }
+  ]
+}

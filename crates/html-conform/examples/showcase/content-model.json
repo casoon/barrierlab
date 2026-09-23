@@ -1,0 +1,54 @@
+{
+  "findings": [
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "unexpected element `{http://www.w3.org/1999/xhtml}span` at 10:5",
+      "location": {
+        "line": 10,
+        "column": 5,
+        "byte_offset": 143
+      }
+    },
+    {
+      "rule_id": "schema.html5",
+      "severity": "Error",
+      "message": "unexpected attribute `align` at 12:3",
+      "location": {
+        "line": 12,
+        "column": 3,
+        "byte_offset": 182
+      }
+    },
+    {
+      "rule_id": "assertion.elements.no-footer-in-header-footer",
+      "severity": "Error",
+      "message": "The element \"footer\" must not appear as a descendant of the \"footer\" or \"header\" element.",
+      "location": {
+        "line": 13,
+        "column": 11,
+        "byte_offset": 233
+      }
+    },
+    {
+      "rule_id": "assertion.elements.img-missing-alt",
+      "severity": "Error",
+      "message": "An \"img\" element must have an \"alt\" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.",
+      "location": {
+        "line": 14,
+        "column": 6,
+        "byte_offset": 278
+      }
+    },
+    {
+      "rule_id": "assertion.elements.button-in-a",
+      "severity": "Error",
+      "message": "The element \"button\" must not appear as a descendant of the \"a\" element.",
+      "location": {
+        "line": 15,
+        "column": 20,
+        "byte_offset": 323
+      }
+    }
+  ]
+}

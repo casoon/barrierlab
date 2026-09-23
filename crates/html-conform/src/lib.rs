@@ -1,0 +1,256 @@
+//! HTML5 conformance checking with browser-style error recovery.
+//!
+//! `check`/`check_with_options` combine six finding sources, in order:
+//! HTML parser diagnostics, RELAX NG schema (content-model) validation,
+//! Schematron-style assertion (co-constraint) checking,
+//! `<script type="importmap"|"speculationrules">` JSON content validation
+//! (`src/scripts.rs` — a value/content-format check like the RELAX NG
+//! datatypes, just on element text content instead of an attribute), and
+//! `<meta http-equiv="Content-Security-Policy">` enforcement against
+//! inline script/style content elsewhere in the document
+//! (`src/csp_enforcement.rs` — a genuine cross-element check needing a
+//! real CSP source-list parser, not expressible as a `rules/*.sch` rule
+//! or a `w:*` datatype), and table cell-grid integrity
+//! (`src/table_integrity.rs` — laying a table out over its
+//! `colspan`/`rowspan` values needs mutable state carried forward across
+//! cells, which XPath 1.0 has no way to express).
+
+mod assertions;
+mod csp_enforcement;
+mod datatypes;
+mod finding;
+mod infoset;
+mod parse;
+mod schema;
+mod scripts;
+mod table_integrity;
+
+use assertions::SchematronEngine;
+
+pub use finding::{CheckError, CheckReport, Finding, Severity, SourceLocation};
+
+/// Options that control which diagnostics are included in a check report.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CheckOptions {
+    /// Include recoverable HTML parser diagnostics in the report.
+    pub include_parse_errors: bool,
+}
+
+impl Default for CheckOptions {
+    fn default() -> Self {
+        Self {
+            include_parse_errors: true,
+        }
+    }
+}
+
+/// Checks a complete HTML document with the default options.
+///
+/// Findings are returned in parser order. Technical initialization failures are
+/// returned as [`CheckError`] rather than being represented as findings.
+pub fn check(html: &str) -> Result<CheckReport, CheckError> {
+    check_with_options(html, CheckOptions::default())
+}
+
+/// Checks a complete HTML document with explicit options.
+///
+/// This function always uses HTML5 error recovery. `include_parse_errors`
+/// controls whether recovered parser diagnostics become report findings.
+/// Schema and assertion findings are always included — the checker only
+/// omits parser diagnostics on request, not the conformance findings that
+/// are the point of running it at all.
+///
+/// # Errors
+///
+/// Only for a genuine setup failure in this checker itself (the embedded
+/// HTML5 schema failed to compile, or the embedded assertion rule set
+/// failed to parse) — never for a document that is merely non-conformant,
+/// which is reported through [`CheckReport::findings`] instead.
+pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckReport, CheckError> {
+    let parsed = parse::parse(html);
+    let document = infoset::normalize(parsed.document(), parsed.source());
+
+    let mut findings = if options.include_parse_errors {
+        parse::findings(&parsed)
+    } else {
+        Vec::new()
+    };
+
+    let schema_errors =
+        schema::validate_document(&document).map_err(|message| CheckError::Initialization {
+            message: format!("schema validation setup failed: {message}"),
+        })?;
+    findings.extend(schema::findings(&schema_errors));
+
+    let assertion_failures = assertions::RuleSetEngine
+        .check(&document)
+        .map_err(|error| CheckError::Initialization {
+            message: format!("assertion engine setup failed: {error}"),
+        })?;
+    findings.extend(assertions::findings(&assertion_failures));
+
+    findings.extend(scripts::findings(parsed.document()));
+    findings.extend(csp_enforcement::findings(parsed.document()));
+    findings.extend(table_integrity::findings(parsed.document()));
+
+    Ok(CheckReport { findings })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CheckOptions, SourceLocation, check, check_with_options};
+
+    #[test]
+    fn valid_html_has_no_parser_findings() {
+        let report = check(r#"<!doctype html><html lang="en"><title>Example</title><p>Hello</p>"#)
+            .expect("HTML5 parsing should recover");
+
+        assert!(report.findings.is_empty());
+        assert!(!report.has_errors());
+    }
+
+    #[test]
+    fn parser_diagnostics_can_be_excluded() {
+        // Otherwise fully schema-conformant (has a <title>, per
+        // schema/html5/meta.rnc's required head.inner) so that excluding
+        // the recoverable parser diagnostic (an unknown entity reference)
+        // leaves no findings at all — isolates this test to what it's
+        // actually about (the `include_parse_errors` toggle), rather than
+        // also depending on schema/assertion behavior.
+        let report = check_with_options(
+            r#"<!doctype html><html lang="en"><title>Example</title><p>&notAnEntity;</p>"#,
+            CheckOptions {
+                include_parse_errors: false,
+            },
+        )
+        .expect("HTML5 parsing should recover");
+
+        assert!(report.findings.is_empty());
+    }
+
+    #[test]
+    fn parser_diagnostics_are_included_by_default() {
+        let report =
+            check(r#"<!doctype html><html lang="en"><title>Example</title><p>&notAnEntity;</p>"#)
+                .expect("HTML5 parsing should recover");
+
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.findings[0].rule_id, "parser.html5");
+    }
+
+    #[test]
+    fn schema_violation_is_reported_as_a_finding() {
+        // No <title> — schema/html5/meta.rnc's head.inner requires one.
+        // Fires against the *synthesized* implicit `<head>` (no explicit
+        // `<head>` tag in this input), so `location` is `None` here — see
+        // `schema_violation_location_is_populated_for_an_explicit_element`
+        // below for the populated case.
+        let report = check_with_options(
+            r#"<!doctype html><html lang="en"><p>Hello</p>"#,
+            CheckOptions {
+                include_parse_errors: false,
+            },
+        )
+        .expect("HTML5 parsing should recover");
+
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.findings[0].rule_id, "schema.html5");
+        assert_eq!(report.findings[0].location, None);
+        assert!(report.has_errors());
+    }
+
+    #[test]
+    fn schema_violation_location_is_populated_for_an_explicit_element() {
+        // Phase 08: `relax_ng::Element::Location` became generic
+        // (`src/infoset.rs` sets it to `crate::finding::SourceLocation`
+        // directly) — a schema.html5 finding against an *explicit*
+        // element now carries a real, structured position, not `None`.
+        let report = check_with_options(
+            r#"<!doctype html><html lang="en"><title>x</title><p bogus="1">hi</p>"#,
+            CheckOptions {
+                include_parse_errors: false,
+            },
+        )
+        .expect("HTML5 parsing should recover");
+
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.findings[0].rule_id, "schema.html5");
+        assert_eq!(
+            report.findings[0].location,
+            Some(SourceLocation {
+                line: 1,
+                column: 48,
+                byte_offset: 47,
+            })
+        );
+    }
+
+    #[test]
+    fn assertion_violation_is_reported_as_a_finding() {
+        let report = check_with_options(
+            r#"<!doctype html><html lang="en"><title>Example</title><div aria-hidden="true" tabindex="0">x</div>"#,
+            CheckOptions {
+                include_parse_errors: false,
+            },
+        )
+        .expect("HTML5 parsing should recover");
+
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(
+            report.findings[0].rule_id,
+            "assertion.aria.hidden-not-focusable"
+        );
+    }
+
+    /// `body` alone inside an otherwise valid document, so any finding is
+    /// about `body` — the shape the four cases below were reported in.
+    fn rule_ids_for_body(body: &str) -> Vec<String> {
+        let html = format!(
+            "<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\
+             <title>t</title></head>\n<body>{body}</body>\n</html>\n"
+        );
+        check(&html)
+            .expect("HTML5 parsing should recover")
+            .findings
+            .into_iter()
+            .map(|finding| finding.rule_id)
+            .collect()
+    }
+
+    #[test]
+    fn img_without_alt_is_reported() {
+        assert_eq!(
+            rule_ids_for_body(r#"<p><img src="a.png"></p>"#),
+            ["assertion.elements.img-missing-alt"]
+        );
+    }
+
+    #[test]
+    fn button_inside_a_is_reported() {
+        assert_eq!(
+            rule_ids_for_body(r#"<a href="/"><button>x</button></a>"#),
+            ["assertion.elements.button-in-a"]
+        );
+    }
+
+    /// A block-level end tag with no matching element in scope
+    /// (§13.2.6.4.7). html5-parser 0.3.0 dropped it silently; 0.4.0
+    /// records `StrayEndTag`.
+    #[test]
+    fn stray_div_end_tag_is_reported() {
+        assert_eq!(rule_ids_for_body("<p>x</p></div>"), ["parser.html5"]);
+    }
+
+    /// Misnested formatting elements, repaired by the adoption agency
+    /// algorithm. html5-parser 0.3.0 recorded no parse error; 0.4.0
+    /// records `MisnestedFormattingElement` (and `StrayEndTag` for the
+    /// already-closed `</i>`).
+    #[test]
+    fn misnested_formatting_elements_are_reported() {
+        assert!(
+            rule_ids_for_body("<p><b><i>x</b></i></p>")
+                .iter()
+                .any(|rule_id| rule_id == "parser.html5")
+        );
+    }
+}
