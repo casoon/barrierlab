@@ -1,4 +1,8 @@
-# Konventionen
+---
+title: "Konventionen"
+description: "Befundmodell, Aussagegrenzen und API-Stil — was für jedes Paket gilt."
+order: 2
+---
 
 Was für jedes Paket in diesem Repository gilt.
 

@@ -1,4 +1,8 @@
-# a11y-perception
+---
+title: "a11y-perception"
+description: "Aufnahme, Lesereihenfolge und Differenz zweier Aufnahmen. Berechnet, erhebt nicht."
+order: 5
+---
 
 Was von einer Seite **wahrnehmbar** ist: eine Aufnahme, ihre Lesereihenfolge und
 die Differenz zweier Aufnahmen. Das Paket berechnet, es erhebt nicht.

@@ -1,4 +1,8 @@
-# Vorlage für eine Paketseite
+---
+title: "Vorlage"
+description: "Der Aufbau, den jede Paketseite hat."
+order: 99
+---
 
 Jedes Paket bekommt `docs/packages/<name>.md` mit diesem Aufbau. Kurz halten;
 die API-Referenz steht auf docs.rs, nicht hier.

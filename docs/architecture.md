@@ -1,4 +1,8 @@
-# Architektur
+---
+title: "Architektur"
+description: "Schichten, Abhängigkeitsgraph und die Regeln, unter denen ein Paket hier liegt."
+order: 1
+---
 
 ## Grundsatz
 

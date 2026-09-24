@@ -1,4 +1,8 @@
-# a11y-dom
+---
+title: "a11y-dom"
+description: "Die Dokumentabstraktion mit Fähigkeits-Tiers, über die alle Regeln laufen."
+order: 2
+---
 
 Die Abstraktion über das Dokument: ein DOM-förmiger Baum als Trait, plus
 Fähigkeits-Tiers. Damit läuft dieselbe Regel über einen geparsten HTML-Baum,

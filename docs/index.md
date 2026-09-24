@@ -1,4 +1,8 @@
-# Doku
+---
+title: "Überblick"
+description: "Welches Paket wofür da ist und wie diese Dokumentation aufgebaut ist."
+order: 0
+---
 
 Ein Bereich für alle Pakete dieses Repositorys.
 

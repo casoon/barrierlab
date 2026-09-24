@@ -1,6 +1,6 @@
 ---
-title: Installation
-description: html-conform is published on crates.io. It is a library crate; there is no binary to install.
+title: "Installation"
+description: "html-conform is published on crates.io. It is a library crate; there is no binary to install."
 order: 1
 ---
 

@@ -1,6 +1,6 @@
 ---
-title: Installation
-description: Welche Crates ein Werkzeug braucht und mit welcher Rust-Version sie bauen.
+title: "Installation"
+description: "Welche Crates ein Werkzeug braucht und mit welcher Rust-Version sie bauen."
 order: 1
 ---
 

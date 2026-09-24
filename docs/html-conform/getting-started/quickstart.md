@@ -1,6 +1,6 @@
 ---
-title: Quickstart
-description: Check a document, print its findings, and fail when it has errors.
+title: "Quickstart"
+description: "Check a document, print its findings, and fail when it has errors."
 order: 2
 ---
 

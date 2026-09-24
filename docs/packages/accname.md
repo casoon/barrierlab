@@ -1,4 +1,8 @@
-# accname
+---
+title: "accname"
+description: "Accessible Name Computation nach WAI-ARIA, differentiell gegen Chrome geprüft."
+order: 3
+---
 
 Accessible Name and Description Computation nach WAI-ARIA (accname 1.2) und
 HTML-AAM, generisch über `a11y-dom`. Der Eingang für alles, was einen Namen

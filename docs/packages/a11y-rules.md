@@ -1,4 +1,8 @@
-# a11y-rules
+---
+title: "a11y-rules"
+description: "Der Regelbestand, generisch über das Dokumentmodell — eine Implementierung für alle Oberflächen."
+order: 4
+---
 
 Der Regelbestand, generisch über `a11y-dom`: eine Implementierung für
 Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus

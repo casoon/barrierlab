@@ -1,4 +1,8 @@
-# html-conform
+---
+title: "html-conform"
+description: "HTML5-Konformanzprüfung ohne JVM, samt der sechs Parser darunter."
+order: 7
+---
 
 HTML5-Konformanzprüfung als Rust-Abhängigkeit, ohne JVM. Differentiell gegen
 den Nu Html Checker (vnu) geprüft. Dazu gehören sechs eigenständige Pakete, die

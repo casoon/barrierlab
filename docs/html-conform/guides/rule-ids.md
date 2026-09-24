@@ -1,6 +1,6 @@
 ---
-title: Findings and rule IDs
-description: Which layer reports what, under which rule ID and with which severity.
+title: "Findings and rule IDs"
+description: "Which layer reports what, under which rule ID and with which severity."
 order: 2
 ---
 
