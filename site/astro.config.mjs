@@ -2,6 +2,7 @@
 import casoonPages from '@casoon/pages-theme';
 import { defineConfig } from 'astro/config';
 import rehypeMermaid from 'rehype-mermaid';
+import rehypeMdLinks from './src/lib/rehype-md-links.mjs';
 
 // Project page: https://casoon.github.io/barrierlab/
 export default defineConfig({
@@ -13,7 +14,7 @@ export default defineConfig({
     // Kein Laufzeit-JavaScript, keine externe Ressource — dieselbe Quelle
     // rendert GitHub direkt.
     syntaxHighlight: { type: 'shiki', excludeLangs: ['mermaid'] },
-    rehypePlugins: [[rehypeMermaid, { strategy: 'inline-svg', dark: true }]],
+    rehypePlugins: [[rehypeMermaid, { strategy: 'inline-svg', dark: true }], rehypeMdLinks],
   },
   integrations: [
     casoonPages({

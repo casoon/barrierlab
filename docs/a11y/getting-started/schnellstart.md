@@ -92,6 +92,6 @@ Beispiele dieser Seite (`examples/src/main.rs`).
 ## Den Bericht lesen
 
 `Report` ist mit `serde` serialisierbar. Wie das JSON aussieht, zeigt der
-[Showcase](../../../showcase/): ein Teaser-Dokument einmal nur mit Struktur und einmal mit
+die Beispiele in [`examples/a11y/`](https://github.com/casoon/barrierlab/tree/main/examples/a11y): ein Teaser-Dokument einmal nur mit Struktur und einmal mit
 Semantik geprüft. Was die Felder bedeuten, steht unter
 [Befunde und Berichte](../../concepts/befunde/).

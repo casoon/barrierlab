@@ -112,4 +112,4 @@ sample in the showcase:
 ```
 
 This is the format of the `examples/showcase/*.json` files behind the
-[showcase](../../../showcase/), written by `examples/findings.rs`.
+die Beispiele des Crates, written by `examples/findings.rs`.
