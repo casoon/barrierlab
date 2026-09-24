@@ -1,0 +1,19 @@
+[package]
+name = "a11y-perception"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+categories.workspace = true
+description = "Accessibility perception over browser data: AX tree, snapshot, reading-order projection and the diff of two snapshots. Computes, does not collect."
+keywords = ["accessibility", "a11y", "aria", "screenreader", "diff"]
+readme = "README.md"
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -14,6 +14,7 @@ members = [
     # L2 — Berechnung
     "crates/accname",
     "crates/a11y-rules",
+    "crates/a11y-perception",
     # L3 — Auslieferung
     "crates/a11y-wasm",
 ]
