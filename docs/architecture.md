@@ -84,7 +84,7 @@ flowchart BT
 | 1 | `a11y-report`, `a11y-dom`, `accname`, `a11y-rules` | `casoon/a11y-core` | **importiert** (0.10.1), Historie mitgekommen |
 | 2 | `html-conform` + `html5-parser`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng`, `schematron-engine` | eigene Repositories | **importiert**, `=`-Pins aufgelöst |
 | 3 | `a11y-wasm` | `casoon/liveaudit`, `packages/core` | **importiert**, Crate + npm-Paket `@casoon/a11y-wasm` |
-| 4 | `a11y-perception` | `casoon/auditmysite` | Code vorhanden, noch nicht gelöst |
+| 4 | `a11y-perception` | `casoon/auditmysite` | **importiert** (0.1.0), browserfrei, 27 Tests |
 | 5 | `web-checks` | Doppelungen aus auditmysite und astro-post-audit | noch nicht begonnen |
 
 Jeder Schritt zieht die Historie des Ursprungs mit; die alten Repositories
