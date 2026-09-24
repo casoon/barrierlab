@@ -1,0 +1,83 @@
+---
+import {
+  CodeBlock,
+  Facts,
+  Features,
+  Hero,
+  Install,
+  Quickstart,
+} from '@casoon/pages-theme/components';
+import Base from '@casoon/pages-theme/layouts/Base.astro';
+
+const beispiel = `use a11y_dom::Arena;
+use a11y_report::Outcome;
+
+// Derselbe Regelbestand, den auch der Browser-Auditor und die
+// laufende Seite benutzen — hier über einen geparsten Baum.
+let bericht = a11y_rules::run_with_semantics(&dokument);
+
+for befund in &bericht.findings {
+    println!("{} {:?}", befund.rule_id, befund.severity);
+}
+
+// Was nicht geprüft werden konnte, ist ein eigener Zustand —
+// kein stilles "bestanden".
+assert!(bericht.rule_runs.iter().any(|r| r.not_run.is_some()));`;
+---
+
+<Base>
+  <Hero
+    title="Eine Antwort statt vier."
+    lead="Gemeinsame Bibliotheken für Web-Audits: Zugänglichkeit, HTML-Konformanz, Wahrnehmung. Vier Werkzeuge prüfen damit dieselbe Seite — zur Bauzeit, in CI, im Browser und in der laufenden Seite — und kommen zum selben Ergebnis, mit denselben Kennungen."
+  >
+    <Install
+      commands={[
+        { label: 'Rust', command: 'cargo add a11y-rules a11y-report a11y-dom' },
+        { label: 'npm', command: 'npm i @casoon/a11y-wasm' },
+      ]}
+    />
+  </Hero>
+
+  <Facts
+    items={[
+      { value: '14', label: 'Crates in einem Workspace' },
+      { value: '42', label: 'Befundkennungen über drei Fähigkeitsstufen' },
+      { value: '4', label: 'Werkzeuge außerhalb, die daran hängen' },
+      { value: '80 KB', label: 'gzip für den Regelbestand als WebAssembly' },
+    ]}
+  />
+
+  <Features
+    heading="Wofür das gut ist"
+    items={[
+      {
+        title: 'Ein Befund heißt überall gleich',
+        body: 'Regelkennung, Schweregrad und JSON kommen aus a11y-report. Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen.',
+      },
+      {
+        title: '„Lief nicht" ist nicht „bestanden"',
+        body: 'Fehlt einer Prüfung ihre Voraussetzung — kein Accessibility-Tree, kein Fokus, abgebrochene Aufnahme —, entsteht ein eigener Zustand mit Grund. Kein stiller Erfolg.',
+      },
+      {
+        title: 'Berechnung ohne Erhebung',
+        body: 'Kein Paket hier öffnet eine Seite, spricht ein Protokoll oder liest eine Datei. Die Werkzeuge beschaffen die Daten, die Bibliotheken rechnen. Deshalb läuft derselbe Code auch als WebAssembly in der geöffneten Seite.',
+      },
+      {
+        title: 'Widersprüche fallen auf',
+        body: 'Zwei Werkzeuge mit zwei Kopien derselben Prüfung sagten an derselben Seite Gegenteiliges: GPTBot galt einmal als Trainings-, einmal als Zitations-Crawler. Eine gemeinsame Implementierung macht solche Fälle sichtbar, statt sie zu verteilen.',
+      },
+    ]}
+  />
+
+  <Quickstart
+    lead="Die Regeln laufen über jedes Dokumentmodell, das die Traits erfüllt. Was ein Host anbietet, entscheidet, welche Stufe läuft."
+    steps={[
+      'Crate einbinden: <code>cargo add a11y-rules</code>',
+      'Baum bereitstellen: <code>a11y_dom::Document</code> implementieren oder <code>Arena</code> benutzen',
+      'Laufen lassen: <code>run</code>, <code>run_with_semantics</code> oder <code>run_full</code>, je nach vorhandenen Daten',
+      'Bericht lesen: <code>Finding</code> und <code>RuleRun</code> aus <code>a11y-report</code>',
+    ]}
+  >
+    <CodeBlock code={beispiel} lang="rust" />
+  </Quickstart>
+</Base>

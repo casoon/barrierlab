@@ -1,4 +1,8 @@
-# web-checks
+---
+title: "web-checks"
+description: "Die gemeinsame Auswertung zweier Auditoren, beginnend mit robots.txt."
+order: 8
+---
 
 Die gemeinsame Auswertung zweier Auditoren, die dasselbe an derselben Seite
 prüfen: auditmysite über eine laufende Seite in Chrome, astro-post-audit über

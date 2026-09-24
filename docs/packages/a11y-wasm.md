@@ -1,4 +1,8 @@
-# a11y-wasm
+---
+title: "a11y-wasm"
+description: "Der Regelbestand als WebAssembly für die laufende Seite."
+order: 6
+---
 
 Der Regelbestand als WebAssembly: dieselben Regeln, die zur Build-Zeit und in CI
 laufen, laufen damit **in der geöffneten Seite**. Das Paket übersetzt, es

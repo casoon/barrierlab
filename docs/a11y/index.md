@@ -1,6 +1,6 @@
 ---
-title: Überblick
-description: Was a11y-core ist, welche Crates dazugehören und wie diese Dokumentation aufgebaut ist.
+title: "Überblick"
+description: "Was a11y-core ist, welche Crates dazugehören und wie diese Dokumentation aufgebaut ist."
 order: 0
 ---
 

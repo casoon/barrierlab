@@ -1,4 +1,8 @@
-# Konsumenten
+---
+title: "Konsumenten"
+description: "Die Werkzeuge außerhalb dieses Repositorys und was sie von hier benutzen."
+order: 3
+---
 
 Die Werkzeuge leben außerhalb dieses Repositorys und binden die Pakete aus den
 Registries ein. Diese Liste sagt, wer was benutzt — sie ist der Grund, warum ein

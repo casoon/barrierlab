@@ -1,6 +1,6 @@
 ---
-title: API overview
-description: The public items of the crate at a glance. Item-level documentation lives on docs.rs.
+title: "API overview"
+description: "The public items of the crate at a glance. Item-level documentation lives on docs.rs."
 order: 1
 ---
 

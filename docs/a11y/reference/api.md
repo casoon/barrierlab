@@ -1,6 +1,6 @@
 ---
-title: API-Überblick
-description: Die wichtigsten Typen und Funktionen je Crate. Die Einzeldokumentation jedes Elements steht auf docs.rs.
+title: "API-Überblick"
+description: "Die wichtigsten Typen und Funktionen je Crate. Die Einzeldokumentation jedes Elements steht auf docs.rs."
 order: 2
 ---
 

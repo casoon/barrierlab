@@ -1,6 +1,6 @@
 ---
-title: Befunde und Berichte
-description: Das Befundmodell aus a11y-report – zwei Achsen, vier Zustände, ein Vermerk je Regelkennung und ein schlanker JSON-Vertrag.
+title: "Befunde und Berichte"
+description: "Das Befundmodell aus a11y-report – zwei Achsen, vier Zustände, ein Vermerk je Regelkennung und ein schlanker JSON-Vertrag."
 order: 2
 ---
 

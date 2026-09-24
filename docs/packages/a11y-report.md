@@ -1,4 +1,8 @@
-# a11y-report
+---
+title: "a11y-report"
+description: "Das gemeinsame Befundmodell: vier Ergebniszustände, Severity, WCAG-Zuordnung, JSON-Vertrag."
+order: 1
+---
 
 Das Befundmodell, das alle Werkzeuge teilen: vier Ergebniszustände, Severity,
 WCAG-Zuordnung und ein stabiler JSON-Vertrag. Es bewertet nichts selbst.

@@ -1,6 +1,6 @@
 ---
-title: Using html-conform as a dependency
-description: The public API, the one option, error handling, and patterns for tests, tools and services.
+title: "Using html-conform as a dependency"
+description: "The public API, the one option, error handling, and patterns for tests, tools and services."
 order: 1
 ---
 

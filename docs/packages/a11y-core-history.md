@@ -1,3 +1,9 @@
+---
+title: "a11y-core bis 0.11.0"
+description: "Die Changelog-Historie der vier Crates aus der Zeit im Repository a11y-core."
+order: 90
+---
+
 > Historie von `casoon/a11y-core` bis 0.10.1 (Crates im Gleichschritt). Ab 0.10.2
 > führt release-plz je Crate eine eigene `CHANGELOG.md` in `crates/<name>/`.
 

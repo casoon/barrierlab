@@ -1,6 +1,6 @@
 ---
-title: Fähigkeits-Tiers
-description: Warum das Dokumentmodell aus mehreren Traits besteht und was mit einer Regel passiert, deren Tier der Host nicht bedient.
+title: "Fähigkeits-Tiers"
+description: "Warum das Dokumentmodell aus mehreren Traits besteht und was mit einer Regel passiert, deren Tier der Host nicht bedient."
 order: 1
 ---
 

@@ -1,6 +1,6 @@
 ---
-title: Comparison with vnu
-description: What the differential test against the Nu Html Checker measures, what html-conform covers, and where it differs.
+title: "Comparison with vnu"
+description: "What the differential test against the Nu Html Checker measures, what html-conform covers, and where it differs."
 order: 3
 ---
 

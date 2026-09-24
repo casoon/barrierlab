@@ -1,4 +1,8 @@
-# Releases
+---
+title: "Releases"
+description: "Tags, release-plz, crates.io, npm und der WASM-Bauweg."
+order: 4
+---
 
 ## Tags
 

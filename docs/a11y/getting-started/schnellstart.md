@@ -1,6 +1,6 @@
 ---
-title: Schnellstart
-description: Ein Dokument aufbauen, mit und ohne Semantik prüfen und den Bericht lesen.
+title: "Schnellstart"
+description: "Ein Dokument aufbauen, mit und ohne Semantik prüfen und den Bericht lesen."
 order: 2
 ---
 

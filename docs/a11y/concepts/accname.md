@@ -1,6 +1,6 @@
 ---
-title: Accessible Name
-description: Was das Crate accname berechnet, wogegen es geschrieben ist und wo es ohne Rendering-Daten aufhört.
+title: "Accessible Name"
+description: "Was das Crate accname berechnet, wogegen es geschrieben ist und wo es ohne Rendering-Daten aufhört."
 order: 3
 ---
 
