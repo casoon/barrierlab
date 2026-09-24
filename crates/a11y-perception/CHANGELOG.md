@@ -2,6 +2,16 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `AXTreeDiff` meldet jetzt Wechsel an `checked` und `pressed` (Tristate-Token
+  „true"/„false"/„mixed"). Bisher blieb der Diff bei Checkbox, Switch und
+  Toggle-Button leer, obwohl die Bedienung gewirkt hatte. Gesehen im
+  Relief-CDP-Spike gegen Chrome: Checkbox angeklickt, `checked` wechselte auf
+  `true`, der Diff zeigte nichts.
+
 ## [0.1.1] - 2026-09-24
 
 ### Fixed

@@ -38,6 +38,13 @@ jobs:
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
+      # Kaputte Doku-Verweise fallen sonst erst auf docs.rs auf, wo sie nicht
+      # mehr zu korrigieren sind, ohne neu zu veroeffentlichen.
+      - if: steps.members.outputs.present == 'true'
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
       # Fuzz-Ziele und das xtask-Hilfsprogramm sind eigene Workspaces (sie waren
       # es vor dem Umzug schon) und laufen deshalb nicht mit `--workspace` mit.
       # Gebaut werden sie trotzdem, sonst verrotten sie unbemerkt.

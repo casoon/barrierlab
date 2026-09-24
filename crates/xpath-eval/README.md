@@ -66,4 +66,4 @@ xpath-eval = "0.2"
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/casoon/barrierlab/blob/main/LICENSE).
