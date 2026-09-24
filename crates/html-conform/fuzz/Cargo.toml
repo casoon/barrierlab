@@ -19,3 +19,8 @@ path = "fuzz_targets/check.rs"
 test = false
 doc = false
 bench = false
+
+# Eigener Workspace: dieses Paket gehoert nicht zum Workspace des Monorepos
+# (dort unter workspace.exclude) und braucht die Zeile, damit cargo es
+# eigenstaendig baut.
+[workspace]
