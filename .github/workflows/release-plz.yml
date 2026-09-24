@@ -55,6 +55,8 @@ jobs:
         uses: release-plz/action@v0.5.139
         with:
           command: release
+          # Bleibt an: ohne -v sagt der Lauf nur "no token found", mit -v steht
+          # die Antwort der Registry im Log (welche Claim-Angabe nicht passt).
           verbose: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
