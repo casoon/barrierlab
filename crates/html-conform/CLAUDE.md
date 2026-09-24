@@ -1,47 +1,32 @@
 # html-conform
 
-Rust-Crate zur HTML5-Konformitätsprüfung (vgl. Nu Html Checker / vnu) — reine
-Rust-Abhängigkeit, keine JVM-Laufzeit. Konzept: `konzept.txt`. Umsetzungsplan:
-`plan/`.
+Ergänzt die Regeln im Wurzelverzeichnis; hier steht nur, was für dieses Paket
+zusätzlich gilt.
 
-## Architektur
+## Schichten
 
 ```
-HTML-String → parse (HTML5-Baum) → schema (RelaxNG) → assertions (Schematron) → Vec<Finding>
+HTML-String → parse (HTML5-Baum) → schema (RELAX NG) → assertions (Schematron) → Vec<Finding>
 ```
 
-Jede Schicht unabhängig testbar, alle liefern in eine gemeinsame
-`Finding`-Struct (`rule_id`, `severity`, `message`, `line`, `column`).
-
-## Arbeitsweise
-
-- Aktueller Stand & nächster Schritt: `plan/00-STATUS.md`.
-- Phasenpläne mit Schritten/Exit-Kriterien: `plan/0N-*.md`. Vor größeren
-  Änderungen die passende Phase lesen, nicht am Plan vorbei arbeiten.
-- Getroffene Entscheidungen (xmloxide-Eignung, RNC/RNG, Lizenz):
-  `plan/DECISIONS.md` — dort nachschlagen, bevor diese Fragen neu aufgerollt
-  werden.
-- Domänen-Workflows (Schema/Korpus vendoren, Schematron-Regeln pflegen) sind
-  als Skills unter `.claude/skills/` hinterlegt und laden sich bei Bedarf.
+Jede Schicht ist einzeln testbar und liefert in dasselbe `Finding`.
 
 ## Feste Regeln
 
-- Lizenz: **MIT** (bewusst kein "MIT OR Apache-2.0" — Abweichung vom
-  Rust-Ökosystem-Standard, siehe `plan/DECISIONS.md`). `Cargo.toml`:
-  `license = "MIT"`.
-- `schema/` und `tests/corpus/` sind vendorter Fremdcode (vnu,
-  `validator/validator`, MIT-lizenziert) — nicht inhaltlich per Hand ändern,
-  nur über die `xtask/vendor-*.sh`-Skripte aktualisieren.
-- `rules/*.sch` ist der einzige Ort für Fachlogik der Assertion-Schicht —
+- **`rules/*.sch` ist der einzige Ort für Fachlogik der Assertion-Schicht** —
   deklarative XPath-Regeln, kein Rust-Code für Co-Constraints.
-- `assertions.rs` spricht die Schematron-Engine ausschließlich über den
-  `SchematronEngine`-Trait an, nie direkt gegen eine konkrete Engine
-  programmieren.
-- Kein `reqwest`, kein Docker, keine JVM-Laufzeitabhängigkeit im
-  ausgelieferten Binary — vnu/Trang/Java sind ausschließlich
-  Build-/Vendor-Zeit-Werkzeuge.
+- **`assertions.rs` spricht die Engine nur über den `SchematronEngine`-Trait an**,
+  nie direkt gegen eine konkrete Implementierung.
+- **Kein `reqwest`, kein Docker, keine JVM zur Laufzeit.** vnu, Trang und Java
+  sind Werkzeuge der Vendor- und Bauzeit, nichts davon geht ins Paket.
+- `schema/` und `tests/corpus/` sind vendorter Fremdcode (vnu,
+  `validator/validator`) — nur über `xtask/vendor-*.sh` aktualisieren.
+- Die Prüfung ist **differentiell gegen vnu abgeglichen, nicht deckungsgleich**.
+  Welche Klassen fehlen, steht in `docs/html-conform/`; eine Behauptung über
+  vollständige Abdeckung gehört dort nicht hin.
 
-## Definition of Done
+## Eigene Workspaces
 
-Siehe "Exit-Kriterien" in der jeweiligen `plan/0N-*.md`-Datei — nicht global
-definiert, sondern pro Phase.
+`fuzz/` und `xtask/check-file/` gehören nicht zum Workspace des Monorepos
+(`workspace.exclude`) und haben deshalb eine eigene `[workspace]`-Zeile. CI baut
+sie einzeln mit.
