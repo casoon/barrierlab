@@ -16,7 +16,9 @@ on:
 
 permissions:
   contents: write
-  # Fuer crates.io Trusted Publishing (OIDC) statt CARGO_REGISTRY_TOKEN.
+  # Trusted Publishing: release-plz tauscht das OIDC-Token selbst gegen ein
+  # kurzlebiges crates.io-Token. Deshalb kein CARGO_REGISTRY_TOKEN und auch
+  # kein rust-lang/crates-io-auth-action -- release-plz ruft dieselbe API.
   id-token: write
 
 concurrency:
@@ -26,6 +28,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Der Name der Umgebung geht in den OIDC-Anspruch ein und wird auf crates.io
+    # mitgeprueft. Ohne sie koennte jeder, der einen Branch pushen darf, einen
+    # geaenderten Workflow starten und von dort veroeffentlichen.
+    environment: crates-io
     steps:
       - uses: actions/checkout@v5
         with:

@@ -26,9 +26,37 @@ und bei einem Betreuer braucht es den Umweg nicht. Der Ablauf:
 
 Mit `workflow_dispatch` und `dry_run` (Standard) zeigt der Workflow nur die
 Versionen im Repo, ohne etwas zu veröffentlichen.
-- Veröffentlichung über **crates.io Trusted Publishing** (GitHub OIDC), nicht
-  über `CARGO_REGISTRY_TOKEN`. Dafür muss jedes Crate einmalig auf crates.io
-  einen Trusted Publisher für dieses Repository und diesen Workflow eintragen.
+### Trusted Publishing
+
+Veröffentlicht wird über **crates.io Trusted Publishing** (GitHub OIDC), nicht
+über ein Token. `release-plz` tauscht das OIDC-Token selbst gegen ein
+kurzlebiges crates.io-Token — deshalb steht in diesem Repository **kein**
+`CARGO_REGISTRY_TOKEN` und auch nicht `rust-lang/crates-io-auth-action`.
+
+Auf der Repo-Seite ist alles eingerichtet:
+
+| | Wert |
+|---|---|
+| Workflow | `.github/workflows/release-plz.yml` |
+| Berechtigung | `id-token: write` |
+| Umgebung | `crates-io` |
+
+Auf crates.io trägt **jedes Crate einmalig** einen Trusted Publisher ein, unter
+*Settings → Trusted Publishing → Add*:
+
+| Feld | Wert |
+|---|---|
+| Repository owner | `casoon` |
+| Repository name | `barrierlab` |
+| Workflow filename | `release-plz.yml` |
+| Environment | `crates-io` |
+
+Der Name der Umgebung geht in den OIDC-Anspruch ein und wird mitgeprüft. Ohne
+ihn könnte jeder, der einen Branch pushen darf, einen geänderten Workflow
+starten und von dort veröffentlichen.
+
+**Ein neues Crate lässt sich damit nicht anlegen** — crates.io verlangt für die
+erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
 - `repository`-Metadaten zeigen nach dem Import auf dieses Repository. Der erste
   Release eines umgezogenen Crates korrigiert damit auch den Link auf crates.io.
 
