@@ -263,6 +263,26 @@ impl RobotsTxt {
         self.wildcard().is_some_and(Group::disallows_all)
     }
 
+    /// Ist der Pfad für einen Bot ohne eigene Gruppe gesperrt?
+    ///
+    /// Es kann mehrere `*`-Gruppen geben; ihre Regeln gelten zusammen. Genau
+    /// das brauchten beide Hosts, und beide hatten es sich vorher selbst
+    /// zusammengebaut — astro-post-audit als `wildcard_rules`, auditmysite über
+    /// die Gruppenliste.
+    pub fn wildcard_disallows_path(&self, path: &str) -> bool {
+        let mut allows: Vec<String> = Vec::new();
+        let mut disallows: Vec<String> = Vec::new();
+        for gruppe in self
+            .groups
+            .iter()
+            .filter(|g| g.bot_class == BotClass::Wildcard)
+        {
+            allows.extend(gruppe.allows.iter().cloned());
+            disallows.extend(gruppe.disallows.iter().cloned());
+        }
+        path_is_disallowed(&disallows, &allows, path)
+    }
+
     /// Wird mindestens ein Bot dieser Art gesperrt?
     pub fn blocks(&self, class: BotClass) -> bool {
         self.groups
@@ -410,6 +430,23 @@ mod tests {
         let a: Vec<String> = Vec::new();
         assert!(path_is_disallowed(&d, &a, "/kram/datei.pdf"));
         assert!(!path_is_disallowed(&d, &a, "/kram/datei.pdf.html"));
+    }
+
+    #[test]
+    fn mehrere_wildcard_gruppen_gelten_zusammen() {
+        let robots = parse(
+            "User-agent: *\nDisallow: /intern/\n\nUser-agent: *\nDisallow: /tmp/\nAllow: /tmp/oeffentlich/\n",
+        );
+        assert!(robots.wildcard_disallows_path("/intern/seite"));
+        assert!(robots.wildcard_disallows_path("/tmp/x"));
+        assert!(!robots.wildcard_disallows_path("/tmp/oeffentlich/x"));
+        assert!(!robots.wildcard_disallows_path("/start"));
+    }
+
+    #[test]
+    fn ohne_wildcard_gruppe_ist_nichts_gesperrt() {
+        let robots = parse("User-agent: GPTBot\nDisallow: /\n");
+        assert!(!robots.wildcard_disallows_path("/start"));
     }
 
     #[test]
