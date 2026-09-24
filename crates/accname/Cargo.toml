@@ -3,10 +3,10 @@ name = "accname"
 description = "WAI-ARIA Accessible Name and Description Computation in Rust, generic over the document model."
 keywords = ["accessibility", "a11y", "aria", "accname", "wai-aria"]
 version = "0.11.0"
-edition = "2021"
+edition.workspace = true
 license.workspace = true
 repository.workspace = true
-rust-version = "1.85"
+rust-version.workspace = true
 authors.workspace = true
 categories.workspace = true
 

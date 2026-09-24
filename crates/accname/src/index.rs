@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use a11y_dom::{self_and_descendants, Node, NodeKind};
+use a11y_dom::{Node, NodeKind, self_and_descendants};
 
 /// Nachschlagewerk von ID auf Knoten, plus die `label[for]`-Zuordnung.
 pub struct IdIndex<'a, N: Node<'a>> {

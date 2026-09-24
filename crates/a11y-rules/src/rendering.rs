@@ -21,7 +21,7 @@
 //! [`Rendering`]: a11y_dom::Rendering
 //! [`ComputedStyle::background_color`]: a11y_dom::ComputedStyle::background_color
 
-use a11y_dom::{elements, Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier};
+use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::registry::{Meta, RenderingRule};

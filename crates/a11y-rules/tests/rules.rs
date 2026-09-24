@@ -1,6 +1,6 @@
 //! Regeltests gegen die Referenz-Arena.
 
-use a11y_dom::{elements, Arena, ArenaNode, Document, Node, Semantics};
+use a11y_dom::{Arena, ArenaNode, Document, Node, Semantics, elements};
 use a11y_report::{Outcome, Report};
 use a11y_rules::{run, run_with_semantics};
 use accname::IdIndex;
@@ -1692,9 +1692,11 @@ fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
     assert_eq!(befunde.len(), 2, "{:?}", ids(&r));
     assert!(befunde.iter().any(|m| m.contains("aria-checked")));
     // Der Slider hat valuenow, es fehlen valuemin und valuemax.
-    assert!(befunde
-        .iter()
-        .any(|m| m.contains("aria-valuemin") && m.contains("aria-valuemax")));
+    assert!(
+        befunde
+            .iter()
+            .any(|m| m.contains("aria-valuemin") && m.contains("aria-valuemax"))
+    );
 }
 
 #[test]
@@ -1770,11 +1772,12 @@ fn nichtssagender_linktext_ist_eine_eigene_regel() {
     assert_eq!(generisch.len(), 2, "{:?}", ids(&r));
     // Heuristisch -- die Liste kann einen Namen treffen, der im Zusammenhang
     // doch eindeutig ist.
-    assert!(r
-        .findings
-        .iter()
-        .filter(|f| f.rule_id == "links/generic-name")
-        .all(|f| f.outcome == Outcome::Review));
+    assert!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id == "links/generic-name")
+            .all(|f| f.outcome == Outcome::Review)
+    );
     // Verschiedene Ziele, verschiedene Namen -- nicht mehrdeutig.
     assert!(!hat(&r, "links/ambiguous-name"));
 }

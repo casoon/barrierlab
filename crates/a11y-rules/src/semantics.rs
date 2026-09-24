@@ -12,7 +12,7 @@
 //!
 //! [`Semantics`]: a11y_dom::Semantics
 
-use a11y_dom::{elements, Node, NodeId, Semantics, Tier};
+use a11y_dom::{Node, NodeId, Semantics, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::registry::{Meta, SemanticsRule};
