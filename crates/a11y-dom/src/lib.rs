@@ -53,8 +53,8 @@ pub use tiers::{
     Caps, Color, ComputedStyle, Interaction, NameSource, Rect, Rendering, Semantics, Tier,
 };
 pub use tree::{
-    ancestors, closest, descendants, elements, has_text, self_and_descendants, subtree_text,
-    Document, Node, NodeId, NodeKind,
+    Document, Node, NodeId, NodeKind, ancestors, closest, descendants, elements, has_text,
+    self_and_descendants, subtree_text,
 };
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use a11y_dom::{
-    closest, elements, has_text, self_and_descendants, subtree_text, Document, Node, NodeId, Tier,
+    Document, Node, NodeId, Tier, closest, elements, has_text, self_and_descendants, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 

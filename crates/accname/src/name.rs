@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use a11y_dom::{ancestors, descendants, Node, NodeId, NodeKind};
+use a11y_dom::{Node, NodeId, NodeKind, ancestors, descendants};
 
 use crate::index::IdIndex;
 use crate::role::{allows_name_from_content, name_is_prohibited, role};

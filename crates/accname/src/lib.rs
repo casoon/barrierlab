@@ -54,7 +54,7 @@ pub use role::{allows_name_from_content, implicit, name_is_prohibited, role};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a11y_dom::{elements, Arena, ArenaNode, Document, Node};
+    use a11y_dom::{Arena, ArenaNode, Document, Node, elements};
 
     fn finde<'a>(doc: &'a Arena, tag: &str) -> ArenaNode<'a> {
         elements(doc).find(|n| n.local_name() == tag).unwrap()

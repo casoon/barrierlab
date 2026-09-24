@@ -4,7 +4,7 @@
 //! nicht abstrakte Rolle benennt. Andernfalls gilt die implizite Rolle des
 //! HTML-Elements.
 
-use a11y_dom::{ancestors, Node};
+use a11y_dom::{Node, ancestors};
 
 /// Gültige, nicht abstrakte Rollen aus WAI-ARIA 1.2.
 const VALID: &[&str] = &[
