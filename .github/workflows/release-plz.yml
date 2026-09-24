@@ -55,6 +55,7 @@ jobs:
         uses: release-plz/action@v0.5.139
         with:
           command: release
+          verbose: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
