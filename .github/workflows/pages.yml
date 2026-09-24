@@ -29,18 +29,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: site/pnpm-lock.yaml
+          # Ein Workspace, ein Lockfile: die Seite haengt als Paket mit drin.
+          cache-dependency-path: pnpm-lock.yaml
 
       - uses: actions/configure-pages@v6
 
       - name: Build site
-        working-directory: site
         run: |
           pnpm install --frozen-lockfile
           # Mermaid wird zur Bauzeit zu Inline-SVG gerendert; rehype-mermaid
           # braucht dafuer einen Browser. Ohne Laufzeit-JavaScript auf der Seite.
-          pnpm exec playwright install --with-deps chromium
-          pnpm build
+          pnpm --filter barrierlab-site exec playwright install --with-deps chromium
+          pnpm --filter barrierlab-site build
 
       - uses: actions/upload-pages-artifact@v5
         with:
