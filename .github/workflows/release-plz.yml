@@ -28,10 +28,6 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Der Name der Umgebung geht in den OIDC-Anspruch ein und wird auf crates.io
-    # mitgeprueft. Ohne sie koennte jeder, der einen Branch pushen darf, einen
-    # geaenderten Workflow starten und von dort veroeffentlichen.
-    environment: crates-io
     steps:
       - uses: actions/checkout@v5
         with:

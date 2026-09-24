@@ -39,7 +39,7 @@ Auf der Repo-Seite ist alles eingerichtet:
 |---|---|
 | Workflow | `.github/workflows/release-plz.yml` |
 | Berechtigung | `id-token: write` |
-| Umgebung | `crates-io` |
+| Umgebung | keine |
 
 Auf crates.io trägt **jedes Crate einmalig** einen Trusted Publisher ein, unter
 *Settings → Trusted Publishing → Add*:
@@ -49,11 +49,13 @@ Auf crates.io trägt **jedes Crate einmalig** einen Trusted Publisher ein, unter
 | Repository owner | `casoon` |
 | Repository name | `barrierlab` |
 | Workflow filename | `release-plz.yml` |
-| Environment | `crates-io` |
+| Environment | leer |
 
-Der Name der Umgebung geht in den OIDC-Anspruch ein und wird mitgeprüft. Ohne
-ihn könnte jeder, der einen Branch pushen darf, einen geänderten Workflow
-starten und von dort veröffentlichen.
+Eine GitHub-Umgebung wird **nicht** benutzt. Ihr Name ginge in den OIDC-Anspruch
+ein und müsste auf crates.io genauso eingetragen sein; das ist eine zusätzliche
+Stelle, an der beides auseinanderlaufen kann. Wer den Schutz später will, trägt
+die Umgebung an beiden Stellen gleichzeitig ein — im Job **und** in jeder
+Crate-Konfiguration.
 
 **Ein neues Crate lässt sich damit nicht anlegen** — crates.io verlangt für die
 erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
