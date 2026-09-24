@@ -38,8 +38,6 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 [[package]]
 name = "csp-parse"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1cd2527b63dd3d6edbb8a0f251aa31bb52e81cc7ad37dc461d2974084fa5c33"
 
 [[package]]
 name = "displaydoc"
@@ -89,7 +87,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "csp-parse",
  "encoding_rs",
@@ -113,9 +111,7 @@ dependencies = [
 
 [[package]]
 name = "html5-parser"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b851f35c29d28aaba06e9b0022d2110e5339bf34b343766821e5d65dc49be2c"
+version = "0.4.0"
 
 [[package]]
 name = "icu_collections"
@@ -262,8 +258,6 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 [[package]]
 name = "media-query-parse"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93a1e4247a741c4a1d80414a107c4ddae6302e41b783de3eabcfbceca71727c"
 
 [[package]]
 name = "memchr"
@@ -342,8 +336,6 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 [[package]]
 name = "relax-ng"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c379ffde14c5045576e89c49ba93812aad1f61986485a434198037be3316e17e"
 dependencies = [
  "regex",
  "roxmltree",
@@ -362,8 +354,6 @@ dependencies = [
 [[package]]
 name = "schematron-engine"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07c05422a9c10ccc8ca8c5939e191af07a0542578d52f3bbd7558d5c02b0619c"
 dependencies = [
  "roxmltree",
  "xpath-eval",
@@ -506,8 +496,6 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 [[package]]
 name = "xpath-eval"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83058fdeec995449ff47adb0bc5773092b56aa91423c4cb257ef4e4e11df542b"
 
 [[package]]
 name = "yoke"

@@ -1,0 +1,21 @@
+version = 1
+SPDX-PackageName = "barrierlab"
+SPDX-PackageSupplier = "CASOON"
+SPDX-PackageDownloadLocation = "https://github.com/casoon/barrierlab"
+
+# Alles in diesem Repository, sofern unten nichts Genaueres steht.
+[[annotations]]
+path = ["**"]
+SPDX-FileCopyrightText = "2026 CASOON"
+SPDX-License-Identifier = "MIT"
+
+# Vendort aus validator/validator (Nu Html Checker, vnu), MIT — Einzelheiten in
+# crates/html-conform/THIRD-PARTY-NOTICES.md. Genauer als die Regel oben und
+# überschreibt sie deshalb (REUSE.toml: die letzte passende Tabelle gilt).
+[[annotations]]
+path = ["crates/html-conform/schema/**", "crates/html-conform/tests/corpus/**"]
+SPDX-FileCopyrightText = "2007-2026 Mozilla Foundation, Henri Sivonen, and the W3C"
+SPDX-License-Identifier = "MIT"
+
+# Die vendorte RELAX-NG-Testsuite bringt eigene .license-Dateien mit
+# (BSD-3-Clause); Herkunft in crates/relax-ng/tests/corpus/relaxng/UPSTREAM.md.

@@ -1,0 +1,33 @@
+# cargo-deny für den ganzen Workspace.
+#
+# Geprüft wird in CI `cargo deny check licenses`: dass keine Abhängigkeit eine
+# Lizenz mitbringt, die hier nicht ausdrücklich erlaubt ist. Jede Erlaubnis
+# braucht einen Grund — eine Liste ohne Begründung wächst sonst stillschweigend.
+#
+# Die drei Crates, die diese Datei aus ihren Einzelrepositorys mitbrachten
+# (csp-parse, relax-ng, html-conform), hatten drei verschiedene Fassungen.
+# Das ist die Vereinigung.
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "MIT",          # die Lizenz aller Pakete hier und der meisten Abhängigkeiten
+    "Apache-2.0",   # die andere Hälfte des verbreiteten "MIT OR Apache-2.0"
+    "BSD-3-Clause", # roxmltree-Umfeld und die vendorte RELAX-NG-Testsuite
+    "Unlicense",    # aho-corasick und memchr: "Unlicense OR MIT"
+    "Unicode-3.0",  # unicode-ident bringt Unicodes eigene Zeichentabellen mit
+]
+
+[licenses.private]
+ignore = false
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-git = []

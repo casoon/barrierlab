@@ -38,6 +38,31 @@ jobs:
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
+      # Fuzz-Ziele und das xtask-Hilfsprogramm sind eigene Workspaces (sie waren
+      # es vor dem Umzug schon) und laufen deshalb nicht mit `--workspace` mit.
+      # Gebaut werden sie trotzdem, sonst verrotten sie unbemerkt.
+      - if: steps.members.outputs.present == 'true'
+        name: Ausgeschlossene Workspaces
+        run: |
+          for pfad in crates/html-conform/fuzz crates/html-conform/xtask/check-file; do
+            echo "::group::$pfad"
+            cargo check --manifest-path "$pfad/Cargo.toml" --all-targets
+            echo "::endgroup::"
+          done
+
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # Jede Datei im Repository braucht Urheber- und Lizenzangabe (REUSE);
+      # die vendorten Korpora haben eigene, abweichende — siehe REUSE.toml.
+      - uses: fsfe/reuse-action@v5
+      - uses: dtolnay/rust-toolchain@stable
+      # Keine Abhaengigkeit mit einer Lizenz, die deny.toml nicht erlaubt.
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses
+
   wasm:
     runs-on: ubuntu-latest
     steps:
