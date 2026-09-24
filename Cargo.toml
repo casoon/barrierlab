@@ -15,6 +15,7 @@ members = [
     "crates/accname",
     "crates/a11y-rules",
     "crates/a11y-perception",
+    "crates/web-checks",
     # L3 — Auslieferung
     "crates/a11y-wasm",
 ]
