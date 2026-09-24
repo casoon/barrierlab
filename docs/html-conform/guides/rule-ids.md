@@ -73,5 +73,5 @@ Lays each table out over its `colspan` and `rowspan` values and reports overlapp
 cells that span past the end of their row group, and columns in which no cell begins. This
 needs state carried across cells, so it is Rust code rather than a Schematron rule.
 
-The [showcase](../../../showcase/) has one sample document per layer, with the findings
+The die Beispiele des Crates has one sample document per layer, with the findings
 html-conform reports for it.

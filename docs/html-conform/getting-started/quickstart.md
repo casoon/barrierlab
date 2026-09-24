@@ -62,4 +62,4 @@ the details.
 ## Next steps
 
 - [Findings and rule IDs](../../guides/rule-ids/) explains what each finding source reports.
-- The [showcase](../../../showcase/) shows the findings for seven sample documents.
+- The die Beispiele des Crates shows the findings for seven sample documents.
