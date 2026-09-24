@@ -14,7 +14,7 @@ pub struct QName {
     pub local: String,
 }
 
-/// The 13 XPath axes ([6] `AxisName`). Abbreviated forms (`@`, `.`, `..`)
+/// The 13 XPath axes (\[6\] `AxisName`). Abbreviated forms (`@`, `.`, `..`)
 /// are represented as their equivalent explicit axis, not as a separate
 /// variant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,7 +57,7 @@ impl Axis {
     }
 }
 
-/// [7] `NodeTest` — includes the `NameTest` alternatives (`*`, `prefix:*`,
+/// \[7\] `NodeTest` — includes the `NameTest` alternatives (`*`, `prefix:*`,
 /// `QName`) and the `NodeType`/`processing-instruction(Literal)` forms.
 #[derive(Debug, Clone, PartialEq)]
 pub enum NodeTest {
@@ -77,7 +77,7 @@ pub enum NodeTest {
     ProcessingInstruction(Option<String>),
 }
 
-/// [4] `Step` — `AxisSpecifier NodeTest Predicate*`, with `AbbreviatedStep`
+/// \[4\] `Step` — `AxisSpecifier NodeTest Predicate*`, with `AbbreviatedStep`
 /// (`.` / `..`) desugared into the equivalent `self`/`parent` axis step.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Step {
@@ -86,7 +86,7 @@ pub struct Step {
     pub predicates: Vec<Expr>,
 }
 
-/// [1]/[2]/[3] `LocationPath` — `//` is desugared into an explicit
+/// \[1\]/\[2\]/\[3\] `LocationPath` — `//` is desugared into an explicit
 /// `descendant-or-self::node()` step prepended to (or inserted into) `steps`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocationPath {
@@ -94,7 +94,7 @@ pub struct LocationPath {
     pub steps: Vec<Step>,
 }
 
-/// [16] `FunctionCall` — name plus argument expressions. Not validated
+/// \[16\] `FunctionCall` — name plus argument expressions. Not validated
 /// against the core function library in this phase; any syntactically
 /// valid `QName` is accepted.
 #[derive(Debug, Clone, PartialEq)]
@@ -103,29 +103,29 @@ pub struct FunctionCall {
     pub args: Vec<Expr>,
 }
 
-/// [15] `PrimaryExpr`.
+/// \[15\] `PrimaryExpr`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PrimaryExpr {
-    /// [36] `VariableReference` — `$QName`.
+    /// \[36\] `VariableReference` — `$QName`.
     Variable(QName),
     /// `'(' Expr ')'`
     Parenthesized(Box<Expr>),
-    /// [29] `Literal`.
+    /// \[29\] `Literal`.
     Literal(String),
-    /// [30] `Number`.
+    /// \[30\] `Number`.
     Number(f64),
-    /// [16] `FunctionCall`.
+    /// \[16\] `FunctionCall`.
     Function(FunctionCall),
 }
 
-/// [20] `FilterExpr` — a `PrimaryExpr` with zero or more predicates.
+/// \[20\] `FilterExpr` — a `PrimaryExpr` with zero or more predicates.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterExpr {
     pub primary: PrimaryExpr,
     pub predicates: Vec<Expr>,
 }
 
-/// [19] `PathExpr`.
+/// \[19\] `PathExpr`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathExpr {
     /// A bare `LocationPath`.
@@ -165,28 +165,28 @@ pub enum MultiplicativeOp {
     Mod,
 }
 
-/// [14] `Expr` and the full operator-precedence chain [18]/[21]-[27] in a
+/// \[14\] `Expr` and the full operator-precedence chain \[18\]/\[21\]-\[27\] in a
 /// single flat enum: each precedence level either produces a node here or,
 /// when its operator is absent, simply returns the inner expression from
 /// the next-tighter level (standard precedence-climbing shortcut).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    /// [21] `OrExpr`.
+    /// \[21\] `OrExpr`.
     Or(Box<Expr>, Box<Expr>),
-    /// [22] `AndExpr`.
+    /// \[22\] `AndExpr`.
     And(Box<Expr>, Box<Expr>),
-    /// [23] `EqualityExpr`.
+    /// \[23\] `EqualityExpr`.
     Equality(Box<Expr>, EqualityOp, Box<Expr>),
-    /// [24] `RelationalExpr`.
+    /// \[24\] `RelationalExpr`.
     Relational(Box<Expr>, RelationalOp, Box<Expr>),
-    /// [25] `AdditiveExpr`.
+    /// \[25\] `AdditiveExpr`.
     Additive(Box<Expr>, AdditiveOp, Box<Expr>),
-    /// [26] `MultiplicativeExpr`.
+    /// \[26\] `MultiplicativeExpr`.
     Multiplicative(Box<Expr>, MultiplicativeOp, Box<Expr>),
-    /// [27] `UnaryExpr ::= '-' UnaryExpr`.
+    /// \[27\] `UnaryExpr ::= '-' UnaryExpr`.
     Negate(Box<Expr>),
-    /// [18] `UnionExpr`.
+    /// \[18\] `UnionExpr`.
     Union(Box<Expr>, Box<Expr>),
-    /// [19] `PathExpr`.
+    /// \[19\] `PathExpr`.
     Path(PathExpr),
 }

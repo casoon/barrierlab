@@ -8,7 +8,7 @@
 //!
 //! [`run`] läuft mit dem, was da ist, und hält für jede Regel fest, ob sie
 //! laufen konnte. Eine Tier-2-Regel auf einem Host ohne
-//! [`Semantics`](a11y_dom::Semantics) erzeugt keinen stillen Nicht-Befund,
+//! [`a11y_dom::Semantics`] erzeugt keinen stillen Nicht-Befund,
 //! sondern einen Vermerk mit `NotRun::CapabilityMissing`.
 //!
 //! ```
@@ -35,7 +35,7 @@
 //! assert_eq!(report.summary.rules_not_run, 7);
 //! ```
 //!
-//! Mit einem Host, der [`Semantics`](a11y_dom::Semantics) erfüllt, laufen die
+//! Mit einem Host, der [`a11y_dom::Semantics`] erfüllt, laufen die
 //! über [`run_with_semantics`] mit.
 
 #![forbid(unsafe_code)]

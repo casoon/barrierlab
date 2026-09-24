@@ -98,7 +98,14 @@ pub struct FocusMove {
 /// ("false"/"true"/"grammar"/"spelling"), nie als `Bool`. Über den
 /// Bool-Zugriff war diese Eigenschaft hier stillschweigend tot — sie stand
 /// in der Liste, konnte aber nie eine Änderung erzeugen.
-const TRACKED_PROPERTIES: &[&str] = &["expanded", "hidden", "selected", "invalid", "modal"];
+///
+/// `checked` und `pressed` sind in Chrome Tristate-Token
+/// ("true"/"false"/"mixed"). Ohne sie meldete der Diff bei Checkbox,
+/// Switch und Toggle-Button keine Wirkung einer Bedienung (gefunden im
+/// Relief-CDP-Spike: Checkbox angeklickt, Diff leer).
+const TRACKED_PROPERTIES: &[&str] = &[
+    "expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",
+];
 
 impl AXTreeDiff {
     /// Compute the structural diff between two snapshots.
@@ -334,6 +341,27 @@ mod tests {
             .expect("Wechsel an aria-invalid muss sichtbar sein");
         assert_eq!(change.before, "false");
         assert_eq!(change.after, "true");
+    }
+
+    /// Checkbox und Toggle-Button: Tristate-Token, auch „mixed“.
+    #[test]
+    fn checked_und_pressed_erzeugen_eine_aenderung() {
+        for (prop, from, to) in [
+            ("checked", "false", "true"),
+            ("checked", "true", "mixed"),
+            ("pressed", "false", "true"),
+        ] {
+            let mut before = snap("a", "T", "https://x", None);
+            before.tree = AXTree::from_nodes(vec![node_with_token("1", 7, prop, from)]);
+            let mut after = snap("b", "T", "https://x", None);
+            after.tree = AXTree::from_nodes(vec![node_with_token("1", 7, prop, to)]);
+
+            let diff = AXTreeDiff::between(&before, &after);
+            let change = diff
+                .property_change_for(7, prop)
+                .unwrap_or_else(|| panic!("Wechsel an {prop} muss sichtbar sein"));
+            assert_eq!((change.before.as_str(), change.after.as_str()), (from, to));
+        }
     }
 
     /// Boolesche Eigenschaften bleiben unverändert in ihrer Darstellung.

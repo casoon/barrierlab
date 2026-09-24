@@ -6,7 +6,7 @@ use crate::document::Node;
 
 /// An XPath 1.0 value: one of the four object types (§3.1) — "node-set
 /// (an unordered collection of nodes without duplicates), boolean, number
-/// ... [or] string".
+/// ... \[or\] string".
 ///
 /// Parameterized only over the node type `N`, not over a separate lifetime
 /// — a concrete `N` already implements `Node<'a>` for one specific `'a`
