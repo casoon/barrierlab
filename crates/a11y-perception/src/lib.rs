@@ -11,6 +11,7 @@
 //! | [`AXSnapshot`], [`FocusSnapshot`] | wie sah ein bestimmter Zeitpunkt aus |
 //! | [`AXTreeDiff`] | was hat eine Handlung wahrnehmbar verändert |
 //! | [`linearize`], [`ReadingItem`] | in welcher Reihenfolge fände ein Screenreader das vor |
+//! | [`announce`], [`Announcement`] | woraus die Ansage zu einer Leseeinheit besteht |
 //!
 //! # Grenzen
 //!
@@ -40,12 +41,14 @@
 
 #![forbid(unsafe_code)]
 
+mod announcement;
 mod diff;
 mod linearizer;
 mod reading;
 mod snapshot;
 mod tree;
 
+pub use announcement::{AnnouncedRole, AnnouncedState, Announcement, announce};
 pub use diff::*;
 pub use linearizer::*;
 pub use reading::{IgnoredReadingNode, ReadingItem};

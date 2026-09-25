@@ -4,6 +4,22 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-25
+
+### Added
+
+- `announce` und `Announcement`: woraus die Ansage zu einer Leseeinheit besteht
+  — Name, Rolle, Zustände, in Ansagereihenfolge und als benannte Teile
+  (`AnnouncedRole`, `AnnouncedState`), nicht als Zeichenkette. Die Struktur ist
+  überall dieselbe: dass die Ebene einer Überschrift in die Rolle gehört, dass
+  `expanded=false` „eingeklappt" zu sagen hat und `required=false` nichts, dass
+  „fokussierbar" nur dort etwas hinzufügt, wo die Rolle es nicht schon sagt. Die
+  Wörter bringt ein Host mit seiner Lokalisierung mit.
+
+  Herkunft: auditmysites `screen_reader/announcer.rs`. Dort waren Struktur und
+  Sprache in einer Funktion verschränkt, weshalb das Paket den Renderer bisher
+  nicht übernehmen konnte (siehe `docs/packages/a11y-perception.md`, 0.1.0).
+
 ### Fixed
 
 - `AXTreeDiff` meldet jetzt Wechsel an `checked` und `pressed` (Tristate-Token
