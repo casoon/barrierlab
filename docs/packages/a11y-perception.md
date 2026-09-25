@@ -9,14 +9,17 @@ die Differenz zweier Aufnahmen. Das Paket berechnet, es erhebt nicht.
 
 ## Stand
 
-0.1.0, neu in barrierlab. Herausgezogen aus auditmysite
+0.2.0. Herausgezogen aus auditmysite
 (`accessibility/{tree,diff,snapshot}.rs`, `screen_reader/{linearizer,types}.rs`)
 nach dem Umbau, der an 133 Seiten mit 692 Journey-Instanzen gemessen wurde.
 27 Tests sind mitgekommen und laufen ohne Browser.
 
-Noch **nicht** hier: der Renderer, der aus der Struktur einen lesbaren Satz
-macht (`announcer.rs`). Er hängt an der Lokalisierung des Hosts; die
-Ansage-Struktur von ihm zu trennen, ist ein eigener Schritt.
+Neu in 0.2.0 ist die **Ansage-Struktur** (`announce`). Der Renderer aus
+auditmysites `announcer.rs` war daran nicht zu trennen, weil er Struktur und
+Wörter in einem Zug erledigte: welche Teile eine Ansage hat, in welcher
+Reihenfolge und welcher Zustand nichts hinzufügt — und gleich daneben, wie das
+auf Deutsch heißt. Die erste Hälfte ist überall dieselbe und liegt jetzt hier;
+die zweite bleibt beim Host, der seine Lokalisierung mitbringt.
 
 ## Aufbau
 
@@ -28,6 +31,9 @@ flowchart LR
   snap --> lin["linearize()"]
   lin --> ri["ReadingItem-Folge"]
   lin --> ign["IgnoredReadingNode\nmit Grund"]
+  ri --> ann["announce()"]
+  ann --> parts["Announcement\nName · Rolle · Zustände"]
+  parts -.-> words["Wörter: Lokalisierung des Hosts\n(nicht in diesem Paket)"]
   snap -- vorher --> diff["AXTreeDiff"]
   snap2["AXSnapshot nachher"] --> diff
   diff --> fm["Fokusbewegung"]
@@ -44,6 +50,7 @@ flowchart LR
 | `AXSnapshot`, `FocusSnapshot`, `FocusIndicatorStatus`, `Rect` | ein aufgenommener Zeitpunkt samt Fokuslage |
 | `AXTreeDiff` | die Differenz zweier Aufnahmen |
 | `linearize`, `ReadingItem`, `IgnoredReadingNode` | die Projektion in Lesereihenfolge, mit dem, was sie übergeht |
+| `announce`, `Announcement`, `AnnouncedRole`, `AnnouncedState` | woraus die Ansage zu einer Leseeinheit besteht — benannte Teile, keine Zeichenkette |
 
 ## Abhängigkeiten
 
