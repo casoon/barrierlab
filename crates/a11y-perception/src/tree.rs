@@ -158,10 +158,41 @@ impl AXTree {
 
     /// Iterate over all auditable nodes (excludes browser-generated artifacts).
     /// This is the default iterator that all WCAG rules should use.
+    ///
+    /// Also excluded: everything below a `Video` or `Audio` node. With
+    /// `controls`, Chrome exposes the player's own interface there — play,
+    /// mute and fullscreen buttons, a timeline `slider` without `valuenow` —
+    /// from the browser's shadow DOM. No author wrote it or can fix it, and
+    /// ARIA rules reported the timeline as a Critical "missing
+    /// aria-valuenow" on every page with a `<video controls>`. Fallback
+    /// content inside `<video>` is only rendered where video is unsupported,
+    /// so the subtree is never author content. The media node itself stays.
     pub fn iter(&self) -> impl Iterator<Item = &AXNode> {
+        let media_ui = self.media_controls();
         self.ordered_nodes()
             .into_iter()
-            .filter(|n| !n.is_browser_generated())
+            .filter(move |n| !n.is_browser_generated() && !media_ui.contains(n.node_id.as_str()))
+    }
+
+    /// Ids of all nodes below a `Video` or `Audio` node — the browser's
+    /// player interface. See [`iter`](Self::iter).
+    fn media_controls(&self) -> std::collections::HashSet<&str> {
+        let mut out = std::collections::HashSet::new();
+        let mut stack: Vec<&str> = self
+            .nodes
+            .values()
+            .filter(|n| matches!(n.role.as_deref(), Some("Video") | Some("Audio")))
+            .flat_map(|n| n.child_ids.iter().map(String::as_str))
+            .collect();
+        while let Some(id) = stack.pop() {
+            if !out.insert(id) {
+                continue;
+            }
+            if let Some(node) = self.nodes.get(id) {
+                stack.extend(node.child_ids.iter().map(String::as_str));
+            }
+        }
+        out
     }
 
     /// Iterate over ALL nodes including browser-generated artifacts.
@@ -744,5 +775,52 @@ mod tests {
 
         let non_heading = create_test_node("2", "paragraph", Some("Text"));
         assert_eq!(non_heading.heading_level(), None);
+    }
+
+    fn with_children(mut node: AXNode, children: &[&str]) -> AXNode {
+        node.child_ids = children.iter().map(|c| c.to_string()).collect();
+        node
+    }
+
+    /// The player interface Chrome exposes under `<video controls>` is not
+    /// author content: rules iterating the tree must not see it. The media
+    /// node itself and everything outside it stay.
+    #[test]
+    fn media_player_controls_are_not_auditable() {
+        let tree = AXTree::from_nodes(vec![
+            with_children(create_test_node("1", "RootWebArea", None), &["2", "3", "7"]),
+            create_test_node("2", "heading", Some("Clip")),
+            with_children(create_test_node("3", "Video", None), &["4"]),
+            with_children(create_test_node("4", "generic", None), &["5", "6"]),
+            create_test_node("5", "button", Some("Wiedergeben")),
+            create_test_node("6", "slider", Some("Video-Zeitachse")),
+            create_test_node("7", "slider", Some("Author volume")),
+        ]);
+        let roles: Vec<(&str, &str)> = tree
+            .iter()
+            .map(|n| (n.node_id.as_str(), n.role.as_deref().unwrap_or("")))
+            .collect();
+        assert_eq!(
+            roles,
+            vec![
+                ("1", "RootWebArea"),
+                ("2", "heading"),
+                ("3", "Video"),
+                ("7", "slider")
+            ]
+        );
+        assert_eq!(tree.form_controls().len(), 1, "only the author's slider");
+        // Nothing is dropped from the full traversal.
+        assert_eq!(tree.iter_all().count(), 7);
+    }
+
+    #[test]
+    fn audio_player_controls_are_not_auditable() {
+        let tree = AXTree::from_nodes(vec![
+            with_children(create_test_node("1", "RootWebArea", None), &["2"]),
+            with_children(create_test_node("2", "Audio", None), &["3"]),
+            create_test_node("3", "button", Some("Stumm")),
+        ]);
+        assert_eq!(tree.iter().count(), 2);
     }
 }
