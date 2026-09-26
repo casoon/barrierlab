@@ -4,6 +4,20 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-26
+
+### Fixed
+
+- `AXTree::iter()` — und damit `images`, `headings`, `form_controls`, `links`,
+  `nodes_with_role` — lässt alles unterhalb eines `Video`- oder `Audio`-Knotens
+  aus. Mit `controls` legt Chrome dort die Bedienoberfläche des Players aus dem
+  Shadow DOM des Browsers ab: Wiedergabe-, Stumm- und Vollbild-Button und eine
+  Zeitleiste als `slider` ohne `valuenow`. Die ARIA-Regeln eines Hosts meldeten
+  diese Zeitleiste als Critical „fehlendes aria-valuenow" — auf jeder Seite mit
+  `<video controls>`, ohne dass ein Autor sie geschrieben hätte oder beheben
+  könnte. In auditmysite kappte das den Score einer solchen Seite auf 49. Der
+  Medien-Knoten selbst bleibt; `iter_all()` und `text_nodes()` sind unverändert.
+
 ## [0.2.0] - 2026-09-25
 
 ### Added
