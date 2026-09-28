@@ -37,9 +37,14 @@
 //!
 //! Schritt 2A der Spezifikation schließt versteckte Knoten aus. Ohne
 //! Rendering-Daten sind nur `aria-hidden="true"` und das `hidden`-Attribut
-//! erkennbar — `display: none` und `visibility: hidden` nicht. Ein Host mit
-//! [`a11y_dom::Rendering`] kann hier genauer sein; dieses Crate bleibt
-//! bewusst bei dem, was ohne Layout entscheidbar ist.
+//! erkennbar — `display: none` und `visibility: hidden` nicht. Ebenso der
+//! Trenner im Inhaltsdurchlauf: Ohne Layout wird jedes Kind durch ein
+//! Leerzeichen abgesetzt, auch ein Inline-Element (`<abbr>EU</abbr>-Arktis`
+//! ergibt „EU -Arktis").
+//!
+//! Ein Host mit [`a11y_dom::Rendering`] ruft stattdessen [`name_rendered`]:
+//! Dort schließen Elemente mit `display: inline` direkt an, und per Stil
+//! versteckte Knoten fallen weg.
 
 #![forbid(unsafe_code)]
 
@@ -48,7 +53,7 @@ mod name;
 mod role;
 
 pub use index::IdIndex;
-pub use name::{description, name};
+pub use name::{description, name, name_rendered};
 pub use role::{allows_name_from_content, implicit, name_is_prohibited, role};
 
 #[cfg(test)]

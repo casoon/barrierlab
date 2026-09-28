@@ -5,6 +5,21 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.11.3] - 2026-09-28
+
+### Added
+
+- `name_rendered(doc, node, ids)` für Hosts mit `a11y_dom::Rendering`: Im
+  Inhaltsdurchlauf (2F) und in `<label>`-, `<legend>`-, `<figcaption>`- und
+  `<caption>`-Texten schließen Kinder mit `display: inline`/`contents` direkt
+  an, alle anderen und ersetzte Elemente werden abgesetzt, `<br>` trennt immer.
+  `display: none` (auch an einem Vorfahren) und `visibility: hidden`/`collapse`
+  blenden aus (2A), außer bei Verweis. Ohne Stil für ein Element gilt das
+  Verhalten von `name()`. Im Differentialkorpus von auditmysite (35 Seiten, mit
+  Stilen aus CDP `DOMSnapshot`) bleibt ein echtes Abweichungsmuster statt
+  sechs; „EU-Arktis", „Rechenpower", „abholen*" stimmen jetzt mit Chrome
+  überein. `name()` ist unverändert.
+
 ## [0.11.2] - 2026-09-28
 
 ### Fixed
