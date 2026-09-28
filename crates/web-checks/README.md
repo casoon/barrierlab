@@ -16,7 +16,11 @@ Two rules keep it small:
 
 ## Scope
 
-`robots` — robots.txt grammar, bot classification, longest-match path rules.
+- `robots` — robots.txt grammar, bot classification, longest-match path rules.
+- `meta` — title and meta description length, counted in characters (not bytes),
+  with the shared recommended ranges 30–60 and 120–160.
+- `social` — OpenGraph and Twitter Card tag lists, presence (empty content counts
+  as missing), completeness, valid `twitter:card` values, absolute image URLs.
 
 More families follow one at a time, each checked first for whether it really
 asks the same question. "Security" looked like duplication by name; in fact one

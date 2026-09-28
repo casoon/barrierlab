@@ -2,6 +2,19 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.3.0] - 2026-09-28
+
+### Added
+
+- Familie `meta`: `length` zählt Zeichen nach browserüblicher
+  Leerraum-Zusammenfassung, `LengthRange::classify` ordnet zu kurz / ok / zu
+  lang ein; `TITLE` (30–60) und `DESCRIPTION` (120–160) als gemeinsame
+  Empfehlung. Beide Hosts maßen vorher in Bytes — Umlaute zählten doppelt.
+- Familie `social`: Tag-Listen für OpenGraph und Twitter Cards
+  (`*_REQUIRED`, `*_FIELDS`), `is_present` (leerer Inhalt gilt als fehlend),
+  `is_complete`, `completeness` in Prozent, `is_valid_twitter_card`,
+  `is_absolute_url`.
+
 ## [0.2.0] - 2026-09-24
 
 ### Added
