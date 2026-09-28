@@ -47,6 +47,7 @@ mod semantics;
 mod structure;
 
 pub use locale::Locale;
+use locale::pick;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule};
 
 use a11y_dom::{Document, Rendering, Semantics};
@@ -109,14 +110,16 @@ fn nicht_gelaufen(metas: &'static [Meta], grund: &str, report: &mut Report) {
 }
 
 fn ohne_semantik(locale: Locale) -> &'static str {
-    locale.pick(
+    pick!(
+        locale,
         "host provides no role and no accessible name",
         "Host liefert keine Rolle und keinen Accessible Name",
     )
 }
 
 fn ohne_darstellung(locale: Locale) -> &'static str {
-    locale.pick(
+    pick!(
+        locale,
         "host provides no computed styles and no geometry",
         "Host liefert keine berechneten Stile und keine Geometrie",
     )

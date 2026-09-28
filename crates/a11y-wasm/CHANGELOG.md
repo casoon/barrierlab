@@ -2,6 +2,14 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.2.1] - 2026-09-28
+
+### Changed
+
+- Baut `a11y-rules` ohne das Feature `de`: Das Modul trägt keine deutschen
+  Texte mehr, die es in der laufenden Seite nie ausgibt. 173,6 → 168,4 KB roh,
+  83,3 → 80,9 KB gzip. Befunde und Texte unverändert.
+
 ## [0.2.0] - 2026-09-28
 
 ### Changed
