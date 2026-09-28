@@ -299,7 +299,7 @@ mod tests {
         let doc = Arena::builder()
             .open("a")
             .attr("href", "/x")
-            .text("Zum")
+            .text("Zum ")
             .open("strong")
             .text("Bericht")
             .close()
@@ -307,6 +307,105 @@ mod tests {
             .build();
         let ids = IdIndex::build(doc.root());
         assert_eq!(name(finde(&doc, "a"), &ids).as_deref(), Some("Zum Bericht"));
+    }
+
+    fn link_name(doc: &Arena) -> Option<String> {
+        let ids = IdIndex::build(doc.root());
+        name(finde(doc, "a"), &ids)
+    }
+
+    #[test]
+    fn inline_elemente_fuegen_kein_leerzeichen_ein() {
+        // Korpusfälle aus auditmysite (plan/01); WPT comp_name_from_content:
+        // „for each child (no space, inline)".
+        let abbr = Arena::builder()
+            .open("a")
+            .attr("href", "/")
+            .open("abbr")
+            .text("EU")
+            .close()
+            .text("-Arktis")
+            .close()
+            .build();
+        assert_eq!(link_name(&abbr).as_deref(), Some("EU-Arktis"));
+
+        let span = Arena::builder()
+            .open("a")
+            .attr("href", "/")
+            .text("Rechen")
+            .open("span")
+            .text("power")
+            .close()
+            .close()
+            .build();
+        assert_eq!(link_name(&span).as_deref(), Some("Rechenpower"));
+    }
+
+    #[test]
+    fn label_mit_inline_stern_bleibt_zusammen() {
+        let doc = Arena::builder()
+            .open("form")
+            .open("label")
+            .attr("for", "f")
+            .text("abholen")
+            .open("span")
+            .text("*")
+            .close()
+            .close()
+            .open("input")
+            .attr("type", "checkbox")
+            .attr("id", "f")
+            .close()
+            .close()
+            .build();
+        let ids = IdIndex::build(doc.root());
+        assert_eq!(
+            name(finde(&doc, "input"), &ids).as_deref(),
+            Some("abholen*")
+        );
+    }
+
+    #[test]
+    fn block_elemente_bleiben_getrennt() {
+        // WPT: „for each child (display:block)" ergibt „one two three".
+        let doc = Arena::builder()
+            .open("a")
+            .attr("href", "/")
+            .open("div")
+            .text("one")
+            .close()
+            .open("p")
+            .text("two")
+            .close()
+            .text("three")
+            .close()
+            .build();
+        assert_eq!(link_name(&doc).as_deref(), Some("one two three"));
+    }
+
+    #[test]
+    fn block_elemente_im_label_bleiben_getrennt() {
+        let doc = Arena::builder()
+            .open("form")
+            .open("label")
+            .attr("for", "f")
+            .open("div")
+            .text("Straße")
+            .close()
+            .open("div")
+            .text("Hausnummer")
+            .close()
+            .close()
+            .open("input")
+            .attr("id", "f")
+            .close()
+            .close()
+            .build();
+        let ids = IdIndex::build(doc.root());
+        assert_eq!(
+            name(finde(&doc, "input"), &ids).as_deref(),
+            Some("Straße Hausnummer")
+        );
     }
 
     #[test]
@@ -352,6 +451,24 @@ mod tests {
             .build();
         let ids = IdIndex::build(doc.root());
         assert!(name(finde(&doc, "div"), &ids).is_none());
+    }
+
+    #[test]
+    fn dt_bekommt_keinen_namen_aus_seinem_inhalt() {
+        // Rolle `term`: weder in ARIA 1.2 noch in 1.3 „name from content",
+        // in 1.3 ausdrücklich „name prohibited". Chrome benennt `<dt>` aus dem
+        // Inhalt — eine Chrome-Abweichung, kein Fehler hier (plan/01).
+        let doc = Arena::builder()
+            .open("dl")
+            .open("dt")
+            .text("Begriff")
+            .close()
+            .close()
+            .build();
+        let ids = IdIndex::build(doc.root());
+        let dt = finde(&doc, "dt");
+        assert_eq!(role(dt), Some("term"));
+        assert_eq!(name(dt, &ids), None);
     }
 
     #[test]

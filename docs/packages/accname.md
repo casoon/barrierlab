@@ -45,6 +45,17 @@ Erhebung.
 ## Grenzen
 
 Kein CSS: `text-transform`, `::before`/`::after` und Sichtbarkeitsregeln des
-Browsers sind nicht abgebildet. Wo ein Host native Werte hat (Chrome über CDP),
+Browsers sind nicht abgebildet. Ob zwischen zwei Teilen eines Namens ein
+Leerzeichen steht, entscheidet deshalb das Tag: Phrasing-Elemente mit
+`display: inline` im UA-Stylesheet (`span`, `abbr`, `strong`, …) schließen
+direkt an, alles andere wird abgesetzt. Per CSS umgestellte Elemente trifft das
+nicht. `display: none` und `visibility: hidden` sind unsichtbar; `name()` nimmt
+keine Rendering-Daten entgegen, versteckt ist nur, was `hidden` oder
+`aria-hidden="true"` trägt.
+
+`<dt>` (Rolle `term`) bekommt keinen Namen aus dem Inhalt: `term` steht weder
+in ARIA 1.2 noch im ARIA-1.3-Entwurf unter „name from content", im Entwurf
+ausdrücklich unter „name prohibited". Chrome benennt `<dt>` trotzdem aus dem
+Inhalt — eine erwartete Abweichung. Wo ein Host native Werte hat (Chrome über CDP),
 sind diese getrennt zu kennzeichnen — nicht stillschweigend gegen die eigene
 Berechnung zu tauschen.
