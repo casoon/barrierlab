@@ -45,11 +45,14 @@ Erhebung.
 ## Grenzen
 
 Kein CSS: `text-transform`, `::before`/`::after` und Sichtbarkeitsregeln des
-Browsers sind nicht abgebildet. Ob zwischen zwei Teilen eines Namens ein
-Leerzeichen steht, entscheidet deshalb das Tag: Phrasing-Elemente mit
-`display: inline` im UA-Stylesheet (`span`, `abbr`, `strong`, …) schließen
-direkt an, alles andere wird abgesetzt. Per CSS umgestellte Elemente trifft das
-nicht. `display: none` und `visibility: hidden` sind unsichtbar; `name()` nimmt
+Browsers sind nicht abgebildet. Zwischen den Teilen eines Namens steht deshalb
+immer ein Leerzeichen, auch bei Inline-Elementen: `<abbr>EU</abbr>-Arktis`
+ergibt „EU -Arktis", Chrome „EU-Arktis". Eine Entscheidung nach dem Tag wurde in
+0.11.1 versucht und in 0.11.2 zurückgenommen — auf echten Seiten sind `<span>`
+oft per CSS Block-Elemente, und das Leerzeichen fehlte dann an viel mehr
+Stellen, als es vorher zu viel war (auditmysite-Korpus: 450 neue Abweichungen
+gegen 5 behobene). Richtig lösen lässt es sich nur mit dem berechneten `display`
+vom Host. `display: none` und `visibility: hidden` sind unsichtbar; `name()` nimmt
 keine Rendering-Daten entgegen, versteckt ist nur, was `hidden` oder
 `aria-hidden="true"` trägt.
 
