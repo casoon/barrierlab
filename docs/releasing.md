@@ -9,7 +9,7 @@ order: 4
 Ein Tag je Paket: `<paket>-vX.Y.Z`, zum Beispiel `accname-v0.11.0`. Es gibt
 keinen gemeinsamen Repository-Tag. Konfiguriert in `release-plz.toml`.
 
-Die vier a11y-core-Crates bleiben im Gleichschritt versioniert (heute 0.10.1),
+Die vier a11y-core-Crates bleiben im Gleichschritt versioniert,
 weil sie einen gemeinsamen Vertrag bilden. Alles andere versioniert eigenständig.
 
 ## crates.io
