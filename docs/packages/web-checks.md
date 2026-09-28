@@ -1,6 +1,6 @@
 ---
 title: "web-checks"
-description: "Die gemeinsame Auswertung zweier Auditoren: robots.txt, Meta-Längen, OpenGraph und Twitter Cards."
+description: "Die gemeinsame Auswertung zweier Auditoren: robots.txt, Meta-Längen, OpenGraph und Twitter Cards, strukturierte Daten."
 order: 8
 ---
 
@@ -10,9 +10,9 @@ ein gebautes `dist/`. Verschieden ist die Erhebung, gleich ist die Auswertung.
 
 ## Stand
 
-0.3.0, Familien `robots`, `meta` und `social`. Weitere folgen einzeln; strukturierte
-Daten sind der nächste Kandidat, Render-blocking wurde geprüft und bleibt draußen
-(gemeinsam wären rund fünf Zeilen, der Rest sind verschiedene Prüfungen).
+0.4.0, Familien `robots`, `meta`, `social` und `structured_data`. Weitere folgen
+einzeln; Render-blocking wurde geprüft und bleibt draußen (gemeinsam wären rund
+fünf Zeilen, der Rest sind verschiedene Prüfungen).
 
 ## Was das Paket nicht tut
 
@@ -76,6 +76,36 @@ Inhalt fehlt. Die Wertprüfungen aus astro-post-audit (`twitter:card` nur
 `summary`, `summary_large_image`, `app`, `player`; `og:image` absolut) stehen
 jetzt beiden zur Verfügung.
 
+### `structured_data` (0.4.0)
+
+Beide Werkzeuge werten JSON-LD aus, und ihre Tabellen widersprachen sich bei
+fast jedem gemeinsamen Typ. Grundlage ist jetzt auditmysites Tabelle, weil sie
+belegt ist: Jede Bewertung verweist auf die Seite von Google Search Central zum
+Merkmal und trägt den Stand der Tabelle. Die Entscheidungen im Einzelnen:
+
+| Punkt | astro-post-audit | auditmysite | jetzt |
+|---|---|---|---|
+| Anwesenheit | Schlüssel existiert | nicht leer | nicht leer (`""`, `null`, `[]`, `{}` fehlen) |
+| `@context` | Teilzeichenkette `schema.org` | exakt, Listen, `@vocab`, Vererbung in `@graph` | exakt wie auditmysite; fehlend und fremd getrennt |
+| Wurzel-Liste, `@type`-Liste | nicht aufgelöst, nur erster Typ | aufgelöst, alle Typen | aufgelöst, alle Typen |
+| Organization, Person, WebSite | `name` (und `url`) Pflicht | nur Empfehlungen | nur Empfehlungen (so dokumentiert Google) |
+| Article | `headline` Pflicht | nur Empfehlungen | nur Empfehlungen |
+| NewsArticle `publisher` | Pflicht | — | empfohlen |
+| WebSite `potentialAction` | niedrig | — | empfohlen; die Sitelinks-Suchbox gibt es seit 2024 nicht mehr, das Gewicht entscheidet der Host |
+| LocalBusiness | `name` Pflicht | `name`, `address` Pflicht | `name`, `address` Pflicht |
+| FAQPage | `acceptedAnswer` je Frage | nur `mainEntity` | beides |
+| BreadcrumbList | `name` auch über `item.name` | ≥ 2 Einträge, `item` bis auf den letzten, `name` direkt | ≥ 2 Einträge, `item` bis auf den letzten, `name` auch über `item.name` |
+| Doppelter `@type` über Blöcke | ja | nein | `duplicate_types`, der Host schaltet |
+| Event, Recipe, VideoObject, JobPosting, SoftwareApplication, ProfilePage, CollectionPage, ItemList, Merchant Listing | — | ja | ja |
+
+Zwei Dinge sind beim Umzug Daten geworden, die vorher Sätze waren: die Hinweise
+zur Handprüfung (`ManualReview` statt englischer Sätze) und die Strukturprobleme
+(`StructuralIssue` statt Meldungstext). Beschriftungen der Merkmale und
+Statustexte bleiben beim Host.
+
+Abgleich mit sichtbarem Inhalt (braucht die gerenderte Seite), Konsistenz über
+alle Seiten eines Builds, Microdata und RDFa bleiben draußen.
+
 ## Öffentliche Fläche
 
 | Eintrag | Zweck |
@@ -88,6 +118,12 @@ jetzt beiden zur Verfügung.
 | `meta::length`, `LengthRange::classify`, `meta::TITLE`, `meta::DESCRIPTION` | Länge in Zeichen, Einordnung zu kurz / ok / zu lang |
 | `social::is_present`, `is_complete`, `completeness` | Anwesenheit (leer = fehlt) und Vollständigkeit über `*_REQUIRED` / `*_FIELDS` |
 | `social::is_valid_twitter_card`, `is_absolute_url` | Wertprüfungen |
+| `structured_data::parse_blocks`, `parse_block` → `Block { nodes, issues, json_error }` | Script-Text → normalisierte Knoten und `StructuralIssue` |
+| `structured_data::has_schema_org_context`, `extract_types`, `normalize_schema_type` | die Bausteine der Normalisierung |
+| `structured_data::assess_node`, `SchemaRuleAssessment`, `ProductRuleContext` | Bewertung je Knoten und Typ: fehlende Pflicht- und Empfehlungspfade, Merkmal, Verfügbarkeit, Quelle |
+| `structured_data::inventory_fields` | Felder je Typ für ein Inventar |
+| `structured_data::duplicate_types` | `@type` in mehr als einem Block |
+| `structured_data::RULESET_VERSION` | Stand der Regeltabelle |
 
 ## Grenzen
 

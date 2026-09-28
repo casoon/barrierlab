@@ -21,6 +21,11 @@ Two rules keep it small:
   with the shared recommended ranges 30–60 and 120–160.
 - `social` — OpenGraph and Twitter Card tag lists, presence (empty content counts
   as missing), completeness, valid `twitter:card` values, absolute image URLs.
+- `structured_data` — JSON-LD: parse `ld+json` script text into normalized nodes
+  (top-level arrays, `@graph`, every `@type` entry, strict schema.org `@context`),
+  structural issues as data, per-type property assessment against Google Search
+  Central's documented required/recommended properties (with source URL and
+  ruleset version), and `@type` values duplicated across blocks.
 
 More families follow one at a time, each checked first for whether it really
 asks the same question. "Security" looked like duplication by name; in fact one

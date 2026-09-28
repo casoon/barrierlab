@@ -24,6 +24,11 @@
 //! [`social`] — OpenGraph und Twitter Cards: Tag-Listen, Anwesenheit,
 //! Vollständigkeit, zulässige `twitter:card`-Werte, absolute Bild-URLs.
 //!
+//! [`structured_data`] — JSON-LD lesen und normalisieren (Wurzel-Listen,
+//! `@graph`, `@type`-Listen, schema.org-Kontext), Knoten je Typ gegen die von
+//! Google dokumentierten Pflicht- und Empfehlungsangaben bewerten, doppelte
+//! Typen über Blöcke hinweg finden.
+//!
 //! Weitere Familien folgen einzeln. Jede wird vorher darauf geprüft, ob sie
 //! wirklich dieselbe Frage stellt: bei „Security" etwa sah die Namensgleichheit
 //! nach Doppelung aus, tatsächlich prüft ein Werkzeug HTTP-Header und das
@@ -34,3 +39,4 @@
 pub mod meta;
 pub mod robots;
 pub mod social;
+pub mod structured_data;
