@@ -5,6 +5,19 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.11.2] - 2026-09-28
+
+### Fixed
+
+- Rücknahme der Leerzeichen-Regel aus 0.11.1: Zwischen den Teilen eines Namens
+  steht wieder immer ein Leerzeichen. Die Entscheidung nach dem Tag traf echte
+  Seiten falsch, auf denen `<span>` per CSS Block-Elemente sind
+  (`<a><span>Cloud & Hosting</span><span>Edge-Hosting</span></a>` ergab
+  „Cloud & HostingEdge-Hosting"). Im Differentialkorpus von auditmysite
+  (35 Seiten) standen 5 behobenen Fällen 450 neue Abweichungen gegenüber.
+  Ohne berechnetes `display` vom Host bleibt das Leerzeichen die bessere
+  Näherung.
+
 ## [0.11.1] - 2026-09-28
 
 ### Fixed

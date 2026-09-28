@@ -315,53 +315,24 @@ mod tests {
     }
 
     #[test]
-    fn inline_elemente_fuegen_kein_leerzeichen_ein() {
-        // Korpusfälle aus auditmysite (plan/01); WPT comp_name_from_content:
-        // „for each child (no space, inline)".
-        let abbr = Arena::builder()
-            .open("a")
-            .attr("href", "/")
-            .open("abbr")
-            .text("EU")
-            .close()
-            .text("-Arktis")
-            .close()
-            .build();
-        assert_eq!(link_name(&abbr).as_deref(), Some("EU-Arktis"));
-
-        let span = Arena::builder()
-            .open("a")
-            .attr("href", "/")
-            .text("Rechen")
-            .open("span")
-            .text("power")
-            .close()
-            .close()
-            .build();
-        assert_eq!(link_name(&span).as_deref(), Some("Rechenpower"));
-    }
-
-    #[test]
-    fn label_mit_inline_stern_bleibt_zusammen() {
+    fn spans_bleiben_ohne_stile_getrennt() {
+        // Ohne berechnetes `display` wird jedes Kind abgesetzt: Auf echten
+        // Seiten sind solche `<span>` oft Block-Elemente (0.11.1 klebte sie
+        // zusammen — „Cloud & HostingEdge-Hosting").
         let doc = Arena::builder()
-            .open("form")
-            .open("label")
-            .attr("for", "f")
-            .text("abholen")
+            .open("a")
+            .attr("href", "/")
             .open("span")
-            .text("*")
+            .text("Cloud & Hosting")
             .close()
-            .close()
-            .open("input")
-            .attr("type", "checkbox")
-            .attr("id", "f")
+            .open("span")
+            .text("Edge-Hosting")
             .close()
             .close()
             .build();
-        let ids = IdIndex::build(doc.root());
         assert_eq!(
-            name(finde(&doc, "input"), &ids).as_deref(),
-            Some("abholen*")
+            link_name(&doc).as_deref(),
+            Some("Cloud & Hosting Edge-Hosting")
         );
     }
 

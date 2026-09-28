@@ -164,11 +164,14 @@ fn berechne<'a, N: Node<'a>>(
     // ohnehin schon im Inhaltsdurchlauf sind.
     let aus_inhalt = rolle.is_some_and(allows_name_from_content) || via_verweis || rekursion;
     if aus_inhalt {
-        let mut s = String::new();
+        let mut teile: Vec<String> = Vec::new();
         for kind in node.children() {
-            let teil = berechne(ctx, kind, true, false);
-            anhaengen(&mut s, &teil, ist_inline(kind));
+            let s = berechne(ctx, kind, true, false);
+            if !s.is_empty() {
+                teile.push(s);
+            }
         }
+        let s = teile.join(" ");
         if !s.trim().is_empty() {
             return s;
         }
@@ -307,90 +310,23 @@ fn label_elemente<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Stri
 /// beschrifteten Feldes nicht in sein eigenes Label zurückfließt.
 fn subtree_ohne<'a, N: Node<'a>>(wurzel: N, aussparen: N) -> String {
     let mut out = String::new();
-    teilbaum_text(wurzel, Some(aussparen), &mut out);
+    for n in a11y_dom::self_and_descendants(wurzel) {
+        if n == aussparen {
+            continue;
+        }
+        if ancestors(n).any(|a| a == aussparen) {
+            continue;
+        }
+        if n.kind() == NodeKind::Text {
+            out.push(' ');
+            out.push_str(n.text());
+        }
+    }
     flatten(&out)
 }
 
 fn subtree_plain<'a, N: Node<'a>>(node: N) -> String {
-    let mut out = String::new();
-    teilbaum_text(node, None, &mut out);
-    flatten(&out)
-}
-
-/// Sammelt den Text eines Teilbaums mit denselben Trennregeln wie Schritt 2F:
-/// Inline-Elemente fügen sich ohne Leerzeichen an, alle anderen werden
-/// abgesetzt.
-fn teilbaum_text<'a, N: Node<'a>>(node: N, aussparen: Option<N>, out: &mut String) {
-    if Some(node) == aussparen {
-        return;
-    }
-    if node.kind() == NodeKind::Text {
-        out.push_str(node.text());
-        return;
-    }
-    let mut innen = String::new();
-    for kind in node.children() {
-        teilbaum_text(kind, aussparen, &mut innen);
-    }
-    anhaengen(out, &innen, ist_inline(node));
-}
-
-/// Hängt den Beitrag eines Kindes an. Ein Inline-Kind schließt direkt an, jedes
-/// andere wird beidseitig durch ein Leerzeichen abgesetzt — wie in Chrome und
-/// Firefox und wie es WPT `accname/name/comp_name_from_content.html` erwartet
-/// (`<span>one</span><span>two</span>` ergibt inline „onetwo", als Block oder
-/// Inline-Block „one two"). accname 1.2 selbst hängt ohne Trenner an; die
-/// Arbeitsgruppe erwägt, das von CSS `display` abhängig zu machen.
-fn anhaengen(out: &mut String, teil: &str, inline: bool) {
-    if teil.is_empty() {
-        return;
-    }
-    if inline {
-        out.push_str(teil);
-    } else {
-        out.push(' ');
-        out.push_str(teil);
-        out.push(' ');
-    }
-}
-
-/// Ob ein Knoten ohne Stilangaben inline gerendert wird. Ohne berechnete Stile
-/// entscheidet das Tag: Textknoten und die Phrasing-Elemente, die das
-/// UA-Stylesheet mit `display: inline` rendert. Ersetzte Elemente und
-/// Steuerelemente (`img`, `input`, `button`, `select`, …) sind inline-block und
-/// werden abgesetzt, ebenso `br` und jedes unbekannte oder eigene Element — dort
-/// bleibt es beim bisherigen, vorsichtigen Trenner.
-fn ist_inline<'a, N: Node<'a>>(node: N) -> bool {
-    node.kind() == NodeKind::Text
-        || matches!(
-            node.local_name(),
-            "a" | "abbr"
-                | "b"
-                | "bdi"
-                | "bdo"
-                | "cite"
-                | "code"
-                | "data"
-                | "del"
-                | "dfn"
-                | "em"
-                | "i"
-                | "ins"
-                | "kbd"
-                | "label"
-                | "mark"
-                | "q"
-                | "s"
-                | "samp"
-                | "small"
-                | "span"
-                | "strong"
-                | "sub"
-                | "sup"
-                | "time"
-                | "u"
-                | "var"
-        )
+    flatten(&a11y_dom::subtree_text(node))
 }
 
 /// Die Spezifikation verlangt einen „flat string": Zeilenumbrüche und
