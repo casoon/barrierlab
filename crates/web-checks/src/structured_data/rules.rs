@@ -72,6 +72,28 @@ pub enum SchemaFeature {
 }
 
 impl SchemaFeature {
+    /// Alle Merkmale in Deklarationsreihenfolge — für Hosts, die ein Inventar
+    /// oder eine Abdeckung darüber führen.
+    pub const ALL: [SchemaFeature; 17] = [
+        Self::ProductSnippet,
+        Self::MerchantListing,
+        Self::Article,
+        Self::Breadcrumb,
+        Self::Organization,
+        Self::LocalBusiness,
+        Self::Faq,
+        Self::Event,
+        Self::Recipe,
+        Self::Video,
+        Self::JobPosting,
+        Self::SoftwareApplication,
+        Self::ProfilePage,
+        Self::ItemList,
+        Self::WebPage,
+        Self::WebSite,
+        Self::Person,
+    ];
+
     /// Stabiler Schlüssel, gleich der serde-Form.
     pub fn key(self) -> &'static str {
         match self {
@@ -1075,26 +1097,16 @@ mod tests {
     }
 
     #[test]
+    fn all_lists_every_feature_once() {
+        let mut keys: Vec<_> = SchemaFeature::ALL.iter().map(|f| f.key()).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), SchemaFeature::ALL.len());
+    }
+
+    #[test]
     fn feature_key_matches_serde_form() {
-        for feature in [
-            SchemaFeature::ProductSnippet,
-            SchemaFeature::MerchantListing,
-            SchemaFeature::Article,
-            SchemaFeature::Breadcrumb,
-            SchemaFeature::Organization,
-            SchemaFeature::LocalBusiness,
-            SchemaFeature::Faq,
-            SchemaFeature::Event,
-            SchemaFeature::Recipe,
-            SchemaFeature::Video,
-            SchemaFeature::JobPosting,
-            SchemaFeature::SoftwareApplication,
-            SchemaFeature::ProfilePage,
-            SchemaFeature::ItemList,
-            SchemaFeature::WebPage,
-            SchemaFeature::WebSite,
-            SchemaFeature::Person,
-        ] {
+        for feature in SchemaFeature::ALL {
             assert_eq!(
                 serde_json::to_value(feature).unwrap(),
                 serde_json::json!(feature.key())
