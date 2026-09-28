@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use a11y_dom::{Node, NodeId, NodeKind, ancestors, descendants};
+use a11y_dom::{ComputedStyle, Node, NodeId, NodeKind, Rendering, ancestors, descendants};
 
 use crate::index::IdIndex;
 use crate::role::{allows_name_from_content, name_is_prohibited, role};
@@ -21,8 +21,15 @@ enum Ziel {
     Beschreibung,
 }
 
+/// Berechneter Stil je Element, soweit der Host ihn kennt (Tier 3). `None`,
+/// wenn der Host keine Rendering-Daten hat — dann gilt das Verhalten ohne
+/// Layout: jedes Kind wird abgesetzt, versteckt ist nur, was es per Attribut
+/// ist.
+type Stil<'s, N> = Option<&'s dyn Fn(N) -> Option<ComputedStyle>>;
+
 struct Ctx<'i, 'a, N: Node<'a>> {
     ids: &'i IdIndex<'a, N>,
+    stil: Stil<'i, N>,
     /// Knoten, die in dieser Berechnung schon besucht wurden. Verhindert
     /// Endlosschleifen über `aria-labelledby`-Ringe.
     besucht: HashSet<NodeId>,
@@ -34,8 +41,40 @@ struct Ctx<'i, 'a, N: Node<'a>> {
 /// Gibt `None` zurück, wenn kein Name zustande kommt — das ist etwas anderes
 /// als ein leerer Name.
 pub fn name<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<String> {
+    name_mit_stil(node, ids, None)
+}
+
+/// Berechnet den Accessible Name mit den berechneten Stilen des Hosts.
+///
+/// Zwei Stellen der Spezifikation hängen am Layout, und nur hier werden sie
+/// entschieden statt angenähert:
+///
+/// - **Trenner im Inhaltsdurchlauf (2F):** Ein Kind mit `display: inline`
+///   (oder `contents`) schließt direkt an, jedes andere wird durch Leerzeichen
+///   abgesetzt — wie in WPT `accname/name/comp_name_from_content.html`.
+///   Ersetzte Elemente (`img`, `svg`, `br`, …) bleiben abgesetzt.
+/// - **Versteckt (2A):** `display: none` am Knoten oder einem Vorfahren und
+///   `visibility: hidden`/`collapse` am Knoten.
+///
+/// Wo der Host für ein Element keinen Stil liefert, gilt für dieses Element
+/// das Verhalten von [`name`].
+pub fn name_rendered<'n, D: Rendering>(
+    doc: &'n D,
+    node: D::N<'n>,
+    ids: &IdIndex<'n, D::N<'n>>,
+) -> Option<String> {
+    let stil = |n: D::N<'n>| doc.computed_style(n);
+    name_mit_stil(node, ids, Some(&stil))
+}
+
+fn name_mit_stil<'a, N: Node<'a>>(
+    node: N,
+    ids: &IdIndex<'a, N>,
+    stil: Stil<'_, N>,
+) -> Option<String> {
     let mut ctx = Ctx {
         ids,
+        stil,
         besucht: HashSet::new(),
         ziel: Ziel::Name,
     };
@@ -50,6 +89,7 @@ pub fn description<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Str
     if let Some(v) = node.attr("aria-describedby") {
         let mut ctx = Ctx {
             ids,
+            stil: None,
             besucht: HashSet::new(),
             ziel: Ziel::Beschreibung,
         };
@@ -73,7 +113,7 @@ pub fn description<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Str
     }
     let name_kommt_woanders_her = node.has_attr("aria-label")
         || node.has_attr("aria-labelledby")
-        || natives_label(node, ids).is_some();
+        || natives_label(node, ids, None).is_some();
     name_kommt_woanders_her.then(|| title.to_string())
 }
 
@@ -105,7 +145,7 @@ fn berechne<'a, N: Node<'a>>(
 
     // Schritt 2A: versteckte Knoten zählen nicht mit — es sei denn, sie werden
     // ausdrücklich per IDREF herangezogen.
-    if !via_verweis && ist_versteckt(node) {
+    if !via_verweis && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion)) {
         return String::new();
     }
 
@@ -144,7 +184,7 @@ fn berechne<'a, N: Node<'a>>(
 
     // Schritt 2D: die Textalternative aus dem HTML selbst.
     if !verboten {
-        if let Some(s) = natives_label(node, ctx.ids) {
+        if let Some(s) = natives_label(node, ctx.ids, ctx.stil) {
             if !s.trim().is_empty() {
                 return s;
             }
@@ -164,14 +204,15 @@ fn berechne<'a, N: Node<'a>>(
     // ohnehin schon im Inhaltsdurchlauf sind.
     let aus_inhalt = rolle.is_some_and(allows_name_from_content) || via_verweis || rekursion;
     if aus_inhalt {
-        let mut teile: Vec<String> = Vec::new();
+        let mut s = String::new();
         for kind in node.children() {
-            let s = berechne(ctx, kind, true, false);
-            if !s.is_empty() {
-                teile.push(s);
+            let teil = berechne(ctx, kind, true, false);
+            anhaengen(&mut s, &teil, abgesetzt(ctx.stil, kind));
+            // Ein Zeilenumbruch trennt, obwohl er selbst nichts beiträgt.
+            if kind.is_element("br") {
+                s.push(' ');
             }
         }
-        let s = teile.join(" ");
         if !s.trim().is_empty() {
             return s;
         }
@@ -185,6 +226,67 @@ fn berechne<'a, N: Node<'a>>(
     }
 
     String::new()
+}
+
+/// Ob ein Kind im Inhaltsdurchlauf durch Leerzeichen abgesetzt wird. Ohne Stil
+/// jedes, auch Text — Inline-Elemente lassen sich ohne Layout nicht erkennen,
+/// und eine Entscheidung nach dem Tag traf echte Seiten falsch (0.11.1).
+fn abgesetzt<'a, N: Node<'a>>(stil: Stil<'_, N>, kind: N) -> bool {
+    let Some(stil) = stil else {
+        return true;
+    };
+    if kind.kind() == NodeKind::Text {
+        return false;
+    }
+    if ist_ersetztes_element(kind.local_name()) {
+        return true;
+    }
+    match stil(kind).and_then(|s| s.display) {
+        Some(display) => !matches!(display.as_str(), "inline" | "contents"),
+        None => true,
+    }
+}
+
+/// Ersetzte Elemente sind im Stil oft `inline`, werden aber wie ein eigener
+/// Block benannt.
+fn ist_ersetztes_element(tag: &str) -> bool {
+    matches!(
+        tag,
+        "img" | "svg" | "canvas" | "video" | "audio" | "iframe" | "object" | "embed"
+    )
+}
+
+fn anhaengen(ziel: &mut String, teil: &str, abgesetzt: bool) {
+    if teil.is_empty() {
+        return;
+    }
+    if abgesetzt {
+        ziel.push(' ');
+        ziel.push_str(teil);
+        ziel.push(' ');
+    } else {
+        ziel.push_str(teil);
+    }
+}
+
+/// Versteckt per berechnetem Stil. `display: none` vererbt sich nicht als
+/// Wert, nur als Wirkung — deshalb zählen die Vorfahren, allerdings nur an der
+/// Wurzel der Berechnung (`mit_vorfahren`): im Inhaltsdurchlauf wäre ein
+/// versteckter Vorfahre schon selbst ausgeschieden.
+fn per_stil_versteckt<'a, N: Node<'a>>(stil: Stil<'_, N>, node: N, mit_vorfahren: bool) -> bool {
+    let Some(stil) = stil else {
+        return false;
+    };
+    let eigen = stil(node);
+    let unsichtbar = eigen
+        .as_ref()
+        .and_then(|s| s.visibility.as_deref())
+        .is_some_and(|v| matches!(v, "hidden" | "collapse"));
+    let ohne_anzeige =
+        |s: Option<ComputedStyle>| s.and_then(|s| s.display).as_deref() == Some("none");
+    unsichtbar
+        || ohne_anzeige(eigen)
+        || (mit_vorfahren && ancestors(node).any(|a| ohne_anzeige(stil(a))))
 }
 
 /// Ohne Rendering-Daten ist nur die ausdrückliche Verstecktheit erkennbar:
@@ -242,7 +344,16 @@ fn eingebetteter_wert<'a, N: Node<'a>>(node: N, rolle: Option<&str>) -> Option<S
 
 /// Schritt 2D: die vom HTML selbst gestellte Textalternative, nach
 /// [HTML-AAM](https://www.w3.org/TR/html-aam-1.0/).
-fn natives_label<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<String> {
+fn natives_label<'a, N: Node<'a>>(
+    node: N,
+    ids: &IdIndex<'a, N>,
+    stil: Stil<'_, N>,
+) -> Option<String> {
+    // Beschriftende Elemente: mit Stil nach denselben Trennregeln wie 2F.
+    let beschriftung = |n: N| match stil {
+        Some(_) => teilbaum_text(stil, n, None),
+        None => subtree_plain(n),
+    };
     let tag = node.local_name();
     match tag {
         "img" | "area" => node.attr("alt").map(str::to_string),
@@ -258,20 +369,20 @@ fn natives_label<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Strin
                 "image" => node
                     .attr("alt")
                     .map(str::to_string)
-                    .or_else(|| label_elemente(node, ids))
+                    .or_else(|| label_elemente(node, ids, stil))
                     .or_else(|| Some("Submit Query".to_string())),
-                _ => label_elemente(node, ids).or_else(|| {
+                _ => label_elemente(node, ids, stil).or_else(|| {
                     // placeholder ist die letzte Rückfallebene vor title.
                     node.attr("placeholder").map(str::to_string)
                 }),
             }
         }
-        "select" | "textarea" | "meter" | "progress" | "output" => label_elemente(node, ids),
-        "fieldset" => erstes_kind_mit_tag(node, "legend").map(subtree_plain),
+        "select" | "textarea" | "meter" | "progress" | "output" => label_elemente(node, ids, stil),
+        "fieldset" => erstes_kind_mit_tag(node, "legend").map(beschriftung),
         "figure" => descendants(node)
             .find(|d| d.is_element("figcaption"))
-            .map(subtree_plain),
-        "table" => erstes_kind_mit_tag(node, "caption").map(subtree_plain),
+            .map(beschriftung),
+        "table" => erstes_kind_mit_tag(node, "caption").map(beschriftung),
         "svg" => erstes_kind_mit_tag(node, "title").map(subtree_plain),
         "iframe" => node.attr("title").map(str::to_string),
         _ => None,
@@ -283,12 +394,16 @@ fn erstes_kind_mit_tag<'a, N: Node<'a>>(node: N, tag: &str) -> Option<N> {
 }
 
 /// Die `<label>`-Elemente eines Formularelements: umschließend oder per `for`.
-fn label_elemente<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<String> {
+fn label_elemente<'a, N: Node<'a>>(
+    node: N,
+    ids: &IdIndex<'a, N>,
+    stil: Stil<'_, N>,
+) -> Option<String> {
     let mut teile: Vec<String> = Vec::new();
 
     if let Some(id) = node.attr("id") {
         for &l in ids.labels_for(id) {
-            let t = subtree_ohne(l, node);
+            let t = teilbaum_text(stil, l, Some(node));
             if !t.trim().is_empty() {
                 teile.push(t);
             }
@@ -296,7 +411,7 @@ fn label_elemente<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Stri
     }
     if teile.is_empty() {
         if let Some(l) = a11y_dom::closest(node, "label") {
-            let t = subtree_ohne(l, node);
+            let t = teilbaum_text(stil, l, Some(node));
             if !t.trim().is_empty() {
                 teile.push(t);
             }
@@ -306,22 +421,33 @@ fn label_elemente<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Stri
     (!teile.is_empty()).then(|| teile.join(" "))
 }
 
-/// Text eines Teilbaums ohne den Teilbaum von `aussparen` — damit der Wert des
-/// beschrifteten Feldes nicht in sein eigenes Label zurückfließt.
-fn subtree_ohne<'a, N: Node<'a>>(wurzel: N, aussparen: N) -> String {
-    let mut out = String::new();
-    for n in a11y_dom::self_and_descendants(wurzel) {
-        if n == aussparen {
-            continue;
-        }
-        if ancestors(n).any(|a| a == aussparen) {
-            continue;
-        }
-        if n.kind() == NodeKind::Text {
-            out.push(' ');
-            out.push_str(n.text());
+/// Text eines beschriftenden Teilbaums, ohne den Teilbaum von `aussparen` —
+/// damit der Wert des beschrifteten Feldes nicht in sein eigenes Label
+/// zurückfließt. Trenner nach [`abgesetzt`]; mit Stil fallen per Stil
+/// versteckte Teilbäume weg.
+fn teilbaum_text<'a, N: Node<'a>>(stil: Stil<'_, N>, wurzel: N, aussparen: Option<N>) -> String {
+    fn sammle<'a, N: Node<'a>>(stil: Stil<'_, N>, node: N, aussparen: Option<N>, out: &mut String) {
+        for kind in node.children() {
+            if Some(kind) == aussparen {
+                continue;
+            }
+            let teil = match kind.kind() {
+                NodeKind::Text => kind.text().to_string(),
+                _ if per_stil_versteckt(stil, kind, false) => continue,
+                _ => {
+                    let mut innen = String::new();
+                    sammle(stil, kind, aussparen, &mut innen);
+                    innen
+                }
+            };
+            anhaengen(out, &teil, abgesetzt(stil, kind));
+            if kind.is_element("br") {
+                out.push(' ');
+            }
         }
     }
+    let mut out = String::new();
+    sammle(stil, wurzel, aussparen, &mut out);
     flatten(&out)
 }
 
