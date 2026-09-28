@@ -26,6 +26,7 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   `item.name` tragen; FAQPage verlangt `acceptedAnswer` je Frage
   (`mainEntity[i].acceptedAnswer`); NewsArticle empfiehlt zusätzlich
   `publisher`, WebSite zusätzlich `potentialAction`.
+- `SchemaFeature::ALL` — alle Merkmale als Liste, für Inventare und Abdeckung beim Host.
 
 ## [0.3.0] - 2026-09-28
 
