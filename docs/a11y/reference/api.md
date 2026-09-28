@@ -9,6 +9,7 @@ order: 2
 | Element | Zweck |
 |---|---|
 | `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | ein Dokument prüfen, je nachdem, was der Host liefert |
+| `run_in`, `run_with_semantics_in`, `run_with_rendering_in`, `run_full_in` | dasselbe, mit Befundtexten in der gewählten `Locale` (`En`, `De`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | die Regeln eines Tiers, gebunden an einen Host |
 | `structure_metas`, `semantics_metas`, `rendering_metas` | die Deklarationen ohne Host, zum Auflisten und Benennen |
 | `Meta` | Kennungen, Tier, WCAG-Kriterien, Vorgabeschwere und Hinweis einer Regel |

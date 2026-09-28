@@ -40,11 +40,13 @@
 
 #![forbid(unsafe_code)]
 
+mod locale;
 mod registry;
 mod rendering;
 mod semantics;
 mod structure;
 
+pub use locale::Locale;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule};
 
 use a11y_dom::{Document, Rendering, Semantics};
@@ -98,7 +100,7 @@ fn vermerke(meta: &Meta, gefunden: &[Finding], report: &mut Report) {
 /// Das ist die Umsetzung von „nicht geprüft ist nicht bestanden": Eine Regel,
 /// deren Tier dieser Host nicht bedient, verschwindet nicht aus dem Bericht,
 /// sondern steht mit `NotRun::CapabilityMissing` darin.
-fn nicht_gelaufen(metas: &'static [Meta], grund: &'static str, report: &mut Report) {
+fn nicht_gelaufen(metas: &'static [Meta], grund: &str, report: &mut Report) {
     for meta in metas {
         for id in meta.ids {
             report.record(RuleRun::not_run(*id, NotRun::CapabilityMissing).with_reason(grund));
@@ -106,13 +108,24 @@ fn nicht_gelaufen(metas: &'static [Meta], grund: &'static str, report: &mut Repo
     }
 }
 
-const OHNE_SEMANTIK: &str = "host provides no role and no accessible name";
-const OHNE_DARSTELLUNG: &str = "host provides no computed styles and no geometry";
+fn ohne_semantik(locale: Locale) -> &'static str {
+    locale.pick(
+        "host provides no role and no accessible name",
+        "Host liefert keine Rolle und keinen Accessible Name",
+    )
+}
 
-fn run_structure<D: Document>(doc: &D, report: &mut Report) {
+fn ohne_darstellung(locale: Locale) -> &'static str {
+    locale.pick(
+        "host provides no computed styles and no geometry",
+        "Host liefert keine berechneten Stile und keine Geometrie",
+    )
+}
+
+fn run_structure<D: Document>(doc: &D, locale: Locale, report: &mut Report) {
     for rule in structure_rules::<D>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, &mut out);
+        (rule.run)(doc, locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
@@ -123,35 +136,45 @@ fn run_structure<D: Document>(doc: &D, report: &mut Report) {
 /// Tier-2-Regeln werden mit `NotRun::CapabilityMissing` vermerkt, nicht
 /// übergangen — der Bericht sagt damit aus, was er *nicht* geprüft hat.
 pub fn run<D: Document>(doc: &D) -> Report {
+    run_in(doc, Locale::En)
+}
+
+/// Wie [`run`], mit Befundtexten in der gewählten Sprache.
+pub fn run_in<D: Document>(doc: &D, locale: Locale) -> Report {
     let mut report = Report::new();
-    run_structure(doc, &mut report);
-    nicht_gelaufen(semantics_metas(), OHNE_SEMANTIK, &mut report);
-    nicht_gelaufen(rendering_metas(), OHNE_DARSTELLUNG, &mut report);
+    run_structure(doc, locale, &mut report);
+    nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
+    nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
     report.finish()
 }
 
 /// Prüft ein Dokument, das zusätzlich Rolle und Accessible Name liefert.
 pub fn run_with_semantics<D: Semantics>(doc: &D) -> Report {
+    run_with_semantics_in(doc, Locale::En)
+}
+
+/// Wie [`run_with_semantics`], mit Befundtexten in der gewählten Sprache.
+pub fn run_with_semantics_in<D: Semantics>(doc: &D, locale: Locale) -> Report {
     let mut report = Report::new();
-    run_structure(doc, &mut report);
-    run_semantics(doc, &mut report);
-    nicht_gelaufen(rendering_metas(), OHNE_DARSTELLUNG, &mut report);
+    run_structure(doc, locale, &mut report);
+    run_semantics(doc, locale, &mut report);
+    nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
     report.finish()
 }
 
-fn run_semantics<D: Semantics>(doc: &D, report: &mut Report) {
+fn run_semantics<D: Semantics>(doc: &D, locale: Locale, report: &mut Report) {
     for rule in semantics_rules::<D>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, &mut out);
+        (rule.run)(doc, locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
 }
 
-fn run_rendering<D: Rendering>(doc: &D, report: &mut Report) {
+fn run_rendering<D: Rendering>(doc: &D, locale: Locale, report: &mut Report) {
     for rule in rendering_rules::<D>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, &mut out);
+        (rule.run)(doc, locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
@@ -163,10 +186,15 @@ fn run_rendering<D: Rendering>(doc: &D, report: &mut Report) {
 /// Prüfung. Alle Regeln laufen; der Bericht enthält keinen
 /// `CapabilityMissing`-Vermerk mehr.
 pub fn run_full<D: Semantics + Rendering>(doc: &D) -> Report {
+    run_full_in(doc, Locale::En)
+}
+
+/// Wie [`run_full`], mit Befundtexten in der gewählten Sprache.
+pub fn run_full_in<D: Semantics + Rendering>(doc: &D, locale: Locale) -> Report {
     let mut report = Report::new();
-    run_structure(doc, &mut report);
-    run_semantics(doc, &mut report);
-    run_rendering(doc, &mut report);
+    run_structure(doc, locale, &mut report);
+    run_semantics(doc, locale, &mut report);
+    run_rendering(doc, locale, &mut report);
     report.finish()
 }
 
@@ -174,9 +202,14 @@ pub fn run_full<D: Semantics + Rendering>(doc: &D) -> Report {
 /// Semantik. Selten — aufgeführt, damit die Tier-Kombination nicht durch das
 /// Raster fällt.
 pub fn run_with_rendering<D: Rendering>(doc: &D) -> Report {
+    run_with_rendering_in(doc, Locale::En)
+}
+
+/// Wie [`run_with_rendering`], mit Befundtexten in der gewählten Sprache.
+pub fn run_with_rendering_in<D: Rendering>(doc: &D, locale: Locale) -> Report {
     let mut report = Report::new();
-    run_structure(doc, &mut report);
-    nicht_gelaufen(semantics_metas(), OHNE_SEMANTIK, &mut report);
-    run_rendering(doc, &mut report);
+    run_structure(doc, locale, &mut report);
+    nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
+    run_rendering(doc, locale, &mut report);
     report.finish()
 }

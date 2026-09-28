@@ -2,6 +2,15 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.2.0] - 2026-09-28
+
+### Changed
+
+- Gegen `a11y-*` 0.12.0 gebaut: `ids/duplicate` meldet nur noch doppelte IDs,
+  auf die ein IDREF zeigt (WCAG 2.2, Kriterium 4.1.2). Befundtexte bleiben
+  englisch — die Sprache wählt der Host, und die laufende Seite spricht
+  Englisch.
+
 ## [0.1.1] - 2026-09-23
 
 ### Changed

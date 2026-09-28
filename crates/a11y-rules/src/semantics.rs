@@ -15,6 +15,7 @@
 use a11y_dom::{Node, NodeId, Semantics, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
+use crate::locale::{Locale, tr};
 use crate::registry::{Meta, SemanticsRule};
 
 fn at(id: NodeId) -> Location {
@@ -25,23 +26,29 @@ fn named<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
     doc.accessible_name(n).is_some_and(|s| !s.trim().is_empty())
 }
 
-fn link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+fn link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !n.is_element("a") || !n.has_attr("href") || doc.is_ignored(n) {
             continue;
         }
         if !named(doc, n) {
             out.push(
-                Finding::fail("links/name-missing", "The link has no accessible name.")
-                    .with_severity(Severity::Critical)
-                    .with_wcag(["2.4.4", "4.1.2"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "links/name-missing",
+                    locale.pick(
+                        "The link has no accessible name.",
+                        "Der Link hat keinen zugänglichen Namen.",
+                    ),
+                )
+                .with_severity(Severity::Critical)
+                .with_wcag(["2.4.4", "4.1.2"])
+                .at(at(n.id())),
             );
         }
     }
 }
 
-fn button_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let ist_button = n.is_element("button") || doc.role(n).as_deref() == Some("button");
         if !ist_button || doc.is_ignored(n) {
@@ -49,16 +56,22 @@ fn button_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
         }
         if !named(doc, n) {
             out.push(
-                Finding::fail("buttons/name-missing", "The button has no accessible name.")
-                    .with_severity(Severity::Critical)
-                    .with_wcag(["4.1.2"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "buttons/name-missing",
+                    locale.pick(
+                        "The button has no accessible name.",
+                        "Der Button hat keinen zugänglichen Namen.",
+                    ),
+                )
+                .with_severity(Severity::Critical)
+                .with_wcag(["4.1.2"])
+                .at(at(n.id())),
             );
         }
     }
 }
 
-fn svg_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !n.is_element("svg") || doc.is_ignored(n) {
             continue;
@@ -73,7 +86,7 @@ fn svg_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "svg/name-missing",
-                    "The SVG has no accessible name and is not marked decorative.",
+                    locale.pick("The SVG has no accessible name and is not marked decorative.", "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.1.1"])
@@ -122,7 +135,7 @@ const NICHTSSAGEND: &[&str] = &[
 
 /// Heuristisch: Die Liste kann einen Namen treffen, der im Zusammenhang doch
 /// eindeutig ist. Deshalb `REVIEW`, nicht `FAIL`.
-fn generic_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+fn generic_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !n.is_element("a") || !n.has_attr("href") || doc.is_ignored(n) {
             continue;
@@ -139,8 +152,10 @@ fn generic_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::review(
                     "links/generic-name",
-                    format!(
+                    tr!(
+                        locale,
                         "The link text \"{}\" says nothing about its target.",
+                        "Der Linktext \"{}\" sagt nichts über das Ziel.",
                         name.trim()
                     ),
                 )
@@ -152,7 +167,7 @@ fn generic_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
     }
 }
 
-fn ambiguous_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
+fn ambiguous_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     use std::collections::HashMap;
     let mut nach_name: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
 
@@ -186,7 +201,11 @@ fn ambiguous_link_names<D: Semantics>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::review(
                     "links/ambiguous-name",
-                    format!("Several links are named \"{name}\" but point to different targets."),
+                    tr!(
+                        locale,
+                        "Several links are named \"{name}\" but point to different targets.",
+                        "Mehrere Links heißen \"{name}\", zeigen aber auf verschiedene Ziele."
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["2.4.4"])
@@ -205,6 +224,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4", "4.1.2"],
         severity: Severity::Critical,
         help: "Every link needs a name that describes its target.",
+        help_de: "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
     },
     Meta {
         ids: &["buttons/name-missing"],
@@ -212,6 +232,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Critical,
         help: "Every button needs a name that describes what it does.",
+        help_de: "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
     },
     Meta {
         ids: &["svg/name-missing"],
@@ -219,6 +240,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative SVGs need a name, decorative ones role=\"presentation\".",
+        help_de: "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
     },
     Meta {
         ids: &["links/ambiguous-name"],
@@ -226,6 +248,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Links with the same name should point to the same target.",
+        help_de: "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
     },
     Meta {
         ids: &["links/generic-name"],
@@ -233,11 +256,12 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Link text should say where it leads without the surrounding sentence.",
+        help_de: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
     },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, &mut Vec<Finding>); 5] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 5] {
     [
         link_names,
         button_names,
