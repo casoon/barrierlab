@@ -7,7 +7,7 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, tr};
+use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, StructureRule};
 
 fn at(id: NodeId) -> Location {
@@ -134,7 +134,8 @@ fn lang<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         None => out.push(
             Finding::fail(
                 "document/lang-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "The <html> element has no lang attribute.",
                     "Das <html>-Element hat kein lang-Attribut.",
                 ),
@@ -180,7 +181,8 @@ fn title<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         None => out.push(
             Finding::fail(
                 "document/title-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "The document has no <title> element.",
                     "Das Dokument hat kein <title>-Element.",
                 ),
@@ -191,7 +193,8 @@ fn title<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         Some(t) if subtree_text(t).trim().is_empty() => out.push(
             Finding::fail(
                 "document/title-empty",
-                locale.pick(
+                pick!(
+                    locale,
                     "The <title> element is empty.",
                     "Das <title>-Element ist leer.",
                 ),
@@ -228,7 +231,8 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-locked",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The viewport prevents or limits zooming.",
                         "Der Viewport verhindert oder begrenzt das Zoomen.",
                     ),
@@ -247,7 +251,8 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-scale-limited",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The viewport limits scaling to less than 500%.",
                         "Der Viewport begrenzt die Vergrößerung auf weniger als 500 %.",
                     ),
@@ -266,7 +271,8 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         out.push(
             Finding::fail(
                 "zoom/viewport-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "The document has no viewport declaration.",
                     "Das Dokument hat keine Viewport-Angabe.",
                 ),
@@ -319,7 +325,8 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "headings/empty",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The heading has no text.",
                         "Die Überschrift hat keinen Text.",
                     ),
@@ -351,7 +358,8 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         out.push(
             Finding::fail(
                 "headings/h1-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "The document has no h1 heading.",
                     "Das Dokument hat keine h1-Überschrift.",
                 ),
@@ -472,7 +480,8 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         0 => out.push(
             Finding::fail(
                 "landmarks/main-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "The document has no main landmark.",
                     "Das Dokument hat keine main-Landmark.",
                 ),
@@ -506,7 +515,8 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             "nav",
             "navigation",
             "landmarks/navigation-missing",
-            locale.pick(
+            pick!(
+                locale,
                 "The document has no navigation landmark.",
                 "Das Dokument hat keine navigation-Landmark.",
             ),
@@ -515,7 +525,8 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             "header",
             "banner",
             "landmarks/banner-missing",
-            locale.pick(
+            pick!(
+                locale,
                 "The document has no banner landmark.",
                 "Das Dokument hat keine banner-Landmark.",
             ),
@@ -524,7 +535,8 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             "footer",
             "contentinfo",
             "landmarks/contentinfo-missing",
-            locale.pick(
+            pick!(
+                locale,
                 "The document has no contentinfo landmark.",
                 "Das Dokument hat keine contentinfo-Landmark.",
             ),
@@ -582,7 +594,8 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         out.push(
             Finding::review(
                 "keyboard/skip-link-missing",
-                locale.pick(
+                pick!(
+                    locale,
                     "No skip link found that bypasses repeated blocks.",
                     "Kein Sprunglink gefunden, der wiederkehrende Bereiche überspringt.",
                 ),
@@ -621,7 +634,8 @@ fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             None => out.push(
                 Finding::fail(
                     "images/alt-missing",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The image has no alt attribute.",
                         "Das Bild hat kein alt-Attribut.",
                     ),
@@ -715,7 +729,11 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "forms/label-missing",
-                    locale.pick("The input has no label.", "Das Eingabefeld hat kein Label."),
+                    pick!(
+                        locale,
+                        "The input has no label.",
+                        "Das Eingabefeld hat kein Label."
+                    ),
                 )
                 .with_severity(Severity::Critical)
                 .with_wcag(["1.3.1", "3.3.2", "4.1.2"])
@@ -725,7 +743,8 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "forms/placeholder-as-label",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The field uses the placeholder instead of a label.",
                         "Das Feld nutzt den Platzhalter anstelle eines Labels.",
                     ),
@@ -927,7 +946,8 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
             out.push(
                 Finding::fail(
                     "keyboard/hidden-focusable",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The element is focusable but hidden with aria-hidden.",
                         "Das Element ist fokussierbar, aber per aria-hidden versteckt.",
                     ),
@@ -1029,7 +1049,8 @@ fn verwaiste_eintraege<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
             out.push(
                 Finding::fail(
                     "lists/item-outside-list",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The list item is outside a list.",
                         "Der Listeneintrag steht außerhalb einer Liste.",
                     ),
@@ -1076,7 +1097,8 @@ fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
             out.push(
                 Finding::fail(
                     "lists/term-without-definition",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "This term has no definition.",
                         "Zu diesem Begriff gibt es keine Definition.",
                     ),
@@ -1109,7 +1131,7 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::fail(
                         "tables/presentational-with-headers",
-                        locale.pick("The table is marked presentational but contains header cells.", "Die Tabelle ist als präsentational ausgezeichnet, enthält aber Kopfzellen."),
+                        pick!(locale, "The table is marked presentational but contains header cells.", "Die Tabelle ist als präsentational ausgezeichnet, enthält aber Kopfzellen."),
                     )
                     .with_severity(Severity::Medium)
                     .with_wcag(["1.3.1"])
@@ -1130,7 +1152,8 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::review(
                     "tables/name-missing",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The table has neither a <caption> nor an aria-label.",
                         "Die Tabelle hat weder <caption> noch aria-label.",
                     ),
@@ -1144,7 +1167,8 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "tables/header-missing",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The table has no <th> header cells.",
                         "Die Tabelle hat keine <th>-Kopfzellen.",
                     ),
@@ -1167,6 +1191,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::High,
         help: "The <html> element needs a valid lang attribute.",
+        #[cfg(feature = "de")]
         help_de: "Das <html>-Element braucht ein gültiges lang-Attribut.",
     },
     Meta {
@@ -1175,6 +1200,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.2"],
         severity: Severity::High,
         help: "Every page needs a meaningful <title>.",
+        #[cfg(feature = "de")]
         help_de: "Jede Seite braucht einen aussagekräftigen <title>.",
     },
     Meta {
@@ -1187,6 +1213,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.4", "1.4.10"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
+        #[cfg(feature = "de")]
         help_de: "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
     },
     Meta {
@@ -1200,6 +1227,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
+        #[cfg(feature = "de")]
         help_de: "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
     },
     Meta {
@@ -1208,6 +1236,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative images need descriptive alt text.",
+        #[cfg(feature = "de")]
         help_de: "Informative Bilder brauchen einen beschreibenden Alt-Text.",
     },
     Meta {
@@ -1216,6 +1245,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "3.3.2", "4.1.2"],
         severity: Severity::Critical,
         help: "Every input needs an associated label.",
+        #[cfg(feature = "de")]
         help_de: "Jedes Eingabefeld braucht ein zugeordnetes Label.",
     },
     Meta {
@@ -1224,6 +1254,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only roles from the ARIA specification.",
+        #[cfg(feature = "de")]
         help_de: "Nur Rollen aus der ARIA-Spezifikation verwenden.",
     },
     Meta {
@@ -1232,6 +1263,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA references must point to IDs that exist.",
+        #[cfg(feature = "de")]
         help_de: "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
     },
     Meta {
@@ -1240,6 +1272,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "A role that announces a state needs the attribute carrying it.",
+        #[cfg(feature = "de")]
         help_de: "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
     },
     Meta {
@@ -1248,6 +1281,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "An ID that another element references must be unique.",
+        #[cfg(feature = "de")]
         help_de: "Eine ID, auf die ein anderes Element verweist, muss eindeutig sein.",
     },
     Meta {
@@ -1256,6 +1290,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.3"],
         severity: Severity::High,
         help: "Positive tabindex values break the tab order.",
+        #[cfg(feature = "de")]
         help_de: "Positive tabindex-Werte brechen die Tabreihenfolge.",
     },
     Meta {
@@ -1264,6 +1299,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Focusable elements must not be aria-hidden.",
+        #[cfg(feature = "de")]
         help_de: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
     },
     Meta {
@@ -1276,6 +1312,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "<ul> and <ol> may only have <li> as direct children and must not be empty.",
+        #[cfg(feature = "de")]
         help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
     },
     Meta {
@@ -1288,6 +1325,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Data tables need <th> header cells.",
+        #[cfg(feature = "de")]
         help_de: "Datentabellen brauchen <th>-Kopfzellen.",
     },
     Meta {
@@ -1302,6 +1340,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1"],
         severity: Severity::High,
         help: "Landmarks structure the page for everyone who cannot see it.",
+        #[cfg(feature = "de")]
         help_de: "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
     },
     Meta {
@@ -1310,6 +1349,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.1"],
         severity: Severity::Medium,
         help: "A skip link bypasses blocks that repeat before the content.",
+        #[cfg(feature = "de")]
         help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
     },
 ];

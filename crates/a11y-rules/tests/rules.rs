@@ -2,7 +2,9 @@
 
 use a11y_dom::{Arena, ArenaNode, Document, Node, Semantics, elements};
 use a11y_report::{Outcome, Report};
-use a11y_rules::{Locale, run, run_in, run_with_semantics};
+#[cfg(feature = "de")]
+use a11y_rules::{Locale, run_in};
+use a11y_rules::{run, run_with_semantics};
 use accname::IdIndex;
 
 /// Ein Tier-2-Host für die Tests: die Arena plus echte Namensberechnung.
@@ -581,6 +583,7 @@ fn referenzierte_doppelte_ids_melden_nur_den_zweiten_treffer() {
     assert_eq!(treffer[0].wcag, vec!["4.1.2".to_string()]);
 }
 
+#[cfg(feature = "de")]
 #[test]
 fn texte_folgen_der_gewaehlten_sprache() {
     let doc = fehlerhaft();
@@ -611,6 +614,7 @@ fn texte_folgen_der_gewaehlten_sprache() {
     assert!(grund.starts_with("Host liefert"), "{grund}");
 }
 
+#[cfg(feature = "de")]
 #[test]
 fn semantikregeln_folgen_der_gewaehlten_sprache() {
     let arena = fehlerhaft();
@@ -628,6 +632,7 @@ fn semantikregeln_folgen_der_gewaehlten_sprache() {
     }
 }
 
+#[cfg(feature = "de")]
 #[test]
 fn jeder_hinweis_hat_eine_deutsche_fassung() {
     let alle = a11y_rules::structure_metas()

@@ -2,13 +2,19 @@
 name = "a11y-rules"
 description = "Accessibility rules generic over the document model: one rule set for build-time, CI and in-page surfaces."
 keywords = ["accessibility", "a11y", "wcag", "rules", "audit"]
-version = "0.12.0"
+version = "0.12.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 categories.workspace = true
+
+[features]
+default = ["de"]
+# Deutsche Befundtexte und Hinweise (`Locale::De`). Ohne das Feature kommen
+# nur die englischen Texte in den Binärcode.
+de = []
 
 [dependencies]
 a11y-dom = { workspace = true }

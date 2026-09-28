@@ -15,7 +15,7 @@
 use a11y_dom::{Node, NodeId, Semantics, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, tr};
+use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, SemanticsRule};
 
 fn at(id: NodeId) -> Location {
@@ -35,7 +35,8 @@ fn link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "links/name-missing",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The link has no accessible name.",
                         "Der Link hat keinen zugänglichen Namen.",
                     ),
@@ -58,7 +59,8 @@ fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "buttons/name-missing",
-                    locale.pick(
+                    pick!(
+                        locale,
                         "The button has no accessible name.",
                         "Der Button hat keinen zugänglichen Namen.",
                     ),
@@ -86,7 +88,7 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "svg/name-missing",
-                    locale.pick("The SVG has no accessible name and is not marked decorative.", "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."),
+                    pick!(locale, "The SVG has no accessible name and is not marked decorative.", "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.1.1"])
@@ -224,6 +226,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4", "4.1.2"],
         severity: Severity::Critical,
         help: "Every link needs a name that describes its target.",
+        #[cfg(feature = "de")]
         help_de: "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
     },
     Meta {
@@ -232,6 +235,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Critical,
         help: "Every button needs a name that describes what it does.",
+        #[cfg(feature = "de")]
         help_de: "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
     },
     Meta {
@@ -240,6 +244,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative SVGs need a name, decorative ones role=\"presentation\".",
+        #[cfg(feature = "de")]
         help_de: "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
     },
     Meta {
@@ -248,6 +253,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Links with the same name should point to the same target.",
+        #[cfg(feature = "de")]
         help_de: "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
     },
     Meta {
@@ -256,6 +262,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Link text should say where it leads without the surrounding sentence.",
+        #[cfg(feature = "de")]
         help_de: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
     },
 ];

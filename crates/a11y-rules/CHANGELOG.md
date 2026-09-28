@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.12.1] - 2026-09-28
+
+### Added
+
+- Feature `de` (Vorgabe: an) für die deutschen Befundtexte und Hinweise.
+  Mit `default-features = false` kommen die deutschen Vorlagen gar nicht erst
+  in den Binärcode; `Locale::De` und `Meta::help_de` gibt es dann nicht —
+  wer Deutsch verlangt, bekommt einen Compile-Fehler statt stillem Englisch.
+  Rein additiv: Mit den Vorgaben ändert sich nichts.
+
 ## [0.12.0] - 2026-09-28
 
 ### Added
