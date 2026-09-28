@@ -171,6 +171,9 @@ mod tests {
                 .close() // kein Name
                 .open("button")
                 .attr("tabindex", "3")
+                // Verweist auf die doppelte ID; erst damit ist sie unter
+                // WCAG 2.2 ein Befund. Eine Beschreibung ist kein Name.
+                .attr("aria-describedby", "dup")
                 .close() // positiver tabindex, kein Name
                 .close()
                 .close();

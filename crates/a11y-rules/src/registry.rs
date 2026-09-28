@@ -10,6 +10,8 @@
 use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
+use crate::locale::Locale;
+
 /// Was über eine Regel unabhängig vom Host feststeht.
 ///
 /// `ids` listet **alle** Befund-Kennungen, die diese Regel erzeugen kann.
@@ -29,13 +31,23 @@ pub struct Meta {
     pub wcag: &'static [&'static str],
     /// Vorgabeschwere. Einzelne Befunde dürfen davon abweichen.
     pub severity: Severity,
+    /// Hinweis zur Regel, englisch. Für andere Sprachen [`Meta::help_in`].
     pub help: &'static str,
+    /// Derselbe Hinweis auf Deutsch.
+    pub help_de: &'static str,
+}
+
+impl Meta {
+    /// Der Hinweis in der gewählten Sprache.
+    pub fn help_in(&self, locale: Locale) -> &'static str {
+        locale.pick(self.help, self.help_de)
+    }
 }
 
 /// Eine Regel auf [`Tier::Structure`] — Tags, Attribute, Text, Hierarchie.
 pub struct StructureRule<D: Document> {
     pub meta: Meta,
-    pub run: fn(&D, &mut Vec<Finding>),
+    pub run: fn(&D, Locale, &mut Vec<Finding>),
 }
 
 impl<D: Document> Clone for StructureRule<D> {
@@ -49,7 +61,7 @@ impl<D: Document> Copy for StructureRule<D> {}
 /// Eine Regel auf [`Tier::Semantics`] — braucht Rolle und Accessible Name.
 pub struct SemanticsRule<D: Semantics> {
     pub meta: Meta,
-    pub run: fn(&D, &mut Vec<Finding>),
+    pub run: fn(&D, Locale, &mut Vec<Finding>),
 }
 
 impl<D: Semantics> Clone for SemanticsRule<D> {
@@ -63,7 +75,7 @@ impl<D: Semantics> Copy for SemanticsRule<D> {}
 /// Eine Regel auf [`Tier::Rendering`] — braucht berechnete Stile und Geometrie.
 pub struct RenderingRule<D: Rendering> {
     pub meta: Meta,
-    pub run: fn(&D, &mut Vec<Finding>),
+    pub run: fn(&D, Locale, &mut Vec<Finding>),
 }
 
 impl<D: Rendering> Clone for RenderingRule<D> {

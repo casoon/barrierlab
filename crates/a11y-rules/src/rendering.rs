@@ -24,6 +24,7 @@
 use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
+use crate::locale::{Locale, tr};
 use crate::registry::{Meta, RenderingRule};
 
 fn at(id: NodeId) -> Location {
@@ -94,7 +95,7 @@ fn wird_dargestellt(stil: &ComputedStyle) -> bool {
     stil.display.as_deref() != Some("none") && stil.visibility.as_deref() != Some("hidden")
 }
 
-fn text_kontrast<D: Rendering>(doc: &D, out: &mut Vec<Finding>) {
+fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !traegt_text(n) {
             continue;
@@ -116,10 +117,17 @@ fn text_kontrast<D: Rendering>(doc: &D, out: &mut Vec<Finding>) {
                     out.push(
                         Finding::fail(
                             "contrast/text-insufficient",
-                            format!(
+                            tr!(
+                                locale,
                                 "The text reaches a contrast ratio of {wert:.2}:1; \
                                  {schwelle:.1}:1 is required for {}.",
-                                if gross { "large text" } else { "normal text" }
+                                "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
+                                 gefordert sind {schwelle:.1}:1 für {}.",
+                                if gross {
+                                    locale.pick("large text", "großen Text")
+                                } else {
+                                    locale.pick("normal text", "normalen Text")
+                                }
                             ),
                         )
                         .with_severity(Severity::High)
@@ -135,8 +143,12 @@ fn text_kontrast<D: Rendering>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::untested(
                         "contrast/text-undetermined",
-                        "The contrast cannot be determined automatically — the host could not \
-                         resolve the foreground or background colour. Check it by hand.",
+                        locale.pick(
+                            "The contrast cannot be determined automatically — the host could \
+                             not resolve the foreground or background colour. Check it by hand.",
+                            "Der Kontrast ist automatisiert nicht bestimmbar — der Host konnte \
+                             Vorder- oder Hintergrundfarbe nicht auflösen. Von Hand prüfen.",
+                        ),
                     )
                     .with_severity(Severity::Medium)
                     .with_wcag(["1.4.3"])
@@ -154,6 +166,9 @@ pub(crate) const METAS: &[Meta] = &[Meta {
     severity: Severity::High,
     help: "Text needs a contrast ratio against its background of at least 4.5:1, \
            or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
+    help_de: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
+              mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
+              fettem Schnitt ab 14 pt.",
 }];
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
