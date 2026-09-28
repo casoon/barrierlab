@@ -2,6 +2,31 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.4.0] - 2026-09-28
+
+### Added
+
+- Familie `structured_data`, zusammengeführt aus auditmysite (`schema_rules.rs`
+  und der JSON-LD-Normalisierung aus `schema.rs`) und den Zusatzregeln aus
+  astro-post-audit:
+  - `parse_blocks` / `parse_block`: je Script-Text die normalisierten Knoten
+    (Wurzel-Listen und `@graph` aufgelöst, jeder `@type`-Eintrag, volle IRIs
+    gekürzt) und Strukturprobleme als `StructuralIssue` — `EmptyScript`,
+    `InvalidJson`, `InvalidRoot`, `EmptyDocument`, `GraphNotArray`,
+    `MissingContext`, `NonSchemaOrgContext`, `GraphWithoutContext`,
+    `MissingType`. Als schema.org-Kontext zählt nur `http(s)://schema.org`,
+    auch in Listen und als `@vocab`; ein `@graph` vererbt ihn.
+  - `assess_node`, `inventory_fields`, `SchemaRuleAssessment` samt Merkmal,
+    Verfügbarkeit, Status und Quelle; `RULESET_VERSION` = `2026-09-28`.
+    Vorhanden heißt nicht leer: `""`, `null`, `[]` und `{}` fehlen.
+  - `duplicate_types`: `@type`-Werte, die in mehr als einem Block derselben
+    Seite stehen, mit den Block-Indizes.
+  - `ManualReview`: was nur von Hand zu prüfen ist, als Daten statt als Satz.
+- Gegenüber auditmysite geändert: Breadcrumb-Einträge dürfen ihren Namen an
+  `item.name` tragen; FAQPage verlangt `acceptedAnswer` je Frage
+  (`mainEntity[i].acceptedAnswer`); NewsArticle empfiehlt zusätzlich
+  `publisher`, WebSite zusätzlich `potentialAction`.
+
 ## [0.3.0] - 2026-09-28
 
 ### Added
