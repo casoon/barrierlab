@@ -1,6 +1,6 @@
 ---
 title: "web-checks"
-description: "Die gemeinsame Auswertung zweier Auditoren, beginnend mit robots.txt."
+description: "Die gemeinsame Auswertung zweier Auditoren: robots.txt, Meta-Längen, OpenGraph und Twitter Cards."
 order: 8
 ---
 
@@ -10,7 +10,9 @@ ein gebautes `dist/`. Verschieden ist die Erhebung, gleich ist die Auswertung.
 
 ## Stand
 
-0.1.0, erste Familie: `robots`. Weitere folgen einzeln.
+0.3.0, Familien `robots`, `meta` und `social`. Weitere folgen einzeln; strukturierte
+Daten sind der nächste Kandidat, Render-blocking wurde geprüft und bleibt draußen
+(gemeinsam wären rund fünf Zeilen, der Rest sind verschiedene Prüfungen).
 
 ## Was das Paket nicht tut
 
@@ -59,6 +61,21 @@ Antwort statt zweier widersprüchlicher. Für astro-post-audit ändert sich dami
 die Befundlage — „KI-Citation-Bot gesperrt" wird für GPTBot zu
 „KI-Training-Bot gesperrt", was die übliche und unauffällige Lage ist.
 
+### `meta` und `social` (0.3.0)
+
+Titel- und Beschreibungslänge prüften beide Werkzeuge mit denselben Grenzen
+(60 / 160) — und beide in **Bytes**: Ein Umlaut zählte doppelt, „Überschrift"
+war früher zu lang als „Ueberschrift". `meta::length` zählt Zeichen nach
+browserüblicher Leerraum-Zusammenfassung. Die Mindestlängen (30 / 120) gab es
+nur in auditmysite; das Paket führt beide Grenzen, der Host entscheidet, welche
+er meldet.
+
+Bei OpenGraph galt ein Tag in auditmysite schon als vorhanden, wenn das Element
+existierte, in astro-post-audit erst mit Inhalt. Jetzt einheitlich: leerer
+Inhalt fehlt. Die Wertprüfungen aus astro-post-audit (`twitter:card` nur
+`summary`, `summary_large_image`, `app`, `player`; `og:image` absolut) stehen
+jetzt beiden zur Verfügung.
+
 ## Öffentliche Fläche
 
 | Eintrag | Zweck |
@@ -68,6 +85,9 @@ die Befundlage — „KI-Citation-Bot gesperrt" wird für GPTBot zu
 | `Group::disallows_path` | gilt eine Sperre für diesen Pfad |
 | `classify_bot`, `BotClass` | Einordnung als Daten, ohne Wertung |
 | `path_is_disallowed` | Längste-Regel-Auswertung mit `*` und `$` |
+| `meta::length`, `LengthRange::classify`, `meta::TITLE`, `meta::DESCRIPTION` | Länge in Zeichen, Einordnung zu kurz / ok / zu lang |
+| `social::is_present`, `is_complete`, `completeness` | Anwesenheit (leer = fehlt) und Vollständigkeit über `*_REQUIRED` / `*_FIELDS` |
+| `social::is_valid_twitter_card`, `is_absolute_url` | Wertprüfungen |
 
 ## Grenzen
 

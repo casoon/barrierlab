@@ -19,6 +19,11 @@
 //! [`robots`] — Grammatik der robots.txt, Einordnung der Bots, Pfadauswertung
 //! nach der Längsten-Regel.
 //!
+//! [`meta`] — Länge von Titel und Meta-Beschreibung, in Zeichen.
+//!
+//! [`social`] — OpenGraph und Twitter Cards: Tag-Listen, Anwesenheit,
+//! Vollständigkeit, zulässige `twitter:card`-Werte, absolute Bild-URLs.
+//!
 //! Weitere Familien folgen einzeln. Jede wird vorher darauf geprüft, ob sie
 //! wirklich dieselbe Frage stellt: bei „Security" etwa sah die Namensgleichheit
 //! nach Doppelung aus, tatsächlich prüft ein Werkzeug HTTP-Header und das
@@ -26,4 +31,6 @@
 
 #![forbid(unsafe_code)]
 
+pub mod meta;
 pub mod robots;
+pub mod social;
