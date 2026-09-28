@@ -44,6 +44,10 @@ statischem Markup überhaupt nicht bestimmen.
 | + Darstellung | `run_with_rendering` |
 | beides | `run_full` |
 
+Jeder Einstieg hat eine Variante mit `_in` und einer `Locale` (`En`, `De`) für
+die Befundtexte, etwa `run_full_in(&doc, Locale::De)`. Ohne `_in` ist es
+Englisch. Kennungen, Outcomes und Schweregrade sind in jeder Sprache gleich.
+
 ## Eine Namensmenge für Befunde und Vermerke
 
 `Meta::ids` deklariert **alle** Befund-Kennungen, die eine Regel erzeugen kann,

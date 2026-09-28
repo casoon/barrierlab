@@ -75,6 +75,14 @@ Der Befund stammt aus `examples/teaser.semantik.json`. Die optionalen Felder:
 | `snippet` | das betroffene Markup, soweit der Host es liefern kann |
 | `evidence` | Belege mit `source`, `field`, `value` |
 
+## Sprache
+
+`message`, der Grund eines nicht gelaufenen Vermerks und der Hinweis der Deklaration gibt es auf
+Englisch und Deutsch. Die Sprache wählt der Host beim Lauf (`run_with_semantics_in(doc,
+Locale::De)`); die Einstiege ohne `_in` liefern Englisch. Alles, woran ein Werkzeug einen Befund
+wiedererkennt — Kennung, Outcome, Schwere, WCAG-Bezug —, ist in jeder Sprache gleich. Der
+Vertrag selbst ändert sich nicht: `message` bleibt ein Text, nur in der gewählten Sprache.
+
 ## Platz für das, was nicht in den Vertrag gehört
 
 `Finding::extra` ist ein undurchsichtiger Slot für werkzeugspezifische Beigaben, etwa den

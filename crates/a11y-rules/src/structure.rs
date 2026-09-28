@@ -7,6 +7,7 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
+use crate::locale::{Locale, tr};
 use crate::registry::{Meta, StructureRule};
 
 fn at(id: NodeId) -> Location {
@@ -124,7 +125,7 @@ fn heading_level(tag: &str) -> Option<u8> {
 
 // --- Dokument -------------------------------------------------------------
 
-fn lang<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn lang<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let root = doc.root();
     if !root.is_element("html") {
         return;
@@ -133,7 +134,10 @@ fn lang<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         None => out.push(
             Finding::fail(
                 "document/lang-missing",
-                "The <html> element has no lang attribute.",
+                locale.pick(
+                    "The <html> element has no lang attribute.",
+                    "Das <html>-Element hat kein lang-Attribut.",
+                ),
             )
             .with_severity(Severity::High)
             .with_wcag(["3.1.1"])
@@ -142,7 +146,11 @@ fn lang<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         Some(l) if !is_plausible_lang(l) => out.push(
             Finding::fail(
                 "document/lang-invalid",
-                format!("The language code \"{l}\" is not a valid BCP-47 tag."),
+                tr!(
+                    locale,
+                    "The language code \"{l}\" is not a valid BCP-47 tag.",
+                    "Der Sprachcode \"{l}\" ist kein gültiges BCP-47-Kürzel."
+                ),
             )
             .with_severity(Severity::Medium)
             .with_wcag(["3.1.1"])
@@ -167,27 +175,36 @@ fn is_plausible_lang(l: &str) -> bool {
     parts.all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_alphanumeric()))
 }
 
-fn title<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn title<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     match elements(doc).find(|n| n.is_element("title")) {
         None => out.push(
             Finding::fail(
                 "document/title-missing",
-                "The document has no <title> element.",
+                locale.pick(
+                    "The document has no <title> element.",
+                    "Das Dokument hat kein <title>-Element.",
+                ),
             )
             .with_severity(Severity::High)
             .with_wcag(["2.4.2"]),
         ),
         Some(t) if subtree_text(t).trim().is_empty() => out.push(
-            Finding::fail("document/title-empty", "The <title> element is empty.")
-                .with_severity(Severity::High)
-                .with_wcag(["2.4.2"])
-                .at(at(t.id())),
+            Finding::fail(
+                "document/title-empty",
+                locale.pick(
+                    "The <title> element is empty.",
+                    "Das <title>-Element ist leer.",
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["2.4.2"])
+            .at(at(t.id())),
         ),
         _ => {}
     }
 }
 
-fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut gefunden = false;
     for n in elements(doc).filter(|n| n.is_element("meta")) {
         if n.attr("name") != Some("viewport") {
@@ -211,7 +228,10 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-locked",
-                    "The viewport prevents or limits zooming.",
+                    locale.pick(
+                        "The viewport prevents or limits zooming.",
+                        "Der Viewport verhindert oder begrenzt das Zoomen.",
+                    ),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.4.4"])
@@ -227,7 +247,10 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-scale-limited",
-                    "The viewport limits scaling to less than 500%.",
+                    locale.pick(
+                        "The viewport limits scaling to less than 500%.",
+                        "Der Viewport begrenzt die Vergrößerung auf weniger als 500 %.",
+                    ),
                 )
                 .with_severity(Severity::Low)
                 .with_wcag(["1.4.4"])
@@ -243,7 +266,10 @@ fn viewport<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         out.push(
             Finding::fail(
                 "zoom/viewport-missing",
-                "The document has no viewport declaration.",
+                locale.pick(
+                    "The document has no viewport declaration.",
+                    "Das Dokument hat keine Viewport-Angabe.",
+                ),
             )
             .with_severity(Severity::High)
             .with_wcag(["1.4.4", "1.4.10"])
@@ -276,7 +302,7 @@ fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
-fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut last = 0u8;
     let mut any = false;
     let mut h1s: Vec<NodeId> = Vec::new();
@@ -291,17 +317,27 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         }
         if heading_is_empty(n) {
             out.push(
-                Finding::fail("headings/empty", "The heading has no text.")
-                    .with_severity(Severity::Medium)
-                    .with_wcag(["1.3.1", "2.4.6"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "headings/empty",
+                    locale.pick(
+                        "The heading has no text.",
+                        "Die Überschrift hat keinen Text.",
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.3.1", "2.4.6"])
+                .at(at(n.id())),
             );
         }
         if last > 0 && level > last + 1 {
             out.push(
                 Finding::fail(
                     "headings/skip-level",
-                    format!("The outline skips from h{last} to h{level}."),
+                    tr!(
+                        locale,
+                        "The outline skips from h{last} to h{level}.",
+                        "Die Gliederung springt von h{last} auf h{level}."
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.3.1"])
@@ -313,9 +349,15 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
     if any && h1s.is_empty() {
         out.push(
-            Finding::fail("headings/h1-missing", "The document has no h1 heading.")
-                .with_severity(Severity::Medium)
-                .with_wcag(["1.3.1"]),
+            Finding::fail(
+                "headings/h1-missing",
+                locale.pick(
+                    "The document has no h1 heading.",
+                    "Das Dokument hat keine h1-Überschrift.",
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["1.3.1"]),
         );
     }
 
@@ -326,7 +368,12 @@ fn headings<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         out.push(
             Finding::review(
                 "headings/h1-multiple",
-                format!("The document has {} h1 headings.", h1s.len()),
+                tr!(
+                    locale,
+                    "The document has {} h1 headings.",
+                    "Das Dokument hat {} h1-Überschriften.",
+                    h1s.len()
+                ),
             )
             .with_severity(Severity::Low)
             .with_wcag(["1.3.1"])
@@ -354,7 +401,7 @@ const ERFORDERLICH: &[(&str, &[&str])] = &[
     ("option", &["aria-selected"]),
 ];
 
-fn aria_required_attributes<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let Some(rolle) = n.attr("role").map(str::trim) else {
             continue;
@@ -377,8 +424,10 @@ fn aria_required_attributes<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         out.push(
             Finding::fail(
                 "aria/required-attribute-missing",
-                format!(
+                tr!(
+                    locale,
                     "role=\"{erste}\" requires {}, but {} is missing.",
+                    "role=\"{erste}\" braucht {}, aber {} fehlt.",
                     noetig.join(", "),
                     fehlend.join(", ")
                 ),
@@ -413,7 +462,7 @@ fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
     a11y_dom::ancestors(n).all(|a| !SECTIONING.contains(&a.local_name()))
 }
 
-fn landmarks<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let wurzel = doc.root().id();
     let mains: Vec<_> = elements(doc)
         .filter(|n| ist_landmark(*n, "main", "main"))
@@ -423,7 +472,10 @@ fn landmarks<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         0 => out.push(
             Finding::fail(
                 "landmarks/main-missing",
-                "The document has no main landmark.",
+                locale.pick(
+                    "The document has no main landmark.",
+                    "Das Dokument hat keine main-Landmark.",
+                ),
             )
             .with_severity(Severity::High)
             .with_wcag(["1.3.1", "2.4.1"])
@@ -433,7 +485,11 @@ fn landmarks<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         n => out.push(
             Finding::fail(
                 "landmarks/main-duplicate",
-                format!("The document has {n} main landmarks; exactly one is allowed."),
+                tr!(
+                    locale,
+                    "The document has {n} main landmarks; exactly one is allowed.",
+                    "Das Dokument hat {n} main-Landmarks; genau eine ist zulässig."
+                ),
             )
             .with_severity(Severity::High)
             .with_wcag(["1.3.1"])
@@ -450,19 +506,28 @@ fn landmarks<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             "nav",
             "navigation",
             "landmarks/navigation-missing",
-            "The document has no navigation landmark.",
+            locale.pick(
+                "The document has no navigation landmark.",
+                "Das Dokument hat keine navigation-Landmark.",
+            ),
         ),
         (
             "header",
             "banner",
             "landmarks/banner-missing",
-            "The document has no banner landmark.",
+            locale.pick(
+                "The document has no banner landmark.",
+                "Das Dokument hat keine banner-Landmark.",
+            ),
         ),
         (
             "footer",
             "contentinfo",
             "landmarks/contentinfo-missing",
-            "The document has no contentinfo landmark.",
+            locale.pick(
+                "The document has no contentinfo landmark.",
+                "Das Dokument hat keine contentinfo-Landmark.",
+            ),
         ),
     ] {
         let vorhanden = elements(doc).any(|n| {
@@ -506,7 +571,7 @@ fn sieht_aus_wie_sprunglink<'a, N: Node<'a>>(n: N) -> bool {
         .any(|m| text.contains(m) || marker.contains(m))
 }
 
-fn skip_link<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let vorhanden = elements(doc).any(|n| {
         n.is_element("a")
             && n.attr("href")
@@ -517,7 +582,10 @@ fn skip_link<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         out.push(
             Finding::review(
                 "keyboard/skip-link-missing",
-                "No skip link found that bypasses repeated blocks.",
+                locale.pick(
+                    "No skip link found that bypasses repeated blocks.",
+                    "Kein Sprunglink gefunden, der wiederkehrende Bereiche überspringt.",
+                ),
             )
             .with_severity(Severity::Medium)
             .with_wcag(["2.4.1"])
@@ -544,24 +612,34 @@ fn ausdruecklich_dekorativ<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
-fn images<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc).filter(|n| n.is_element("img")) {
         if ausdruecklich_dekorativ(n) {
             continue;
         }
         match n.attr("alt") {
             None => out.push(
-                Finding::fail("images/alt-missing", "The image has no alt attribute.")
-                    .with_severity(Severity::High)
-                    .with_wcag(["1.1.1"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "images/alt-missing",
+                    locale.pick(
+                        "The image has no alt attribute.",
+                        "Das Bild hat kein alt-Attribut.",
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["1.1.1"])
+                .at(at(n.id())),
             ),
             Some(alt) if suspicious_alt(alt) => out.push(
                 // Heuristisch: der Text ist da, aber vermutlich nichtssagend.
                 // Deshalb Review, nicht Fail.
                 Finding::review(
                     "images/alt-suspicious",
-                    format!("The alt text \"{alt}\" probably does not describe the image."),
+                    tr!(
+                        locale,
+                        "The alt text \"{alt}\" probably does not describe the image.",
+                        "Der Alt-Text \"{alt}\" beschreibt das Bild vermutlich nicht."
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.1.1"])
@@ -608,7 +686,7 @@ fn suspicious_alt(alt: &str) -> bool {
 /// Die Label-Zuordnung ist vollständig strukturell entscheidbar: `label[for]`,
 /// verschachteltes `<label>`, `aria-label`, `aria-labelledby`, `title`. Dafür
 /// braucht es keine Accessible-Name-Berechnung.
-fn form_labels<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let label_targets: HashSet<&str> = elements(doc)
         .filter(|n| n.is_element("label"))
         .filter_map(|n| n.attr("for"))
@@ -635,16 +713,22 @@ fn form_labels<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
         if !(aria_named || for_labelled || wrapped || titled) {
             out.push(
-                Finding::fail("forms/label-missing", "The input has no label.")
-                    .with_severity(Severity::Critical)
-                    .with_wcag(["1.3.1", "3.3.2", "4.1.2"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "forms/label-missing",
+                    locale.pick("The input has no label.", "Das Eingabefeld hat kein Label."),
+                )
+                .with_severity(Severity::Critical)
+                .with_wcag(["1.3.1", "3.3.2", "4.1.2"])
+                .at(at(n.id())),
             );
         } else if n.has_attr("placeholder") && !aria_named && !for_labelled && !wrapped {
             out.push(
                 Finding::fail(
                     "forms/placeholder-as-label",
-                    "The field uses the placeholder instead of a label.",
+                    locale.pick(
+                        "The field uses the placeholder instead of a label.",
+                        "Das Feld nutzt den Platzhalter anstelle eines Labels.",
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["3.3.2"])
@@ -656,7 +740,7 @@ fn form_labels<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- ARIA -----------------------------------------------------------------
 
-fn aria_roles<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let Some(role) = n.attr("role") else { continue };
         for r in role.split_whitespace() {
@@ -664,7 +748,11 @@ fn aria_roles<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::fail(
                         "aria/role-abstract",
-                        format!("\"{r}\" is an abstract role and must not be used as a value."),
+                        tr!(
+                            locale,
+                            "\"{r}\" is an abstract role and must not be used as a value.",
+                            "\"{r}\" ist eine abstrakte Rolle und darf nicht ausgezeichnet werden."
+                        ),
                     )
                     .with_severity(Severity::High)
                     .with_wcag(["4.1.2"])
@@ -674,7 +762,11 @@ fn aria_roles<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::fail(
                         "aria/role-invalid",
-                        format!("\"{r}\" is not a valid ARIA role."),
+                        tr!(
+                            locale,
+                            "\"{r}\" is not a valid ARIA role.",
+                            "\"{r}\" ist keine gültige ARIA-Rolle."
+                        ),
                     )
                     .with_severity(Severity::High)
                     .with_wcag(["4.1.2"])
@@ -685,7 +777,7 @@ fn aria_roles<D: Document>(doc: &D, out: &mut Vec<Finding>) {
     }
 }
 
-fn aria_references<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids: HashSet<&str> = elements(doc).filter_map(|n| n.attr("id")).collect();
 
     for n in elements(doc) {
@@ -704,8 +796,10 @@ fn aria_references<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::fail(
                         "aria/reference-missing",
-                        format!(
+                        tr!(
+                            locale,
                             "{rel} references IDs that do not exist: {}",
+                            "{rel} verweist auf nicht vorhandene IDs: {}",
                             fehlend.join(", ")
                         ),
                     )
@@ -720,11 +814,46 @@ fn aria_references<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- IDs ------------------------------------------------------------------
 
-fn duplicate_ids<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+/// Attribute, die per IDREF auf ein anderes Element zeigen.
+const IDREF_ATTRS: &[&str] = &[
+    "for",
+    "form",
+    "list",
+    "headers",
+    "aria-labelledby",
+    "aria-describedby",
+    "aria-controls",
+    "aria-owns",
+    "aria-activedescendant",
+    "aria-details",
+    "aria-errormessage",
+    "aria-flowto",
+];
+
+/// Doppelte IDs, auf die ein IDREF zeigt.
+///
+/// WCAG 2.2 hat 4.1.1 (Parsing) gestrichen: Eine doppelte ID ist für sich
+/// genommen kein Verstoß mehr. Einer bleibt sie dort, wo ein IDREF auf sie
+/// zeigt — dann ist nicht bestimmbar, welches Element gemeint ist, und Name,
+/// Rolle oder Wert der Beziehung bricht. Gemeldet als 4.1.2, dieselbe Zuordnung,
+/// die axe-core für `duplicate-id-aria` führt.
+fn duplicate_ids<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut referenced: HashSet<&str> = HashSet::new();
+    for n in elements(doc) {
+        for attr in IDREF_ATTRS {
+            if let Some(value) = n.attr(attr) {
+                referenced.extend(value.split_whitespace());
+            }
+        }
+    }
+    if referenced.is_empty() {
+        return;
+    }
+
     let mut seen: HashMap<&str, usize> = HashMap::new();
     for n in elements(doc) {
         let Some(id) = n.attr("id") else { continue };
-        if id.is_empty() {
+        if id.is_empty() || !referenced.contains(id) {
             continue;
         }
         let count = seen.entry(id).or_insert(0);
@@ -733,10 +862,14 @@ fn duplicate_ids<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "ids/duplicate",
-                    format!("The ID \"{id}\" occurs more than once."),
+                    tr!(
+                        locale,
+                        "The ID \"{id}\" occurs more than once and is referenced, so the reference is ambiguous.",
+                        "Die ID \"{id}\" kommt mehrfach vor und wird referenziert — der Verweis ist nicht eindeutig.",
+                    ),
                 )
                 .with_severity(Severity::Medium)
-                .with_wcag(["4.1.1"])
+                .with_wcag(["4.1.2"])
                 .at(at(n.id())),
             );
         }
@@ -745,7 +878,7 @@ fn duplicate_ids<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 // --- Tastatur -------------------------------------------------------------
 
-fn tabindex<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let Some(raw) = n.attr("tabindex") else {
             continue;
@@ -757,7 +890,11 @@ fn tabindex<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "keyboard/positive-tabindex",
-                    format!("tabindex=\"{value}\" breaks the natural tab order."),
+                    tr!(
+                        locale,
+                        "tabindex=\"{value}\" breaks the natural tab order.",
+                        "tabindex=\"{value}\" bricht die natürliche Tabreihenfolge."
+                    ),
                 )
                 // Hoch, nicht mittel: Ein positiver tabindex bricht die
                 // Tabreihenfolge reproduzierbar und für jeden, der mit der
@@ -772,7 +909,7 @@ fn tabindex<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 
 /// Fokussierbar und zugleich vor dem Accessibility-Tree versteckt — Nutzer
 /// landen mit der Tabtaste auf etwas, das ihnen nicht angesagt wird.
-fn hidden_focusable<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if n.attr("aria-hidden") != Some("true") {
             continue;
@@ -790,7 +927,10 @@ fn hidden_focusable<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "keyboard/hidden-focusable",
-                    "The element is focusable but hidden with aria-hidden.",
+                    locale.pick(
+                        "The element is focusable but hidden with aria-hidden.",
+                        "Das Element ist fokussierbar, aber per aria-hidden versteckt.",
+                    ),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.3.1", "4.1.2"])
@@ -816,7 +956,7 @@ fn ist_listeneintrag<'a, N: Node<'a>>(n: N) -> bool {
     n.local_name() == "li" || n.attr("role") == Some("listitem")
 }
 
-fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !ist_liste(n) {
             continue;
@@ -838,7 +978,11 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "lists/invalid-structure",
-                    format!("<{tag}> has direct children that are not <li>."),
+                    tr!(
+                        locale,
+                        "<{tag}> has direct children that are not <li>.",
+                        "<{tag}> enthält direkte Kinder, die kein <li> sind."
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.3.1"])
@@ -850,16 +994,23 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
         // Struktur an, die es nicht gibt.
         if !kinder.iter().any(|c| ist_listeneintrag(*c)) {
             out.push(
-                Finding::fail("lists/empty", format!("<{tag}> has no list items."))
-                    .with_severity(Severity::Low)
-                    .with_wcag(["1.3.1"])
-                    .at(at(n.id())),
+                Finding::fail(
+                    "lists/empty",
+                    tr!(
+                        locale,
+                        "<{tag}> has no list items.",
+                        "<{tag}> enthält keine Listeneinträge."
+                    ),
+                )
+                .with_severity(Severity::Low)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
             );
         }
     }
 
-    beschreibungslisten(doc, out);
-    verwaiste_eintraege(doc, out);
+    beschreibungslisten(doc, locale, out);
+    verwaiste_eintraege(doc, locale, out);
 }
 
 /// Ein Listeneintrag ohne Liste.
@@ -868,7 +1019,7 @@ fn list_structure<D: Document>(doc: &D, out: &mut Vec<Finding>) {
 /// steht. Ein `<li>`, das gar keine Liste über sich hat, wird dabei nie
 /// besucht — für die Assistenztechnik kündigt es aber eine Aufzählung an, die
 /// es nicht gibt.
-fn verwaiste_eintraege<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn verwaiste_eintraege<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !ist_listeneintrag(n) {
             continue;
@@ -878,7 +1029,10 @@ fn verwaiste_eintraege<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "lists/item-outside-list",
-                    "The list item is outside a list.",
+                    locale.pick(
+                        "The list item is outside a list.",
+                        "Der Listeneintrag steht außerhalb einer Liste.",
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.3.1"])
@@ -907,7 +1061,7 @@ fn ist_definition<'a, N: Node<'a>>(n: N) -> bool {
 /// Geprüft wird unter demselben Elternknoten, weil HTML seit einiger Zeit auch
 /// `<div>`-Gruppen innerhalb einer `<dl>` erlaubt. Ein `<dt>` in einer solchen
 /// Gruppe braucht sein `<dd>` dort, nicht irgendwo in der Liste.
-fn beschreibungslisten<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !ist_begriff(n) {
             continue;
@@ -922,7 +1076,10 @@ fn beschreibungslisten<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "lists/term-without-definition",
-                    "This term has no definition.",
+                    locale.pick(
+                        "This term has no definition.",
+                        "Zu diesem Begriff gibt es keine Definition.",
+                    ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.3.1"])
@@ -939,7 +1096,7 @@ fn hat_kopfzelle<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
-fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
+fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc)
         .filter(|n| n.is_element("table") || matches!(n.attr("role"), Some("table") | Some("grid")))
     {
@@ -952,7 +1109,7 @@ fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
                 out.push(
                     Finding::fail(
                         "tables/presentational-with-headers",
-                        "The table is marked presentational but contains header cells.",
+                        locale.pick("The table is marked presentational but contains header cells.", "Die Tabelle ist als präsentational ausgezeichnet, enthält aber Kopfzellen."),
                     )
                     .with_severity(Severity::Medium)
                     .with_wcag(["1.3.1"])
@@ -973,7 +1130,10 @@ fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::review(
                     "tables/name-missing",
-                    "The table has neither a <caption> nor an aria-label.",
+                    locale.pick(
+                        "The table has neither a <caption> nor an aria-label.",
+                        "Die Tabelle hat weder <caption> noch aria-label.",
+                    ),
                 )
                 .with_severity(Severity::Low)
                 .with_wcag(["1.3.1"])
@@ -984,7 +1144,10 @@ fn table_headers<D: Document>(doc: &D, out: &mut Vec<Finding>) {
             out.push(
                 Finding::fail(
                     "tables/header-missing",
-                    "The table has no <th> header cells.",
+                    locale.pick(
+                        "The table has no <th> header cells.",
+                        "Die Tabelle hat keine <th>-Kopfzellen.",
+                    ),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.3.1"])
@@ -1004,6 +1167,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::High,
         help: "The <html> element needs a valid lang attribute.",
+        help_de: "Das <html>-Element braucht ein gültiges lang-Attribut.",
     },
     Meta {
         ids: &["document/title-missing", "document/title-empty"],
@@ -1011,6 +1175,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.2"],
         severity: Severity::High,
         help: "Every page needs a meaningful <title>.",
+        help_de: "Jede Seite braucht einen aussagekräftigen <title>.",
     },
     Meta {
         ids: &[
@@ -1022,6 +1187,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.4", "1.4.10"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
+        help_de: "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
     },
     Meta {
         ids: &[
@@ -1034,6 +1200,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
+        help_de: "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
     },
     Meta {
         ids: &["images/alt-missing", "images/alt-suspicious"],
@@ -1041,6 +1208,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative images need descriptive alt text.",
+        help_de: "Informative Bilder brauchen einen beschreibenden Alt-Text.",
     },
     Meta {
         ids: &["forms/label-missing", "forms/placeholder-as-label"],
@@ -1048,6 +1216,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "3.3.2", "4.1.2"],
         severity: Severity::Critical,
         help: "Every input needs an associated label.",
+        help_de: "Jedes Eingabefeld braucht ein zugeordnetes Label.",
     },
     Meta {
         ids: &["aria/role-invalid", "aria/role-abstract"],
@@ -1055,6 +1224,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only roles from the ARIA specification.",
+        help_de: "Nur Rollen aus der ARIA-Spezifikation verwenden.",
     },
     Meta {
         ids: &["aria/reference-missing"],
@@ -1062,6 +1232,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA references must point to IDs that exist.",
+        help_de: "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
     },
     Meta {
         ids: &["aria/required-attribute-missing"],
@@ -1069,13 +1240,15 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "A role that announces a state needs the attribute carrying it.",
+        help_de: "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
     },
     Meta {
         ids: &["ids/duplicate"],
         tier: Tier::Structure,
-        wcag: &["4.1.1"],
+        wcag: &["4.1.2"],
         severity: Severity::Medium,
-        help: "IDs must be unique within the document.",
+        help: "An ID that another element references must be unique.",
+        help_de: "Eine ID, auf die ein anderes Element verweist, muss eindeutig sein.",
     },
     Meta {
         ids: &["keyboard/positive-tabindex"],
@@ -1083,6 +1256,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.3"],
         severity: Severity::High,
         help: "Positive tabindex values break the tab order.",
+        help_de: "Positive tabindex-Werte brechen die Tabreihenfolge.",
     },
     Meta {
         ids: &["keyboard/hidden-focusable"],
@@ -1090,6 +1264,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Focusable elements must not be aria-hidden.",
+        help_de: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
     },
     Meta {
         ids: &[
@@ -1101,6 +1276,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "<ul> and <ol> may only have <li> as direct children and must not be empty.",
+        help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
     },
     Meta {
         ids: &[
@@ -1112,6 +1288,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Data tables need <th> header cells.",
+        help_de: "Datentabellen brauchen <th>-Kopfzellen.",
     },
     Meta {
         ids: &[
@@ -1125,6 +1302,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1"],
         severity: Severity::High,
         help: "Landmarks structure the page for everyone who cannot see it.",
+        help_de: "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
     },
     Meta {
         ids: &["keyboard/skip-link-missing"],
@@ -1132,11 +1310,12 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.1"],
         severity: Severity::Medium,
         help: "A skip link bypasses blocks that repeat before the content.",
+        help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
     },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, &mut Vec<Finding>); 16] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 16] {
     [
         lang,
         title,
