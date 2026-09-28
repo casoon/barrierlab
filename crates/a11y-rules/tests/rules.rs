@@ -2,7 +2,7 @@
 
 use a11y_dom::{Arena, ArenaNode, Document, Node, Semantics, elements};
 use a11y_report::{Outcome, Report};
-use a11y_rules::{run, run_with_semantics};
+use a11y_rules::{Locale, run, run_in, run_with_semantics};
 use accname::IdIndex;
 
 /// Ein Tier-2-Host für die Tests: die Arena plus echte Namensberechnung.
@@ -534,12 +534,11 @@ fn aria_verweise_auf_fehlende_ids() {
 }
 
 #[test]
-fn doppelte_ids_melden_nur_den_zweiten_treffer() {
+fn doppelte_ids_ohne_verweis_melden_nichts() {
+    // WCAG 2.2 hat 4.1.1 gestrichen: Eine Dopplung, auf die niemand zeigt,
+    // verletzt kein Kriterium mehr.
     let doc = sauber()
         .open("body")
-        .open("div")
-        .attr("id", "x")
-        .close()
         .open("div")
         .attr("id", "x")
         .close()
@@ -549,14 +548,101 @@ fn doppelte_ids_melden_nur_den_zweiten_treffer() {
         .close()
         .close()
         .build();
+    assert!(!hat(&run(&doc), "ids/duplicate"));
+}
+
+#[test]
+fn referenzierte_doppelte_ids_melden_nur_den_zweiten_treffer() {
+    let doc = sauber()
+        .open("body")
+        .open("label")
+        .attr("for", "x")
+        .text("Name")
+        .close()
+        .open("input")
+        .attr("id", "x")
+        .close()
+        .open("input")
+        .attr("id", "x")
+        .close()
+        .open("input")
+        .attr("id", "x")
+        .close()
+        .close()
+        .close()
+        .build();
     let r = run(&doc);
-    assert_eq!(
+    let treffer: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "ids/duplicate")
+        .collect();
+    assert_eq!(treffer.len(), 1);
+    assert_eq!(treffer[0].wcag, vec!["4.1.2".to_string()]);
+}
+
+#[test]
+fn texte_folgen_der_gewaehlten_sprache() {
+    let doc = fehlerhaft();
+    let en = run(&doc);
+    let de = run_in(&doc, Locale::De);
+
+    // Dieselben Befunde, nur anders beschriftet.
+    assert_eq!(ids(&en), ids(&de));
+    assert!(!en.findings.is_empty());
+    for (e, d) in en.findings.iter().zip(&de.findings) {
+        assert_ne!(e.message, d.message, "ohne deutsche Fassung: {}", e.rule_id);
+    }
+    let alt = |r: &Report| {
         r.findings
             .iter()
-            .filter(|f| f.rule_id == "ids/duplicate")
-            .count(),
-        1
+            .find(|f| f.rule_id == "images/alt-missing")
+            .map(|f| f.message.clone())
+    };
+    assert_eq!(alt(&en).as_deref(), Some("The image has no alt attribute."));
+    assert_eq!(alt(&de).as_deref(), Some("Das Bild hat kein alt-Attribut."));
+
+    // Auch der Grund eines nicht gelaufenen Vermerks.
+    let grund = de
+        .rule_runs
+        .iter()
+        .find_map(|r| r.reason.clone())
+        .expect("ohne Semantik laufen Tier-2-Regeln nicht");
+    assert!(grund.starts_with("Host liefert"), "{grund}");
+}
+
+#[test]
+fn semantikregeln_folgen_der_gewaehlten_sprache() {
+    let arena = fehlerhaft();
+    let doc = MitSemantik::new(&arena);
+    let en = run_with_semantics(&doc);
+    let de = a11y_rules::run_with_semantics_in(&doc, Locale::De);
+    assert_eq!(ids(&en), ids(&de));
+    assert!(
+        ids(&en)
+            .iter()
+            .any(|id| id.starts_with("links/") || id.starts_with("buttons/"))
     );
+    for (e, d) in en.findings.iter().zip(&de.findings) {
+        assert_ne!(e.message, d.message, "ohne deutsche Fassung: {}", e.rule_id);
+    }
+}
+
+#[test]
+fn jeder_hinweis_hat_eine_deutsche_fassung() {
+    let alle = a11y_rules::structure_metas()
+        .iter()
+        .chain(a11y_rules::semantics_metas())
+        .chain(a11y_rules::rendering_metas());
+    for meta in alle {
+        assert!(!meta.help_de.is_empty(), "{:?}", meta.ids);
+        assert_ne!(
+            meta.help_in(Locale::En),
+            meta.help_in(Locale::De),
+            "{:?}",
+            meta.ids
+        );
+    }
 }
 
 #[test]
