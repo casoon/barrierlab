@@ -24,7 +24,7 @@
 use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, tr};
+use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, RenderingRule};
 
 fn at(id: NodeId) -> Location {
@@ -124,9 +124,9 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                                 "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
                                  gefordert sind {schwelle:.1}:1 für {}.",
                                 if gross {
-                                    locale.pick("large text", "großen Text")
+                                    pick!(locale, "large text", "großen Text")
                                 } else {
-                                    locale.pick("normal text", "normalen Text")
+                                    pick!(locale, "normal text", "normalen Text")
                                 }
                             ),
                         )
@@ -143,7 +143,8 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                 out.push(
                     Finding::untested(
                         "contrast/text-undetermined",
-                        locale.pick(
+                        pick!(
+                            locale,
                             "The contrast cannot be determined automatically — the host could \
                              not resolve the foreground or background colour. Check it by hand.",
                             "Der Kontrast ist automatisiert nicht bestimmbar — der Host konnte \
@@ -166,6 +167,7 @@ pub(crate) const METAS: &[Meta] = &[Meta {
     severity: Severity::High,
     help: "Text needs a contrast ratio against its background of at least 4.5:1, \
            or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
+    #[cfg(feature = "de")]
     help_de: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
               mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
               fettem Schnitt ab 14 pt.",

@@ -83,6 +83,10 @@ Locale::De)`); die Einstiege ohne `_in` liefern Englisch. Alles, woran ein Werkz
 wiedererkennt — Kennung, Outcome, Schwere, WCAG-Bezug —, ist in jeder Sprache gleich. Der
 Vertrag selbst ändert sich nicht: `message` bleibt ein Text, nur in der gewählten Sprache.
 
+Die deutschen Texte hängen am Feature `de`, das standardmäßig an ist. Wer nur Englisch ausliefert
+und auf Größe achten muss — wie `a11y-wasm` in der laufenden Seite —, baut mit
+`default-features = false` und spart die deutschen Vorlagen komplett.
+
 ## Platz für das, was nicht in den Vertrag gehört
 
 `Finding::extra` ist ein undurchsichtiger Slot für werkzeugspezifische Beigaben, etwa den

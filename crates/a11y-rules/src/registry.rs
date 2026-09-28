@@ -10,7 +10,7 @@
 use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
-use crate::locale::Locale;
+use crate::locale::{Locale, pick};
 
 /// Was über eine Regel unabhängig vom Host feststeht.
 ///
@@ -33,14 +33,15 @@ pub struct Meta {
     pub severity: Severity,
     /// Hinweis zur Regel, englisch. Für andere Sprachen [`Meta::help_in`].
     pub help: &'static str,
-    /// Derselbe Hinweis auf Deutsch.
+    /// Derselbe Hinweis auf Deutsch. Nur mit dem Feature `de`.
+    #[cfg(feature = "de")]
     pub help_de: &'static str,
 }
 
 impl Meta {
     /// Der Hinweis in der gewählten Sprache.
     pub fn help_in(&self, locale: Locale) -> &'static str {
-        locale.pick(self.help, self.help_de)
+        pick!(locale, self.help, self.help_de)
     }
 }
 

@@ -47,6 +47,9 @@ statischem Markup überhaupt nicht bestimmen.
 Jeder Einstieg hat eine Variante mit `_in` und einer `Locale` (`En`, `De`) für
 die Befundtexte, etwa `run_full_in(&doc, Locale::De)`. Ohne `_in` ist es
 Englisch. Kennungen, Outcomes und Schweregrade sind in jeder Sprache gleich.
+Die deutschen Texte hängen am Feature `de` (Vorgabe: an); mit
+`default-features = false` kommen sie gar nicht erst in den Binärcode, und
+`Locale::De` gibt es dann nicht.
 
 ## Eine Namensmenge für Befunde und Vermerke
 
