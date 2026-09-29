@@ -253,4 +253,49 @@ mod tests {
                 .any(|rule_id| rule_id == "parser.html5")
         );
     }
+
+    /// `name` next to RDFa `property` on `<meta>` is conforming
+    /// (HTML+RDFa 1.1 §3.1 only drops the `name` requirement). Seen on
+    /// gov.uk: `<meta name="title" property="og:title" content="…">`.
+    #[test]
+    fn meta_with_name_and_property_is_conforming() {
+        let report = check(
+            "<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\
+             <title>t</title>\
+             <meta property=\"og:image\" content=\"https://example.org/a.png\">\
+             <meta name=\"title\" property=\"og:title\" content=\"Welcome\">\
+             </head>\n<body></body>\n</html>\n",
+        )
+        .expect("HTML5 parsing should recover");
+
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+    }
+
+    #[test]
+    fn input_type_search_is_conforming() {
+        assert!(
+            rule_ids_for_body(r#"<input type="search" name="q" aria-label="Search">"#).is_empty()
+        );
+    }
+
+    /// Not a false positive: ARIA in HTML allows no role other than
+    /// `searchbox` on `input type=search` without `list` (vnu's schema
+    /// agrees). gov.uk's script adds `role="combobox"` to its search field;
+    /// the conforming form is `type="text" role="combobox"`.
+    #[test]
+    fn combobox_role_on_input_type_search_is_reported() {
+        assert!(
+            rule_ids_for_body(
+                r#"<input type="search" role="combobox" aria-expanded="false" aria-label="Search">"#
+            )
+            .iter()
+            .any(|rule_id| rule_id == "schema.html5")
+        );
+        assert!(
+            rule_ids_for_body(
+                r#"<input type="text" role="combobox" aria-expanded="false" aria-label="Search">"#
+            )
+            .is_empty()
+        );
+    }
 }
