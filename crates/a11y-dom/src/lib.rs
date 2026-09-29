@@ -13,6 +13,17 @@
 //! Accessibility-Tree des Browsers gibt die gar nicht her — `tabindex` etwa
 //! taucht dort nicht auf. Rolle und Name kommen als eigene Fähigkeit obendrauf.
 //!
+//! # Shadow DOM kommt als flacher Baum
+//!
+//! Ein Knoten kennt keinen Shadow Root. Der Host liefert deshalb den flachen
+//! Baum, so wie ihn Rendering und Assistenztechnik sehen: Die Kinder eines
+//! Shadow Roots hängen unter dem Host, die einem `<slot>` zugewiesenen
+//! Light-DOM-Knoten unter diesem `<slot>` (ohne Zuweisung dessen
+//! Ersatzinhalt). Light-DOM-Kinder, die keinem `<slot>` zugewiesen sind,
+//! werden nicht dargestellt und fehlen. Der `<slot>` selbst bleibt als
+//! Element stehen (`display: contents`); die Listenregeln in `a11y-rules`
+//! sehen durch ihn hindurch.
+//!
 //! # Fähigkeiten statt Optionen
 //!
 //! Die drei Substrate unterscheiden sich nicht in der Darstellung derselben

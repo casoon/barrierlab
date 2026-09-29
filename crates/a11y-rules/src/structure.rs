@@ -976,20 +976,46 @@ fn ist_listeneintrag<'a, N: Node<'a>>(n: N) -> bool {
     n.local_name() == "li" || n.attr("role") == Some("listitem")
 }
 
+/// Die wirksame explizite Rolle: das erste gültige Token aus `role`.
+fn explizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
+    n.attr("role")?
+        .split_whitespace()
+        .find(|r| VALID_ROLES.contains(r))
+}
+
+/// Die Element-Kinder einer Liste im flachen Baum.
+///
+/// Ein `<slot>` ist `display: contents` und für die Assistenztechnik
+/// durchlässig: Was ihm zugewiesen ist (oder sein Ersatzinhalt), steht unter
+/// ihm und gilt als Kind der Liste. So baut eine Web-Komponente ihre Liste im
+/// Shadow Root (`<ul><slot></slot></ul>`) und bekommt die Einträge aus dem
+/// Light DOM.
+fn listenkinder<'a, N: Node<'a>>(n: N, out: &mut Vec<N>) {
+    for c in n.children() {
+        if c.kind() != a11y_dom::NodeKind::Element {
+            continue;
+        }
+        if c.local_name() == "slot" {
+            listenkinder(c, out);
+        } else {
+            out.push(c);
+        }
+    }
+}
+
 fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !ist_liste(n) {
             continue;
         }
-        // Der Autor sagt ausdruecklich, dass hier keine Liste gemeint ist.
-        if matches!(n.attr("role"), Some("presentation") | Some("none")) {
+        // Eine andere Rolle macht aus `<ul>`/`<ol>` etwas anderes als eine
+        // Liste -- `presentation`/`none` ebenso wie `listbox` oder `menu`.
+        if explizite_rolle(n).is_some_and(|r| r != "list") {
             continue;
         }
         let tag = n.local_name();
-        let kinder: Vec<_> = n
-            .children()
-            .filter(|c| c.kind() == a11y_dom::NodeKind::Element)
-            .collect();
+        let mut kinder = Vec::new();
+        listenkinder(n, &mut kinder);
 
         let fremd = kinder
             .iter()
