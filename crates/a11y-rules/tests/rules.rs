@@ -1104,6 +1104,100 @@ fn praesentationsliste_erzeugt_keinen_strukturbefund() {
     assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
 }
 
+/// Eine per `role` umgedeutete `<ul>` ist keine Liste mehr. Beleg: gov.uk,
+/// APG-Autocomplete `<ul id="…__listbox" role="listbox">`, leer, bis getippt
+/// wird. Weder leer noch mit `option`-Kindern ist das ein Listenbefund.
+#[test]
+fn umgedeutete_liste_wird_nicht_als_liste_geprueft() {
+    let leer = sauber()
+        .open("body")
+        .open("ul")
+        .attr("role", "listbox")
+        .attr("aria-label", "Vorschläge")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&leer);
+    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+
+    let gefuellt = sauber()
+        .open("body")
+        .open("ul")
+        .attr("role", "listbox")
+        .attr("aria-label", "Vorschläge")
+        .open("li")
+        .attr("role", "option")
+        .attr("aria-selected", "false")
+        .text("Steuer")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&gefuellt);
+    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/item-outside-list"), "{:?}", r.findings);
+}
+
+/// Shadow DOM kommt als flacher Baum herein: Die Liste steht im Shadow Root
+/// der Komponente, ihre Einträge sind Light-DOM-Kinder des Hosts, die per
+/// `<slot>` in sie hineinprojiziert und dort unter dem `<slot>` eingehängt
+/// werden. Beleg: sachsen-anhalt.de, `muse-link-list` mit
+/// `<ul class="link-list__list"><slot></slot></ul>` und
+/// `<muse-link role="listitem">` als Light-DOM-Kindern. Der `<slot>` selbst
+/// ist `display: contents` und für die Liste unsichtbar.
+#[test]
+fn eintraege_ueber_slot_zaehlen_als_listeneintraege() {
+    let doc = sauber()
+        .open("body")
+        .open("muse-link-list")
+        .open("ul")
+        .open("slot")
+        .open("muse-link")
+        .attr("role", "listitem")
+        .open("a")
+        .attr("href", "/a")
+        .text("Impressum")
+        .close()
+        .close()
+        .open("muse-link")
+        .attr("role", "listitem")
+        .open("a")
+        .attr("href", "/b")
+        .text("Datenschutz")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/item-outside-list"), "{:?}", r.findings);
+}
+
+/// Ein `<slot>`, dem nichts zugewiesen ist und der keinen Ersatzinhalt hat,
+/// lässt die Liste im flachen Baum leer — das bleibt ein Befund.
+#[test]
+fn liste_mit_leerem_slot_bleibt_leer() {
+    let doc = sauber()
+        .open("body")
+        .open("ul")
+        .open("slot")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    assert!(hat(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+}
+
 /// Eine Kopfzelle kann per Rolle ausgezeichnet sein. Bis 0.3.0 suchte die
 /// Regel nur `<th>` und meldete solche Tabellen faelschlich als kopflos.
 #[test]

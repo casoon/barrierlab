@@ -5,6 +5,21 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+## [0.12.2] - 2026-09-29
+
+### Fixed
+
+- `lists/invalid-structure` und `lists/empty` sehen durch `<slot>` hindurch:
+  Was unter einem `<slot>` hängt, zählt als Kind der Liste. Web-Komponenten
+  bauen ihre Liste im Shadow Root (`<ul><slot></slot></ul>`) und bekommen die
+  Einträge aus dem Light DOM (Beleg: sachsen-anhalt.de, `muse-link-list`).
+  Voraussetzung ist ein Host, der den flachen Baum liefert — siehe `a11y-dom`.
+- `<ul>`/`<ol>` mit einer anderen gültigen Rolle als `list` wird nicht mehr als
+  Liste geprüft — bisher galt das nur für `presentation`/`none`. Eine leere
+  `<ul role="listbox">` (APG-Autocomplete, Beleg: gov.uk) ist keine leere Liste.
+
 ## [0.12.1] - 2026-09-28
 
 ### Added

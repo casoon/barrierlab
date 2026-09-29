@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+## [0.12.2] - 2026-09-29
+
+### Documentation
+
+- Vertrag für Shadow DOM festgehalten: Der Host liefert den flachen Baum —
+  Shadow-Root-Kinder unter dem Host, zugewiesene Knoten unter ihrem `<slot>`,
+  nicht zugewiesene Light-DOM-Kinder gar nicht.
+
 ## [0.12.1] - 2026-09-28
 
 ### Changed

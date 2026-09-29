@@ -448,7 +448,10 @@ datatypes w = "http://whattf.org/datatype-draft"
 # pinned commit). This gives this crate equivalent, minimal coverage
 # (property+content on <meta> only, not the full RDFa Lite attribute
 # set on arbitrary elements — Open Graph/Twitter Card meta tags are the
-# overwhelmingly common real-world case).
+# overwhelmingly common real-world case). `name` may accompany `property`
+# (HTML+RDFa 1.1 §3.1: with @property present, @name is not required —
+# not forbidden); gov.uk ships `<meta name="title" property="og:title"
+# content="…">`, which vnu's RDFa-aware schema accepts.
 #
 # Deliberately appended here (not in a separate include`d file) rather
 # than left as an isolated non-vendored module: a standalone file's
@@ -468,6 +471,7 @@ datatypes w = "http://whattf.org/datatype-draft"
 		&	common.attrs.other
 		&	meta.property.attrs.property
 		&	meta.property.attrs.content?
+		&	meta.name.attrs.name?
 		&	common.attrs.microdata.itemref?
 		&	common.attrs.microdata.itemscope?
 		&	common.attrs.microdata.itemtype?
