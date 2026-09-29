@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-29
+
 ### Fixed
 - `<meta name="…" property="…" content="…">` is no longer an "unexpected attribute `property`" error. HTML+RDFa 1.1 only drops the `name` requirement when `property` is present; it does not forbid `name`. Seen on gov.uk (`<meta name="title" property="og:title">`).
 
