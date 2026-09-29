@@ -7,6 +7,8 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-09-29
+
 ### Fixed
 
 - `lists/invalid-structure` und `lists/empty` sehen durch `<slot>` hindurch:

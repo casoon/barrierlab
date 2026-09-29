@@ -7,6 +7,8 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-09-29
+
 ### Documentation
 
 - Vertrag für Shadow DOM festgehalten: Der Host liefert den flachen Baum —
