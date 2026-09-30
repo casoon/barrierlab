@@ -539,3 +539,34 @@ fn deutsche_texte() {
         .unwrap();
     assert!(f.message.contains("muss in einem Element"), "{}", f.message);
 }
+
+/// auditmysite-Korpus `svg_graphics_role_no_name`: Rollen aus WAI-ARIA
+/// Graphics und DPUB-ARIA sind gültig, auch wenn sie nicht in WAI-ARIA 1.2
+/// stehen.
+#[test]
+fn modul_rollen_sind_gueltig() {
+    let doc = a11y_dom::Arena::builder()
+        .open("html")
+        .attr("lang", "de")
+        .open("body")
+        .open("svg")
+        .attr("role", "graphics-document")
+        .attr("aria-label", "Diagramm")
+        .close()
+        .open("section")
+        .attr("role", "doc-chapter")
+        .close()
+        .open("div")
+        .attr("role", "doc-nonsense")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = a11y_rules::run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "aria/role-invalid")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
