@@ -32,7 +32,7 @@
 //! // Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
 //! // Semantik noch Darstellung liefert. Sie fehlen nicht im Bericht, sie
 //! // stehen mit `NotRun::CapabilityMissing` darin.
-//! assert_eq!(report.summary.rules_not_run, 7);
+//! assert_eq!(report.summary.rules_not_run, 15);
 //! ```
 //!
 //! Mit einem Host, der [`a11y_dom::Semantics`] erfüllt, laufen die
@@ -40,15 +40,20 @@
 
 #![forbid(unsafe_code)]
 
+mod checkliste;
+mod heuristik;
 mod locale;
 mod registry;
 mod rendering;
 mod semantics;
+mod sicht;
 mod structure;
 
 pub use locale::Locale;
 use locale::pick;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule};
+pub use sicht::Scope;
+use sicht::{Sicht, Verborgen};
 
 use a11y_dom::{Document, Rendering, Semantics};
 use a11y_report::{Finding, NotRun, Report, RuleRun};
@@ -125,10 +130,10 @@ fn ohne_darstellung(locale: Locale) -> &'static str {
     )
 }
 
-fn run_structure<D: Document>(doc: &D, locale: Locale, report: &mut Report) {
-    for rule in structure_rules::<D>() {
+fn run_structure<D: Document>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
+    for rule in structure_rules::<Sicht<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, locale, &mut out);
+        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
@@ -144,8 +149,9 @@ pub fn run<D: Document>(doc: &D) -> Report {
 
 /// Wie [`run`], mit Befundtexten in der gewählten Sprache.
 pub fn run_in<D: Document>(doc: &D, locale: Locale) -> Report {
+    let v = Verborgen::nach_attribut(doc);
     let mut report = Report::new();
-    run_structure(doc, locale, &mut report);
+    run_structure(doc, &v, locale, &mut report);
     nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
     nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
     report.finish()
@@ -158,26 +164,27 @@ pub fn run_with_semantics<D: Semantics>(doc: &D) -> Report {
 
 /// Wie [`run_with_semantics`], mit Befundtexten in der gewählten Sprache.
 pub fn run_with_semantics_in<D: Semantics>(doc: &D, locale: Locale) -> Report {
+    let v = Verborgen::nach_attribut(doc);
     let mut report = Report::new();
-    run_structure(doc, locale, &mut report);
-    run_semantics(doc, locale, &mut report);
+    run_structure(doc, &v, locale, &mut report);
+    run_semantics(doc, &v, locale, &mut report);
     nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
     report.finish()
 }
 
-fn run_semantics<D: Semantics>(doc: &D, locale: Locale, report: &mut Report) {
-    for rule in semantics_rules::<D>() {
+fn run_semantics<D: Semantics>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
+    for rule in semantics_rules::<Sicht<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, locale, &mut out);
+        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
 }
 
-fn run_rendering<D: Rendering>(doc: &D, locale: Locale, report: &mut Report) {
-    for rule in rendering_rules::<D>() {
+fn run_rendering<D: Rendering>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
+    for rule in rendering_rules::<Sicht<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(doc, locale, &mut out);
+        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
         vermerke(&rule.meta, &out, report);
         report.extend(out);
     }
@@ -194,10 +201,11 @@ pub fn run_full<D: Semantics + Rendering>(doc: &D) -> Report {
 
 /// Wie [`run_full`], mit Befundtexten in der gewählten Sprache.
 pub fn run_full_in<D: Semantics + Rendering>(doc: &D, locale: Locale) -> Report {
+    let v = Verborgen::nach_stil(doc);
     let mut report = Report::new();
-    run_structure(doc, locale, &mut report);
-    run_semantics(doc, locale, &mut report);
-    run_rendering(doc, locale, &mut report);
+    run_structure(doc, &v, locale, &mut report);
+    run_semantics(doc, &v, locale, &mut report);
+    run_rendering(doc, &v, locale, &mut report);
     report.finish()
 }
 
@@ -210,9 +218,10 @@ pub fn run_with_rendering<D: Rendering>(doc: &D) -> Report {
 
 /// Wie [`run_with_rendering`], mit Befundtexten in der gewählten Sprache.
 pub fn run_with_rendering_in<D: Rendering>(doc: &D, locale: Locale) -> Report {
+    let v = Verborgen::nach_stil(doc);
     let mut report = Report::new();
-    run_structure(doc, locale, &mut report);
+    run_structure(doc, &v, locale, &mut report);
     nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
-    run_rendering(doc, locale, &mut report);
+    run_rendering(doc, &v, locale, &mut report);
     report.finish()
 }

@@ -1,6 +1,6 @@
 {
   "name": "@casoon/a11y-wasm",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Accessibility rules as WebAssembly: run the a11y rule set inside a live page.",
   "license": "MIT",
   "type": "module",

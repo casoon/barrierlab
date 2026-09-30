@@ -169,6 +169,41 @@ pub struct ComputedStyle {
     pub visibility: Option<String>,
 }
 
+/// Layout-Angaben für heuristische Prüfungen — was eine Regel braucht, um eine
+/// Barriere zu *vermuten*, nicht um sie zu belegen. Die Regeln darauf melden
+/// deshalb `REVIEW`, nie `FAIL`.
+///
+/// Alles hier kostet den Host zusätzliche Arbeit; er liefert es über
+/// [`Rendering::layout`], und wer es nicht liefert, bekommt diese Heuristiken
+/// nicht.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Layout {
+    /// Ein Flex-Container mit `flex-direction: row-reverse` oder
+    /// `column-reverse`: Die Leserichtung weicht von der Quellreihenfolge ab.
+    pub flex_reversed: bool,
+    /// Berechnetes `order`. Ungleich 0 verschiebt das Element gegenüber der
+    /// Quellreihenfolge.
+    pub order: i32,
+    /// Berechnetes `min-width` in CSS-Pixeln, `0` ohne Angabe.
+    pub min_width_px: f32,
+    /// Berechnetes `cursor: pointer` — das Element sieht anklickbar aus.
+    pub cursor_pointer: bool,
+    /// Auf dem Element läuft eine Animation mit unendlich vielen Wiederholungen.
+    pub infinite_animation: bool,
+    /// Das Element liegt im sichtbaren Bereich, aber seine Mitte wird von
+    /// einem fixierten oder klebenden fremden Element überdeckt.
+    pub obscured: bool,
+    /// Ein fixiertes oder klebendes Element am oberen Rand, das tiefer reicht
+    /// als `scroll-padding-top`: Was beim Rückwärts-Tabben oben ausgerichtet
+    /// wird, kann ganz darunter verschwinden.
+    pub hides_focus: bool,
+    /// Ob der Fokus sichtbar wird: `Some(true)`, wenn sich beim Fokussieren
+    /// ein Stil ändert, der als Indikator taugt; `None`, wenn nicht gemessen —
+    /// Fokussieren ändert den Zustand der Seite und ist deshalb ein eigener,
+    /// ausdrücklicher Durchgang.
+    pub focus_visible: Option<bool>,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -182,6 +217,12 @@ pub trait Rendering: Document {
     /// „steht im Markup".
     fn is_rendered<'n>(&'n self, node: Self::N<'n>) -> bool {
         self.bounds(node).is_some_and(|b| !b.is_empty())
+    }
+
+    /// Layout-Angaben für die heuristischen Regeln. Vorgabe `None`: Ein Host,
+    /// der sie nicht erhebt, bekommt diese Regeln nicht.
+    fn layout<'n>(&'n self, _node: Self::N<'n>) -> Option<Layout> {
+        None
     }
 }
 

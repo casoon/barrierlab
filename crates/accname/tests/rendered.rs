@@ -250,3 +250,45 @@ fn zeilenumbruch_trennt() {
         Some("Austauschbar. Oder unverwechselbar.")
     );
 }
+
+/// Ein Label mit `display: none` benennt nichts — Chrome gibt dem Feld dann
+/// den Namen `""` (per CDP nachgemessen auf barrierlab.eu/experience/, wo ein
+/// Schalter die Labels ausblendet).
+#[test]
+fn nicht_dargestelltes_label_benennt_nicht() {
+    let doc = Arena::builder()
+        .open("form")
+        .open("label")
+        .attr("for", "e")
+        .attr("data-display", "none")
+        .text("E-Mail")
+        .close()
+        .open("input")
+        .attr("id", "e")
+        .close()
+        .close()
+        .build();
+    assert_eq!(gerendert(&doc, "input"), None);
+
+    // Ohne Stil ist die Verstecktheit nicht erkennbar; das Label zählt.
+    let ids = IdIndex::build(doc.root());
+    assert_eq!(name(finde(&doc, "input"), &ids).as_deref(), Some("E-Mail"));
+}
+
+/// Per `aria-labelledby` zählt versteckter Inhalt weiterhin.
+#[test]
+fn verstecktes_label_zaehlt_ueber_labelledby() {
+    let doc = Arena::builder()
+        .open("form")
+        .open("label")
+        .attr("id", "l")
+        .attr("data-display", "none")
+        .text("E-Mail")
+        .close()
+        .open("input")
+        .attr("aria-labelledby", "l")
+        .close()
+        .close()
+        .build();
+    assert_eq!(gerendert(&doc, "input").as_deref(), Some("E-Mail"));
+}

@@ -19,7 +19,7 @@ mod testing;
 use wasm_bindgen::prelude::*;
 
 pub use arena::{Arena, ArenaNode};
-pub use rendering::{RenderArena, RenderingColumns};
+pub use rendering::{LayoutColumns, RenderArena, RenderingColumns};
 pub use semantics::SemanticArena;
 
 /// Ein Scan: die Arena eines Dokuments, über die der Regelbestand läuft.
@@ -33,6 +33,9 @@ pub struct Scan {
     /// laufen die Kontrastregeln nicht — und werden als solche vermerkt, nicht
     /// uebergangen.
     rendering: Option<RenderingColumns>,
+    /// Layout und Geometrie für die heuristischen Regeln. Fehlen sie, melden
+    /// diese Regeln nichts.
+    layout: Option<LayoutColumns>,
 }
 
 #[wasm_bindgen]
@@ -65,6 +68,7 @@ impl Scan {
         };
         Scan {
             rendering: None,
+            layout: None,
             arena: Arena::from_columns(
                 &tag,
                 &parent,
@@ -118,9 +122,33 @@ impl Scan {
     /// über der Arena berechnet. Tier 3 nur, wenn `withRendering` gerufen
     /// wurde. Regeln oberhalb des verfügbaren Tiers vermerkt der Bericht als
     /// nicht gelaufen; sie erscheinen nie als bestanden.
+    /// Layout und Geometrie für die heuristischen Regeln. Nur zusammen mit
+    /// [`Scan::with_rendering`] wirksam. `bounds` hält vier Werte je Knoten.
+    #[wasm_bindgen(js_name = withLayout)]
+    pub fn with_layout(
+        &mut self,
+        flags: Vec<u8>,
+        order: Vec<i32>,
+        min_width_px: Vec<f32>,
+        bounds: Vec<f32>,
+    ) {
+        self.layout = Some(LayoutColumns {
+            flags,
+            order,
+            min_width_px,
+            bounds,
+        });
+    }
+
     pub fn run(&self) -> Result<JsValue, JsValue> {
         let report = match &self.rendering {
-            Some(spalten) => a11y_rules::run_full(&RenderArena::new(&self.arena, spalten)),
+            Some(spalten) => {
+                let host = RenderArena::new(&self.arena, spalten);
+                match &self.layout {
+                    Some(layout) => a11y_rules::run_full(&host.with_layout(layout)),
+                    None => a11y_rules::run_full(&host),
+                }
+            }
             None => a11y_rules::run_with_semantics(&SemanticArena::new(&self.arena)),
         };
         serde_wasm_bindgen::to_value(&report).map_err(JsValue::from)
@@ -251,7 +279,8 @@ mod tests {
     /// Nicht gelaufen ist nicht bestanden: Der Bericht benennt Regeln, die der
     /// Host nicht bedienen konnte, statt zu schweigen.
     ///
-    /// Ohne den Tier-3-Durchgang des Collectors sind das die Kontrastregeln.
+    /// Ohne den Tier-3-Durchgang des Collectors sind das die Kontrastregeln und
+    /// die Heuristiken über Layout und Geometrie.
     /// Sie verschwinden nicht aus dem Bericht — sie stehen mit
     /// `CapabilityMissing` darin.
     #[test]
@@ -268,10 +297,12 @@ mod tests {
             .filter(|r| r.not_run.is_some())
             .map(|r| r.rule_id.as_str())
             .collect();
-        assert_eq!(
-            offen,
-            ["contrast/text-insufficient", "contrast/text-undetermined"]
-        );
+        let tier3: Vec<&str> = a11y_rules::rendering_metas()
+            .iter()
+            .flat_map(|m| m.ids.iter().copied())
+            .collect();
+        assert!(offen.contains(&"contrast/text-insufficient"));
+        assert_eq!(offen, tier3);
 
         // Kein Befund wird als bestanden ausgegeben, den niemand geprüft hat.
         assert_eq!(report.summary.pass, 0);

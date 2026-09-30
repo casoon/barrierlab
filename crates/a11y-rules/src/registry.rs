@@ -11,6 +11,7 @@ use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
 use crate::locale::{Locale, pick};
+use crate::sicht::Scope;
 
 /// Was über eine Regel unabhängig vom Host feststeht.
 ///
@@ -27,6 +28,9 @@ pub struct Meta {
     pub ids: &'static [&'static str],
     /// Welche Datenschicht die Regel braucht.
     pub tier: Tier,
+    /// Welche Knoten die Regel sieht. Versteckte Teilbäume fehlen in ihrer
+    /// Sicht auf das Dokument, statt dass jede Regel sie einzeln ausnimmt.
+    pub scope: Scope,
     /// WCAG-Erfolgskriterien, z. B. `["1.1.1"]`.
     pub wcag: &'static [&'static str],
     /// Vorgabeschwere. Einzelne Befunde dürfen davon abweichen.
