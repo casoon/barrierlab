@@ -289,16 +289,41 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
     },
+    Meta {
+        ids: &["aria/attribute-not-allowed", "aria/attribute-prohibited"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "Use only ARIA attributes the element's role supports.",
+        #[cfg(feature = "de")]
+        help_de: "Nur ARIA-Attribute verwenden, die die Rolle des Elements unterstützt.",
+    },
+    Meta {
+        ids: &[
+            "aria/required-parent-missing",
+            "aria/required-children-missing",
+        ],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1", "4.1.2"],
+        severity: Severity::High,
+        help: "Roles that belong together must be nested as WAI-ARIA requires.",
+        #[cfg(feature = "de")]
+        help_de: "Zusammengehörige Rollen müssen verschachtelt sein, wie WAI-ARIA es verlangt.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 5] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 7] {
     [
         link_names,
         button_names,
         svg_names,
         ambiguous_link_names,
         generic_link_names,
+        crate::aria::attributes_allowed,
+        crate::aria::required_context,
     ]
 }
 

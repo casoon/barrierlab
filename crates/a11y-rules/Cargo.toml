@@ -22,3 +22,5 @@ a11y-report = { workspace = true }
 
 [dev-dependencies]
 accname = { workspace = true }
+# Nur für Tests: die Korpusfälle als HTML statt als Builder-Kette.
+html5-parser = { workspace = true }

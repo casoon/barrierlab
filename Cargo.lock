@@ -29,6 +29,7 @@ dependencies = [
  "a11y-dom",
  "a11y-report",
  "accname",
+ "html5-parser",
 ]
 
 [[package]]
