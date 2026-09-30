@@ -80,9 +80,27 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             continue;
         }
         // Rein dekoratives SVG ist korrekt ausgezeichnet und gemeint.
-        if matches!(n.attr("role"), Some("presentation") | Some("none"))
-            || n.attr("aria-hidden") == Some("true")
+        if n.attr("role").is_some_and(|r| {
+            r.split_whitespace().next().is_some_and(|x| {
+                x.eq_ignore_ascii_case("presentation") || x.eq_ignore_ascii_case("none")
+            })
+        }) || n.attr("aria-hidden") == Some("true")
         {
+            continue;
+        }
+        // Das Icon in einem benannten Link oder Button: Der Name des
+        // Bedienelements trägt die Aussage, die Grafik braucht keinen eigenen.
+        // Beleg: auditmysite `is_graphic_in_named_control` (mit.edu).
+        if a11y_dom::ancestors(n).any(|a| {
+            (a.is_element("a")
+                || a.is_element("button")
+                || a.attr("role").is_some_and(|r| {
+                    r.split_whitespace().next().is_some_and(|x| {
+                        x.eq_ignore_ascii_case("link") || x.eq_ignore_ascii_case("button")
+                    })
+                }))
+                && named(doc, a)
+        }) {
             continue;
         }
         if !named(doc, n) {

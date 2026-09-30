@@ -1489,6 +1489,18 @@ fn viewport_unterscheidet_verstoss_von_begrenzung() {
     assert_eq!(fall("maximum-scale=1.5"), vec!["zoom/viewport-locked"]);
     assert_eq!(fall("user-scalable=NO"), vec!["zoom/viewport-locked"]);
 
+    // Semikolon und Leerraum trennen wie das Komma, Leerraum um `=` gehört
+    // zum Paar (CSS Viewport). Das Semikolon ist in der Praxis verbreitet.
+    assert_eq!(
+        fall("width=device-width; maximum-scale=1"),
+        vec!["zoom/viewport-locked"]
+    );
+    assert_eq!(
+        fall("width=device-width user-scalable = no"),
+        vec!["zoom/viewport-locked"]
+    );
+    assert!(fall("width=device-width; user-scalable=yes").is_empty());
+
     // Zwischen 200 und 500 %: erfuellt 1.4.4, begrenzt aber. Eigene Kennung,
     // und nicht beide zugleich.
     assert_eq!(fall("maximum-scale=3"), vec!["zoom/viewport-scale-limited"]);
@@ -1856,6 +1868,46 @@ fn sprunglink_wird_an_text_oder_klasse_erkannt() {
     assert!(hat(&run(&anker), "keyboard/skip-link-missing"));
 }
 
+/// auditmysite#642: Erkannt am Ziel und an der Stellung, nicht am Wortlaut —
+/// ein Fragmentlink vor dem ersten Link, der die Seite verlässt.
+#[test]
+fn sprunglink_wird_an_ziel_und_stellung_erkannt() {
+    let franzoesisch = sauber()
+        .open("body")
+        .open("a")
+        .attr("href", "#contenu")
+        .text("Aller au contenu")
+        .close()
+        .open("nav")
+        .open("a")
+        .attr("href", "/fr/")
+        .text("Accueil")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&franzoesisch), "keyboard/skip-link-missing"));
+
+    // Derselbe Anker hinter der Navigation überspringt nichts.
+    let dahinter = sauber()
+        .open("body")
+        .open("nav")
+        .open("a")
+        .attr("href", "/fr/")
+        .text("Accueil")
+        .close()
+        .close()
+        .open("a")
+        .attr("href", "#contenu")
+        .text("Aller au contenu")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&dahinter), "keyboard/skip-link-missing"));
+}
+
 /// Der Sprunglink ist heuristisch erkannt — der Befund ist deshalb REVIEW.
 #[test]
 fn fehlender_sprunglink_ist_review_nicht_fail() {
@@ -1888,14 +1940,55 @@ fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
         .filter(|f| f.rule_id == "aria/required-attribute-missing")
         .map(|f| f.message.as_str())
         .collect();
-    assert_eq!(befunde.len(), 2, "{:?}", ids(&r));
+    // Der Slider hat valuenow; valuemin und valuemax haben seit ARIA 1.2
+    // Vorgaben und fehlen deshalb nicht.
+    assert_eq!(befunde.len(), 1, "{:?}", ids(&r));
     assert!(befunde.iter().any(|m| m.contains("aria-checked")));
-    // Der Slider hat valuenow, es fehlen valuemin und valuemax.
-    assert!(
-        befunde
-            .iter()
-            .any(|m| m.contains("aria-valuemin") && m.contains("aria-valuemax"))
-    );
+}
+
+#[test]
+fn nativer_zustand_und_statischer_trenner_brauchen_kein_aria() {
+    // auditmysite#656: Das native Feld übermittelt Wert bzw. Haken selbst.
+    let doc = vollstaendig()
+        .open("input")
+        .attr("type", "range")
+        .attr("role", "slider")
+        .close()
+        .open("input")
+        .attr("type", "checkbox")
+        .attr("role", "switch")
+        .close()
+        .open("div")
+        .attr("role", "separator")
+        .close()
+        .open("div")
+        .attr("role", "option")
+        .text("A")
+        .close()
+        .close()
+        .build();
+    assert!(!hat(&run(&doc), "aria/required-attribute-missing"));
+}
+
+#[test]
+fn meter_und_fokussierbarer_trenner_brauchen_valuenow() {
+    let doc = vollstaendig()
+        .open("div")
+        .attr("role", "meter")
+        .close()
+        .open("div")
+        .attr("role", "separator")
+        .attr("tabindex", "0")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "aria/required-attribute-missing")
+        .count();
+    assert_eq!(n, 2, "{:?}", ids(&r));
 }
 
 #[test]
@@ -2007,4 +2100,104 @@ fn ausdruecklich_dekorative_bilder_brauchen_kein_alt() {
         .close()
         .build();
     assert!(hat(&run(&ohne), "images/alt-missing"));
+}
+
+#[test]
+fn leerer_oder_verwaister_aktiver_nachfahre_faellt_auf() {
+    let doc = vollstaendig()
+        .open("div")
+        .attr("role", "listbox")
+        .attr("tabindex", "0")
+        .attr("aria-activedescendant", "gibt-es-nicht")
+        .close()
+        .open("button")
+        .attr("aria-controls", "  ")
+        .text("Menü")
+        .close()
+        // Leeres aria-labelledby fällt auf andere Namensquellen zurück.
+        .open("button")
+        .attr("aria-labelledby", "")
+        .text("OK")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "aria/reference-missing")
+        .count();
+    assert_eq!(n, 2, "{:?}", r.findings);
+}
+
+#[test]
+fn deaktivierter_link_unter_aria_hidden_bleibt_fokussierbar() {
+    // `disabled` wirkt nur an Formularfeldern.
+    let doc = vollstaendig()
+        .open("div")
+        .attr("aria-hidden", "true")
+        .open("a")
+        .attr("href", "/x")
+        .attr("disabled", "")
+        .text("x")
+        .close()
+        .open("button")
+        .attr("disabled", "")
+        .text("y")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "keyboard/hidden-focusable")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
+
+#[test]
+fn bild_mit_aria_label_oder_title_braucht_kein_alt() {
+    let doc = vollstaendig()
+        .open("img")
+        .attr("src", "logo.png")
+        .attr("aria-label", "Logo")
+        .close()
+        .open("img")
+        .attr("src", "karte.png")
+        .attr("title", "Anfahrt")
+        .close()
+        .open("img")
+        .attr("src", "leer.png")
+        .attr("title", " ")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "images/alt-missing")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
+
+/// auditmysite#639: Die Grenze gilt auch über die Rolle des Vorfahren.
+#[test]
+fn header_unter_role_main_ist_kein_banner() {
+    let doc = sauber()
+        .open("body")
+        .open("div")
+        .attr("role", "main")
+        .open("header")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(hat(&run(&doc), "landmarks/banner-missing"));
 }
