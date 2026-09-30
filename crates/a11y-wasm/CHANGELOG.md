@@ -2,6 +2,15 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.3.1] - 2026-09-30
+
+Gebaut auf `a11y-rules` 0.13.5. Keine Änderung an der Schnittstelle; übernimmt
+die Fehlalarm-Korrekturen aus 0.13.1–0.13.5 (Viewport-Trenner, Pflichtattribute
+nach ARIA 1.2, `aria-activedescendant`, Landmark-Grenze über Rollen, Sprunglink
+am Ziel und zum Hauptinhalt, `img` mit `aria-label`/`title`, SVG im benannten
+Link, geschlossenes `<details>`, eingeklapptes `aria-controls`, main-missing
+hinter offenem Dialog).
+
 ## [0.3.0] - 2026-09-30
 
 Gebaut auf `a11y-rules` 0.13.0.
