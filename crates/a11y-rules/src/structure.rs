@@ -536,18 +536,22 @@ fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
-/// Ob ein modaler Dialog offen ist: `role="dialog"`/`"alertdialog"` mit
-/// `aria-modal="true"`, oder ein `<dialog open>`. Solange er offen ist, blenden
-/// Seiten den Rest korrekt aus (`aria-hidden` oder `inert`) — die Landmarks
-/// fehlen dann für den Moment, nicht für die Seite.
+/// Ob ein Dialog offen ist: ein dargestelltes `role="dialog"`/`"alertdialog"`
+/// oder ein `<dialog open>`. Solange er offen ist, blenden Seiten den Rest oft
+/// aus (`aria-hidden` oder `inert`) — die Landmarks fehlen dann für den
+/// Moment, nicht für die Seite. `aria-modal` ist keine Voraussetzung: Der
+/// Consent-Dialog von administracion.gob.es trägt es nicht und blendet
+/// `<main>` trotzdem aus (auditmysite#709). Die Sicht der Regel enthält nur
+/// Dargestelltes; ein per Stil geschlossener Dialog zählt bei Hosts mit
+/// Stilen also nicht.
 fn modal_offen<D: Document>(doc: &D) -> bool {
     elements(doc).any(|n| {
-        let modal_rolle = n.attr("role").is_some_and(|r| {
+        let dialog_rolle = n.attr("role").is_some_and(|r| {
             r.split_whitespace().next().is_some_and(|x| {
                 x.eq_ignore_ascii_case("dialog") || x.eq_ignore_ascii_case("alertdialog")
             })
-        }) && n.attr("aria-modal") == Some("true");
-        modal_rolle || (n.is_element("dialog") && n.has_attr("open"))
+        });
+        dialog_rolle || (n.is_element("dialog") && n.has_attr("open"))
     })
 }
 

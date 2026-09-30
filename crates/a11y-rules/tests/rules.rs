@@ -2312,6 +2312,26 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .expect("als Hinweis gemeldet");
     assert_eq!(f.outcome, Outcome::Review);
 
+    // Auch ohne aria-modal (administracion.gob.es).
+    let ohne_modal = sauber()
+        .open("body")
+        .open("main")
+        .attr("aria-hidden", "true")
+        .close()
+        .open("section")
+        .attr("role", "dialog")
+        .attr("aria-label", "Cookies")
+        .close()
+        .close()
+        .close()
+        .build();
+    let f = run(&ohne_modal)
+        .findings
+        .into_iter()
+        .find(|f| f.rule_id == "landmarks/main-missing")
+        .unwrap();
+    assert_eq!(f.outcome, Outcome::Review);
+
     // Ohne Dialog bleibt es ein Verstoß.
     let ohne = sauber()
         .open("body")
