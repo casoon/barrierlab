@@ -2,7 +2,9 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-30
+
+Gebaut auf `a11y-rules` 0.13.0.
 
 ### Changed
 
