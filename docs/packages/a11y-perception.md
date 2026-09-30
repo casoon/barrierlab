@@ -54,7 +54,7 @@ flowchart LR
 
 ## Abhängigkeiten
 
-Nach unten: nur `serde`. Nach oben: auditmysite; künftig der Reader-Host.
+Nach unten: nur `serde`. Nach oben: auditmysite, Relief.
 Bewusst **nicht** `a11y-report`: dieses Paket erzeugt keine Befunde.
 
 ## Grenzen

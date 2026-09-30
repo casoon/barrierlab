@@ -13,7 +13,7 @@ Paket hier liegt.
 | auditmysite | `casoon/auditmysite` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `a11y-perception`, `web-checks` |
 | astro-post-audit | `casoon/astro-post-audit` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `web-checks` |
 | liveaudit | `casoon/liveaudit` | die vier a11y-Crates direkt (WASM-Adapter im Repo) | `a11y-wasm` als npm-Paket |
-| Reader-Host | noch kein Repository | — | `a11y-perception` |
+| Relief | `casoon/relief` | `a11y-perception`, `a11y-dom`, `accname`, `a11y-report` | `a11y-rules` |
 | auditmysite_studio | `casoon/auditmysite_studio` | `auditmysite` als Bibliothek | — |
 
 Regeln, die sich daraus ergeben:

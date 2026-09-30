@@ -16,8 +16,8 @@ binden die Pakete aus den Registries ein.
 Vorgeschichte: Dieses Verzeichnis war bis 2026-09-22 reines Konzeptmaterial für
 einen browserseitigen Vorabtest der Zugänglichkeit von Interaktionen (Snapshot →
 handeln → Snapshot → Differenz). Dieser Motor kommt als Paket `a11y-perception`
-hierher; ein eigenständiger Host dafür bekommt ein eigenes Repository. Der
-Kenntnisstand dazu steht in `plan/reader/`.
+hierher; den eigenständigen Host übernimmt Relief (`casoon/relief`) mit eigenem
+Browser. Der Kenntnisstand dazu steht in `plan/reader/`.
 
 ## Stand
 
@@ -49,9 +49,9 @@ vollständig: fmt, clippy und Tests über den Workspace.
 
 ## Wo die Arbeit liegt
 
-`plan/status.md` ist der einzige Index: Migrationsstand und der Backlog des
-Reader-Themas. Der Referenzrahmen des Reader-Themas steht in
-`plan/reader/spezifikation/` und wird fortgeschrieben, nicht abgearbeitet.
+`plan/status.md` ist der einzige Index. Das Reader-Thema ist geschlossen, Relief
+ersetzt den geplanten Host; sein Referenzrahmen bleibt in
+`plan/reader/spezifikation/` als Nachschlagewerk.
 
 ## Was hier absichtlich fehlt
 
