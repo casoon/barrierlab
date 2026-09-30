@@ -2227,3 +2227,57 @@ fn eingeklapptes_aria_controls_darf_auf_spaeteres_ziel_zeigen() {
         .count();
     assert_eq!(n, 1, "{:?}", r.findings);
 }
+
+/// barrierlab#26 (bund.de): Die Sprunglinks stehen hinter den Links des
+/// Cookie-Banners. Ein Fragmentlink auf den Anfang des Hauptinhalts zählt
+/// trotzdem; ein Anker mitten im Inhalt nicht.
+#[test]
+fn sprunglink_auf_den_hauptinhalt_zaehlt_auch_hinter_anderen_links() {
+    let seite = |ziel: &str| {
+        sauber()
+            .open("body")
+            .open("div")
+            .attr("class", "cookie-banner")
+            .open("a")
+            .attr("href", "/datenschutz")
+            .text("Datenschutz")
+            .close()
+            .open("a")
+            .attr("href", "")
+            .close()
+            .close()
+            .open("a")
+            .attr("href", ziel)
+            .text("Inhalt")
+            .close()
+            .open("nav")
+            .open("a")
+            .attr("href", "/")
+            .text("Start")
+            .close()
+            .close()
+            .open("main")
+            .attr("id", "main")
+            .open("h1")
+            .attr("id", "titel")
+            .text("Titel")
+            .close()
+            .open("p")
+            .text("Text")
+            .close()
+            .open("h2")
+            .attr("id", "abschnitt")
+            .text("Abschnitt")
+            .close()
+            .close()
+            .close()
+            .close()
+            .build()
+    };
+    assert!(!hat(&run(&seite("#main")), "keyboard/skip-link-missing"));
+    assert!(!hat(&run(&seite("#titel")), "keyboard/skip-link-missing"));
+    assert!(hat(
+        &run(&seite("#abschnitt")),
+        "keyboard/skip-link-missing"
+    ));
+}
