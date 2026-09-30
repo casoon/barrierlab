@@ -157,6 +157,29 @@ fn verschachteltes_svg_unter_aria_hidden_braucht_keinen_namen() {
 }
 
 #[test]
+fn icon_im_benannten_link_braucht_keinen_eigenen_namen() {
+    let arena = seite()
+        .open("a")
+        .attr("href", "/t")
+        .attr("aria-label", "Twitter")
+        .open("svg")
+        .open("path")
+        .close()
+        .close()
+        .close()
+        // Zur Kontrolle: Das freistehende SVG fällt weiter auf.
+        .open("svg")
+        .open("path")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    assert_eq!(anzahl(&r, "svg/name-missing"), 1, "{:?}", r.findings);
+}
+
+#[test]
 fn leere_versteckte_liste_ist_kein_befund() {
     let arena = seite()
         .open("div")
