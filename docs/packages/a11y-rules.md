@@ -12,8 +12,8 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 34 in Tier 1 (Struktur), 5 in Tier 2 (Semantik),
-2 in Tier 3 (Darstellung).
+alle Oberflächen stabil und in `Meta::ids` deklariert: 41 in Tier 1 (Struktur, davon 7 Checkliste), 5 in Tier 2 (Semantik),
+10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
 
@@ -39,6 +39,12 @@ flowchart LR
 | `structure_metas`, `semantics_metas`, `rendering_metas` | alle Kennungen vorab, ohne zu laufen — für Abdeckungsberichte |
 | `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule` | Regeltypen und ihre Deklaration |
 | `Scope` | welche Knoten eine Regel sieht: Accessibility-Tree, Dargestelltes oder das ganze Markup |
+
+Zwei Regelgruppen urteilen bewusst nicht: die **Checkliste** (`manual/*`,
+`UNTESTED` je Seite und Kriterium, sobald es auf der Seite anwendbar ist) und
+die **Heuristiken** in Tier 3 (`REVIEW`, aus `Rendering::layout` und
+`bounds`; ohne diese Daten melden sie nichts, nur die ungemessene
+Fokus-Sichtbarkeit bleibt als `UNTESTED` stehen).
 
 ## Abhängigkeiten
 

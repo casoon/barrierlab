@@ -7,6 +7,15 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added
+
+- `Layout` und `Rendering::layout()` (Vorgabe `None`): Layout-Angaben für
+  heuristische Regeln — umgekehrte Flex-Richtung, `order`, `min-width`,
+  `cursor: pointer`, Endlos-Animation, Verdeckung durch fixierte Elemente,
+  Leisten tiefer als `scroll-padding-top`, gemessene Fokus-Sichtbarkeit.
+  Nicht brechend: Ein Host ohne diese Daten bekommt die Heuristiken nicht
+  (liveaudit#6).
+
 ## [0.12.2] - 2026-09-29
 
 ### Documentation

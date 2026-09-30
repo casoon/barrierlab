@@ -7,12 +7,14 @@
 //! auch die Merkliste, ohne die Tier 3 nach der Messung vom 20.09.2026 nicht
 //! tragbar wäre.
 //!
-//! Geometrie (`bounds`) ist bewusst noch nicht dabei: Die Kontrastregel braucht
-//! sie nicht, und `getBoundingClientRect()` je Knoten kostet laut derselben
-//! Messung so viel wie der ganze Collector. Sie kommt mit der ersten Regel, die
-//! sie tatsächlich braucht — Zielgrößen.
+//! Layout und Geometrie kommen in eigenen Spalten ([`LayoutColumns`]) für die
+//! heuristischen Regeln. Geometrie (`bounds`) erhebt der Collector nur an
+//! Bedienelementen: `getBoundingClientRect()` je Knoten kostet laut derselben
+//! Messung so viel wie der ganze Collector.
 
-use a11y_dom::{Color, ComputedStyle, Document, NameSource, Node, Rect, Rendering, Semantics};
+use a11y_dom::{
+    Color, ComputedStyle, Document, Layout, NameSource, Node, Rect, Rendering, Semantics,
+};
 
 use crate::arena::{Arena, ArenaNode};
 use crate::semantics::SemanticArena;
@@ -45,6 +47,28 @@ pub struct RenderingColumns {
     pub flags: Vec<u8>,
 }
 
+/// Bits der Layout-Spalte. Ohne `LAYOUT_ERFASST` hat der Collector für den
+/// Knoten nichts erhoben.
+const LAYOUT_ERFASST: u8 = 1;
+const LAYOUT_UMGEKEHRT: u8 = 2;
+const LAYOUT_ZEIGER: u8 = 4;
+const LAYOUT_ENDLOS: u8 = 8;
+const LAYOUT_VERDECKT: u8 = 16;
+const LAYOUT_FOKUS_GEMESSEN: u8 = 32;
+const LAYOUT_FOKUS_SICHTBAR: u8 = 64;
+const LAYOUT_VERSTECKT_FOKUS: u8 = 128;
+
+/// Die Layout-Spalten für die heuristischen Regeln, parallel zu den
+/// Arena-Indizes. `bounds` hält vier Werte je Knoten (x, y, Breite, Höhe);
+/// eine Breite `NaN` heißt „nicht erhoben" — der Collector misst Geometrie nur
+/// an Bedienelementen, weil sie je Knoten so viel kostet wie der ganze Scan.
+pub struct LayoutColumns {
+    pub flags: Vec<u8>,
+    pub order: Vec<i32>,
+    pub min_width_px: Vec<f32>,
+    pub bounds: Vec<f32>,
+}
+
 /// Die Arena plus Semantik plus Darstellung — der vollständige Host.
 ///
 /// Erfüllt `Document`, `Semantics` und `Rendering` und ist damit der Fall, für
@@ -53,6 +77,7 @@ pub struct RenderingColumns {
 pub struct RenderArena<'a> {
     semantik: SemanticArena<'a>,
     spalten: &'a RenderingColumns,
+    layout: Option<&'a LayoutColumns>,
 }
 
 impl<'a> RenderArena<'a> {
@@ -60,7 +85,14 @@ impl<'a> RenderArena<'a> {
         RenderArena {
             semantik: SemanticArena::new(arena),
             spalten,
+            layout: None,
         }
+    }
+
+    /// Mit den Layout-Spalten für die heuristischen Regeln.
+    pub fn with_layout(mut self, layout: &'a LayoutColumns) -> Self {
+        self.layout = Some(layout);
+        self
     }
 
     fn erfasst(&self, index: usize) -> bool {
@@ -131,10 +163,39 @@ impl Rendering for RenderArena<'_> {
         })
     }
 
-    /// Noch nicht erhoben — siehe Modulkopf. `None` ist die ehrliche Antwort;
-    /// Regeln, die Geometrie brauchen, melden damit `UNTESTED`.
-    fn bounds<'n>(&'n self, _node: Self::N<'n>) -> Option<Rect> {
-        None
+    /// Nur an Bedienelementen erhoben, und nur mit Layout-Spalten.
+    fn bounds<'n>(&'n self, node: Self::N<'n>) -> Option<Rect> {
+        let i = node.id().0 as usize * 4;
+        let b = self.layout?.bounds.get(i..i + 4)?;
+        if b[2].is_nan() {
+            return None;
+        }
+        Some(Rect {
+            x: b[0],
+            y: b[1],
+            width: b[2],
+            height: b[3],
+        })
+    }
+
+    fn layout<'n>(&'n self, node: Self::N<'n>) -> Option<Layout> {
+        let spalten = self.layout?;
+        let i = node.id().0 as usize;
+        let f = *spalten.flags.get(i)?;
+        if f & LAYOUT_ERFASST == 0 {
+            return None;
+        }
+        Some(Layout {
+            flex_reversed: f & LAYOUT_UMGEKEHRT != 0,
+            order: spalten.order[i],
+            min_width_px: spalten.min_width_px[i],
+            cursor_pointer: f & LAYOUT_ZEIGER != 0,
+            infinite_animation: f & LAYOUT_ENDLOS != 0,
+            obscured: f & LAYOUT_VERDECKT != 0,
+            hides_focus: f & LAYOUT_VERSTECKT_FOKUS != 0,
+            focus_visible: (f & LAYOUT_FOKUS_GEMESSEN != 0)
+                .then_some(f & LAYOUT_FOKUS_SICHTBAR != 0),
+        })
     }
 }
 
@@ -235,5 +296,40 @@ mod tests {
         let host = RenderArena::new(&arena, &s);
         let report = a11y_rules::run_full(&host);
         assert_eq!(report.summary.rules_not_run, 0);
+    }
+
+    /// Die Layout-Spalten kommen bei den Regeln an: jedes Feld einmal gefüllt
+    /// gesehen, nicht nur deklariert.
+    #[test]
+    fn layout_spalten_erreichen_die_heuristiken() {
+        let arena = dokument();
+        let n = arena.len();
+        let s = spalten(n, 0x3333_33ff, 0xffff_ffff);
+        let absatz = elements_mit_tag(&arena, "p");
+        let mut layout = LayoutColumns {
+            flags: vec![LAYOUT_ERFASST; n],
+            order: vec![0; n],
+            min_width_px: vec![0.0; n],
+            bounds: vec![f32::NAN; n * 4],
+        };
+        layout.min_width_px[absatz] = 640.0;
+        layout.flags[absatz] |= LAYOUT_ENDLOS | LAYOUT_ZEIGER;
+        let host = RenderArena::new(&arena, &s).with_layout(&layout);
+        let report = a11y_rules::run_full(&host);
+        let ids: Vec<&str> = report.findings.iter().map(|f| f.rule_id.as_str()).collect();
+        for erwartet in [
+            "reflow/min-width",
+            "motion/infinite-animation",
+            "keyboard/pointer-only",
+        ] {
+            assert!(ids.contains(&erwartet), "{erwartet} fehlt in {ids:?}");
+        }
+    }
+
+    fn elements_mit_tag(arena: &Arena, tag: &str) -> usize {
+        a11y_dom::elements(arena)
+            .find(|n| n.local_name() == tag)
+            .map(|n| n.id().0 as usize)
+            .unwrap()
     }
 }

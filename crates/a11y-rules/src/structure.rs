@@ -928,6 +928,26 @@ fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+/// Ob die Tabtaste dieses Element erreicht: nativ fokussierbar oder mit
+/// `tabindex` ≥ 0, und nicht per `tabindex="-1"` oder `disabled` ausgenommen.
+/// `inert` und Nicht-Dargestelltes prüft der Aufrufer.
+pub(crate) fn per_tab_erreichbar<'a, N: Node<'a>>(n: N) -> bool {
+    let tabindex = n
+        .attr("tabindex")
+        .and_then(|t| t.trim().parse::<i32>().ok());
+    if let Some(t) = tabindex {
+        return t >= 0;
+    }
+    (match n.local_name() {
+        "a" | "area" => n.has_attr("href"),
+        "input" => !n
+            .attr("type")
+            .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
+        "button" | "select" | "textarea" | "summary" | "iframe" => true,
+        _ => false,
+    }) && !n.has_attr("disabled")
+}
+
 /// Fokussierbar und zugleich vor dem Accessibility-Tree versteckt — Nutzer
 /// landen mit der Tabtaste auf etwas, das ihnen nicht angesagt wird.
 ///
@@ -945,23 +965,7 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
         {
             continue;
         }
-        let tabindex = n
-            .attr("tabindex")
-            .and_then(|t| t.trim().parse::<i32>().ok());
-        if tabindex.is_some_and(|v| v < 0) {
-            continue;
-        }
-        let natively_focusable = match n.local_name() {
-            "a" | "area" => n.has_attr("href"),
-            "input" => !n
-                .attr("type")
-                .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
-            "button" | "select" | "textarea" | "summary" | "iframe" => true,
-            _ => false,
-        } && !n.has_attr("disabled");
-        let tab_focusable = tabindex.is_some();
-
-        if natively_focusable || tab_focusable {
+        if per_tab_erreichbar(n) {
             out.push(
                 Finding::fail(
                     "keyboard/hidden-focusable",
@@ -1413,10 +1417,11 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
     },
+    crate::checkliste::META,
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 16] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 17] {
     [
         lang,
         title,
@@ -1434,6 +1439,7 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 16] {
         table_headers,
         landmarks,
         skip_link,
+        crate::checkliste::checkliste,
     ]
 }
 

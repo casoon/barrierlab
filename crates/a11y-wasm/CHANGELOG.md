@@ -9,8 +9,15 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - `RenderArena` berechnet den Namen mit `accname::name_rendered`: Per
   `display: none` versteckte Labels und Teilbäume tragen nichts bei.
 - Übernimmt aus `a11y-rules` den Geltungsbereich je Regel: Befunde an
-  versteckten Elementen entfallen (liveaudit#1, #3, #4). 168,5 → 177,1 KB roh,
-  80,9 → 83,4 KB gzip.
+  versteckten Elementen entfallen (liveaudit#1, #3, #4), dazu Checkliste und
+  Heuristiken (liveaudit#6, #7).
+
+### Added
+
+- `Scan.withLayout(flags, order, minWidthPx, bounds)`: Layout und Geometrie
+  für die heuristischen Regeln; `RenderArena` bedient damit `bounds` und
+  `layout`. `withRendering` bleibt unverändert. Größe 168,5 → 197,6 KB roh,
+  80,9 → 92,4 KB gzip.
 
 ## [0.2.1] - 2026-09-28
 
