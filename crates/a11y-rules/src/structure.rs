@@ -16,6 +16,58 @@ fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
+/// Rollen aus den ARIA-Modulen: WAI-ARIA Graphics Module 1.0 und DPUB-ARIA 1.1.
+/// Gültige Rollen, aber ohne Einträge in den Attribut-Tabellen von WAI-ARIA
+/// 1.2 — `aria/role-invalid` erkennt sie an, die Attributregeln urteilen über
+/// sie nicht. Beleg: `<svg role="graphics-document">` im auditmysite-Korpus
+/// (`svg_graphics_role_no_name`).
+pub(crate) const MODULE_ROLES: &[&str] = &[
+    "graphics-document",
+    "graphics-object",
+    "graphics-symbol",
+    "doc-abstract",
+    "doc-acknowledgments",
+    "doc-afterword",
+    "doc-appendix",
+    "doc-backlink",
+    "doc-biblioentry",
+    "doc-bibliography",
+    "doc-biblioref",
+    "doc-chapter",
+    "doc-colophon",
+    "doc-conclusion",
+    "doc-cover",
+    "doc-credit",
+    "doc-credits",
+    "doc-dedication",
+    "doc-endnote",
+    "doc-endnotes",
+    "doc-epigraph",
+    "doc-epilogue",
+    "doc-errata",
+    "doc-example",
+    "doc-footnote",
+    "doc-foreword",
+    "doc-glossary",
+    "doc-glossref",
+    "doc-index",
+    "doc-introduction",
+    "doc-noteref",
+    "doc-notice",
+    "doc-pagebreak",
+    "doc-pagefooter",
+    "doc-pageheader",
+    "doc-pagelist",
+    "doc-part",
+    "doc-preface",
+    "doc-prologue",
+    "doc-pullquote",
+    "doc-qna",
+    "doc-subtitle",
+    "doc-tip",
+    "doc-toc",
+];
+
 /// Alle gültigen ARIA-Rollen aus WAI-ARIA 1.2, ohne die abstrakten.
 pub(crate) const VALID_ROLES: &[&str] = &[
     "alert",
@@ -949,7 +1001,7 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     .with_wcag(["4.1.2"])
                     .at(at(n.id())),
                 );
-            } else if !VALID_ROLES.contains(&r) {
+            } else if !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
                 out.push(
                     Finding::fail(
                         "aria/role-invalid",
