@@ -14,7 +14,7 @@
 use std::collections::HashSet;
 
 use a11y_dom::{
-    ComputedStyle, Document, NameSource, Node, NodeId, NodeKind, Rect, Rendering, Semantics,
+    ComputedStyle, Document, Layout, NameSource, Node, NodeId, NodeKind, Rect, Rendering, Semantics,
 };
 
 /// Welche Knoten eine Regel betrachtet.
@@ -239,5 +239,10 @@ impl<D: Rendering> Rendering for Sicht<'_, D> {
     fn is_rendered<'n>(&'n self, node: Self::N<'n>) -> bool {
         let doc: &'n D = self.doc;
         doc.is_rendered(node.inner)
+    }
+
+    fn layout<'n>(&'n self, node: Self::N<'n>) -> Option<Layout> {
+        let doc: &'n D = self.doc;
+        doc.layout(node.inner)
     }
 }

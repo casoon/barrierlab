@@ -24,6 +24,7 @@
 use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
+use crate::heuristik;
 use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, RenderingRule};
 use crate::sicht::Scope;
@@ -161,7 +162,7 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
     }
 }
 
-pub(crate) const METAS: &[Meta] = &[Meta {
+const KONTRAST: Meta = Meta {
     ids: &["contrast/text-insufficient", "contrast/text-undetermined"],
     tier: Tier::Rendering,
     scope: Scope::Rendered,
@@ -173,13 +174,27 @@ pub(crate) const METAS: &[Meta] = &[Meta {
     help_de: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
               mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
               fettem Schnitt ab 14 pt.",
-}];
+};
+
+pub(crate) const METAS: &[Meta] = &[
+    KONTRAST,
+    heuristik::METAS[0],
+    heuristik::METAS[1],
+    heuristik::METAS[2],
+    heuristik::METAS[3],
+    heuristik::METAS[4],
+    heuristik::METAS[5],
+    heuristik::METAS[6],
+];
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
-    vec![RenderingRule {
-        meta: METAS[0],
-        run: text_kontrast,
-    }]
+    let funktionen = std::iter::once(text_kontrast as fn(&D, Locale, &mut Vec<Finding>))
+        .chain(heuristik::funktionen::<D>());
+    METAS
+        .iter()
+        .zip(funktionen)
+        .map(|(meta, run)| RenderingRule { meta: *meta, run })
+        .collect()
 }
 
 #[cfg(test)]

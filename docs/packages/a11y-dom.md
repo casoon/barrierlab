@@ -33,6 +33,7 @@ flowchart TB
 |---|---|
 | `Document` | das Minimum: Baum, Elemente, Attribute |
 | `Semantics`, `Rendering` | Tiers, die ein Host nur dann anbietet, wenn er die Daten wirklich hat |
+| `Layout` | Layout-Angaben für heuristische Regeln, über `Rendering::layout()` (Vorgabe `None`) |
 | `Arena`, `ArenaBuilder`, `ArenaNode` | fertige Implementierung für Tests und parserbasierte Hosts |
 
 ## Abhängigkeiten

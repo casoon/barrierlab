@@ -300,3 +300,81 @@ fn nicht_dargestelltes_fokussierbares_unter_aria_hidden_ist_kein_befund() {
         .build();
     assert_eq!(anzahl(&run(&arena), "keyboard/hidden-focusable"), 0);
 }
+
+// --- Checkliste (liveaudit#7) ---------------------------------------------
+
+fn manuell(r: &Report) -> Vec<&str> {
+    r.findings
+        .iter()
+        .filter(|f| f.rule_id.starts_with("manual/"))
+        .map(|f| f.rule_id.as_str())
+        .collect()
+}
+
+#[test]
+fn checkliste_erscheint_nur_mit_anlass() {
+    let leer = seite().close().close().build();
+    assert!(manuell(&run(&leer)).is_empty());
+
+    let arena = seite()
+        .open("video")
+        .attr("src", "a.mp4")
+        .close()
+        .open("img")
+        .attr("src", "a.png")
+        .attr("alt", "")
+        .close()
+        .open("img")
+        .attr("src", "b.png")
+        .attr("alt", "")
+        .close()
+        .open("form")
+        .open("label")
+        .text("Passwort")
+        .open("input")
+        .attr("type", "password")
+        .close()
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&arena);
+    let mut punkte = manuell(&r);
+    punkte.sort_unstable();
+    assert_eq!(
+        punkte,
+        [
+            "manual/authentication",
+            "manual/error-handling",
+            "manual/image-alternatives",
+            "manual/media-alternatives",
+            "manual/timing",
+            "manual/use-of-color",
+            "manual/visual-structure",
+        ],
+        "je Kriterium genau einmal, auch bei zwei Bildern"
+    );
+    assert!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id.starts_with("manual/"))
+            .all(|f| f.outcome == a11y_report::Outcome::Untested
+                && f.location.node.as_deref() == Some("0"))
+    );
+}
+
+#[test]
+fn versteckte_medien_setzen_keinen_punkt() {
+    let arena = seite()
+        .open("div")
+        .attr("hidden", "")
+        .open("video")
+        .attr("src", "a.mp4")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!manuell(&run(&arena)).contains(&"manual/media-alternatives"));
+}
