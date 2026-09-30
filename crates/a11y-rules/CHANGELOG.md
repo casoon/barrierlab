@@ -5,6 +5,40 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.13.1] - 2026-09-30
+
+Abgleich mit auditmysite vor dem Umzug seiner Regeln (casoon/barrierlab#13,
+auditmysite#690): Wo die geteilte Fassung einen Fall übersah oder zu Unrecht
+meldete, den auditmysite richtig behandelt, ist sie nachgezogen.
+
+### Fixed
+
+- `zoom/viewport-locked`: `content` wird nach CSS Viewport zerlegt — Semikolon
+  und Leerraum trennen wie das Komma. `width=device-width; maximum-scale=1`
+  blieb bisher unerkannt.
+- `aria/required-attribute-missing` folgt ARIA 1.2: `slider` braucht nur noch
+  `aria-valuenow` (min/max haben Vorgaben), `option` kein `aria-selected`.
+  Native Felder mit expliziter Rolle (`<input type="range" role="slider">`,
+  `<input type="checkbox" role="switch">`, `<meter>`, `<progress>`) übermitteln
+  ihren Zustand selbst und werden nicht gemeldet (auditmysite#656). Neu
+  geprüft: `meter` und der fokussierbare `separator` ohne `aria-valuenow`.
+- `aria/reference-missing` prüft auch `aria-activedescendant` und meldet
+  leere `aria-controls`, `aria-owns` und `aria-activedescendant`.
+- `keyboard/hidden-focusable`: `disabled` nimmt nur Formularfelder aus der
+  Tab-Folge; ein `<a href disabled>` bleibt erreichbar und wird gemeldet.
+- `landmarks/banner-missing`, `contentinfo-missing`: Ein `<header>`/`<footer>`
+  unter einem Vorfahren mit Rolle `article`, `complementary`, `main`,
+  `navigation` oder `region` ist keine Seiten-Landmark (HTML-AAM,
+  auditmysite#639) — bisher zählte nur der Tag des Vorfahren.
+- `keyboard/skip-link-missing` erkennt den Sprunglink am Ziel und an der
+  Stellung wie axe `isSkipLink`: Fragmentlinks vor dem ersten Link, der die
+  Seite verlässt. „Aller au contenu" wurde bisher nicht erkannt
+  (auditmysite#642). Die Wortliste bleibt als zweiter Weg.
+- `images/alt-missing`: Ein `<img>` mit nicht leerem `aria-label`,
+  `aria-labelledby` oder `title` hat eine Textalternative (ARIA6, ARIA10, H67).
+- `svg/name-missing`: Ein SVG in einem benannten Link oder Button braucht
+  keinen eigenen Namen; `role="none presentation"` gilt als dekorativ.
+
 ## [0.13.0] - 2026-09-30
 
 ### Changed

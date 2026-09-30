@@ -209,6 +209,37 @@ fn title<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+/// Der Wert zu `key` im `content` einer Viewport-Angabe.
+///
+/// Trenner sind nach CSS Viewport („parsing the content attribute") Komma,
+/// Semikolon und Leerraum; Leerraum um `=` gehört zum Paar.
+/// `width=device-width; maximum-scale=1` ist verbreitet, und Browser werten
+/// es aus — wer nur an Kommas trennt, übersieht die Sperre.
+fn viewport_value<'c>(content: &'c str, key: &str) -> Option<&'c str> {
+    let mut rest = content;
+    while !rest.is_empty() {
+        rest = rest.trim_start_matches(|c: char| c == ',' || c == ';' || c.is_whitespace());
+        let name_end = rest
+            .find(|c: char| c == '=' || c == ',' || c == ';' || c.is_whitespace())
+            .unwrap_or(rest.len());
+        let name = &rest[..name_end];
+        rest = rest[name_end..].trim_start();
+        let Some(after_eq) = rest.strip_prefix('=') else {
+            continue;
+        };
+        rest = after_eq.trim_start();
+        let value_end = rest
+            .find(|c: char| c == ',' || c == ';' || c.is_whitespace())
+            .unwrap_or(rest.len());
+        let value = &rest[..value_end];
+        rest = &rest[value_end..];
+        if name == key {
+            return Some(value);
+        }
+    }
+    None
+}
+
 fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut gefunden = false;
     for n in elements(doc).filter(|n| n.is_element("meta")) {
@@ -221,12 +252,9 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         };
         // Kleinschreiben vor dem Vergleich: HTML-Attributwerte sind nicht
         // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
-        let c = content.to_ascii_lowercase().replace(' ', "");
-        let gesperrt = c.contains("user-scalable=no") || c.contains("user-scalable=0");
-        let max = c.split(',').find_map(|p| {
-            p.strip_prefix("maximum-scale=")
-                .and_then(|v| v.parse::<f32>().ok())
-        });
+        let c = content.to_ascii_lowercase();
+        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
+        let max = viewport_value(&c, "maximum-scale").and_then(|v| v.parse::<f32>().ok());
 
         // Unter 200 %: verletzt 1.4.4 unmittelbar.
         if gesperrt || max.is_some_and(|v| v < 2.0) {
@@ -402,14 +430,32 @@ const ERFORDERLICH: &[(&str, &[&str])] = &[
     ("switch", &["aria-checked"]),
     ("radio", &["aria-checked"]),
     ("combobox", &["aria-expanded"]),
-    (
-        "slider",
-        &["aria-valuenow", "aria-valuemin", "aria-valuemax"],
-    ),
+    // ARIA 1.2: `aria-valuemin`/`aria-valuemax` haben Vorgaben (0 und 100)
+    // und sind nicht mehr erforderlich, `aria-selected` an `option` ebenso.
+    ("slider", &["aria-valuenow"]),
     ("spinbutton", &["aria-valuenow"]),
     ("scrollbar", &["aria-controls", "aria-valuenow"]),
-    ("option", &["aria-selected"]),
+    ("meter", &["aria-valuenow"]),
+    // Nur der fokussierbare Trenner ist ein Widget mit Wert; der statische
+    // braucht keinen.
+    ("separator", &["aria-valuenow"]),
 ];
+
+/// Ob das Element seinen Zustand nativ übermittelt, sodass die Rolle ihn
+/// nicht per ARIA braucht: `<input type="range" role="slider">` hat seinen
+/// Wert, `<input type="checkbox" role="switch">` seinen Haken (ARIA in HTML
+/// verbietet dort sogar `aria-checked`). Beleg: auditmysite#656.
+fn zustand_nativ<'a, N: Node<'a>>(n: N) -> bool {
+    if n.is_element("meter") || n.is_element("progress") {
+        return true;
+    }
+    n.is_element("input")
+        && n.attr("type").is_some_and(|t| {
+            ["checkbox", "radio", "range", "number"]
+                .iter()
+                .any(|x| t.trim().eq_ignore_ascii_case(x))
+        })
+}
 
 fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
@@ -426,6 +472,12 @@ fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
         else {
             continue;
         };
+        if zustand_nativ(n) {
+            continue;
+        }
+        if erste.eq_ignore_ascii_case("separator") && !n.has_attr("tabindex") {
+            continue;
+        }
 
         let fehlend: Vec<&str> = noetig.iter().copied().filter(|a| !n.has_attr(a)).collect();
         if fehlend.is_empty() {
@@ -468,8 +520,20 @@ fn ist_landmark<'a, N: Node<'a>>(n: N, tag: &str, rolle: &str) -> bool {
 /// dazwischen disqualifiziert dagegen nicht.
 const SECTIONING: &[&str] = &["article", "aside", "main", "nav", "section"];
 
+/// Dieselbe Grenze über die Rolle (HTML-AAM, `header`/`footer`): Ein
+/// `<div role="main">` schließt ein `<header>` genauso ein wie ein `<main>`.
+/// Beleg: auditmysite#639.
+const SECTIONING_ROLLEN: &[&str] = &["article", "complementary", "main", "navigation", "region"];
+
 fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
-    a11y_dom::ancestors(n).all(|a| !SECTIONING.contains(&a.local_name()))
+    a11y_dom::ancestors(n).all(|a| {
+        !SECTIONING.contains(&a.local_name())
+            && !a.attr("role").is_some_and(|r| {
+                r.split_whitespace()
+                    .next()
+                    .is_some_and(|x| SECTIONING_ROLLEN.iter().any(|s| x.eq_ignore_ascii_case(s)))
+            })
+    })
 }
 
 fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
@@ -585,13 +649,27 @@ fn sieht_aus_wie_sprunglink<'a, N: Node<'a>>(n: N) -> bool {
         .any(|m| text.contains(m) || marker.contains(m))
 }
 
+fn ist_fragmentlink(href: &str) -> bool {
+    href.starts_with('#') && href.len() > 1
+}
+
 fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let vorhanden = elements(doc).any(|n| {
-        n.is_element("a")
-            && n.attr("href")
-                .is_some_and(|h| h.starts_with('#') && h.len() > 1)
-            && sieht_aus_wie_sprunglink(n)
-    });
+    let links: Vec<_> = elements(doc)
+        .filter(|n| n.is_element("a") && n.has_attr("href"))
+        .collect();
+    // Am Ziel erkannt, wie axe `isSkipLink`: Links vor dem ersten, der die
+    // Seite verlässt, springen innerhalb der Seite — in jeder Sprache. Nur
+    // wenn danach überhaupt etwas zu überspringen kommt; eine Seite aus
+    // lauter Ankern hat keinen Block, den ein Sprunglink umgeht.
+    // Beleg: auditmysite#642, „Aller au contenu" auf jeder /fr/-Seite.
+    let voran = links
+        .iter()
+        .take_while(|n| n.attr("href").is_some_and(ist_fragmentlink))
+        .count();
+    let vorhanden = (voran > 0 && voran < links.len())
+        || links
+            .iter()
+            .any(|n| n.attr("href").is_some_and(ist_fragmentlink) && sieht_aus_wie_sprunglink(*n));
     if !vorhanden {
         out.push(
             Finding::review(
@@ -627,9 +705,21 @@ fn ausdruecklich_dekorativ<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
+/// Ob ein `<img>` ohne `alt` seine Textalternative anders bekommt:
+/// `aria-label`, `aria-labelledby` oder `title` sind nach ARIA6, ARIA10 und
+/// H67 hinreichende Techniken, und die Namensberechnung zieht sie heran.
+fn alternative_ohne_alt<'a, N: Node<'a>>(n: N) -> bool {
+    ["aria-label", "aria-labelledby", "title"]
+        .iter()
+        .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()))
+}
+
 fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc).filter(|n| n.is_element("img")) {
         if ausdruecklich_dekorativ(n) {
+            continue;
+        }
+        if n.attr("alt").is_none() && alternative_ohne_alt(n) {
             continue;
         }
         match n.attr("alt") {
@@ -807,8 +897,31 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             "aria-describedby",
             "aria-controls",
             "aria-owns",
+            "aria-activedescendant",
         ] {
             let Some(v) = n.attr(rel) else { continue };
+            // Ein leerer Verweis auf Steuerung, Besitz oder aktiven Nachfahren
+            // behauptet eine Beziehung, die es nicht gibt. Leeres
+            // `aria-labelledby` dagegen fällt auf die übrigen Namensquellen
+            // zurück und schadet nicht.
+            if v.trim().is_empty() {
+                if matches!(rel, "aria-controls" | "aria-owns" | "aria-activedescendant") {
+                    out.push(
+                        Finding::fail(
+                            "aria/reference-missing",
+                            tr!(
+                                locale,
+                                "{rel} is present but empty.",
+                                "{rel} ist vorhanden, aber leer.",
+                            ),
+                        )
+                        .with_severity(Severity::High)
+                        .with_wcag(["1.3.1", "4.1.2"])
+                        .at(at(n.id())),
+                    );
+                }
+                continue;
+            }
             let fehlend: Vec<&str> = v
                 .split_whitespace()
                 .filter(|id| !ids.contains(id))
@@ -945,7 +1058,10 @@ pub(crate) fn per_tab_erreichbar<'a, N: Node<'a>>(n: N) -> bool {
             .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
         "button" | "select" | "textarea" | "summary" | "iframe" => true,
         _ => false,
-    }) && !n.has_attr("disabled")
+    }) && !(n.has_attr("disabled")
+        // `disabled` gibt es nur an Formularfeldern; an einem Link ist es
+        // wirkungslos, der Link bleibt per Tab erreichbar.
+        && matches!(n.local_name(), "button" | "input" | "select" | "textarea"))
 }
 
 /// Fokussierbar und zugleich vor dem Accessibility-Tree versteckt — Nutzer
