@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.13.3] - 2026-09-30
+
+### Fixed
+
+- `keyboard/skip-link-missing`: Ein Fragmentlink auf den Anfang des
+  Hauptinhalts (die main-Landmark oder ein Element an ihrem Anfang) ist ein
+  Sprunglink, wo immer er steht — auch hinter den Links eines Cookie-Banners
+  (bund.de, #26). `href=""` beendet die Folge der Fragmentlinks nicht mehr.
+  Ein Anker mitten im Inhalt zählt weiter nicht.
+
 ## [0.13.2] - 2026-09-30
 
 Aus dem Vergleichslauf von auditmysite gegen echte Seiten (auditmysite#690).
