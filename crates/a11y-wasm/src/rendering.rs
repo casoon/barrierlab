@@ -91,8 +91,10 @@ impl Semantics for RenderArena<'_> {
         self.semantik.role(node)
     }
 
+    /// Mit Stil gerechnet: Per `display: none` versteckte Labels und
+    /// Teilbäume tragen dann nichts bei, wie im Browser.
     fn accessible_name<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
-        self.semantik.accessible_name(node)
+        accname::name_rendered(self, node, &self.semantik.ids)
     }
 
     fn name_source<'n>(&'n self, node: Self::N<'n>) -> Option<NameSource> {

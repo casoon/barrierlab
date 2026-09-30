@@ -26,6 +26,7 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, RenderingRule};
+use crate::sicht::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -163,6 +164,7 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 pub(crate) const METAS: &[Meta] = &[Meta {
     ids: &["contrast/text-insufficient", "contrast/text-undetermined"],
     tier: Tier::Rendering,
+    scope: Scope::Rendered,
     wcag: &["1.4.3"],
     severity: Severity::High,
     help: "Text needs a contrast ratio against its background of at least 4.5:1, \

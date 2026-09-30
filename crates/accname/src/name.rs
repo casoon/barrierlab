@@ -394,6 +394,11 @@ fn erstes_kind_mit_tag<'a, N: Node<'a>>(node: N, tag: &str) -> Option<N> {
 }
 
 /// Die `<label>`-Elemente eines Formularelements: umschließend oder per `for`.
+///
+/// Ein Label, das nicht dargestellt wird, trägt nichts bei — so rechnen es
+/// die Browser (in Chrome per CDP nachgemessen: Name `""`). Anders als bei
+/// `aria-labelledby` zieht HTML-AAM versteckte Labels nicht heran. Ohne Stil
+/// ist das nicht erkennbar, und das Label zählt wie bisher.
 fn label_elemente<'a, N: Node<'a>>(
     node: N,
     ids: &IdIndex<'a, N>,
@@ -403,6 +408,9 @@ fn label_elemente<'a, N: Node<'a>>(
 
     if let Some(id) = node.attr("id") {
         for &l in ids.labels_for(id) {
+            if per_stil_versteckt(stil, l, true) {
+                continue;
+            }
             let t = teilbaum_text(stil, l, Some(node));
             if !t.trim().is_empty() {
                 teile.push(t);

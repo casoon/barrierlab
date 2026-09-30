@@ -3,12 +3,14 @@
 use std::collections::{HashMap, HashSet};
 
 use a11y_dom::{
-    Document, Node, NodeId, Tier, closest, elements, has_text, self_and_descendants, subtree_text,
+    Document, Node, NodeId, Tier, ancestors, closest, elements, has_text, self_and_descendants,
+    subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, StructureRule};
+use crate::sicht::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -928,19 +930,36 @@ fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
 /// Fokussierbar und zugleich vor dem Accessibility-Tree versteckt — Nutzer
 /// landen mit der Tabtaste auf etwas, das ihnen nicht angesagt wird.
+///
+/// `aria-hidden` wirkt auf den ganzen Teilbaum. Geprüft wird deshalb jedes
+/// fokussierbare Element darunter, nicht nur das, das das Attribut trägt —
+/// der übliche Fall ist ein versteckter Container voller Links. Ausgenommen
+/// ist, was `inert` ist oder per `tabindex="-1"` aus der Tabfolge genommen
+/// wurde: So wird ein versteckter Bereich richtig gebaut. Nicht Dargestelltes
+/// fehlt in der Sicht dieser Regel ohnehin (`Scope::Rendered`).
 fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if n.attr("aria-hidden") != Some("true") {
+        let mit_vorfahren = || std::iter::once(n).chain(ancestors(n));
+        if !mit_vorfahren().any(|a| a.attr("aria-hidden") == Some("true"))
+            || mit_vorfahren().any(|a| a.has_attr("inert"))
+        {
             continue;
         }
-        let natively_focusable = matches!(
-            n.local_name(),
-            "a" | "button" | "input" | "select" | "textarea" | "summary" | "iframe"
-        ) && !n.has_attr("disabled");
-        let tab_focusable = n
+        let tabindex = n
             .attr("tabindex")
-            .and_then(|t| t.trim().parse::<i32>().ok())
-            .is_some_and(|v| v >= 0);
+            .and_then(|t| t.trim().parse::<i32>().ok());
+        if tabindex.is_some_and(|v| v < 0) {
+            continue;
+        }
+        let natively_focusable = match n.local_name() {
+            "a" | "area" => n.has_attr("href"),
+            "input" => !n
+                .attr("type")
+                .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
+            "button" | "select" | "textarea" | "summary" | "iframe" => true,
+            _ => false,
+        } && !n.has_attr("disabled");
+        let tab_focusable = tabindex.is_some();
 
         if natively_focusable || tab_focusable {
             out.push(
@@ -948,8 +967,8 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
                     "keyboard/hidden-focusable",
                     pick!(
                         locale,
-                        "The element is focusable but hidden with aria-hidden.",
-                        "Das Element ist fokussierbar, aber per aria-hidden versteckt.",
+                        "The element is focusable but hidden with aria-hidden, on itself or an ancestor.",
+                        "Das Element ist fokussierbar, aber per aria-hidden versteckt, selbst oder über einen Vorfahren.",
                     ),
                 )
                 .with_severity(Severity::High)
@@ -1214,6 +1233,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["document/lang-missing", "document/lang-invalid"],
         tier: Tier::Structure,
+        scope: Scope::Markup,
         wcag: &["3.1.1"],
         severity: Severity::High,
         help: "The <html> element needs a valid lang attribute.",
@@ -1223,6 +1243,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["document/title-missing", "document/title-empty"],
         tier: Tier::Structure,
+        scope: Scope::Markup,
         wcag: &["2.4.2"],
         severity: Severity::High,
         help: "Every page needs a meaningful <title>.",
@@ -1236,6 +1257,7 @@ pub const METAS: &[Meta] = &[
             "zoom/viewport-missing",
         ],
         tier: Tier::Structure,
+        scope: Scope::Markup,
         wcag: &["1.4.4", "1.4.10"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
@@ -1250,6 +1272,7 @@ pub const METAS: &[Meta] = &[
             "headings/h1-multiple",
         ],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
@@ -1259,6 +1282,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["images/alt-missing", "images/alt-suspicious"],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative images need descriptive alt text.",
@@ -1268,6 +1292,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["forms/label-missing", "forms/placeholder-as-label"],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1", "3.3.2", "4.1.2"],
         severity: Severity::Critical,
         help: "Every input needs an associated label.",
@@ -1277,6 +1302,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["aria/role-invalid", "aria/role-abstract"],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only roles from the ARIA specification.",
@@ -1286,6 +1312,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["aria/reference-missing"],
         tier: Tier::Structure,
+        scope: Scope::Markup,
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA references must point to IDs that exist.",
@@ -1295,6 +1322,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["aria/required-attribute-missing"],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "A role that announces a state needs the attribute carrying it.",
@@ -1304,6 +1332,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["ids/duplicate"],
         tier: Tier::Structure,
+        scope: Scope::Markup,
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "An ID that another element references must be unique.",
@@ -1313,6 +1342,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["keyboard/positive-tabindex"],
         tier: Tier::Structure,
+        scope: Scope::Rendered,
         wcag: &["2.4.3"],
         severity: Severity::High,
         help: "Positive tabindex values break the tab order.",
@@ -1322,6 +1352,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["keyboard/hidden-focusable"],
         tier: Tier::Structure,
+        scope: Scope::Rendered,
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Focusable elements must not be aria-hidden.",
@@ -1335,6 +1366,7 @@ pub const METAS: &[Meta] = &[
             "lists/term-without-definition",
         ],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "<ul> and <ol> may only have <li> as direct children and must not be empty.",
@@ -1348,6 +1380,7 @@ pub const METAS: &[Meta] = &[
             "tables/presentational-with-headers",
         ],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Data tables need <th> header cells.",
@@ -1363,6 +1396,7 @@ pub const METAS: &[Meta] = &[
             "landmarks/contentinfo-missing",
         ],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1", "2.4.1"],
         severity: Severity::High,
         help: "Landmarks structure the page for everyone who cannot see it.",
@@ -1372,6 +1406,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["keyboard/skip-link-missing"],
         tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
         wcag: &["2.4.1"],
         severity: Severity::Medium,
         help: "A skip link bypasses blocks that repeat before the content.",

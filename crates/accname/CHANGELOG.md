@@ -5,6 +5,15 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Fixed
+
+- `name_rendered`: Ein `<label>`, das nicht dargestellt wird (`display: none`
+  am Label oder einem Vorfahren), trägt nichts zum Namen bei — wie im Browser
+  (Chrome per CDP: Name `""`). Per `aria-labelledby` zählt verstecktes Label
+  weiterhin. Ohne Stil (`name`) unverändert (liveaudit#3).
+
 ## [0.12.2] - 2026-09-29
 
 ### Changed

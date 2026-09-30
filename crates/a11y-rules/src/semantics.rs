@@ -17,6 +17,7 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, SemanticsRule};
+use crate::sicht::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -223,6 +224,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["links/name-missing"],
         tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
         wcag: &["2.4.4", "4.1.2"],
         severity: Severity::Critical,
         help: "Every link needs a name that describes its target.",
@@ -232,6 +234,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["buttons/name-missing"],
         tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
         wcag: &["4.1.2"],
         severity: Severity::Critical,
         help: "Every button needs a name that describes what it does.",
@@ -241,6 +244,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["svg/name-missing"],
         tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative SVGs need a name, decorative ones role=\"presentation\".",
@@ -250,6 +254,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["links/ambiguous-name"],
         tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Links with the same name should point to the same target.",
@@ -259,6 +264,7 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["links/generic-name"],
         tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Link text should say where it leads without the surrounding sentence.",

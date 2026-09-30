@@ -38,11 +38,28 @@ flowchart LR
 | `structure_rules`, `semantics_rules`, `rendering_rules` | die Regeln einzeln, wenn ein Host selbst orchestriert |
 | `structure_metas`, `semantics_metas`, `rendering_metas` | alle Kennungen vorab, ohne zu laufen — für Abdeckungsberichte |
 | `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule` | Regeltypen und ihre Deklaration |
+| `Scope` | welche Knoten eine Regel sieht: Accessibility-Tree, Dargestelltes oder das ganze Markup |
 
 ## Abhängigkeiten
 
 Nach unten: `a11y-dom`, `a11y-report`, `accname`. Nach oben: alle Hosts,
 künftig `a11y-wasm`.
+
+## Geltungsbereich
+
+Jede Regel deklariert in `Meta::scope`, welche Knoten sie sieht, und läuft über
+eine Sicht auf das Dokument, in der die übrigen fehlen:
+
+| `Scope` | fehlt in der Sicht | Regeln |
+|---|---|---|
+| `AccessibilityTree` | `aria-hidden="true"`, nicht Dargestelltes | der Normalfall |
+| `Rendered` | nicht Dargestelltes | `keyboard/*`, Kontrast |
+| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate` |
+
+„Nicht dargestellt" heißt mit Tier 3 `display: none` oder `visibility: hidden`,
+ohne das `hidden`-Attribut. Ohne Stile bleibt per CSS Verstecktes in der Sicht
+— die ehrliche Grenze des statischen Falls. `visibility` kann an einem
+Nachfahren wieder `visible` sein; ein solcher Nachfahre fällt mit weg.
 
 ## Grenzen
 

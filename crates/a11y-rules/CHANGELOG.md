@@ -7,6 +7,35 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Geltungsbereich je Regel.** `Meta` trägt ein neues Feld `scope`
+  (`Scope::AccessibilityTree`, `Rendered`, `Markup`), und jede Regel läuft über
+  eine Sicht auf das Dokument, in der versteckte Teilbäume fehlen: unter
+  `aria-hidden="true"` (nur `AccessibilityTree`) und nicht dargestellt —
+  `display: none`/`visibility: hidden`, wo der Host Stile liefert, sonst das
+  `hidden`-Attribut. Bisher liefen die Regeln auch über versteckte Elemente;
+  die Namensberechnung überspringt versteckten Inhalt zu Recht, der Button im
+  versteckten Banner bekam also einen leeren Namen und einen `FAIL`. Gemessen
+  mit LiveAudit auf barrierlab.eu (237 Seiten, 29.09.2026): 992 solche FAILs
+  (`buttons/`, `links/`, `svg/name-missing`, `lists/empty`), danach keiner
+  (liveaudit#1). Hosts mit eigenem `is_ignored` ändert das nichts an den
+  Tier-2-Regeln, wohl aber an den strukturellen.
+- `forms/label-missing` sieht ein nicht dargestelltes `<label>` nicht mehr als
+  Label an, wenn der Host Stile liefert (liveaudit#3).
+- `keyboard/hidden-focusable` prüft jedes fokussierbare Element unter einem
+  Vorfahren mit `aria-hidden="true"`, nicht nur das Element mit dem Attribut
+  (axe: `aria-hidden-focus`). Ausgenommen: `inert`, `tabindex` < 0, `<a>` ohne
+  `href`, `<input type="hidden">` (liveaudit#4). Der Befundtext nennt den
+  Vorfahren.
+- Verweise (`aria/reference-missing`, `ids/duplicate`) und die dokumentweiten
+  Regeln sehen weiterhin das ganze Markup: `aria-labelledby` darf auf
+  Verstecktes zeigen.
+
+**Breaking:** `Meta` hat ein Pflichtfeld mehr; die Regeln der
+`*_rules()`-Listen laufen im Runner über die interne Sicht. Hosts, die nur
+`run_*` und `*_metas()` benutzen, sind nicht betroffen.
+
 ## [0.12.2] - 2026-09-29
 
 ### Fixed
