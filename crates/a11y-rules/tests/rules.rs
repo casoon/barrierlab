@@ -177,7 +177,21 @@ fn vollstaendig() -> a11y_dom::ArenaBuilder {
 fn vollstaendiges_dokument_erzeugt_keinen_befund() {
     let doc = vollstaendig().close().build();
     let r = run(&doc);
-    assert!(r.findings.is_empty(), "unerwartet: {:?}", ids(&r));
+    // Außer der Checkliste: Was keine Maschine entscheiden kann, bleibt als
+    // UNTESTED stehen, auch auf einem einwandfreien Dokument.
+    let urteile: Vec<&str> = r
+        .findings
+        .iter()
+        .filter(|f| !f.rule_id.starts_with("manual/"))
+        .map(|f| f.rule_id.as_str())
+        .collect();
+    assert!(urteile.is_empty(), "unerwartet: {urteile:?}");
+    assert!(
+        r.findings
+            .iter()
+            .filter(|f| f.rule_id.starts_with("manual/"))
+            .all(|f| f.outcome == Outcome::Untested)
+    );
 }
 
 /// Was einem bloß wohlgeformten Dokument fehlt, wird benannt — und zwar

@@ -5,7 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.13.0] - 2026-09-30
+
+### Added
+
+- `Layout` und `Rendering::layout()` (Vorgabe `None`): Layout-Angaben für
+  heuristische Regeln — umgekehrte Flex-Richtung, `order`, `min-width`,
+  `cursor: pointer`, Endlos-Animation, Verdeckung durch fixierte Elemente,
+  Leisten tiefer als `scroll-padding-top`, gemessene Fokus-Sichtbarkeit.
+  Nicht brechend: Ein Host ohne diese Daten bekommt die Heuristiken nicht
+  (liveaudit#6).
 
 ## [0.12.2] - 2026-09-29
 

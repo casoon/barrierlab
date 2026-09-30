@@ -61,7 +61,7 @@ mod tree;
 
 pub use arena::{Arena, ArenaBuilder, ArenaNode};
 pub use tiers::{
-    Caps, Color, ComputedStyle, Interaction, NameSource, Rect, Rendering, Semantics, Tier,
+    Caps, Color, ComputedStyle, Interaction, Layout, NameSource, Rect, Rendering, Semantics, Tier,
 };
 pub use tree::{
     Document, Node, NodeId, NodeKind, ancestors, closest, descendants, elements, has_text,

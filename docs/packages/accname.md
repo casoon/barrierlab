@@ -57,7 +57,8 @@ Hosts mit berechneten Stilen ([`Rendering`](a11y-dom.md), Tier 3) rufen
 `name_rendered(doc, node, ids)`. Dort schließen Kinder mit `display: inline`
 oder `contents` direkt an, alle anderen und ersetzte Elemente (`img`, `svg`, …)
 werden abgesetzt, `<br>` trennt immer; `display: none` (auch an einem
-Vorfahren) und `visibility: hidden` blenden aus, außer bei ausdrücklichem
+Vorfahren) und `visibility: hidden` blenden aus — auch ein so verstecktes
+`<label>` benennt sein Feld nicht mehr —, außer bei ausdrücklichem
 Verweis über `aria-labelledby`. Der Host muss die Leerraum-Textknoten mitliefern
 — CDP `DOM.getDocument` lässt sie aus, `DOMSnapshot` nicht. Im
 auditmysite-Korpus (35 Seiten) bleibt damit ein echtes Abweichungsmuster statt

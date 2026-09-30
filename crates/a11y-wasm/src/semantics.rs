@@ -20,7 +20,7 @@ use crate::arena::{Arena, ArenaNode};
 /// Die Arena plus der einmal je Scan gebaute ID-Index.
 pub struct SemanticArena<'a> {
     arena: &'a Arena,
-    ids: IdIndex<'a, ArenaNode<'a>>,
+    pub(crate) ids: IdIndex<'a, ArenaNode<'a>>,
 }
 
 impl<'a> SemanticArena<'a> {
