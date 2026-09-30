@@ -536,6 +536,21 @@ fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
+/// Ob ein modaler Dialog offen ist: `role="dialog"`/`"alertdialog"` mit
+/// `aria-modal="true"`, oder ein `<dialog open>`. Solange er offen ist, blenden
+/// Seiten den Rest korrekt aus (`aria-hidden` oder `inert`) — die Landmarks
+/// fehlen dann für den Moment, nicht für die Seite.
+fn modal_offen<D: Document>(doc: &D) -> bool {
+    elements(doc).any(|n| {
+        let modal_rolle = n.attr("role").is_some_and(|r| {
+            r.split_whitespace().next().is_some_and(|x| {
+                x.eq_ignore_ascii_case("dialog") || x.eq_ignore_ascii_case("alertdialog")
+            })
+        }) && n.attr("aria-modal") == Some("true");
+        modal_rolle || (n.is_element("dialog") && n.has_attr("open"))
+    })
+}
+
 fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let wurzel = doc.root().id();
     let mains: Vec<_> = elements(doc)
@@ -543,6 +558,23 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         .collect();
 
     match mains.len() {
+        // Hinter einem offenen Modal ist die fehlende main-Landmark kein
+        // Befund über die Seite, sondern über den Moment der Messung — ein
+        // Hinweis, kein Verstoß. Beleg: fünf von 21 EU-Portalen mit offenem
+        // Consent-Dialog (auditmysite#709).
+        0 if modal_offen(doc) => out.push(
+            Finding::review(
+                "landmarks/main-missing",
+                pick!(
+                    locale,
+                    "No main landmark reachable while a modal dialog is open; check the page with the dialog closed.",
+                    "Keine main-Landmark erreichbar, solange ein modaler Dialog offen ist; die Seite mit geschlossenem Dialog prüfen.",
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["1.3.1", "2.4.1"])
+            .at(at(wurzel)),
+        ),
         0 => out.push(
             Finding::fail(
                 "landmarks/main-missing",

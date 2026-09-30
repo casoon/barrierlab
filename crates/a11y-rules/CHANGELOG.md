@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.13.4] - 2026-09-30
+
+### Fixed
+
+- `landmarks/main-missing`: Ist ein modaler Dialog offen (`role="dialog"`/
+  `"alertdialog"` mit `aria-modal="true"`, oder `<dialog open>`) und keine
+  main-Landmark erreichbar, ist das `REVIEW` (Low) statt `FAIL` — die Seite
+  blendet ihren Inhalt korrekt aus, solange der Dialog offen ist. Beleg: fünf
+  von 21 EU-Portalen mit offenem Consent-Dialog (auditmysite#709).
+
 ## [0.13.3] - 2026-09-30
 
 ### Fixed
