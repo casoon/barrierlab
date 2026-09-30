@@ -5,7 +5,12 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.14.0] - 2026-09-30
+
+Rollen aus WAI-ARIA Graphics (`graphics-document`, `-object`, `-symbol`) und
+DPUB-ARIA 1.1 (`doc-*`) gelten für `aria/role-invalid` als gültig; die
+Attributregeln urteilen über sie nicht (auditmysite-Korpus
+`svg_graphics_role_no_name`).
 
 Die ARIA-Regeln aus auditmysite (casoon/barrierlab#14, B1). Norm ist WAI-ARIA
 1.2 und ARIA in HTML; die Rollen- und Attributtabellen sind aus der
