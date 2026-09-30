@@ -922,6 +922,13 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
                 }
                 continue;
             }
+            // Ein eingeklapptes Bedienelement darf auf ein Ziel zeigen, das
+            // erst beim Öffnen entsteht — Menüs aus Web-Komponenten tun das
+            // regelmäßig (bund.de, sachsen-anhalt.de). axe-core nimmt diesen
+            // Fall bei `aria-controls` genauso aus.
+            if rel == "aria-controls" && n.attr("aria-expanded") == Some("false") {
+                continue;
+            }
             let fehlend: Vec<&str> = v
                 .split_whitespace()
                 .filter(|id| !ids.contains(id))

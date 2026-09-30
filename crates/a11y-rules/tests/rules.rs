@@ -2201,3 +2201,29 @@ fn header_unter_role_main_ist_kein_banner() {
         .build();
     assert!(hat(&run(&doc), "landmarks/banner-missing"));
 }
+
+/// bund.de, sachsen-anhalt.de: Das Menü einer Web-Komponente entsteht erst
+/// beim Öffnen. Eingeklappt darf `aria-controls` ins Leere zeigen (wie axe).
+#[test]
+fn eingeklapptes_aria_controls_darf_auf_spaeteres_ziel_zeigen() {
+    let doc = vollstaendig()
+        .open("button")
+        .attr("aria-controls", "menue-spaeter")
+        .attr("aria-expanded", "false")
+        .text("Menü")
+        .close()
+        .open("button")
+        .attr("aria-controls", "menue-fehlt")
+        .attr("aria-expanded", "true")
+        .text("Offen")
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "aria/reference-missing")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
