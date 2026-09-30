@@ -5,6 +5,22 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.13.2] - 2026-09-30
+
+Aus dem Vergleichslauf von auditmysite gegen echte Seiten (auditmysite#690).
+
+### Fixed
+
+- Der Inhalt eines geschlossenen `<details>` — alles außer der ersten
+  `<summary>` — gilt als nicht dargestellt (HTML, „The details element"). Chrome
+  blendet ihn über `content-visibility` aus, berechnetes `display` und
+  `visibility` halten ihn für sichtbar. Beleg: geographia.eu, 22 Karten-Links
+  in `details.more` als `links/name-missing` gemeldet.
+- `aria/reference-missing`: Ein `aria-controls` an einem Element mit
+  `aria-expanded="false"` darf auf ein Ziel zeigen, das erst beim Öffnen
+  entsteht (wie axe-core). Beleg: die Menüs der Web-Komponenten auf bund.de
+  und sachsen-anhalt.de.
+
 ## [0.13.1] - 2026-09-30
 
 Abgleich mit auditmysite vor dem Umzug seiner Regeln (casoon/barrierlab#13,

@@ -74,6 +74,23 @@ impl Verborgen {
                     weg.insert(n.id());
                     continue;
                 }
+                // Ein geschlossenes `<details>` stellt nur seine erste
+                // `<summary>` dar (HTML, „The details element"). Chrome blendet
+                // den Rest über `content-visibility` aus, sodass berechnetes
+                // `display` und `visibility` ihn für sichtbar halten — deshalb
+                // hier aus dem Markup und für jeden Host gleich.
+                if n.is_element("details") && !n.has_attr("open") {
+                    let mut summary_gesehen = false;
+                    for kind in n.children().filter(|k| k.kind() == NodeKind::Element) {
+                        if !summary_gesehen && kind.is_element("summary") {
+                            summary_gesehen = true;
+                            stapel.push(kind);
+                        } else {
+                            weg.insert(kind.id());
+                        }
+                    }
+                    continue;
+                }
                 stapel.extend(n.children());
             }
             weg
