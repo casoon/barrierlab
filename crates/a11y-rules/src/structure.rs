@@ -653,20 +653,64 @@ fn ist_fragmentlink(href: &str) -> bool {
     href.starts_with('#') && href.len() > 1
 }
 
+/// Ob `ziel` der Anfang des Hauptinhalts ist: die main-Landmark selbst oder
+/// ein Element, das an ihrem Anfang steht (jeder Vorfahre bis zur Landmark
+/// ist das erste Element-Kind). `<main><h1 id="inhalt">` gehört dazu, ein
+/// Abschnitt mitten im Inhalt nicht — ein Inhaltsverzeichnis ist kein
+/// Sprunglink.
+fn beginnt_hauptinhalt<'a, N: Node<'a>>(ziel: N) -> bool {
+    let mut n = ziel;
+    loop {
+        if ist_landmark(n, "main", "main") {
+            return true;
+        }
+        let Some(eltern) = n.parent() else {
+            return false;
+        };
+        let erstes = eltern
+            .children()
+            .find(|k| k.kind() == a11y_dom::NodeKind::Element);
+        if erstes != Some(n) {
+            return false;
+        }
+        n = eltern;
+    }
+}
+
 fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let links: Vec<_> = elements(doc)
         .filter(|n| n.is_element("a") && n.has_attr("href"))
         .collect();
+    // Ein Fragmentlink auf den Anfang des Hauptinhalts ist ein Sprunglink,
+    // wo immer er steht (G1, ARIA11) — auch hinter den Links eines
+    // Cookie-Banners. Beleg: bund.de, „Inhalt" → `#main` (barrierlab#26).
+    let ids: HashMap<&str, _> = elements(doc)
+        .filter_map(|n| n.attr("id").map(|id| (id, n)))
+        .collect();
+    let zum_hauptinhalt = links.iter().any(|n| {
+        n.attr("href")
+            .filter(|h| ist_fragmentlink(h))
+            .and_then(|h| ids.get(&h[1..]))
+            .is_some_and(|ziel| beginnt_hauptinhalt(*ziel))
+    });
     // Am Ziel erkannt, wie axe `isSkipLink`: Links vor dem ersten, der die
     // Seite verlässt, springen innerhalb der Seite — in jeder Sprache. Nur
     // wenn danach überhaupt etwas zu überspringen kommt; eine Seite aus
     // lauter Ankern hat keinen Block, den ein Sprunglink umgeht.
     // Beleg: auditmysite#642, „Aller au contenu" auf jeder /fr/-Seite.
+    // `href=""` verlässt die Seite nicht; es zählt weder als Sprunglink noch
+    // beendet es die Folge davor.
     let voran = links
         .iter()
+        .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
         .take_while(|n| n.attr("href").is_some_and(ist_fragmentlink))
         .count();
-    let vorhanden = (voran > 0 && voran < links.len())
+    let echte = links
+        .iter()
+        .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
+        .count();
+    let vorhanden = zum_hauptinhalt
+        || (voran > 0 && voran < echte)
         || links
             .iter()
             .any(|n| n.attr("href").is_some_and(ist_fragmentlink) && sieht_aus_wie_sprunglink(*n));
