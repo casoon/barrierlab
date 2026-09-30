@@ -2281,3 +2281,50 @@ fn sprunglink_auf_den_hauptinhalt_zaehlt_auch_hinter_anderen_links() {
         "keyboard/skip-link-missing"
     ));
 }
+
+/// auditmysite#709: Ein offener Consent-Dialog blendet `<main>` per
+/// `aria-hidden` aus. Das ist korrektes Verhalten, kein fehlendes main.
+#[test]
+fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
+    let doc = sauber()
+        .open("body")
+        .open("main")
+        .attr("aria-hidden", "true")
+        .open("h1")
+        .text("Titel")
+        .close()
+        .close()
+        .open("section")
+        .attr("role", "dialog")
+        .attr("aria-modal", "true")
+        .attr("aria-label", "Cookies")
+        .open("button")
+        .text("Akzeptieren")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let f = run(&doc)
+        .findings
+        .into_iter()
+        .find(|f| f.rule_id == "landmarks/main-missing")
+        .expect("als Hinweis gemeldet");
+    assert_eq!(f.outcome, Outcome::Review);
+
+    // Ohne Dialog bleibt es ein Verstoß.
+    let ohne = sauber()
+        .open("body")
+        .open("div")
+        .text("Inhalt")
+        .close()
+        .close()
+        .close()
+        .build();
+    let f = run(&ohne)
+        .findings
+        .into_iter()
+        .find(|f| f.rule_id == "landmarks/main-missing")
+        .unwrap();
+    assert_eq!(f.outcome, Outcome::Fail);
+}
