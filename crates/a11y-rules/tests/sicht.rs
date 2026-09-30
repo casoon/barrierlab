@@ -179,6 +179,37 @@ fn icon_im_benannten_link_braucht_keinen_eigenen_namen() {
     assert_eq!(anzahl(&r, "svg/name-missing"), 1, "{:?}", r.findings);
 }
 
+/// geographia.eu: 22 Karten-Links in einem geschlossenen `details.more`.
+/// Chrome stellt sie nicht dar und führt sie nicht im Accessibility-Tree;
+/// die berechneten Stile halten sie trotzdem für sichtbar.
+#[test]
+fn inhalt_eines_geschlossenen_details_ist_nicht_dargestellt() {
+    let arena = seite()
+        .open("details")
+        .open("summary")
+        .text("Mehr Fragen")
+        .close()
+        .open("a")
+        .attr("href", "/x")
+        .close()
+        .close()
+        // Geöffnet ist der Inhalt da, der leere Link fällt auf.
+        .open("details")
+        .attr("open", "")
+        .open("summary")
+        .text("Offen")
+        .close()
+        .open("a")
+        .attr("href", "/y")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    assert_eq!(anzahl(&r, "links/name-missing"), 1, "{:?}", r.findings);
+}
+
 #[test]
 fn leere_versteckte_liste_ist_kein_befund() {
     let arena = seite()
