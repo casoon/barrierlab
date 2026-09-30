@@ -2,6 +2,16 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- `RenderArena` berechnet den Namen mit `accname::name_rendered`: Per
+  `display: none` versteckte Labels und Teilbäume tragen nichts bei.
+- Übernimmt aus `a11y-rules` den Geltungsbereich je Regel: Befunde an
+  versteckten Elementen entfallen (liveaudit#1, #3, #4). 168,5 → 177,1 KB roh,
+  80,9 → 83,4 KB gzip.
+
 ## [0.2.1] - 2026-09-28
 
 ### Changed
