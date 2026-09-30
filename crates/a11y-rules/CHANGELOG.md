@@ -5,6 +5,15 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.13.5] - 2026-09-30
+
+### Fixed
+
+- `landmarks/main-missing` hinter einem offenen Dialog: Auch ein
+  `role="dialog"`/`"alertdialog"` ohne `aria-modal` zählt — der
+  Consent-Dialog von administracion.gob.es blendet `<main>` ohne es aus
+  (auditmysite#709).
+
 ## [0.13.4] - 2026-09-30
 
 ### Fixed

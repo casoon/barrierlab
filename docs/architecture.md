@@ -7,7 +7,7 @@ order: 1
 ## Grundsatz
 
 Dieses Repository enthält **Bibliotheken**, keine Werkzeuge. Jeder Host —
-auditmysite, astro-post-audit, liveaudit, ein künftiger eigenständiger Prüfer —
+auditmysite, astro-post-audit, liveaudit, Relief —
 lebt in seinem eigenen Repository und bindet die Pakete über crates.io bzw. npm
 ein. Eine Bibliothek hier darf nie einen Host voraussetzen.
 
@@ -41,7 +41,7 @@ flowchart BT
     ams[auditmysite]
     apa[astro-post-audit]
     la[liveaudit]
-    rd[Reader-Host]
+    rl[Relief]
   end
 
   sch --> xp
@@ -54,7 +54,7 @@ flowchart BT
   ams --> rules & hc & perc & wc
   apa --> rules & hc & wc
   la --> wasm
-  rd --> perc
+  rl --> perc & acc & dom & rep
 ```
 
 | Schicht | Aufgabe | Regel |
