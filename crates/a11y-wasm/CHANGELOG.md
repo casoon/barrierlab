@@ -2,6 +2,13 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.7.0] - 2026-10-01
+
+Gebaut auf `a11y-rules` 0.17.0: die Landmark- und Strukturregeln aus B4
+(barrierlab#17) — eindeutige, oberste und doppelte Landmarks, Inhalt außerhalb
+von Landmarks, Seite ohne Überschriften, Tastaturerreichbarkeit, Dialog ohne
+Fokusziel, Akkordeon. Keine Änderung an der Schnittstelle.
+
 ## [0.6.0] - 2026-10-01
 
 Gebaut auf `a11y-rules` 0.16.0: die Formularregeln aus B3 (barrierlab#16) —
