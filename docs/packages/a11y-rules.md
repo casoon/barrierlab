@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 50 in Tier 1 (Struktur, davon 7 Checkliste), 16 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 59 in Tier 1 (Struktur, davon 7 Checkliste), 21 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
@@ -64,6 +64,16 @@ die Rollen, für die WAI-ARIA 1.2 einen Namen verlangt. `label-in-name/mismatch`
 vergleicht nach WCAG 2.5.3 den Namen mit dem sichtbaren Text,
 `status/live-overridden` die `aria-live`-Angabe von Live-Regionen mit der
 Vorgabe ihrer Rolle.
+
+## Formulare
+
+`forms/*` prüft Beschriftung, Gruppen, Fehlerbeschreibung (`aria-invalid`),
+Autofill-Angaben nach dem HTML-Standard, Absende-Elemente und wiederholte
+Eingaben; `context/*` den Kontextwechsel bei Fokus und Eingabe (3.2.1,
+3.2.2), `auth/captcha` ein Captcha im Anmeldeformular (3.3.8). Was nur aus
+Wortlaut oder Handlern geraten werden kann — Zweck eines Felds, Formatvorgabe,
+Pflichtkennzeichnung, Wiederholung, Captcha —, ist `REVIEW`. Der Einfüge-Test
+an Passwortfeldern und das Lesen von Handlern über `window` bleiben im Host.
 
 ## Abhängigkeiten
 

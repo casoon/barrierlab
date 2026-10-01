@@ -2,6 +2,13 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.6.0] - 2026-10-01
+
+Gebaut auf `a11y-rules` 0.16.0: die Formularregeln aus B3 (barrierlab#16) —
+autocomplete, Zweck, Fehlerkennzeichnung, Gruppen, Pflichtfelder,
+Anweisungen, Absenden, wiederholte Eingabe, Kontextwechsel, CAPTCHA. Keine
+Änderung an der Schnittstelle. Das Größenbudget liegt seitdem bei 130 KB gzip.
+
 ## [0.5.0] - 2026-10-01
 
 Gebaut auf `a11y-rules` 0.15.0: die Namensregeln aus B2 (barrierlab#15) —
