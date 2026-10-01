@@ -436,6 +436,37 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         last = level;
     }
 
+    // Gar keine Überschrift: nichts, wonach sich navigieren ließe (2.4.1).
+    // `headings/h1-missing` setzt voraus, dass es Überschriften gibt.
+    // Gezählt wird auch `role="heading"`. Hinter einem offenen Dialog fehlen
+    // sie für den Moment der Messung, nicht für die Seite — ein Hinweis wie
+    // bei `landmarks/main-missing` (auditmysite#709).
+    let ueberschrift = any || elements(doc).any(|n| explizite_rolle(n) == Some("heading"));
+    if !ueberschrift {
+        let f = if modal_offen(doc) {
+            Finding::review(
+                "headings/none",
+                pick!(
+                    locale,
+                    "No headings reachable while a dialog is open; check the page with the dialog closed.",
+                    "Keine Überschriften erreichbar, solange ein Dialog offen ist; die Seite mit geschlossenem Dialog prüfen.",
+                ),
+            )
+            .with_severity(Severity::Low)
+        } else {
+            Finding::fail(
+                "headings/none",
+                pick!(
+                    locale,
+                    "The document has no headings to navigate by.",
+                    "Das Dokument hat keine Überschriften, über die sich navigieren ließe.",
+                ),
+            )
+            .with_severity(Severity::Medium)
+        };
+        out.push(f.with_wcag(["2.4.1"]).at(at(doc.root().id())));
+    }
+
     if any && h1s.is_empty() {
         out.push(
             Finding::fail(
@@ -577,7 +608,7 @@ const SECTIONING: &[&str] = &["article", "aside", "main", "nav", "section"];
 /// Beleg: auditmysite#639.
 const SECTIONING_ROLLEN: &[&str] = &["article", "complementary", "main", "navigation", "region"];
 
-fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
+pub(crate) fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
     a11y_dom::ancestors(n).all(|a| {
         !SECTIONING.contains(&a.local_name())
             && !a.attr("role").is_some_and(|r| {
@@ -1560,10 +1591,11 @@ pub const METAS: &[Meta] = &[
             "headings/skip-level",
             "headings/h1-missing",
             "headings/h1-multiple",
+            "headings/none",
         ],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
-        wcag: &["1.3.1", "2.4.6"],
+        wcag: &["1.3.1", "2.4.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
         #[cfg(feature = "de")]
