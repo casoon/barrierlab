@@ -1768,10 +1768,90 @@ pub const METAS: &[Meta] = &[
         help_de: "Ein offener Dialog darf nicht inert sein.",
     },
     crate::checkliste::META,
+    Meta {
+        ids: &["forms/autocomplete-invalid"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.5"],
+        severity: Severity::Low,
+        help: "autocomplete must use the autofill tokens of the HTML standard.",
+        #[cfg(feature = "de")]
+        help_de: "autocomplete muss die Autofill-Angaben des HTML-Standards verwenden.",
+    },
+    Meta {
+        ids: &["forms/error-unidentified"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.3.1"],
+        severity: Severity::Medium,
+        help: "A field marked aria-invalid needs an error description via aria-describedby or aria-errormessage.",
+        #[cfg(feature = "de")]
+        help_de: "Ein als aria-invalid ausgezeichnetes Feld braucht eine Fehlerbeschreibung per aria-describedby oder aria-errormessage.",
+    },
+    Meta {
+        ids: &["forms/group-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::Medium,
+        help: "Radio buttons and checkboxes sharing a name belong in a fieldset with legend or a named group.",
+        #[cfg(feature = "de")]
+        help_de: "Optionsfelder und gleichnamige Kontrollkästchen gehören in ein fieldset mit legend oder eine benannte Gruppe.",
+    },
+    Meta {
+        ids: &["forms/no-submit"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.2.2"],
+        severity: Severity::Medium,
+        help: "A form that collects input needs an explicit submit control.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Formular, das Eingaben sammelt, braucht ein ausdrückliches Absende-Element.",
+    },
+    Meta {
+        ids: &["forms/redundant-entry"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.3.7"],
+        severity: Severity::Medium,
+        help: "Information entered once is prefilled, autofillable or selectable when asked again.",
+        #[cfg(feature = "de")]
+        help_de: "Einmal Eingegebenes ist bei erneuter Abfrage vorbelegt, automatisch ausfüllbar oder auswählbar.",
+    },
+    Meta {
+        ids: &["context/on-input"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.2.2"],
+        severity: Severity::Medium,
+        help: "Changing a selection must not submit, navigate or open a window by itself.",
+        #[cfg(feature = "de")]
+        help_de: "Eine Auswahl zu ändern darf nicht von selbst absenden, navigieren oder ein Fenster öffnen.",
+    },
+    Meta {
+        ids: &["context/on-focus", "context/autofocus"],
+        tier: Tier::Structure,
+        scope: Scope::Rendered,
+        wcag: &["3.2.1"],
+        severity: Severity::High,
+        help: "Receiving focus must not change the context.",
+        #[cfg(feature = "de")]
+        help_de: "Der Fokus allein darf den Kontext nicht wechseln.",
+    },
+    Meta {
+        ids: &["auth/captcha"],
+        tier: Tier::Structure,
+        scope: Scope::Rendered,
+        wcag: &["3.3.8"],
+        severity: Severity::Medium,
+        help: "A CAPTCHA in a sign-in form needs an alternative without a cognitive function test.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 23] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 31] {
     [
         lang,
         title,
@@ -1796,6 +1876,14 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 23] {
         crate::aria::popover,
         crate::aria::inert_dialog,
         crate::checkliste::checkliste,
+        crate::forms::autocomplete_invalid,
+        crate::forms::error_unidentified,
+        crate::forms::group_missing,
+        crate::forms::no_submit,
+        crate::forms::redundant_entry,
+        crate::forms::on_input,
+        crate::forms::on_focus,
+        crate::forms::captcha,
     ]
 }
 

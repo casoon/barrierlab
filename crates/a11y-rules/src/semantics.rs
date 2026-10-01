@@ -384,10 +384,50 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Der zugängliche Name muss den sichtbaren Beschriftungstext enthalten.",
     },
+    Meta {
+        ids: &["forms/purpose-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.5"],
+        severity: Severity::Medium,
+        help: "Fields asking for information about the user carry the matching autocomplete token.",
+        #[cfg(feature = "de")]
+        help_de: "Felder, die nach Angaben zur Person fragen, tragen die passende autocomplete-Angabe.",
+    },
+    Meta {
+        ids: &["forms/required-unmarked", "forms/instructions-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.3.2"],
+        severity: Severity::Medium,
+        help: "Required fields and expected formats are stated in the label or description.",
+        #[cfg(feature = "de")]
+        help_de: "Pflichtfelder und erwartete Formate stehen in Beschriftung oder Beschreibung.",
+    },
+    Meta {
+        ids: &["forms/title-only-label"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::Medium,
+        help: "A field should have a visible label, not only a title attribute.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Feld sollte eine sichtbare Beschriftung haben, nicht nur ein title-Attribut.",
+    },
+    Meta {
+        ids: &["forms/group-name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1", "3.3.2"],
+        severity: Severity::Medium,
+        help: "A fieldset needs a legend, a form group a name.",
+        #[cfg(feature = "de")]
+        help_de: "Ein fieldset braucht eine legend, eine Formulargruppe einen Namen.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 14] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 18] {
     [
         link_names,
         button_names,
@@ -403,6 +443,10 @@ fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 14] {
         crate::names::summary_names,
         crate::names::live_regions,
         crate::names::label_in_name,
+        crate::forms::purpose_missing,
+        crate::forms::instructions,
+        crate::forms::title_only,
+        crate::forms::group_name_missing,
     ]
 }
 
