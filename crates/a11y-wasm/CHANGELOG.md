@@ -2,6 +2,12 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.5.0] - 2026-10-01
+
+Gebaut auf `a11y-rules` 0.15.0: die Namensregeln aus B2 (barrierlab#15) —
+Pflichtnamen, Dialoge, `<summary>`, Live-Regionen, Label in Name. Keine
+Änderung an der Schnittstelle. 111,6 KB gzip bei 110 KB Budget (112.640 Byte).
+
 ## [0.4.0] - 2026-09-30
 
 Gebaut auf `a11y-rules` 0.14.0: die ARIA-Attributregeln aus B1 (barrierlab#14)

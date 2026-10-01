@@ -5,7 +5,13 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.15.0] - 2026-10-01
+
+Nachgezogen nach dem Vergleichslauf mit auditmysite: Ein leerer `role="tab"`
+braucht einen Namen (WCAG 4.1.2, auch ohne „Name Required" in ARIA 1.2);
+`label-in-name/mismatch` nimmt Symbol-Labels aus (`¹⁾`, Understanding 2.5.3)
+und meldet gleiche Wörter in anderer Reihenfolge als `REVIEW` (dm.de).
+
 
 Die Namensregeln aus auditmysite (casoon/barrierlab#15, B2). Norm sind
 WAI-ARIA 1.2 („Accessible Name Required"), accname 1.2, HTML-AAM und WCAG
