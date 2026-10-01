@@ -2348,3 +2348,38 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .unwrap();
     assert_eq!(f.outcome, Outcome::Fail);
 }
+
+/// berlin.de: Swiper setzt `role="group"` auf die `<li>` der Slider-Liste.
+/// Dann hat die Liste keine Einträge mehr, die die Assistenztechnik als
+/// solche sieht.
+#[test]
+fn li_mit_anderer_rolle_ist_kein_listeneintrag() {
+    let doc = vollstaendig()
+        .open("ul")
+        .attr("class", "swiper-wrapper")
+        .open("li")
+        .attr("role", "group")
+        .text("Folie 1")
+        .close()
+        .open("li")
+        .attr("role", "group")
+        .text("Folie 2")
+        .close()
+        .close()
+        // Zur Kontrolle: role="listitem" bleibt ein Eintrag.
+        .open("ul")
+        .open("li")
+        .attr("role", "listitem")
+        .text("A")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&doc);
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "lists/invalid-structure")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
