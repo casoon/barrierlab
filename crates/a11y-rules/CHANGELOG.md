@@ -7,6 +7,13 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+`names/required-missing` meldet Formularfeld-Rollen (`textbox`, `searchbox`,
+`combobox`, `listbox`, `spinbutton`, `slider`, `checkbox`, `radio`,
+`radiogroup`, `switch`) ohne Namen als Critical — dieselbe Schwere wie das
+native Feld ohne Label (`forms/label-missing`). Bisher High; die übrigen Rollen
+bleiben High. Beleg: auditmysite-Kalibrierung `combobox_missing_expanded`,
+`widget_patterns` (dort meldete die abgelöste Regel `label` Critical).
+
 Die Formularregeln aus auditmysite (casoon/barrierlab#16, B3). Norm sind
 WCAG 2.2 (1.3.1, 1.3.5, 3.2.1, 3.2.2, 3.3.1, 3.3.2, 3.3.7, 3.3.8), der
 HTML-Standard („Autofill", Formulareigentümer) und WAI-ARIA 1.2

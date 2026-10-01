@@ -109,6 +109,27 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         } else {
             &["4.1.2"]
         };
+        // Ein Formularfeld ohne Namen wiegt wie das native Feld ohne Label
+        // (`forms/label-missing`, Critical) — die ARIA-Rolle macht es nicht
+        // leichter. auditmysite meldete beide Fälle als Critical (3.3.2);
+        // die übrigen Rollen bleiben High.
+        let schwere = if matches!(
+            rolle.as_str(),
+            "textbox"
+                | "searchbox"
+                | "combobox"
+                | "listbox"
+                | "spinbutton"
+                | "slider"
+                | "checkbox"
+                | "radio"
+                | "radiogroup"
+                | "switch"
+        ) {
+            Severity::Critical
+        } else {
+            Severity::High
+        };
         out.push(
             Finding::fail(
                 "names/required-missing",
@@ -118,7 +139,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
                     "Das Element mit der Rolle \"{rolle}\" hat keinen zugänglichen Namen.",
                 ),
             )
-            .with_severity(Severity::High)
+            .with_severity(schwere)
             .with_wcag(wcag.iter().copied())
             .at(at(n.id())),
         );
