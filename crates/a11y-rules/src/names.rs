@@ -28,9 +28,15 @@ fn at(id: NodeId) -> Location {
 /// auditmysite sie prüfte. Ohne `button` (`buttons/name-missing`) und
 /// `dialog`/`alertdialog` (`dialog/name-missing`).
 ///
-/// Nicht übernommen: `menu` und `tab` — ARIA 1.2 verlangt für beide keinen
-/// Namen. Die weiteren Pflichtrollen der Spezifikation (`region`, `img`,
-/// `table`, `grid`, `tree`, …) haben eigene Regeln oder keinen Beleg im Korpus.
+/// Dazu `tab`: ARIA 1.2 führt für ihn kein „Name Required", aber ein Tab ist
+/// ein Bedienelement, und WCAG 4.1.2 verlangt für jedes einen bestimmbaren
+/// Namen. auditmysite meldete den leeren Tab (`aria-label`); ohne ihn ginge
+/// der Fall verloren.
+///
+/// Nicht übernommen: `menu` — ein Container, kein Bedienelement; ARIA 1.2
+/// verlangt keinen Namen. Die weiteren Pflichtrollen der Spezifikation
+/// (`region`, `img`, `table`, `grid`, `tree`, …) haben eigene Regeln oder
+/// keinen Beleg im Korpus.
 const NAME_PFLICHT: &[&str] = &[
     "checkbox",
     "combobox",
@@ -48,6 +54,7 @@ const NAME_PFLICHT: &[&str] = &[
     "slider",
     "spinbutton",
     "switch",
+    "tab",
     "textbox",
     "treeitem",
 ];
