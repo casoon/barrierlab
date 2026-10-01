@@ -459,10 +459,29 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
             continue;
         };
         let sichtbar = sichtbarer_text(n);
+        // Ein sichtbares Label ohne Buchstaben ist ein Symbol (`¹⁾`, `×`,
+        // `→`); 2.5.3 nimmt Symbole ausdrücklich aus (Understanding 2.5.3,
+        // „symbolic text characters"). Beleg: dm.de, Fußnote „¹⁾" mit dem
+        // Namen „Zur Fußnote 1".
+        if !sichtbar.chars().any(char::is_alphabetic) {
+            continue;
+        }
         let (s, m) = (normiert(&sichtbar), normiert(&name));
         if s.is_empty() || m.is_empty() || m.contains(&s) || s.contains(&m) {
             continue;
         }
+        // Stehen alle Wörter des Sichtbaren im Namen, nur in anderer
+        // Reihenfolge, spricht die Spracheingabe sie trotzdem — ein Hinweis,
+        // kein Verstoß. Beleg: dm.de, Karten-Link mit Titel und Teaser in
+        // umgekehrter Folge.
+        let woerter = |t: &str| -> Vec<String> {
+            t.split(|c: char| !c.is_alphanumeric())
+                .filter(|w| !w.is_empty())
+                .map(str::to_lowercase)
+                .collect()
+        };
+        let im_namen = woerter(&name);
+        let umgestellt = woerter(&sichtbar).iter().all(|w| im_namen.contains(w));
         let (name, sichtbar) = (
             name.trim(),
             sichtbar.split_whitespace().collect::<Vec<_>>().join(" "),
@@ -472,7 +491,7 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
             "The accessible name \"{name}\" does not contain the visible label \"{sichtbar}\".",
             "Der zugängliche Name \"{name}\" enthält die sichtbare Beschriftung \"{sichtbar}\" nicht.",
         );
-        let f = if s.chars().count() > m.chars().count() * ZUSAMMENGESETZT {
+        let f = if umgestellt || s.chars().count() > m.chars().count() * ZUSAMMENGESETZT {
             Finding::review("label-in-name/mismatch", text)
         } else {
             Finding::fail("label-in-name/mismatch", text)
