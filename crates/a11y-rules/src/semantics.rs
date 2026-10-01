@@ -23,7 +23,7 @@ fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
-fn named<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
+pub(crate) fn named<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
     doc.accessible_name(n).is_some_and(|s| !s.trim().is_empty())
 }
 
@@ -53,7 +53,9 @@ fn link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let ist_button = n.is_element("button") || doc.role(n).as_deref() == Some("button");
-        if !ist_button || doc.is_ignored(n) {
+        // Eine `<summary>` meldet `summary/name-missing` — `accname` gibt ihr
+        // die Rolle `button`, Chrome nicht; so meldet jeder Host sie einmal.
+        if !ist_button || n.is_element("summary") || doc.is_ignored(n) {
             continue;
         }
         if !named(doc, n) {
@@ -312,10 +314,80 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Zusammengehörige Rollen müssen verschachtelt sein, wie WAI-ARIA es verlangt.",
     },
+    Meta {
+        ids: &["names/required-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1", "4.1.2"],
+        severity: Severity::High,
+        help: "Elements whose role requires a name (fields, toggles, menu items, meters, …) need one.",
+        #[cfg(feature = "de")]
+        help_de: "Elemente, deren Rolle einen Namen verlangt (Felder, Schalter, Menüpunkte, Messanzeigen, …), brauchen einen.",
+    },
+    Meta {
+        ids: &["names/symbol-only"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Medium,
+        help: "An accessible name should be words, not a single symbol.",
+        #[cfg(feature = "de")]
+        help_de: "Ein zugänglicher Name sollte aus Wörtern bestehen, nicht aus einem einzelnen Symbol.",
+    },
+    Meta {
+        ids: &["dialog/name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "Every dialog needs a name, usually via aria-labelledby on its heading.",
+        #[cfg(feature = "de")]
+        help_de: "Jeder Dialog braucht einen Namen, meist per aria-labelledby auf seine Überschrift.",
+    },
+    Meta {
+        ids: &["dialog/modal-unmarked"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Medium,
+        help: "A modal dialog should carry aria-modal=\"true\".",
+        #[cfg(feature = "de")]
+        help_de: "Ein modaler Dialog sollte aria-modal=\"true\" tragen.",
+    },
+    Meta {
+        ids: &["summary/name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "The <summary> of a <details> element needs text.",
+        #[cfg(feature = "de")]
+        help_de: "Die <summary> eines <details>-Elements braucht Text.",
+    },
+    Meta {
+        ids: &["status/live-overridden"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.3"],
+        severity: Severity::High,
+        help: "Live regions should keep the aria-live their role implies.",
+        #[cfg(feature = "de")]
+        help_de: "Live-Regionen sollten das aria-live behalten, das ihre Rolle vorgibt.",
+    },
+    Meta {
+        ids: &["label-in-name/mismatch"],
+        tier: Tier::Semantics,
+        scope: Scope::Rendered,
+        wcag: &["2.5.3"],
+        severity: Severity::Medium,
+        help: "The accessible name must contain the visible label text.",
+        #[cfg(feature = "de")]
+        help_de: "Der zugängliche Name muss den sichtbaren Beschriftungstext enthalten.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 7] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 14] {
     [
         link_names,
         button_names,
@@ -324,6 +396,13 @@ fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 7] {
         generic_link_names,
         crate::aria::attributes_allowed,
         crate::aria::required_context,
+        crate::names::required_names,
+        crate::names::symbol_names,
+        crate::names::dialog_names,
+        crate::names::dialog_modal,
+        crate::names::summary_names,
+        crate::names::live_regions,
+        crate::names::label_in_name,
     ]
 }
 

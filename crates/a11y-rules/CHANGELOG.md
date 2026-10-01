@@ -5,6 +5,77 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Die Namensregeln aus auditmysite (casoon/barrierlab#15, B2). Norm sind
+WAI-ARIA 1.2 („Accessible Name Required"), accname 1.2, HTML-AAM und WCAG
+2.5.3; alle in Tier 2.
+
+### Added
+
+| Neue Kennung | Schwere | ersetzt in auditmysite |
+|---|---|---|
+| `names/required-missing` | hoch | `aria-command-name` (ohne `button` und `a[href]`), `aria-input-field-name`, `aria-meter-name`, `aria-progressbar-name`, `aria-toggle-field-name`, `aria-treeitem-name` (`aria_naming_rules`); `aria-label` „kein Name" (`accessible_name`) |
+| `names/symbol-only` | mittel | `aria-label` „Icon Only" (`accessible_name`) |
+| `dialog/name-missing` | hoch | `aria-dialog-name` (`aria_naming_rules`), `dialog-name` (`dialog_rules`) |
+| `dialog/modal-unmarked` | mittel | `dialog-name` „Dialog Modal" (`dialog_rules`) |
+| `summary/name-missing` | hoch | `summary-name` (`summary_name`) |
+| `status/live-overridden` | hoch (`alert`), mittel (`status`, `log`) | `aria-live-region-role` (`status_messages`) |
+| `label-in-name/mismatch` | mittel | `label-content-name-mismatch` (`label_in_name`) |
+
+Unbenannte Buttons, Links (`a[href]`) und SVGs melden weiter
+`buttons/name-missing`, `links/name-missing` und `svg/name-missing`;
+`names/required-missing` meldet sie nicht noch einmal. Ein natives
+Formularfeld ganz ohne Beschriftung meldet `forms/label-missing`;
+`names/required-missing` nur, wenn eine Beschriftung behauptet wird, aber leer
+ausgeht (`<label for>` ohne Text).
+
+### Changed
+
+- `buttons/name-missing` meldet keine `<summary>` mehr. `accname` gibt ihr
+  die Rolle `button`, Chrome `DisclosureTriangle`; `summary/name-missing`
+  meldet sie jetzt auf jedem Host genau einmal.
+
+### Abweichungen von auditmysite
+
+- `names/required-missing` prüft `menu` und `tab` nicht (ARIA 1.2 verlangt
+  dort keinen Namen) und keine native `<option>` (die leere
+  Platzhalteroption eines `<select>` ist üblich; Chrome stellt sie nicht als
+  `option` aus). Unbenannte, nicht fokussierbare Elemente sind ein Verstoß wie
+  in `aria_naming_rules`, nicht die Warnung aus `accessible_name`.
+- `dialog/name-missing` meldet einen Fall, für den auditmysite zwei
+  Kennungen hatte. Ein geschlossenes `<dialog>` (ohne `open`) wird nicht
+  geprüft.
+- `dialog/modal-unmarked` ist `REVIEW` statt Verstoß (ARIA verlangt
+  `aria-modal` nicht; ein nicht modaler Dialog trägt es zu Recht nicht) und
+  prüft nur `role="dialog"`: Ob ein natives `<dialog>` per `showModal()`
+  geöffnet wurde, liefert kein Tier.
+- `summary/name-missing` meldet nur die `<summary>`, die ihr `<details>`
+  bedient, nicht zusätzlich das `<details>`.
+- `status/live-overridden` ist ein Verstoß nur bei `aria-live="off"` (die
+  Region wird dann nicht angesagt). Eine andere Dringlichkeit (`alert` mit
+  `polite`, `status` mit `assertive`) ist `REVIEW`: ARIA erlaubt das
+  Überschreiben, angesagt wird weiterhin. Implizite Rollen zählen mit
+  (`<output>` ist `status`).
+- `names/symbol-only` ist `REVIEW` statt Verstoß — 4.1.2 verlangt einen
+  Namen, über seine Güte sagt es nichts. Buchstaben zählen nach Unicode.
+- `label-in-name/mismatch` prüft alle Rollen mit Namen aus dem Inhalt
+  (`button`, `link`, `menuitem*`, `tab`, `checkbox`, `radio`, `switch`,
+  `option`, `treeitem`), deren Name aus `aria-label` oder `aria-labelledby`
+  stammt — auditmysite nur `button` mit `aria-label`. Verglichen wird der
+  berechnete Name, ohne Groß-/Kleinschreibung, Satzzeichen und Leerraum, mit
+  Buchstaben nach Unicode. Wie in auditmysite: kein Befund, wenn der Name im
+  sichtbaren Text steht; `REVIEW`, wenn der sichtbare Text mehr als doppelt so
+  lang ist wie der Name (#513). Visuell versteckter Text (`.sr-only`) ist ohne
+  Stile nicht erkennbar und zählt als sichtbar.
+- Nicht übernommen aus `accessible_name`: leeres `aria-labelledby` und
+  `aria-describedby` an einem Element, das einen Namen hat — die übrigen
+  Namensquellen greifen, es schadet nicht (wie schon bei
+  `aria/reference-missing`). Ebenfalls noch nicht übernommen:
+  `description-duplicates-name` (auditmysite#713). Dafür bräuchte
+  `a11y_dom::Semantics` die Accessible Description, die es bisher nicht
+  liefert.
+
 ## [0.14.2] - 2026-10-01
 
 ### Fixed
