@@ -5,6 +5,17 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.14.2] - 2026-10-01
+
+### Fixed
+
+- Ein verwaistes `listitem` meldet nur noch `lists/item-outside-list`, nicht
+  zusätzlich `aria/required-parent-missing` (auditmysite-Kalibrierung
+  `invalid_aria.html`). Dafür erkennt `lists/item-outside-list` auch ein `<li>`
+  unter einer Liste, die per `role` etwas anderes geworden ist
+  (`ul[role=tablist] > li`, auditmysite#715); ein `<li>` mit eigener Rolle
+  (`none` im Menü-Muster, `tab`) gilt dort nicht als Listeneintrag.
+
 ## [0.14.1] - 2026-10-01
 
 ### Fixed
