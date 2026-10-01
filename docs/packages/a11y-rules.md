@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 41 in Tier 1 (Struktur, davon 7 Checkliste), 5 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 50 in Tier 1 (Struktur, davon 7 Checkliste), 9 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
@@ -46,6 +46,16 @@ die **Heuristiken** in Tier 3 (`REVIEW`, aus `Rendering::layout` und
 `bounds`; ohne diese Daten melden sie nichts, nur die ungemessene
 Fokus-Sichtbarkeit bleibt als `UNTESTED` stehen).
 
+## ARIA nach WAI-ARIA 1.2
+
+Die `aria/*`-Regeln prüfen Attributnamen, Wertebereiche, erlaubte und
+verbotene Attribute je Rolle sowie Kontext und Bestandteile. Die Tabellen dazu
+sind aus der Spezifikation erzeugt (eine Bitmaske je Rolle). Kontext und
+Bestandteile laufen über das DOM, nicht über den Accessibility-Tree: Ein `<li>`
+in einer Liste mit fremder Rolle zählt als `listitem`, auch wo Chrome es
+glättet (auditmysite#715). Native Tabellen und Listen ohne `role` prüfen die
+`tables/*`- und `lists/*`-Regeln.
+
 ## Abhängigkeiten
 
 Nach unten: `a11y-dom`, `a11y-report`, `accname`. Nach oben: alle Hosts,
@@ -60,7 +70,7 @@ eine Sicht auf das Dokument, in der die übrigen fehlen:
 |---|---|---|
 | `AccessibilityTree` | `aria-hidden="true"`, nicht Dargestelltes | der Normalfall |
 | `Rendered` | nicht Dargestelltes | `keyboard/*`, Kontrast |
-| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate` |
+| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*` |
 
 „Nicht dargestellt" heißt mit Tier 3 `display: none` oder `visibility: hidden`,
 ohne das `hidden`-Attribut. Ohne Stile bleibt per CSS Verstecktes in der Sicht

@@ -2,6 +2,13 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.4.0] - 2026-09-30
+
+Gebaut auf `a11y-rules` 0.14.0: die ARIA-Attributregeln aus B1 (barrierlab#14)
+laufen jetzt auch in der Seite — erlaubte/verbotene Attribute, Werte,
+Pflicht-Eltern und -Kinder, Tabs, Combobox, popover/inert. Keine Änderung an
+der Schnittstelle. Das Größenbudget liegt seitdem bei 110 KB gzip.
+
 ## [0.3.1] - 2026-09-30
 
 Gebaut auf `a11y-rules` 0.13.5. Keine Änderung an der Schnittstelle; übernimmt

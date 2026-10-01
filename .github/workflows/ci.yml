@@ -84,7 +84,10 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
-      - name: Groessenbudget (100 KB gzip)
+      # 110 KB seit B1 (ARIA-Attributregeln, barrierlab#14): die Regeln kosten
+      # rund 8,6 KB und sollen auch in der laufenden Seite (LiveAudit) greifen.
+      # Entscheidung vom 30.09.2026; mit B2-B7 neu bewerten.
+      - name: Groessenbudget (110 KB gzip)
         run: |
           python3 - <<'EOF'
           import gzip, sys
@@ -92,8 +95,8 @@ jobs:
           raw = open(p, "rb").read()
           gz = len(gzip.compress(raw, 9)) / 1024
           print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
-          if gz > 100:
-              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 100 KB")
+          if gz > 110:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 110 KB")
           EOF
 
   node:
