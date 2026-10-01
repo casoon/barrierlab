@@ -5,6 +5,93 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Die Landmark-, Tastatur- und Strukturregeln aus auditmysite
+(casoon/barrierlab#17, B4). Norm sind WAI-ARIA 1.2 (Landmark-Rollen,
+`aria-activedescendant`), HTML-AAM (`header`, `footer`, `aside`, `section`,
+`form`) und WCAG 2.2 (1.3.1, 2.1.1, 2.4.1, 2.4.3, 4.1.2). Alle neuen Regeln
+außer `headings/none` sind Tier 2: Ob `<form>` und `<section>` Landmarks sind,
+hängt an ihrem Accessible Name, ob ein Element interaktiv ist, an seiner Rolle.
+Die Landmark-Rolle bestimmt die Regel selbst aus dem Markup, nicht aus der
+Rolle des Hosts — `accname` und ältere Chrome-Fassungen geben einem `<header>`
+in `<main>` noch `banner`.
+
+### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `landmarks/not-unique` | 2 | `REVIEW`, mittel | `landmark-unique` (`landmark_granular`) |
+| `landmarks/not-top-level` | 2 | `FAIL`, mittel | `landmark-banner-is-top-level`, `landmark-contentinfo-is-top-level`, `landmark-main-is-top-level` (`landmark_granular`) |
+| `landmarks/banner-duplicate` | 2 | `FAIL`, mittel | `landmark-no-duplicate-banner` (`landmark_granular`) |
+| `landmarks/contentinfo-duplicate` | 2 | `FAIL`, mittel | `landmark-no-duplicate-contentinfo` (`landmark_granular`) |
+| `landmarks/content-outside` | 2 | `FAIL`, mittel | `region` (`region`) |
+| `headings/none` | 1 | `FAIL`, mittel; `REVIEW`, niedrig hinter offenem Dialog | `bypass` „No headings found" (`bypass_blocks`) |
+| `keyboard/focusable-no-role` | 2 | `REVIEW`, niedrig | `focusable-no-role` (`keyboard`) |
+| `keyboard/interactive-not-focusable` | 2 | `REVIEW`, hoch | `keyboard` „appears not keyboard-focusable" (`keyboard`) |
+| `dialog/focusable-missing` | 2 | `FAIL`, mittel (2.4.3) | `dialog-no-focusable` (`patterns/modal_dialog`) |
+| `patterns/accordion-controls-missing` | 2 | `REVIEW`, niedrig | `accordion-no-controls` (`patterns/accordion`) |
+
+Mitgebrachte Korrekturen als Tests (`tests/landmarks.rs`): auditmysite#639
+(`<header>`/`<footer>` in `main`, `article` oder unter `role="main"` sind
+keine banner/contentinfo), #642 (Sprunglink am Ziel erkannt, nicht am Text),
+#709 (keine Überschriften hinter offenem Dialog: Hinweis), #727 (unbenanntes
+`<form>`/`<section>` ist keine Landmark — weder für die Eindeutigkeit noch als
+umgebende Landmark). #638 und #644 betreffen Tabellen und `redundant-role`,
+keine Regel dieses Pakets.
+
+Bleibt im Host: `keyboard-trap` (2.1.2) — der Hinweis je modalem Dialog und
+der seitenweite `UNTESTED`-Vermerk brauchen echte Tastaturbedienung. Aus
+`patterns/` die Mustererkennung und die Journeys, dazu
+`accordion-trigger-not-button` und `aria-expanded-required` (siehe unten).
+
+Nicht übernommen: `accordion-trigger-not-button` — an Rollen, die
+`aria-expanded` nicht unterstützen, meldet das schon
+`aria/attribute-not-allowed`; an Rollen, die es unterstützen (`link`,
+`menuitem`, `tab`, `treeitem`, …), erlaubt WAI-ARIA 1.2 den Zustand
+ausdrücklich, und fehlender Fokus fällt unter
+`keyboard/interactive-not-focusable`. `aria-expanded-required` — rät eine
+Aufklappnavigation aus dem Wort „menu"/„Menü" im Namen; sprachabhängig wie der
+Fehler aus #642, ohne Norm dahinter. `tab-no-aria-selected` und
+`aria-dialog-name` liefen schon als `aria/tab-selected-missing` und
+`dialog/name-missing` (B1, B2), fehlende main- und banner-Landmark sowie
+doppelte main schon als `landmarks/main-missing`, `landmarks/banner-missing`
+und `landmarks/main-duplicate` (B0).
+
+### Abweichungen von auditmysite
+
+- `landmarks/not-unique` ist `REVIEW` statt Verstoß: WAI-ARIA 1.2 und die APG
+  verlangen unterscheidbare Namen nur als SHOULD, WCAG 1.3.1 setzt keine an
+  Landmarks voraus. Wie in auditmysite zählen gleich benannte und gleich
+  unbenannte Landmarks; mehrere `main`, `banner` oder `contentinfo` melden
+  also zusätzlich zu ihrem Duplikatbefund.
+- `<aside>` in `article`, `aside`, `nav` oder `section` ist nur mit Namen
+  `complementary` (HTML-AAM).
+- `landmarks/banner-duplicate` und `landmarks/contentinfo-duplicate` zeigen
+  wie `landmarks/main-duplicate` auf die zweite Landmark, auditmysite auf die
+  erste.
+- `landmarks/content-outside` meldet das äußerste Element ohne Landmark darin,
+  einmal je Block (wie axe `region`), nicht jeden Textknoten und jedes
+  benannte Element einzeln. Steht Text unmittelbar neben einer Landmark, trägt
+  der umgebende Container den Befund. Die Befundzahl je Seite sinkt damit.
+- `keyboard/focusable-no-role` zählt nur die Tabfolge (`tabindex` ≥ 0):
+  `tabindex="-1"`, etwa am Ziel eines Sprunglinks, erreicht niemand per Tab.
+  Ein benannter Bereich (`region`) mit `tabindex="0"` ist das empfohlene Muster
+  für scrollbare Bereiche und zählt nicht.
+- `keyboard/interactive-not-focusable` nimmt deaktivierte Felder, native
+  `<option>` (Chrome führt sie nicht als `option`), Elemente unter
+  `aria-activedescendant` und Inertes aus. Fokussierbar heißt wie Chrome
+  `focusable`: nativ oder mit irgendeinem `tabindex`, auch `-1` (Tabs mit
+  rovingem `tabindex`).
+- `dialog/focusable-missing` sucht in allen Nachfahren, auditmysite nur in
+  den direkten Kindern. Ein geschlossenes `<dialog>` zählt nicht.
+- `patterns/accordion-controls-missing` ist `REVIEW` statt Verstoß: WAI-ARIA
+  1.2 verlangt `aria-controls` am Button nicht, die APG nennt es beim
+  Disclosure-Muster optional. Ausgenommen wie in auditmysite: zugeklappte
+  Buttons, `<summary>` und Buttons in `navigation`/`banner`.
+- `headings/none` zählt auch `role="heading"`; versteckte Überschriften
+  zählen nicht.
+
 ## [0.16.0] - 2026-10-01
 
 `names/required-missing` meldet Formularfeld-Rollen (`textbox`, `searchbox`,

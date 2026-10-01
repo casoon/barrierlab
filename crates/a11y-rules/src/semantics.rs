@@ -424,10 +424,77 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein fieldset braucht eine legend, eine Formulargruppe einen Namen.",
     },
+    Meta {
+        ids: &["landmarks/not-unique"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::Medium,
+        help: "Landmarks of the same role should have distinct names.",
+        #[cfg(feature = "de")]
+        help_de: "Landmarks derselben Rolle sollten unterscheidbare Namen haben.",
+    },
+    Meta {
+        ids: &[
+            "landmarks/not-top-level",
+            "landmarks/banner-duplicate",
+            "landmarks/contentinfo-duplicate",
+        ],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::Medium,
+        help: "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
+        #[cfg(feature = "de")]
+        help_de: "banner, contentinfo und main gehören auf die oberste Ebene; banner und contentinfo höchstens einmal.",
+    },
+    Meta {
+        ids: &["landmarks/content-outside"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::Medium,
+        help: "All content belongs inside a landmark.",
+        #[cfg(feature = "de")]
+        help_de: "Aller Inhalt gehört in eine Landmark.",
+    },
+    Meta {
+        ids: &[
+            "keyboard/focusable-no-role",
+            "keyboard/interactive-not-focusable",
+        ],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.1.1"],
+        severity: Severity::High,
+        help: "Interactive roles must be focusable; focusable elements need an interactive role.",
+        #[cfg(feature = "de")]
+        help_de: "Interaktive Rollen müssen fokussierbar sein; fokussierbare Elemente brauchen eine interaktive Rolle.",
+    },
+    Meta {
+        ids: &["dialog/focusable-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.3"],
+        severity: Severity::Medium,
+        help: "A dialog needs at least one focusable element.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Dialog braucht mindestens ein fokussierbares Element.",
+    },
+    Meta {
+        ids: &["patterns/accordion-controls-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "An expanded button should reference the region it controls with aria-controls.",
+        #[cfg(feature = "de")]
+        help_de: "Ein aufgeklappter Button sollte per aria-controls auf den gesteuerten Bereich verweisen.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 18] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 24] {
     [
         link_names,
         button_names,
@@ -447,6 +514,12 @@ fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 18] {
         crate::forms::instructions,
         crate::forms::title_only,
         crate::forms::group_name_missing,
+        crate::landmarks::not_unique,
+        crate::landmarks::structure,
+        crate::landmarks::content_outside,
+        crate::landmarks::keyboard,
+        crate::landmarks::dialog_focusable,
+        crate::landmarks::accordion_controls,
     ]
 }
 
