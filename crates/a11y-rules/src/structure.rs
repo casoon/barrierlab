@@ -1307,17 +1307,23 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         let mut kinder = Vec::new();
         listenkinder(n, &mut kinder);
 
-        let fremd = kinder
-            .iter()
-            .any(|c| !ist_listeneintrag(*c) && !matches!(c.local_name(), "script" | "template"));
+        // Ein `<li>` mit einer anderen expliziten Rolle (`role="group"` bei
+        // Slidern, `tab`, `menuitem`) ist kein Listeneintrag mehr — die Liste
+        // hat dann Kinder, die die Assistenztechnik nicht als Einträge sieht
+        // (axe `list`). Beleg: berlin.de, `ul.swiper-wrapper > li[role=group]`.
+        let fremd = kinder.iter().any(|c| {
+            let eintrag =
+                ist_listeneintrag(*c) && explizite_rolle(*c).is_none_or(|r| r == "listitem");
+            !eintrag && !matches!(c.local_name(), "script" | "template")
+        });
         if fremd {
             out.push(
                 Finding::fail(
                     "lists/invalid-structure",
                     tr!(
                         locale,
-                        "<{tag}> has direct children that are not <li>.",
-                        "<{tag}> enthält direkte Kinder, die kein <li> sind."
+                        "<{tag}> has direct children that are not list items.",
+                        "<{tag}> enthält direkte Kinder, die keine Listeneinträge sind."
                     ),
                 )
                 .with_severity(Severity::Medium)

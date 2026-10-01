@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.14.1] - 2026-10-01
+
+### Fixed
+
+- `lists/invalid-structure`: Ein `<li>` mit einer anderen expliziten Rolle
+  als `listitem` (etwa `role="group"` bei Slidern) zählt nicht als
+  Listeneintrag. Bis 0.14.0 fing auditmysites eigene `aria-roles`-Regel diesen
+  Fall ab; mit B1 ist sie entfallen. Beleg: berlin.de,
+  `ul.swiper-wrapper > li[role=group]` (wie axe `list`).
+
 ## [0.14.0] - 2026-09-30
 
 Rollen aus WAI-ARIA Graphics (`graphics-document`, `-object`, `-symbol`) und
