@@ -275,8 +275,8 @@ fn treegrid_zeilen_und_native_eingaben_bleiben_still_auditmysite_655_656_673() {
 // --- aria/required-parent-missing, aria/required-children-missing ----------
 
 /// auditmysite#715 (magyarorszag.hu): axe meldet `aria-required-children` an
-/// der Tabliste und `aria-required-parent` an den Tabs; der `listitem`-Fall
-/// kommt dazu.
+/// der Tabliste und `aria-required-parent` an den Tabs; die `<li>` dazwischen
+/// meldet `lists/item-outside-list`.
 const TABLISTE_AUS_LI: &str = r##"<ul id="tabs" role="tablist"><li id="li1"><a id="t1" role="tab" href="#a">A</a></li><li id="li2"><a id="t2" role="tab" href="#b">B</a></li></ul>"##;
 
 #[test]
@@ -288,7 +288,12 @@ fn tabliste_aus_listeneintraegen_auditmysite_715() {
     );
     assert_eq!(
         an(TABLISTE_AUS_LI, &r, "aria/required-parent-missing"),
-        ["li1", "li2", "t1", "t2"]
+        ["t1", "t2"]
+    );
+    // Die <li> meldet die Listen-Familie, nicht ein zweites Mal die ARIA-Regel.
+    assert_eq!(
+        an(TABLISTE_AUS_LI, &r, "lists/item-outside-list"),
+        ["li1", "li2"]
     );
 }
 
@@ -301,7 +306,12 @@ fn tabliste_aus_listeneintraegen_auch_wenn_der_host_das_li_glaettet_auditmysite_
     );
     assert_eq!(
         an(TABLISTE_AUS_LI, &r, "aria/required-parent-missing"),
-        ["li1", "li2", "t1", "t2"]
+        ["t1", "t2"]
+    );
+    // Die <li> meldet die Listen-Familie, nicht ein zweites Mal die ARIA-Regel.
+    assert_eq!(
+        an(TABLISTE_AUS_LI, &r, "lists/item-outside-list"),
+        ["li1", "li2"]
     );
 }
 

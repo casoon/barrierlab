@@ -952,7 +952,11 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             continue;
         };
 
-        if let Some(erlaubt) = nachschlagen(KONTEXT, rolle)
+        // Der Kontext eines `listitem` ist Sache der Listen-Familie
+        // (`lists/item-outside-list`) — sonst meldeten zwei Regeln denselben
+        // verwaisten Eintrag (auditmysite-Kalibrierung `invalid_aria.html`).
+        if rolle != "listitem"
+            && let Some(erlaubt) = nachschlagen(KONTEXT, rolle)
             && im_kontext(doc, n, erlaubt, &besitzer) == Some(false)
         {
             let kontext = erlaubt.join(", ");
