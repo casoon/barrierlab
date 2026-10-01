@@ -426,3 +426,59 @@ fn label_in_name_gilt_auch_fuer_links_und_labelledby() {
         assert_eq!(an(src, &r, "label-in-name/mismatch"), ["link", "tab"]);
     }
 }
+
+/// Ein leerer Tab ist ein Bedienelement ohne Namen (WCAG 4.1.2), auch wenn
+/// ARIA 1.2 für `tab` kein „Name Required" führt. Beleg: auditmysites
+/// abgelöste `aria-label`-Regel.
+#[test]
+fn leerer_tab_hat_keinen_namen() {
+    let doc = a11y_dom::Arena::builder()
+        .open("html")
+        .attr("lang", "de")
+        .open("body")
+        .open("div")
+        .attr("role", "tablist")
+        .attr("aria-label", "Bereiche")
+        .open("div")
+        .attr("role", "tab")
+        .attr("tabindex", "0")
+        .close()
+        .open("div")
+        .attr("role", "tab")
+        .attr("tabindex", "-1")
+        .text("Zwei")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
+    let ids = accname::IdIndex::build(doc.root());
+    struct H<'a>(
+        &'a a11y_dom::Arena,
+        accname::IdIndex<'a, a11y_dom::ArenaNode<'a>>,
+    );
+    impl a11y_dom::Document for H<'_> {
+        type N<'n>
+            = a11y_dom::ArenaNode<'n>
+        where
+            Self: 'n;
+        fn root(&self) -> Self::N<'_> {
+            self.0.root()
+        }
+    }
+    impl a11y_dom::Semantics for H<'_> {
+        fn role<'n>(&'n self, n: Self::N<'n>) -> Option<String> {
+            accname::role(n).map(str::to_string)
+        }
+        fn accessible_name<'n>(&'n self, n: Self::N<'n>) -> Option<String> {
+            accname::name(n, &self.1)
+        }
+    }
+    let r = a11y_rules::run_with_semantics(&H(&doc, ids));
+    let n = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "names/required-missing")
+        .count();
+    assert_eq!(n, 1, "{:?}", r.findings);
+}
