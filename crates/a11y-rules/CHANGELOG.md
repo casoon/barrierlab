@@ -5,7 +5,7 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.17.0] - 2026-10-01
 
 Die Landmark-, Tastatur- und Strukturregeln aus auditmysite
 (casoon/barrierlab#17, B4). Norm sind WAI-ARIA 1.2 (Landmark-Rollen,
