@@ -5,6 +5,87 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Die Formularregeln aus auditmysite (casoon/barrierlab#16, B3). Norm sind
+WCAG 2.2 (1.3.1, 1.3.5, 3.2.1, 3.2.2, 3.3.1, 3.3.2, 3.3.7, 3.3.8), der
+HTML-Standard („Autofill", Formulareigentümer) und WAI-ARIA 1.2
+(`aria-invalid`, `aria-errormessage`, `aria-required`). Kennungen: `forms/*`
+für Felder und Formulare, `context/*` für den Kontextwechsel bei Fokus und
+Eingabe, `auth/*` für die Anmeldung.
+
+### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `forms/autocomplete-invalid` | 1 | `FAIL`, niedrig | `autocomplete-valid` „Invalid autocomplete value" (`input_purpose`) |
+| `forms/purpose-missing` | 2 | `REVIEW`, mittel | `autocomplete-valid` „lacks autocomplete" (`input_purpose`), `identify-purpose` (`identify_purpose`) |
+| `forms/error-unidentified` | 1 | `FAIL`, mittel | `input-error-message` (`form_rules`), `aria-invalid-without-describedby` (`error_identification`) |
+| `forms/group-missing` | 1 | `FAIL`, mittel | `form-field-group` (`form_rules`, AX- und DOM-Teil) |
+| `forms/group-name-missing` | 2 | `FAIL`, mittel | `label` „Form group has no legend or label" (`instructions`) |
+| `forms/required-unmarked` | 2 | `REVIEW`, mittel | `label` „Required field not clearly indicated" (`instructions`), `label` „may not indicate required status" (`form_rules`) |
+| `forms/instructions-missing` | 2 | `REVIEW`, niedrig | `label` „may require format instructions" (`instructions`) |
+| `forms/title-only-label` | 2 | `REVIEW`, mittel | `label-title-only` (`label_title_only`) |
+| `forms/no-submit` | 1 | `FAIL`, mittel; `REVIEW`, niedrig ohne `action` und Textfeld | `form-no-submit` (`form_rules`) |
+| `forms/redundant-entry` | 1 | `REVIEW`, mittel | `redundant-entry` (`redundant_entry`) |
+| `context/on-input` | 1 | `FAIL`, mittel; `REVIEW`, niedrig | `input-no-context-change`, Inline-`onchange` (`on_input`) |
+| `context/on-focus` | 1 | `REVIEW`, hoch | `focus-no-context-change` „onfocus" (`on_focus`) |
+| `context/autofocus` | 1 | `REVIEW`, mittel | `focus-no-context-change` „autofocus" (`on_focus`) |
+| `auth/captcha` | 1 | `REVIEW`, mittel | `accessible-auth-captcha` (`accessible_authentication`) |
+
+Mitgebrachte Korrekturen als Tests (`tests/forms.rs`): auditmysite#643
+(Anleitung per `aria-describedby` zählt gleich welchen Wortlauts; kurze
+Formatbegriffe nur als ganzes Wort; ein einzelnes Kontrollkästchen ist keine
+Gruppe, gleichnamige im selben Formular schon), #656 (native Datumsfelder,
+Zahlenfelder nur über die Beschriftung), #658 (der Name eines Dings ist kein
+Personenname, auch über `id` und `name`), #728 (Formular nur aus Schaltern:
+`REVIEW`, niedrig).
+
+Bleibt im Host: der Einfüge-Test an Passwort- und Einmalcode-Feldern
+(`accessible-auth-paste-blocked`), das Nachschlagen aufgerufener Funktionen
+über `window` und die Namensvermutung („Language") aus `on_input`.
+
+Nicht übernommen, weil schon abgedeckt: `label` „no accessible label" und
+„Placeholder used as only label" (`instructions`) sowie `labels.rs`
+`check_form_control` — `forms/label-missing`, `forms/placeholder-as-label` und
+`names/required-missing` melden dieselben Fälle, auch ARIA-Widgets ohne Namen,
+leeres oder ins Leere zeigendes `aria-labelledby` und leeres `<label for>`.
+Ebenso der seitenweite `UNTESTED`-Vermerk aus `identify_purpose` (1.3.6 für
+Symbole und Bereiche).
+
+### Abweichungen von auditmysite
+
+- `forms/autocomplete-invalid` prüft die ganze Grammatik des HTML-Standards
+  (`[section-*] [shipping|billing] [Kontakt] Feldname [webauthn]`), nicht nur
+  das letzte Token, mit der vollständigen Liste der Feldnamen. Geprüft werden
+  `input` (außer `hidden`), `select` und `textarea`.
+- `forms/purpose-missing` ist `REVIEW` statt Verstoß: Ob ein Feld die Person
+  betrifft, ist aus Beschriftung, `id` und `name` geraten. Ein Fall statt zwei
+  (`identify-purpose` meldete dieselben Felder nach `id`/`name`, niedrig). Die
+  Beschriftung ist der Accessible Name des Hosts; `email`- und `tel`-Felder
+  zählen immer. Technische Adressen (`ip_address`) zählen nicht.
+- `forms/error-unidentified` meldet einen Fall, den auditmysite zweimal
+  meldete. Als Beschreibung zählen `aria-describedby` und
+  `aria-errormessage` mit Text; ein Ziel außerhalb der Sicht (versteckt oder
+  fehlend — das meldet `aria/reference-missing`) gilt als Beschreibung.
+- `forms/group-missing` prüft auf Struktur: Als Gruppe zählen `<fieldset>`,
+  `<details>` und `role="group"`/`"radiogroup"` als Vorfahre.
+- `forms/required-unmarked` ist `REVIEW` statt Verstoß und meldet den Fall
+  einmal (auditmysite: zweimal, niedrig und mittel): Der Screenreader sagt das
+  Pflichtfeld an; ob es sichtbar gekennzeichnet ist, sieht nur ein Mensch.
+- `forms/title-only-label` ist `REVIEW` statt Verstoß: `title` ist eine
+  zulässige Technik (H65). Felder mit `placeholder` meldet
+  `forms/placeholder-as-label`.
+- `forms/group-name-missing` meldet kein `radiogroup` (das tut
+  `names/required-missing`).
+- `forms/no-submit` zählt Felder und Buttons, die per `form`-Attribut
+  außerhalb des Formulars stehen.
+- `context/on-input` liest nur den Handler im Markup; ruft er eine Funktion
+  auf, bleibt es `REVIEW`. Neu: auch Optionsfelder mit `onchange` (F37).
+- `context/on-focus` und `context/autofocus` sind `REVIEW` statt Verstoß: Ob
+  ein `onfocus` den Kontext wechselt, steht nicht im Markup, und `autofocus`
+  wechselt ihn für sich genommen nicht. Schweregrade unverändert.
+
 ## [0.15.0] - 2026-10-01
 
 Nachgezogen nach dem Vergleichslauf mit auditmysite: Ein leerer `role="tab"`
