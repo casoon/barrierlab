@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 50 in Tier 1 (Struktur, davon 7 Checkliste), 9 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 50 in Tier 1 (Struktur, davon 7 Checkliste), 16 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
@@ -55,6 +55,15 @@ Bestandteile laufen über das DOM, nicht über den Accessibility-Tree: Ein `<li>
 in einer Liste mit fremder Rolle zählt als `listitem`, auch wo Chrome es
 glättet (auditmysite#715). Native Tabellen und Listen ohne `role` prüfen die
 `tables/*`- und `lists/*`-Regeln.
+
+## Namen
+
+Neben `links/`, `buttons/`, `svg/` und `tables/name-missing` prüfen
+`dialog/name-missing`, `summary/name-missing` und `names/required-missing`
+die Rollen, für die WAI-ARIA 1.2 einen Namen verlangt. `label-in-name/mismatch`
+vergleicht nach WCAG 2.5.3 den Namen mit dem sichtbaren Text,
+`status/live-overridden` die `aria-live`-Angabe von Live-Regionen mit der
+Vorgabe ihrer Rolle.
 
 ## Abhängigkeiten
 
