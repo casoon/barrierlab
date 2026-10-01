@@ -5,6 +5,93 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.14.0] - 2026-09-30
+
+Rollen aus WAI-ARIA Graphics (`graphics-document`, `-object`, `-symbol`) und
+DPUB-ARIA 1.1 (`doc-*`) gelten für `aria/role-invalid` als gültig; die
+Attributregeln urteilen über sie nicht (auditmysite-Korpus
+`svg_graphics_role_no_name`).
+
+Die ARIA-Regeln aus auditmysite (casoon/barrierlab#14, B1). Norm ist WAI-ARIA
+1.2 und ARIA in HTML; die Rollen- und Attributtabellen sind aus der
+Spezifikation erzeugt, als Bitmasken je Rolle.
+
+### Added
+
+| Neue Kennung | Tier | ersetzt in auditmysite |
+|---|---|---|
+| `aria/attribute-unknown` | 1 | `aria-attr-name-invalid` (`aria_roles`) |
+| `aria/attribute-value-invalid` | 1 | `aria-valid-attr-value` (Wertebereiche) |
+| `aria/owns-conflict` | 1 | `duplicate-id-aria` (`parsing`) |
+| `aria/tab-selected-missing` | 1 | `aria-tab-selected-state`, `tab-no-aria-selected` (`widget_rules`) |
+| `aria/tabpanel-missing` | 1 | `aria-tablist-tabpanel` (`widget_rules`) |
+| `aria/combobox-popup-missing` | 1 | `aria-combobox-options` (`widget_rules`) |
+| `popover/target-missing`, `popover/target-invalid` | 1 | `modern-attribute-misuse` (`modern_attributes`) |
+| `inert/dialog-inert` | 1 | `modern-attribute-misuse` (`active_surface_inert`) |
+| `aria/attribute-not-allowed` | 2 | `aria-allowed-attr` |
+| `aria/attribute-prohibited` | 2 | `aria-prohibited-attr` |
+| `aria/required-parent-missing` | 2 | `aria-required-parent` |
+| `aria/required-children-missing` | 2 | `aria-roles` (erforderliche Bestandteile) |
+
+Die IDREF-Prüfung von `aria-valid-attr-value` übernimmt `aria/reference-missing`
+(siehe Changed). `aria/role-invalid` und `aria/role-abstract` gab es schon; sie
+ersetzen die Rollenprüfung von `aria-roles`.
+
+Kontext und Bestandteile werden am DOM geprüft, nicht am Accessibility-Tree:
+Ein `<li>` in `<ul role="tablist">` ist nach ARIA in HTML ein `listitem`, auch
+wenn Chrome es zu `generic` glättet. Damit meldet der Fall aus
+auditmysite#715 (`ul[role=tablist] > li > a[role=tab]`) wie axe
+`aria/required-children-missing` an der Tabliste und
+`aria/required-parent-missing` an Tabs und Einträgen. `generic`,
+`none`/`presentation` und vom Host Ausgeblendetes sind durchlässig
+(`<tbody>` in Chrome, auditmysite#659); `aria-owns` zählt als Besitz.
+
+### Changed
+
+- `aria/reference-missing` prüft auch `aria-details`, `aria-flowto` und
+  `aria-errormessage` — Letzteres nur, solange `aria-invalid` gesetzt und nicht
+  `false` ist (ARIA 1.2: die Fehlermeldung ist erst dann maßgeblich).
+
+### Abweichungen von auditmysite
+
+- `aria/attribute-not-allowed` und `aria/attribute-prohibited` urteilen über
+  die Rolle des Hosts, explizit oder implizit — auditmysite nur über explizite
+  `role`-Angaben (bei `prohibited` zusätzlich `div`/`span`). `<div
+  aria-expanded>` ist damit ein Befund. Dazu die „MUST NOT"-Fälle aus ARIA in
+  HTML (`aria-checked` an nativer Checkbox/Radio, `aria-valuemin`/`-max`
+  neben `min`/`max`, `aria-placeholder` neben `placeholder`,
+  `aria-disabled`/`-readonly`/`-required="false"` neben dem nativen Attribut,
+  abweichendes `aria-colspan`/`-rowspan`). Leere Werte zählen wie fehlende.
+  Rollen außerhalb von ARIA 1.2 (browserinterne, `mark`) bleiben ohne Urteil.
+- `aria/attribute-value-invalid` meldet `aria-current` und `aria-invalid` nicht:
+  ARIA 1.2 legt fest, dass ein unbekannter Wert dort als `true` gilt.
+  Vergleich ohne Groß-/Kleinschreibung, leere Werte ohne Befund.
+- `aria/required-children-missing` prüft nur Behälter mit expliziter Rolle —
+  native Tabellen und Listen geben ihre Bestandteile per HTML vor
+  (auditmysite#659, #674). Die leere native Tabelle aus dem Korpus
+  `table_required_rows_tbody` (nur `<caption>`) ist deshalb kein Befund mehr.
+  Kein Befund ohne jeden besessenen Knoten, unter `aria-busy="true"` und bei
+  `aria-expanded="false"`.
+- `aria/required-parent-missing` lässt über ARIA 1.2 hinaus `group` für
+  `listitem` (ARIA 1.1), `combobox` für `option` und `radiogroup` für
+  `menuitemradio` zu. Stößt der Weg nach oben auf eine Rolle, die ARIA 1.2 nicht
+  kennt, entsteht kein Befund.
+- `aria/tab-selected-missing` ist `REVIEW` (ARIA sagt SHOULD) und steht an der
+  Tabliste, wenn *kein* Tab `aria-selected="true"` trägt — nicht an jedem Tab
+  ohne das Attribut; die übrigen haben mit der Vorgabe `false` den richtigen
+  Zustand.
+- `aria/tabpanel-missing` ist `REVIEW`: ARIA beschreibt das Panel nur als
+  üblich.
+- `aria/combobox-popup-missing` stützt sich auf das MUST für `aria-controls`
+  (ARIA 1.2); ein Popup im Teilbaum oder per `aria-owns` (ARIA 1.1) genügt
+  weiterhin.
+- `inert/dialog-inert` ist `FAIL` nur für `<dialog open>`; `role="dialog"` wird
+  `REVIEW`, sichtbare `role="menu"` gar nicht geprüft (ein aus dem Bild
+  geschobenes Menü mit `inert` ist richtig gebaut).
+- Nicht übernommen aus `modern_attributes`: der fehlende Name offener Dialoge
+  und Popover (gehört zur Namensprüfung von Dialogen) und „Fokus in einem
+  inerten Teilbaum" (braucht das aktive Element, das kein Tier liefert).
+
 ## [0.13.5] - 2026-09-30
 
 ### Fixed

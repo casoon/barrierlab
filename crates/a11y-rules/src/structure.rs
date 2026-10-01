@@ -16,6 +16,58 @@ fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
+/// Rollen aus den ARIA-Modulen: WAI-ARIA Graphics Module 1.0 und DPUB-ARIA 1.1.
+/// Gültige Rollen, aber ohne Einträge in den Attribut-Tabellen von WAI-ARIA
+/// 1.2 — `aria/role-invalid` erkennt sie an, die Attributregeln urteilen über
+/// sie nicht. Beleg: `<svg role="graphics-document">` im auditmysite-Korpus
+/// (`svg_graphics_role_no_name`).
+pub(crate) const MODULE_ROLES: &[&str] = &[
+    "graphics-document",
+    "graphics-object",
+    "graphics-symbol",
+    "doc-abstract",
+    "doc-acknowledgments",
+    "doc-afterword",
+    "doc-appendix",
+    "doc-backlink",
+    "doc-biblioentry",
+    "doc-bibliography",
+    "doc-biblioref",
+    "doc-chapter",
+    "doc-colophon",
+    "doc-conclusion",
+    "doc-cover",
+    "doc-credit",
+    "doc-credits",
+    "doc-dedication",
+    "doc-endnote",
+    "doc-endnotes",
+    "doc-epigraph",
+    "doc-epilogue",
+    "doc-errata",
+    "doc-example",
+    "doc-footnote",
+    "doc-foreword",
+    "doc-glossary",
+    "doc-glossref",
+    "doc-index",
+    "doc-introduction",
+    "doc-noteref",
+    "doc-notice",
+    "doc-pagebreak",
+    "doc-pagefooter",
+    "doc-pageheader",
+    "doc-pagelist",
+    "doc-part",
+    "doc-preface",
+    "doc-prologue",
+    "doc-pullquote",
+    "doc-qna",
+    "doc-subtitle",
+    "doc-tip",
+    "doc-toc",
+];
+
 /// Alle gültigen ARIA-Rollen aus WAI-ARIA 1.2, ohne die abstrakten.
 pub(crate) const VALID_ROLES: &[&str] = &[
     "alert",
@@ -949,7 +1001,7 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     .with_wcag(["4.1.2"])
                     .at(at(n.id())),
                 );
-            } else if !VALID_ROLES.contains(&r) {
+            } else if !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
                 out.push(
                     Finding::fail(
                         "aria/role-invalid",
@@ -978,8 +1030,20 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             "aria-controls",
             "aria-owns",
             "aria-activedescendant",
+            "aria-details",
+            "aria-flowto",
+            "aria-errormessage",
         ] {
             let Some(v) = n.attr(rel) else { continue };
+            // Die Fehlermeldung darf fehlen, solange nichts ungültig ist —
+            // sie entsteht oft erst mit dem Fehler (ARIA 1.2,
+            // `aria-errormessage`: nur bei `aria-invalid` maßgeblich).
+            if rel == "aria-errormessage"
+                && n.attr("aria-invalid")
+                    .is_none_or(|i| i.trim().is_empty() || i.trim().eq_ignore_ascii_case("false"))
+            {
+                continue;
+            }
             // Ein leerer Verweis auf Steuerung, Besitz oder aktiven Nachfahren
             // behauptet eine Beziehung, die es nicht gibt. Leeres
             // `aria-labelledby` dagegen fällt auf die übrigen Namensquellen
@@ -1203,7 +1267,7 @@ fn ist_listeneintrag<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Die wirksame explizite Rolle: das erste gültige Token aus `role`.
-fn explizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
+pub(crate) fn explizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
     n.attr("role")?
         .split_whitespace()
         .find(|r| VALID_ROLES.contains(r))
@@ -1620,11 +1684,75 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
     },
+    Meta {
+        ids: &["aria/attribute-unknown"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "Use only aria-* attributes defined by WAI-ARIA.",
+        #[cfg(feature = "de")]
+        help_de: "Nur aria-*-Attribute verwenden, die WAI-ARIA definiert.",
+    },
+    Meta {
+        ids: &["aria/attribute-value-invalid"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "ARIA attributes need a value of their type.",
+        #[cfg(feature = "de")]
+        help_de: "ARIA-Attribute brauchen einen Wert ihres Typs.",
+    },
+    Meta {
+        ids: &["aria/owns-conflict"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::High,
+        help: "An element may be owned by only one aria-owns.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Element darf nur einem aria-owns gehören.",
+    },
+    Meta {
+        ids: &[
+            "aria/tab-selected-missing",
+            "aria/tabpanel-missing",
+            "aria/combobox-popup-missing",
+        ],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1", "4.1.2"],
+        severity: Severity::Medium,
+        help: "Tabs mark the selected tab; an expanded combobox references its popup.",
+        #[cfg(feature = "de")]
+        help_de: "Tabs zeichnen den gewählten Tab aus; eine aufgeklappte Combobox verweist auf ihr Popup.",
+    },
+    Meta {
+        ids: &["popover/target-missing", "popover/target-invalid"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["4.1.2"],
+        severity: Severity::Medium,
+        help: "popovertarget must reference an element with the popover attribute.",
+        #[cfg(feature = "de")]
+        help_de: "popovertarget muss auf ein Element mit popover-Attribut verweisen.",
+    },
+    Meta {
+        ids: &["inert/dialog-inert"],
+        tier: Tier::Structure,
+        scope: Scope::Rendered,
+        wcag: &["2.1.1", "4.1.2"],
+        severity: Severity::High,
+        help: "An open dialog must not be inert.",
+        #[cfg(feature = "de")]
+        help_de: "Ein offener Dialog darf nicht inert sein.",
+    },
     crate::checkliste::META,
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 17] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 23] {
     [
         lang,
         title,
@@ -1642,6 +1770,12 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 17] {
         table_headers,
         landmarks,
         skip_link,
+        crate::aria::attribute_names,
+        crate::aria::attribute_values,
+        crate::aria::owns_conflict,
+        crate::aria::widgets,
+        crate::aria::popover,
+        crate::aria::inert_dialog,
         crate::checkliste::checkliste,
     ]
 }
