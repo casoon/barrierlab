@@ -482,3 +482,72 @@ fn leerer_tab_hat_keinen_namen() {
         .count();
     assert_eq!(n, 1, "{:?}", r.findings);
 }
+
+/// dm.de: Ein Symbol-Label (`¹⁾`) ist von 2.5.3 ausgenommen; gleiche Wörter
+/// in anderer Reihenfolge sind ein Hinweis, kein Verstoß.
+#[test]
+fn label_in_name_symbol_und_umstellung() {
+    let doc = a11y_dom::Arena::builder()
+        .open("html")
+        .attr("lang", "de")
+        .open("body")
+        .open("a")
+        .attr("href", "#fn1")
+        .attr("aria-label", "Zur Fußnote 1")
+        .text("¹⁾")
+        .close()
+        .open("a")
+        .attr("href", "/winter")
+        .attr("aria-label", "Winterprodukte, Entdecke die Auswahl")
+        .text("Entdecke die Auswahl Winterprodukte")
+        .close()
+        .open("a")
+        .attr("href", "/top")
+        .attr("aria-label", "Nach oben springen")
+        .text("Zurück zum Anfang")
+        .close()
+        .close()
+        .close()
+        .build();
+    let ids = accname::IdIndex::build(doc.root());
+    struct H<'a>(
+        &'a a11y_dom::Arena,
+        accname::IdIndex<'a, a11y_dom::ArenaNode<'a>>,
+    );
+    impl a11y_dom::Document for H<'_> {
+        type N<'n>
+            = a11y_dom::ArenaNode<'n>
+        where
+            Self: 'n;
+        fn root(&self) -> Self::N<'_> {
+            self.0.root()
+        }
+    }
+    impl a11y_dom::Semantics for H<'_> {
+        fn role<'n>(&'n self, n: Self::N<'n>) -> Option<String> {
+            accname::role(n).map(str::to_string)
+        }
+        fn accessible_name<'n>(&'n self, n: Self::N<'n>) -> Option<String> {
+            accname::name(n, &self.1)
+        }
+    }
+    let r = a11y_rules::run_with_semantics(&H(&doc, ids));
+    let f: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "label-in-name/mismatch")
+        .collect();
+    assert_eq!(f.len(), 2, "{f:?}");
+    assert_eq!(
+        f.iter()
+            .filter(|f| f.outcome == a11y_report::Outcome::Review)
+            .count(),
+        1
+    );
+    assert_eq!(
+        f.iter()
+            .filter(|f| f.outcome == a11y_report::Outcome::Fail)
+            .count(),
+        1
+    );
+}
