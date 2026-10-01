@@ -1363,10 +1363,23 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 /// es nicht gibt.
 fn verwaiste_eintraege<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_listeneintrag(n) {
+        // Ein `<li>` mit eigener Rolle (`none` im Menü-Muster, `tab`) ist kein
+        // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln.
+        if !ist_listeneintrag(n) || explizite_rolle(n).is_some_and(|r| r != "listitem") {
             continue;
         }
-        let in_liste = a11y_dom::ancestors(n).any(ist_liste);
+        // Die nächste Liste darüber. Ist sie per `role` etwas anderes
+        // geworden (`ul[role=tablist]`), steht der Eintrag trotzdem außerhalb
+        // einer Liste; ist sie `none`/`presentation`, erbt er das und ist
+        // keiner (auditmysite#715, magyarorszag.hu).
+        let in_liste = match a11y_dom::ancestors(n).find(|a| ist_liste(*a)) {
+            None => false,
+            Some(l) => match explizite_rolle(l) {
+                None | Some("list" | "directory") => true,
+                Some("none" | "presentation") => continue,
+                Some(_) => false,
+            },
+        };
         if !in_liste {
             out.push(
                 Finding::fail(
