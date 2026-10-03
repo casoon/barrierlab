@@ -257,3 +257,21 @@ fn befunde_folgen_der_sprache() {
         .unwrap();
     assert!(f.message.contains("Langform"), "{}", f.message);
 }
+
+/// Source citations with their own lang (geographia.eu, astro-post-audit#77).
+#[test]
+fn geographia_marked_citation_does_not_change_block_language() {
+    let german = "Die Daten und die Informationen sind für die Menschen und werden mit den Quellen auf der Seite als Grundlage für die weiteren Untersuchungen bereitgestellt.";
+    let doc = body(&format!(
+        r#"<ul>
+        <li id="marked"><cite lang="de">{german}</cite> · licence: CC BY 4.0 · retrieved 29 September 2026</li>
+        <li id="unmarked"><cite>{german}</cite> · licence: CC BY 4.0</li>
+        <li id="mixed"><cite lang="de">{german}</cite> {german}</li>
+        </ul>"#
+    ));
+    let r = run(&doc);
+    assert_eq!(
+        an(&doc, &r, "language/part-unmarked"),
+        ["unmarked", "mixed"]
+    );
+}

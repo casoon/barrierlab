@@ -167,21 +167,42 @@ fn uebergaenge(decls: &[Declaration]) -> Vec<(String, f64)> {
     out
 }
 
-const ANIMATIONS_SCHLUESSEL: &[&str] = &[
-    "infinite",
-    "normal",
-    "reverse",
-    "alternate",
-    "alternate-reverse",
-    "forwards",
-    "backwards",
-    "both",
-    "running",
-    "paused",
-    "initial",
-    "inherit",
-    "unset",
-];
+/// Der Name aus einer einzelnen `animation`-Kurzschreibweise.
+///
+/// Nach CSS Animations geht ein Schlüsselwort, das auch Name sein könnte,
+/// zuerst an die Eigenschaft, die es noch nicht hat — erst was übrig bleibt,
+/// ist der Name. Das zählt, weil der Browser die Kurzschreibweise voll
+/// ausschreibt: `2s linear 0s infinite normal none running spin`. Dort ist
+/// `none` der Füllmodus, `spin` der Name. Ohne Rest heißt die Animation
+/// `none`.
+fn kurzname(einzel: &str) -> Option<String> {
+    let (mut zeitfunktion, mut anzahl, mut richtung, mut fuellung, mut zustand) =
+        (false, false, false, false, false);
+    let mut name = None;
+    for t in teile(einzel) {
+        let tl = t.to_ascii_lowercase();
+        let tl = tl.as_str();
+        if zeit_ms(tl).is_some() || matches!(tl, "initial" | "inherit" | "unset" | "revert") {
+            continue;
+        }
+        if ist_funktion(tl) || (!zeitfunktion && ZEITFUNKTIONEN.contains(&tl)) {
+            zeitfunktion = true;
+        } else if !anzahl && (tl == "infinite" || tl.parse::<f64>().is_ok()) {
+            anzahl = true;
+        } else if !richtung
+            && matches!(tl, "normal" | "reverse" | "alternate" | "alternate-reverse")
+        {
+            richtung = true;
+        } else if !fuellung && matches!(tl, "none" | "forwards" | "backwards" | "both") {
+            fuellung = true;
+        } else if !zustand && matches!(tl, "running" | "paused") {
+            zustand = true;
+        } else if name.is_none() {
+            name = Some(t.trim_matches(['"', '\'']).to_string());
+        }
+    }
+    name
+}
 
 /// Die Animationsnamen einer Regel, ohne `none`.
 fn animationsnamen(decls: &[Declaration]) -> Vec<String> {
@@ -189,19 +210,7 @@ fn animationsnamen(decls: &[Declaration]) -> Vec<String> {
     if let Some(v) = wert(decls, "animation-name") {
         namen.extend(liste(v).into_iter().map(String::from));
     } else if let Some(v) = wert(decls, "animation") {
-        for einzel in liste(v) {
-            let name = teile(einzel).into_iter().find(|t| {
-                let tl = t.to_ascii_lowercase();
-                zeit_ms(&tl).is_none()
-                    && tl.parse::<f64>().is_err()
-                    && !ist_funktion(&tl)
-                    && !ZEITFUNKTIONEN.contains(&tl.as_str())
-                    && !ANIMATIONS_SCHLUESSEL.contains(&tl.as_str())
-            });
-            if let Some(n) = name {
-                namen.push(n.trim_matches(['"', '\'']).to_string());
-            }
-        }
+        namen.extend(liste(v).into_iter().filter_map(kurzname));
     }
     namen.retain(|n| !n.eq_ignore_ascii_case("none"));
     namen

@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.19.0"
+version = "0.19.1"
 
 [[package]]
 name = "a11y-perception"
@@ -16,7 +16,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -24,7 +24,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -47,7 +47,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "a11y-dom",
 ]

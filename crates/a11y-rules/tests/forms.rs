@@ -796,3 +796,26 @@ fn formularbefunde_folgen_der_sprache() {
         assert_ne!(e.1, d.1, "ohne deutsche Fassung: {}", e.0);
     }
 }
+
+/// Geographia quiz options (astro-post-audit#75) have no input format.
+#[test]
+fn geographia_quiz_options_need_no_format_instructions() {
+    let src = r#"<label><input id="radio" type="radio">Das Datum einer wichtigen Erfindung</label>
+        <label><input id="checkbox" type="checkbox">The date of an important invention</label>
+        <label><input id="text" type="text">Date of birth</label>"#;
+    for r in beide(src) {
+        assert_eq!(an(src, &r, "forms/instructions-missing"), ["text"]);
+    }
+}
+
+/// Geographia station/country lookups are not personal data (astro-post-audit#76).
+#[test]
+fn geographia_search_fields_need_no_personal_autocomplete() {
+    let src = r#"<input type="search" aria-label="Land oder Region">
+        <div role="search"><input type="text" aria-label="Country"></div>
+        <input type="text" role="combobox" aria-label="Country">
+        <input id="personal" type="text" aria-label="Country">"#;
+    for r in beide(src) {
+        assert_eq!(an(src, &r, "forms/purpose-missing"), ["personal"]);
+    }
+}
