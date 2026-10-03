@@ -50,7 +50,7 @@ fn uebernehmen(
 
 fn pruefe(body: &str, css: &str) -> Report {
     let doc = seite(body);
-    run_stylesheets(run(&doc), &doc, &[css_parse::parse_stylesheet(css)])
+    run_stylesheets(run(&doc), &doc, &[stylesheet_parse::parse_stylesheet(css)])
 }
 
 fn urteile(r: &Report, rule: &str) -> Vec<(Outcome, Severity)> {

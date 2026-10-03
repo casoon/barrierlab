@@ -95,7 +95,7 @@ impl<D: Rendering> Copy for RenderingRule<D> {}
 /// und gleicht deren Selektoren mit dem Dokument ab.
 pub struct StylesheetRule<D: Document> {
     pub meta: Meta,
-    pub run: fn(&D, &[css_parse::Stylesheet], Locale, &mut Vec<Finding>),
+    pub run: fn(&D, &[stylesheet_parse::Stylesheet], Locale, &mut Vec<Finding>),
 }
 
 impl<D: Document> Clone for StylesheetRule<D> {

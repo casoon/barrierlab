@@ -1,7 +1,7 @@
 //! Fälle zu jedem Zweig von CSS Syntax Level 3 §5 und CSS Nesting, wie
-//! `css-parse` sie umsetzt.
+//! `stylesheet-parse` sie umsetzt.
 
-use css_parse::{Declaration, Rule, StyleRule, Stylesheet, parse_stylesheet};
+use stylesheet_parse::{Declaration, Rule, StyleRule, Stylesheet, parse_stylesheet};
 
 fn style(rule: &Rule) -> &StyleRule {
     match rule {

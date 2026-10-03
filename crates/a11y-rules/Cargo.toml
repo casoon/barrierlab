@@ -17,7 +17,7 @@ default = ["de"]
 de = []
 
 [dependencies]
-css-parse = { workspace = true }
+stylesheet-parse = { workspace = true }
 a11y-dom = { workspace = true }
 a11y-report = { workspace = true }
 

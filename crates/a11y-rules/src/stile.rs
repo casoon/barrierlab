@@ -6,7 +6,7 @@
 //! Portiert aus auditmysite (`focus_visible_css`, `reduced_motion`,
 //! `orientation`, `visual_presentation`). Dort las JavaScript
 //! `document.styleSheets` in der laufenden Seite. Hier kommen die Stylesheets
-//! als Text herein, geparst von `css-parse`; der Host liefert, was er hat —
+//! als Text herein, geparst von `stylesheet-parse`; der Host liefert, was er hat —
 //! auditmysite die Sheets der Seite, astro-post-audit die Dateien aus `dist/`.
 //! Fremde Sheets, die der Browser nicht herausgibt, fehlen in beiden Fällen.
 //!
@@ -14,7 +14,7 @@
 //! `transition`, `outline`); das tun jetzt die Hilfen unten. Was sie nicht
 //! sicher lesen, zählt nicht als Beleg.
 
-use css_parse::{Declaration, Scoped, Stylesheet};
+use stylesheet_parse::{Declaration, Scoped, Stylesheet};
 
 use a11y_dom::{Document, Node};
 use a11y_report::{Finding, Location, Severity};

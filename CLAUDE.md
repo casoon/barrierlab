@@ -11,7 +11,7 @@ Lokaler Stand und offene Punkte: `plan/status.md` (gitignored).
 
 ```
 L0  html5-parser · csp-parse · media-query-parse · xpath-eval · relax-ng · schematron-engine
-L1  a11y-dom · a11y-report · html-conform · css-parse
+L1  a11y-dom · a11y-report · html-conform · stylesheet-parse
 L2  accname · a11y-rules · a11y-perception · web-checks
 L3  a11y-wasm (Crate + npm)
 ──  Repo-Grenze: Hosts binden nur über die Registries ein
@@ -54,7 +54,7 @@ Norm — Abweichungen werden als solche ausgewiesen.
 | `xpath-eval` | XPath 1.0 |
 | `relax-ng` | RELAX NG Specification (relaxng.org) |
 | `schematron-engine` | ISO/IEC 19757-3; XPath ausschließlich über `xpath-eval` |
-| `css-parse` | CSS Syntax Level 3 (Parsing), CSS Nesting |
+| `stylesheet-parse` | CSS Syntax Level 3 (Parsing), CSS Nesting |
 | `accname` | accname 1.2 und HTML-AAM |
 | `a11y-rules` | WCAG 2.2, Kennungen in `Meta::ids` vorab deklariert |
 | `html-conform` | HTML-Konformanz, differentiell gegen vnu — siehe `crates/html-conform/CLAUDE.md` |
