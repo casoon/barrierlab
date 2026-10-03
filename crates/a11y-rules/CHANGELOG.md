@@ -5,6 +5,78 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.19.0] - 2026-10-03
+
+Die Regeln über Stylesheets aus auditmysite (casoon/barrierlab#21, erster
+Teil). Dort las JavaScript `document.styleSheets`; hier kommen die Sheets als
+Text herein, geparst vom neuen Paket `stylesheet-parse`. Norm sind WCAG 2.2 (1.3.4,
+1.4.8, 2.3.3, 2.4.7), CSS Syntax Level 3 und Selectors Level 4.
+
+### Added
+
+| Neue Kennung | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|
+| `focus/outline-removed` | `FAIL`, hoch (2.4.7) | `focus-visible-outline-none` (`focus_visible_css`) |
+| `motion/reduced-motion-ignored` | `REVIEW`, mittel (2.3.3, AAA) | `prefers-reduced-motion` (`reduced_motion`) |
+| `orientation/content-hidden` | `REVIEW`, mittel; hoch für `html`/`body`/`main` (1.3.4) | `css-orientation-lock` (`orientation`), Stylesheet-Teil |
+| `text/justified` | `REVIEW`, niedrig (1.4.8, AAA) | `visual-presentation` (`visual_presentation`), Blocksatz |
+| `text/line-height-tight` | `REVIEW`, niedrig (1.4.8, AAA) | `visual-presentation`, Zeilenabstand |
+
+- `run_stylesheets` / `run_stylesheets_in`: ergänzt einen Bericht um diese
+  Regeln. Jedes `run_*` vermerkt sie vorher als `NotRun::CapabilityMissing`
+  („Host liefert keine Stylesheets").
+- `stylesheet_metas`, `stylesheet_rules`, `StylesheetRule`; neue Schicht
+  `Tier::Stylesheets` in `a11y-dom`.
+- Ein Selektor-Abgleich gegen das Dokument (Teilmenge von Selectors Level 4,
+  dreiwertig: Treffer, kein Treffer, unbekannt), damit nur zählt, was auf der
+  Seite vorkommt — wie `querySelectorAll` in auditmysite (#712).
+
+Belege: der auditmysite-Korpus (`media_and_motion`, `reduced_motion_transform`,
+`reduced_motion_override`, `text_and_layout`) und die Stylesheets der 48
+echten Seiten (337 Sheets, 24 MB, Abruf 2026-10-03). Auf ihnen meldet
+`motion/reduced-motion-ignored` 30 Seiten, `text/line-height-tight` 21 (etwa
+gov.uk mit 1,32 im Fließtext), `focus/outline-removed`,
+`orientation/content-hidden` und `text/justified` keine.
+
+### Fixed
+
+- `images/area-alt-missing` und `media/audio-autoplay` (0.18.0) meldeten mit
+  berechneten Stilen nichts: Das UA-Stylesheet gibt `<area>` und `<audio>`
+  ohne `controls` `display: none`, die Sicht ließ sie deshalb weg. Für diese
+  beiden zählt jetzt nur das `hidden`-Attribut. Gefunden bei der Umstellung von
+  auditmysite (casoon/auditmysite#743, Korpus `misc_content_checks`,
+  `media_and_visual`).
+
+### Abweichungen von auditmysite
+
+- `focus/outline-removed`: Ein in einer `:focus`-Regel wieder gesetzter
+  Rahmen zählt als Ersatz. sueddeutsche.de entfernt ihn für alle und setzt ihn
+  für die Tastatur wieder (`[data-whatintent='keyboard'] *:focus`);
+  auditmysite meldete das als Verstoß.
+- `orientation/content-hidden` ist `REVIEW` statt Verstoß und meldet nur
+  Selektoren, die ein Element der Seite treffen, ohne Pseudo-Elemente. In
+  auditmysites Form schlug die Regel auf vier der 48 Seiten an: zweimal
+  Breakpoint-Marker (`body:before`, zwei Seiten von bundesregierung.de), ein
+  Schließknopf (n-tv.de) und welt.de. Der echte Fall, ein Dialog, der im Querformat
+  „bitte drehen" zeigt (welt.de), ist erst mit geöffnetem Dialog im Dokument.
+  Die Prüfung von `transform: rotate` am berechneten Stil von `body`/`html`
+  bleibt beim Host.
+- `text/*`: Gemessen wird an den `<p>` der Seite, nicht an Selektoren, die
+  mit `body`, `p`, `div` … beginnen. Sonst meldete `html { line-height: 1.15 }`
+  aus normalize.css jede Seite. Zeilenhöhe nur ohne Einheit, in `em` oder `%`.
+  `REVIEW` statt Verstoß; der `UNTESTED`-Vermerk für Farbwahl und Spaltenbreite
+  gehört zur Checkliste.
+- `motion/reduced-motion-ignored`: eine Meldung je Seite wie in auditmysite,
+  aber `REVIEW` statt Verstoß. Eine allein stehende `transition-duration` ist
+  kein Übergang (Tailwind `.duration-200`).
+
+### Noch offen in #21
+
+`list-style-type` (für `redundant_role` an Listen), Linkfarbe gegen Textfarbe
+(`use_of_color`), Scroll-Ausmaße (`scrollable_region`) und
+`non_text_contrast_css`. Sie brauchen neue Felder in `ComputedStyle`/`Layout`,
+die erst ein Host-Lauf gefüllt sehen muss (auditmysite#698).
+
 ## [0.18.0] - 2026-10-03
 
 Die letzten drei Pakete der Regelmigration aus auditmysite (B5–B7,

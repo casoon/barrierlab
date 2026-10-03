@@ -287,15 +287,25 @@ mod tests {
         assert_eq!(befund.outcome, a11y_report::Outcome::Untested);
     }
 
-    /// Mit vollständigem Tier-Satz darf keine Regel mehr als „nicht gelaufen"
-    /// vermerkt sein.
+    /// Mit vollständigem Tier-Satz bleiben nur die Regeln über Stylesheets
+    /// als „nicht gelaufen" vermerkt — dieses Paket gibt noch keine weiter.
     #[test]
     fn run_full_laesst_keine_regel_ungeprueft() {
         let arena = dokument();
         let s = spalten(arena.len(), 0x3333_33ff, 0xffff_ffff);
         let host = RenderArena::new(&arena, &s);
         let report = a11y_rules::run_full(&host);
-        assert_eq!(report.summary.rules_not_run, 0);
+        let offen: Vec<&str> = report
+            .rule_runs
+            .iter()
+            .filter(|r| !r.did_run())
+            .map(|r| r.rule_id.as_str())
+            .collect();
+        let stile: Vec<&str> = a11y_rules::stylesheet_metas()
+            .iter()
+            .flat_map(|m| m.ids.iter().copied())
+            .collect();
+        assert_eq!(offen, stile);
     }
 
     /// Die Layout-Spalten kommen bei den Regeln an: jedes Feld einmal gefüllt

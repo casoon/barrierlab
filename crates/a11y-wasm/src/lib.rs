@@ -297,8 +297,10 @@ mod tests {
             .filter(|r| r.not_run.is_some())
             .map(|r| r.rule_id.as_str())
             .collect();
+        // Dazu die Regeln über Stylesheets: Dieses Paket gibt noch keine weiter.
         let tier3: Vec<&str> = a11y_rules::rendering_metas()
             .iter()
+            .chain(a11y_rules::stylesheet_metas())
             .flat_map(|m| m.ids.iter().copied())
             .collect();
         assert!(offen.contains(&"contrast/text-insufficient"));
@@ -308,7 +310,8 @@ mod tests {
         assert_eq!(report.summary.pass, 0);
     }
 
-    /// Mit dem Tier-3-Durchgang bleibt nichts offen.
+    /// Mit dem Tier-3-Durchgang bleiben nur die Regeln über Stylesheets offen,
+    /// die dieses Paket noch nicht bedient.
     #[test]
     fn mit_tier3_bleibt_keine_regel_ungeprueft() {
         let arena = build(|b| {
@@ -322,7 +325,13 @@ mod tests {
             flags: vec![4; arena.len()],
         };
         let report = a11y_rules::run_full(&RenderArena::new(&arena, &spalten));
-        assert_eq!(report.summary.rules_not_run, 0);
+        assert_eq!(
+            report.summary.rules_not_run,
+            a11y_rules::stylesheet_metas()
+                .iter()
+                .map(|m| m.ids.len())
+                .sum::<usize>()
+        );
         assert_eq!(report.summary.pass, 0);
     }
 }

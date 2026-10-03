@@ -1,0 +1,16 @@
+[package]
+name = "stylesheet-parse"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "A CSS stylesheet parser (CSS Syntax Level 3 parsing, CSS Nesting): rules, at-rules and declarations, flattened with their @media context. Takes text, fetches nothing."
+keywords = ["css", "stylesheet", "parser", "nesting", "syntax"]
+categories = ["parser-implementations", "web-programming"]
+readme = "README.md"
+
+[dependencies]
+media-query-parse = { workspace = true }
