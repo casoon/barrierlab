@@ -52,6 +52,7 @@ impl Anlass {
         for n in elements(doc) {
             match n.local_name() {
                 "video" | "audio" => a.medien = true,
+                "iframe" if n.attr("src").is_some_and(videoplattform) => a.medien = true,
                 "img" | "area" => a.bilder = true,
                 "a" if n.has_attr("href") => a.links = true,
                 "select" | "textarea" => a.felder = true,
@@ -94,6 +95,32 @@ fn input_typ<'a, N: Node<'a>>(n: N) -> String {
     n.attr("type")
         .map(|t| t.trim().to_ascii_lowercase())
         .unwrap_or_else(|| "text".into())
+}
+
+/// Die Player der Videoplattformen, die auditmysite (`media_rules`,
+/// `VIDEO_EMBED_HOSTS`) kennt. Ihre Untertitel steuert der Player der
+/// Plattform; im Markup der Seite steht davon nichts. Beleg: das
+/// YouTube-Video auf w3.org/WAI.
+fn videoplattform(src: &str) -> bool {
+    const HOSTS: &[&str] = &[
+        "youtube.com",
+        "youtube-nocookie.com",
+        "vimeo.com",
+        "dailymotion.com",
+        "wistia.com",
+        "wistia.net",
+    ];
+    let Some((_, rest)) = src.trim().split_once("//") else {
+        return false;
+    };
+    let host = rest
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    HOSTS
+        .iter()
+        .any(|h| host == *h || host.strip_suffix(h).is_some_and(|v| v.ends_with('.')))
 }
 
 /// Die verbreiteten Captcha-Dienste binden sich über Klassen, IDs oder die
