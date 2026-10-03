@@ -51,13 +51,17 @@ impl Semantics for Host<'_> {
 }
 
 impl Rendering for Host<'_> {
-    fn computed_style<'n>(&'n self, _node: Self::N<'n>) -> Option<ComputedStyle> {
+    /// Wie Chrome: `<area>` und `<audio>` ohne `controls` haben aus dem
+    /// UA-Stylesheet `display: none`.
+    fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
+        let ua_none =
+            node.is_element("area") || (node.is_element("audio") && !node.has_attr("controls"));
         Some(ComputedStyle {
             color: None,
             background_color: None,
             font_size_px: None,
             font_weight: None,
-            display: Some("block".into()),
+            display: Some(if ua_none { "none" } else { "block" }.into()),
             visibility: Some("visible".into()),
         })
     }
@@ -446,4 +450,34 @@ fn mit_pause_schalter_keine_bewegungsmeldung() {
         nur_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
         0
     );
+}
+
+/// auditmysite#743 (B6-Umstellung): Mit berechneten Stilen fielen `<area>` und
+/// `<audio>` ohne `controls` aus der Sicht, weil das UA-Stylesheet ihnen
+/// `display: none` gibt. Korpusfälle `misc_content_checks` und
+/// `media_and_visual`.
+#[test]
+fn ua_display_none_verbirgt_area_und_audio_nicht() {
+    let arena = seite()
+        .open("img")
+        .attr("src", "plan.png")
+        .attr("alt", "Plan")
+        .attr("usemap", "#m")
+        .close()
+        .open("map")
+        .attr("name", "m")
+        .open("area")
+        .attr("href", "/room1")
+        .close()
+        .close()
+        .open("audio")
+        .attr("autoplay", "")
+        .attr("src", "/bg.mp3")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run_full(&Host::new(&arena));
+    assert_eq!(befunde(&r, "images/area-alt-missing").len(), 1);
+    assert_eq!(befunde(&r, "media/audio-autoplay").len(), 1);
 }
