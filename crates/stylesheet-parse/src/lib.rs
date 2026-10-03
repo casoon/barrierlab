@@ -14,7 +14,7 @@
 //! # Beispiel
 //!
 //! ```
-//! use css_parse::parse_stylesheet;
+//! use stylesheet_parse::parse_stylesheet;
 //!
 //! let sheet = parse_stylesheet(
 //!     "@media (prefers-reduced-motion: reduce) { .a { animation: none !important } }

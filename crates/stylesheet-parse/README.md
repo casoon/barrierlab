@@ -1,4 +1,4 @@
-# css-parse
+# stylesheet-parse
 
 A pure-Rust stylesheet parser following [CSS Syntax Level 3 §5
 "Parsing"](https://www.w3.org/TR/css-syntax-3/#parsing) (the current
@@ -16,7 +16,7 @@ done by the CSS Syntax Level 3 tokenizer of
 ## Usage
 
 ```rust
-use css_parse::parse_stylesheet;
+use stylesheet_parse::parse_stylesheet;
 
 let sheet = parse_stylesheet(
     "a:focus { outline: none }

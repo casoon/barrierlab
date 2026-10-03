@@ -9,7 +9,7 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 Die Regeln über Stylesheets aus auditmysite (casoon/barrierlab#21, erster
 Teil). Dort las JavaScript `document.styleSheets`; hier kommen die Sheets als
-Text herein, geparst vom neuen Paket `css-parse`. Norm sind WCAG 2.2 (1.3.4,
+Text herein, geparst vom neuen Paket `stylesheet-parse`. Norm sind WCAG 2.2 (1.3.4,
 1.4.8, 2.3.3, 2.4.7), CSS Syntax Level 3 und Selectors Level 4.
 
 ### Added

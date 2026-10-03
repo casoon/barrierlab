@@ -1,7 +1,7 @@
 //! Lauf über echte Stylesheets, nicht im Repository.
 //!
 //! ```sh
-//! CSS_CORPUS=/pfad/zu/css cargo test -p css-parse --release --test corpus -- --ignored --nocapture
+//! CSS_CORPUS=/pfad/zu/css cargo test -p stylesheet-parse --release --test corpus -- --ignored --nocapture
 //! ```
 //!
 //! Liest jede `*.css` unter `CSS_CORPUS` (rekursiv) und prüft: kein Panic,
@@ -10,7 +10,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use css_parse::parse_stylesheet;
+use stylesheet_parse::parse_stylesheet;
 
 fn css_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {

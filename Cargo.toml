@@ -10,7 +10,7 @@ members = [
     # L1 — Modell
     "crates/a11y-report",
     "crates/a11y-dom",
-    "crates/css-parse",
+    "crates/stylesheet-parse",
     "crates/html-conform",
     # L2 — Berechnung
     "crates/accname",
@@ -49,7 +49,7 @@ xpath-eval = { version = "0.2.2", path = "crates/xpath-eval" }
 relax-ng = { version = "0.2.0", path = "crates/relax-ng" }
 schematron-engine = { version = "0.2.0", path = "crates/schematron-engine" }
 html-conform = { version = "0.3.1", path = "crates/html-conform" }
-css-parse = { version = "0.1.0", path = "crates/css-parse" }
+stylesheet-parse = { version = "0.1.0", path = "crates/stylesheet-parse" }
 a11y-report = { version = "0.19.0", path = "crates/a11y-report" }
 # Ohne Vorgabe-Features: Wer die deutschen Texte braucht, schaltet `de` zu.
 a11y-rules = { version = "0.19.0", path = "crates/a11y-rules", default-features = false }

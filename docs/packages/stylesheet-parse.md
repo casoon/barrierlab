@@ -1,5 +1,5 @@
 ---
-title: "css-parse"
+title: "stylesheet-parse"
 description: "Stylesheets lesen nach CSS Syntax Level 3 und CSS Nesting: Regeln, At-Regeln, Deklarationen, eingeebnet mit ihrem @media-Kontext."
 order: 9
 ---

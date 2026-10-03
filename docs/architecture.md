@@ -27,7 +27,7 @@ flowchart BT
     dom[a11y-dom]
     rep[a11y-report]
     hc[html-conform]
-    cssp[css-parse]
+    cssp[stylesheet-parse]
   end
   subgraph L2["L2 · Berechnung"]
     acc[accname]

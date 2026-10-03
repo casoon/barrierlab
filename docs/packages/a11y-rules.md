@@ -35,7 +35,7 @@ flowchart LR
 | Eintrag | Zweck |
 |---|---|
 | `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | ein Lauf, je nach vorhandenen Tiers |
-| `run_stylesheets` | ergänzt einen Bericht um die Regeln über Stylesheets (`css-parse`) |
+| `run_stylesheets` | ergänzt einen Bericht um die Regeln über Stylesheets (`stylesheet-parse`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | die Regeln einzeln, wenn ein Host selbst orchestriert |
 | `structure_metas`, `semantics_metas`, `rendering_metas`, `stylesheet_metas` | alle Kennungen vorab, ohne zu laufen — für Abdeckungsberichte |
 | `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule`, `StylesheetRule` | Regeltypen und ihre Deklaration |
@@ -93,7 +93,7 @@ Textmodus —, misst auditmysite.
 Fünf Regeln lesen die Stylesheets der Seite: `focus/outline-removed` (2.4.7),
 `motion/reduced-motion-ignored` (2.3.3), `orientation/content-hidden` (1.3.4),
 `text/justified` und `text/line-height-tight` (1.4.8). Der Host gibt den
-CSS-Text jedes Sheets an `css_parse::parse_stylesheet` und den Bericht eines
+CSS-Text jedes Sheets an `stylesheet_parse::parse_stylesheet` und den Bericht eines
 `run_*` an `run_stylesheets`; ohne diesen Schritt stehen die fünf mit
 `NotRun::CapabilityMissing` im Bericht. Woher der Text kommt, ist Sache des
 Hosts: aus `document.styleSheets` im Browser oder aus den Dateien eines Builds.
@@ -106,7 +106,7 @@ treffende Angabe am Absatz, sonst am nächsten Vorfahren.
 
 ## Abhängigkeiten
 
-Nach unten: `a11y-dom`, `a11y-report`, `accname`, `css-parse`. Nach oben: alle Hosts,
+Nach unten: `a11y-dom`, `a11y-report`, `accname`, `stylesheet-parse`. Nach oben: alle Hosts,
 künftig `a11y-wasm`.
 
 ## Geltungsbereich

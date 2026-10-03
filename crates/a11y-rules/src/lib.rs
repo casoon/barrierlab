@@ -268,20 +268,20 @@ pub fn run_with_rendering_in<D: Rendering>(doc: &D, locale: Locale) -> Report {
 /// Host, der keine Stylesheets liefert, sagt damit, was er nicht geprüft hat.
 /// Wer sie hat, reicht den Bericht hier durch: Die Vermerke werden durch die
 /// Läufe ersetzt, die Befunde kommen hinzu. Die Stylesheets parst der Host
-/// mit [`css_parse::parse_stylesheet`]; Reihenfolge wie im Dokument.
+/// mit [`stylesheet_parse::parse_stylesheet`]; Reihenfolge wie im Dokument.
 ///
 /// ```
 /// use a11y_dom::Arena;
 ///
 /// let doc = Arena::builder().open("html").open("body").close().close().build();
-/// let sheets = [css_parse::parse_stylesheet("a:focus { outline: none }")];
+/// let sheets = [stylesheet_parse::parse_stylesheet("a:focus { outline: none }")];
 /// let report = a11y_rules::run_stylesheets(a11y_rules::run(&doc), &doc, &sheets);
 /// assert!(report.findings.iter().any(|f| f.rule_id == "focus/outline-removed"));
 /// ```
 pub fn run_stylesheets<D: Document>(
     report: Report,
     doc: &D,
-    sheets: &[css_parse::Stylesheet],
+    sheets: &[stylesheet_parse::Stylesheet],
 ) -> Report {
     run_stylesheets_in(report, doc, sheets, Locale::En)
 }
@@ -290,7 +290,7 @@ pub fn run_stylesheets<D: Document>(
 pub fn run_stylesheets_in<D: Document>(
     mut report: Report,
     doc: &D,
-    sheets: &[css_parse::Stylesheet],
+    sheets: &[stylesheet_parse::Stylesheet],
     locale: Locale,
 ) -> Report {
     let ids: Vec<&str> = stylesheet_metas()

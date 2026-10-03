@@ -2,7 +2,7 @@
 //! verkürzt (kein übernommener Text). Erhoben am 2026-10-03; je Fall steht
 //! die Seite, auf der das Muster vorkam.
 
-use css_parse::{Declaration, parse_stylesheet};
+use stylesheet_parse::{Declaration, parse_stylesheet};
 
 fn decl(name: &str, value: &str, important: bool) -> Declaration {
     Declaration {
