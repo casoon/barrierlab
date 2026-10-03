@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 75 in Tier 1 (Struktur, davon 7 Checkliste und 7 Darstellungskonvention), 31 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 87 in Tier 1 (Struktur, davon 7 Checkliste und 7 Darstellungskonvention), 31 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
@@ -101,7 +101,7 @@ eine Sicht auf das Dokument, in der die übrigen fehlen:
 |---|---|---|
 | `AccessibilityTree` | `aria-hidden="true"`, nicht Dargestelltes | der Normalfall |
 | `Rendered` | nicht Dargestelltes | `keyboard/positive-tabindex`, `keyboard/hidden-focusable`, `keyboard/click-handler-not-focusable`, Kontrast |
-| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `viz/*` und `display/*` |
+| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `tables/headers-attr-invalid`, `patterns/tooltip-unreferenced`, `viz/*` und `display/*` |
 
 „Nicht dargestellt" heißt mit Tier 3 `display: none` oder `visibility: hidden`,
 ohne das `hidden`-Attribut. Ohne Stile bleibt per CSS Verstecktes in der Sicht
