@@ -56,6 +56,7 @@ impl Verborgen {
     /// selten und die bewusste Grenze dieser Sicht.
     pub(crate) fn nach_stil<D: Rendering>(doc: &D) -> Self {
         Self::bestimme(doc, |n| match doc.computed_style(n) {
+            Some(_) if unsichtbar_nach_ua(n) => n.has_attr("hidden"),
             Some(stil) => versteckt_per_stil(&stil),
             None => n.has_attr("hidden"),
         })
@@ -108,6 +109,16 @@ impl Verborgen {
             Scope::Markup => None,
         }
     }
+}
+
+/// Elemente, denen schon das UA-Stylesheet `display: none` gibt, ohne dass
+/// sie verborgen wären: `<area>` wirkt über das Bild seiner Imagemap, ein
+/// `<audio>` ohne `controls` spielt trotzdem (HTML, „Rendering"). Für sie
+/// zählt nur das `hidden`-Attribut — sonst sähen `images/area-alt-missing`
+/// und `media/audio-autoplay` mit berechneten Stilen nie etwas
+/// (auditmysite-Korpus `misc_content_checks`, `media_and_visual`).
+fn unsichtbar_nach_ua<'a, N: Node<'a>>(n: N) -> bool {
+    n.is_element("area") || (n.is_element("audio") && !n.has_attr("controls"))
 }
 
 fn versteckt_per_stil(stil: &ComputedStyle) -> bool {

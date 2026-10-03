@@ -38,6 +38,15 @@ echten Seiten (337 Sheets, 24 MB, Abruf 2026-10-03). Auf ihnen meldet
 gov.uk mit 1,32 im Fließtext), `focus/outline-removed`,
 `orientation/content-hidden` und `text/justified` keine.
 
+### Fixed
+
+- `images/area-alt-missing` und `media/audio-autoplay` (0.18.0) meldeten mit
+  berechneten Stilen nichts: Das UA-Stylesheet gibt `<area>` und `<audio>`
+  ohne `controls` `display: none`, die Sicht ließ sie deshalb weg. Für diese
+  beiden zählt jetzt nur das `hidden`-Attribut. Gefunden bei der Umstellung von
+  auditmysite (casoon/auditmysite#743, Korpus `misc_content_checks`,
+  `media_and_visual`).
+
 ### Abweichungen von auditmysite
 
 - `focus/outline-removed`: Ein in einer `:focus`-Regel wieder gesetzter
