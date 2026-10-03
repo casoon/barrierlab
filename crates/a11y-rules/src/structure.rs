@@ -1914,10 +1914,118 @@ pub const METAS: &[Meta] = &[
         help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
                   der Navigation.",
     },
+    Meta {
+        ids: &["tables/header-without-data", "tables/data-undetermined"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::High,
+        help: "Header cells need data cells to label; a table of headers only labels nothing.",
+        #[cfg(feature = "de")]
+        help_de: "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
+                  Kopfzellen beschriftet nichts.",
+    },
+    Meta {
+        ids: &["tables/headers-attr-invalid"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.3.1"],
+        severity: Severity::High,
+        help: "The headers attribute of a cell must list the ids of header cells in the same \
+               table.",
+        #[cfg(feature = "de")]
+        help_de: "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
+                  nennen.",
+    },
+    Meta {
+        ids: &["document/lang-mismatch"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["3.1.1"],
+        severity: Severity::Medium,
+        help: "lang and xml:lang on <html> must name the same language.",
+        #[cfg(feature = "de")]
+        help_de: "lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen.",
+    },
+    Meta {
+        ids: &["language/part-unmarked", "language/part-undetermined"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.1.2"],
+        severity: Severity::Medium,
+        help: "A passage in another language than the page needs its own lang attribute.",
+        #[cfg(feature = "de")]
+        help_de: "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
+                  lang-Attribut.",
+    },
+    Meta {
+        ids: &["language/abbreviation-unexpanded"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.1.4"],
+        severity: Severity::Low,
+        help: "Make the expansion of an abbreviation available, e.g. in the title of <abbr>.",
+        #[cfg(feature = "de")]
+        help_de: "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>.",
+    },
+    Meta {
+        ids: &["timing/meta-refresh"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.1"],
+        severity: Severity::High,
+        help: "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\">; redirect \
+               on the server or let users trigger it.",
+        #[cfg(feature = "de")]
+        help_de: "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
+                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen.",
+    },
+    Meta {
+        ids: &["headings/section-without-heading"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.10"],
+        severity: Severity::Low,
+        help: "Give articles and named sections a heading so users can find their content.",
+        #[cfg(feature = "de")]
+        help_de: "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
+                  Inhalt findet.",
+    },
+    Meta {
+        ids: &["aria/role-redundant"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "Do not set a role the element already has implicitly.",
+        #[cfg(feature = "de")]
+        help_de: "Keine Rolle setzen, die das Element ohnehin implizit hat.",
+    },
+    Meta {
+        ids: &["names/title-only"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Medium,
+        help: "Do not rely on the title attribute as a control's only name.",
+        #[cfg(feature = "de")]
+        help_de: "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen.",
+    },
+    Meta {
+        ids: &["patterns/tooltip-unreferenced"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.4.13"],
+        severity: Severity::Low,
+        help: "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
+        #[cfg(feature = "de")]
+        help_de: "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
+                  verweisen.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 34] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 44] {
     [
         lang,
         title,
@@ -1953,6 +2061,16 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 34] {
         crate::links::click_handler,
         crate::links::used_as_button,
         crate::links::location,
+        crate::tables::header_without_data,
+        crate::tables::headers_attr,
+        crate::document::lang_mismatch,
+        crate::document::part_unmarked,
+        crate::document::abbreviations,
+        crate::document::meta_refresh,
+        crate::document::section_without_heading,
+        crate::rollen::redundant,
+        crate::rollen::title_only,
+        crate::rollen::tooltip,
     ]
 }
 
