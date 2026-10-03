@@ -315,3 +315,34 @@ fn zeilenhoehe_in_pixeln_bleibt_unbeurteilt() {
     let r = pruefe("<p>Text</p>", "p { line-height: 18px }");
     assert!(urteile(&r, "text/line-height-tight").is_empty());
 }
+
+/// auditmysite#743: Chrome schreibt die Kurzschreibweise in `cssText` voll aus,
+/// mit `none` als Füllmodus vor dem Namen. Korpusfall `media_and_motion`, wie
+/// ihn auditmysite aus `document.styleSheets` liest.
+#[test]
+fn ausgeschriebene_kurzschreibweise_aus_chrome() {
+    let css = ".spinner { animation: 2s linear 0s infinite normal none running spin; }
+               @keyframes spin { 100% { transform: rotate(360deg); } }";
+    let r = pruefe(r#"<div class="spinner">Loading…</div>"#, css);
+    assert_eq!(urteile(&r, "motion/reduced-motion-ignored").len(), 1);
+    // Ein Name, der wie ein Schlüsselwort aussieht, bleibt Name, sobald die
+    // Eigenschaft schon vergeben ist.
+    let doppelt = ".x { animation: 1s forwards both } @keyframes both { to { left: 10px } }";
+    assert_eq!(
+        urteile(
+            &pruefe(r#"<div class="x">x</div>"#, doppelt),
+            "motion/reduced-motion-ignored"
+        )
+        .len(),
+        1
+    );
+    // `animation: none` ist keine Animation.
+    let keine = ".x { animation: none } @keyframes none { to { left: 10px } }";
+    assert!(
+        urteile(
+            &pruefe(r#"<div class="x">x</div>"#, keine),
+            "motion/reduced-motion-ignored"
+        )
+        .is_empty()
+    );
+}
