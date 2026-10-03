@@ -32,7 +32,7 @@
 //! // Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
 //! // Semantik noch Darstellung liefert. Sie fehlen nicht im Bericht, sie
 //! // stehen mit `NotRun::CapabilityMissing` darin.
-//! assert_eq!(report.summary.rules_not_run, 40);
+//! assert_eq!(report.summary.rules_not_run, 41);
 //! ```
 //!
 //! Mit einem Host, der [`a11y_dom::Semantics`] erfüllt, laufen die
@@ -42,16 +42,22 @@
 
 mod aria;
 mod checkliste;
+mod document;
 mod forms;
 mod heuristik;
 mod landmarks;
+mod links;
 mod locale;
+mod media;
 mod names;
 mod registry;
 mod rendering;
+mod rollen;
 mod semantics;
 mod sicht;
 mod structure;
+mod tables;
+mod viz;
 
 pub use locale::Locale;
 use locale::pick;

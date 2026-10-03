@@ -491,10 +491,20 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein aufgeklappter Button sollte per aria-controls auf den gesteuerten Bereich verweisen.",
     },
+    Meta {
+        ids: &["frames/name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.1", "4.1.2"],
+        severity: Severity::High,
+        help: "Every iframe needs a name, usually a title saying what it contains.",
+        #[cfg(feature = "de")]
+        help_de: "Jeder Rahmen braucht einen Namen, meist einen title, der sagt, was er enthält.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 24] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 25] {
     [
         link_names,
         button_names,
@@ -520,6 +530,7 @@ fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 24] {
         crate::landmarks::keyboard,
         crate::landmarks::dialog_focusable,
         crate::landmarks::accordion_controls,
+        crate::media::frame_names,
     ]
 }
 

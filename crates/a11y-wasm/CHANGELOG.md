@@ -2,6 +2,14 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.8.0] - 2026-10-03
+
+Gebaut auf `a11y-rules` 0.18.0: die Regeln aus B5–B7 (barrierlab#18–#20) —
+Links und Zeiger, Bilder und Medien, Tabellen, Dokument, Sprache und Rollen —
+und die statischen `viz/*`- und `display/*`-Regeln der Darstellungskonvention
+(barrierlab#22). Keine Änderung an der Schnittstelle. Das Größenbudget liegt
+seitdem bei 150 KB gzip (gemessen 142,8 KB).
+
 ## [0.7.0] - 2026-10-01
 
 Gebaut auf `a11y-rules` 0.17.0: die Landmark- und Strukturregeln aus B4
