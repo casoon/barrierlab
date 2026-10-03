@@ -1880,10 +1880,283 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test.",
     },
+    Meta {
+        ids: &["keyboard/click-handler-not-focusable"],
+        tier: Tier::Structure,
+        scope: Scope::Rendered,
+        wcag: &["2.1.1"],
+        severity: Severity::High,
+        help: "An element with a click handler must be a control: a <button> or <a href>, or a \
+               role and tabindex with keyboard handling.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
+                  <a href>, oder Rolle und tabindex mit Tastaturbedienung.",
+    },
+    Meta {
+        ids: &["links/used-as-button"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "A link that triggers an action instead of navigating should be a <button>.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein.",
+    },
+    Meta {
+        ids: &["navigation/location-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.8"],
+        severity: Severity::Low,
+        help: "Show users where they are: a breadcrumb trail or aria-current=\"page\" in the \
+               navigation.",
+        #[cfg(feature = "de")]
+        help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
+                  der Navigation.",
+    },
+    Meta {
+        ids: &["images/area-alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An image map <area> with href needs alt text naming its target.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt.",
+    },
+    Meta {
+        ids: &["images/input-alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An <input type=\"image\"> needs alt text describing its action.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt.",
+    },
+    Meta {
+        ids: &["images/server-side-map"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::Medium,
+        help: "Do not use server-side image maps (ismap); use a client-side map or text links.",
+        #[cfg(feature = "de")]
+        help_de: "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
+                  Imagemap oder Textlinks.",
+    },
+    Meta {
+        ids: &["objects/alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An <object> needs a text alternative: fallback content, aria-label or title.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title.",
+    },
+    Meta {
+        ids: &["media/audio-autoplay"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.4.2"],
+        severity: Severity::Medium,
+        help: "Audio that plays automatically must stop within three seconds or be pausable.",
+        #[cfg(feature = "de")]
+        help_de: "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen.",
+    },
+    Meta {
+        ids: &["viz/text-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "Every visualisation (figure[data-viz]) needs a non-empty text layer \
+               [data-viz-text] with its statement.",
+        #[cfg(feature = "de")]
+        help_de: "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
+                  [data-viz-text] mit ihrer Aussage.",
+    },
+    Meta {
+        ids: &["display/text-hidden"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "Never put hidden, aria-hidden=\"true\" or inert on [data-viz-text] or its \
+               ancestors; hide it visually instead.",
+        #[cfg(feature = "de")]
+        help_de: "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
+                  Vorfahren; die Schicht nur visuell ausblenden.",
+    },
+    Meta {
+        ids: &["viz/caption-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::Low,
+        help: "Every visualisation (figure[data-viz]) needs a <figcaption> that names it.",
+        #[cfg(feature = "de")]
+        help_de: "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
+                  benennt.",
+    },
+    Meta {
+        ids: &["viz/static-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Medium,
+        help: "A 3d or interactive visualisation needs a still image [data-viz-static] for calm \
+               mode.",
+        #[cfg(feature = "de")]
+        help_de: "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
+                  [data-viz-static] für den ruhigen Modus.",
+    },
+    Meta {
+        ids: &["viz/table-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.3.1"],
+        severity: Severity::Low,
+        help: "A chart (data-viz=\"chart\") should give its values as a <table>.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben.",
+    },
+    Meta {
+        ids: &["display/toggle-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Medium,
+        help: "A page with visualisations needs a display-mode toggle marked \
+               [data-display-toggle].",
+        #[cfg(feature = "de")]
+        help_de: "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
+                  markierten Umschalter für den Darstellungsmodus.",
+    },
+    Meta {
+        ids: &["display/init-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Low,
+        help: "Set html[data-display] in a small blocking script in <head>, before <body>.",
+        #[cfg(feature = "de")]
+        help_de: "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
+                  <body>.",
+    },
+    Meta {
+        ids: &["tables/header-without-data", "tables/data-undetermined"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1"],
+        severity: Severity::High,
+        help: "Header cells need data cells to label; a table of headers only labels nothing.",
+        #[cfg(feature = "de")]
+        help_de: "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
+                  Kopfzellen beschriftet nichts.",
+    },
+    Meta {
+        ids: &["tables/headers-attr-invalid"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.3.1"],
+        severity: Severity::High,
+        help: "The headers attribute of a cell must list the ids of header cells in the same \
+               table.",
+        #[cfg(feature = "de")]
+        help_de: "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
+                  nennen.",
+    },
+    Meta {
+        ids: &["document/lang-mismatch"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["3.1.1"],
+        severity: Severity::Medium,
+        help: "lang and xml:lang on <html> must name the same language.",
+        #[cfg(feature = "de")]
+        help_de: "lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen.",
+    },
+    Meta {
+        ids: &["language/part-unmarked", "language/part-undetermined"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.1.2"],
+        severity: Severity::Medium,
+        help: "A passage in another language than the page needs its own lang attribute.",
+        #[cfg(feature = "de")]
+        help_de: "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
+                  lang-Attribut.",
+    },
+    Meta {
+        ids: &["language/abbreviation-unexpanded"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.1.4"],
+        severity: Severity::Low,
+        help: "Make the expansion of an abbreviation available, e.g. in the title of <abbr>.",
+        #[cfg(feature = "de")]
+        help_de: "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>.",
+    },
+    Meta {
+        ids: &["timing/meta-refresh"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.1"],
+        severity: Severity::High,
+        help: "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\">; redirect \
+               on the server or let users trigger it.",
+        #[cfg(feature = "de")]
+        help_de: "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
+                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen.",
+    },
+    Meta {
+        ids: &["headings/section-without-heading"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.10"],
+        severity: Severity::Low,
+        help: "Give articles and named sections a heading so users can find their content.",
+        #[cfg(feature = "de")]
+        help_de: "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
+                  Inhalt findet.",
+    },
+    Meta {
+        ids: &["aria/role-redundant"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "Do not set a role the element already has implicitly.",
+        #[cfg(feature = "de")]
+        help_de: "Keine Rolle setzen, die das Element ohnehin implizit hat.",
+    },
+    Meta {
+        ids: &["names/title-only"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Medium,
+        help: "Do not rely on the title attribute as a control's only name.",
+        #[cfg(feature = "de")]
+        help_de: "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen.",
+    },
+    Meta {
+        ids: &["patterns/tooltip-unreferenced"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.4.13"],
+        severity: Severity::Low,
+        help: "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
+        #[cfg(feature = "de")]
+        help_de: "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
+                  verweisen.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 31] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 56] {
     [
         lang,
         title,
@@ -1916,6 +2189,31 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 31] {
         crate::forms::on_input,
         crate::forms::on_focus,
         crate::forms::captcha,
+        crate::links::click_handler,
+        crate::links::used_as_button,
+        crate::links::location,
+        crate::media::area_alt,
+        crate::media::input_alt,
+        crate::media::server_side_map,
+        crate::media::object_alt,
+        crate::media::audio_autoplay,
+        crate::viz::text,
+        crate::viz::text_hidden,
+        crate::viz::caption,
+        crate::viz::static_layer,
+        crate::viz::table,
+        crate::viz::toggle,
+        crate::viz::init,
+        crate::tables::header_without_data,
+        crate::tables::headers_attr,
+        crate::document::lang_mismatch,
+        crate::document::part_unmarked,
+        crate::document::abbreviations,
+        crate::document::meta_refresh,
+        crate::document::section_without_heading,
+        crate::rollen::redundant,
+        crate::rollen::title_only,
+        crate::rollen::tooltip,
     ]
 }
 

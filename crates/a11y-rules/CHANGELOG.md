@@ -5,6 +5,320 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.18.0] - 2026-10-03
+
+Die letzten drei Pakete der Regelmigration aus auditmysite (B5–B7,
+casoon/barrierlab#18–#20) und die statischen Regeln der
+Darstellungskonvention (casoon/barrierlab#22). 28 neue Kennungen.
+
+### Links- und Zeigerregeln (B5)
+
+Die Links- und Zeigerregeln aus auditmysite (casoon/barrierlab#18, B5). Norm
+sind WCAG 2.2 (2.1.1, 2.4.8, 4.1.2), der HTML-Standard (`<a>` ohne `href` ist
+ein Platzhalter, kein Link) und WAI-ARIA 1.2 (`aria-current`). Alle drei
+Regeln sind Tier 1: Sie lesen nur Attribute.
+
+#### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `keyboard/click-handler-not-focusable` | 1 | `FAIL`, hoch (2.1.1) | `click-events-have-key-events` (`click_handlers`) |
+| `links/used-as-button` | 1 | `FAIL`, niedrig (4.1.2) | `link-as-button` (`fake_navigation_link`) |
+| `navigation/location-missing` | 1 | `REVIEW`, niedrig (2.4.8, AAA) | `location` (`location`) |
+
+Belege: der auditmysite-Korpus (`keyboard_and_targets`, `audit_exclude_cap`)
+und 48 echte Seiten, abgerufen am 2026-10-03 (auditmysites Referenzseiten
+und 40 verbreitete deutsche und internationale Seiten). Dort fand
+`links/used-as-button` den Aufruf der Consent-Einstellungen
+(`<a href="#" onclick="UC_UI_recall();">`, wetter.com) und einen
+Neu-laden-Link (craigslist.org), `keyboard/click-handler-not-focusable`
+nichts — wetter.com hängt Handler über `data-onclick` an, das kein Handler ist.
+`navigation/location-missing` meldet auf 30 der 48 Seiten, fast alle davon
+Startseiten; daher `REVIEW`.
+
+#### Changed
+
+- `keyboard/pointer-only` (Tier 3) meldet ein Inline-`onclick` nicht mehr,
+  das `keyboard/click-handler-not-focusable` schon meldet. Auf einem Host mit
+  Darstellung entstand sonst für dasselbe Element ein zweiter Befund.
+
+#### Nicht übernommen
+
+- `pointer_cancellation` (2.5.2): Der statische Teil sucht `onmousedown` und
+  `ontouchstart` an Bedienelementen. Auf keiner der 48 Seiten und in keinem
+  Korpusfall kam das vor — ohne Beleg kommt die Regel nicht hinein. Der
+  seitenweite `UNTESTED`-Vermerk gehört zur manuellen Checkliste
+  (casoon/barrierlab#39).
+
+#### Abweichungen von auditmysite
+
+- `<a onclick>` **ohne** `href` meldet `keyboard/click-handler-not-focusable`,
+  nicht `links/used-as-button`: Ohne `href` ist das Element kein Link, wird
+  nicht als Link angesagt und ist nicht fokussierbar. auditmysite meldet es
+  als Scheinlink.
+- `navigation/location-missing` ist `REVIEW` statt Verstoß: 2.4.8 lässt sich
+  auch mit Titel, Überschriften oder einer Sitemap erfüllen.
+  `aria-current="true"` zählt wie in auditmysite nicht als Ortsangabe — auf
+  t-online.de markiert es Karussellpunkte.
+- Keine Obergrenze je Seite (auditmysite: 10 bzw. 20 Befunde).
+
+### Bild- und Medienregeln (B6)
+
+Die Bild- und Medienregeln aus auditmysite (casoon/barrierlab#19, B6). Norm
+sind WCAG 2.2 (1.1.1, 1.4.2, 2.4.1, 4.1.2) und der HTML-Standard (`<area>`,
+`<input type="image">`, `<object>`, `ismap`, `<iframe>`). Fünf Regeln lesen
+nur Attribute und Text und sind Tier 1; `frames/name-missing` braucht die
+Namensberechnung (`aria-labelledby`) und ist Tier 2.
+
+#### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `images/area-alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `area-alt` (`image_input_rules`) |
+| `images/input-alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `input-image-alt` (`image_input_rules`) |
+| `objects/alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `object-alt` (`image_input_rules`) |
+| `images/server-side-map` | 1 | `FAIL`, mittel (1.1.1) | `server-side-image-map` (`server_side_image_map`) |
+| `media/audio-autoplay` | 1 | `REVIEW`, mittel (1.4.2) | `background-audio` (`background_audio`) |
+| `frames/name-missing` | 2 | `FAIL`, hoch (2.4.1, 4.1.2) | `frame-title` (`media_rules`) |
+
+Belege: der auditmysite-Korpus (`misc_content_checks`, `forms_and_misc`,
+`object_no_alt`, `media_and_visual`, `frame_missing_title`) und die 48 echten
+Seiten vom 2026-10-03. Dort meldet nur `frames/name-missing`: die drei
+Sportdaten-Rahmen auf n-tv.de mit `title=""`. Den Sportdaten-Rahmen auf
+spiegel.de (ohne `title`) setzt Alpine erst im Browser aus einem `<template>`
+ein; er steht als Fall in den Tests. `<area>`, `<input type="image">`,
+`<object>`, `ismap` und `<audio autoplay>` kommen auf keiner der 48 Seiten vor
+— die Belege dafür sind die Korpusfälle.
+
+#### Changed
+
+- `manual/media-alternatives` erscheint auch, wenn die Seite ein Video von
+  YouTube, Vimeo, Dailymotion oder Wistia per `<iframe>` einbettet — die
+  Plattformliste aus auditmysites `video-caption`. Ob es Untertitel hat,
+  steuert der Player der Plattform. Beleg: das YouTube-Video auf w3.org/WAI,
+  das bisher keinen Checklistenpunkt auslöste.
+
+#### Nicht übernommen
+
+- `media-alt` (`media_alternative`, 1.2.8): meldet auf jeder Seite einen
+  `UNTESTED`-Hinweis, auch ohne Medien. Wo Medien sind, sagt
+  `manual/media-alternatives` dasselbe (Transkript, Audiodeskription); ohne
+  Medien gibt es nichts zu prüfen. Hosts bilden `media-alt` auf
+  `manual/media-alternatives` ab.
+- `video-caption` (`media_rules`, 1.2.2): ohne geprüfte Untertiteldatei bleibt
+  es beim `UNTESTED`-Hinweis, und den gibt `manual/media-alternatives`. Ob
+  eine `<track>`-Datei tatsächlich lädt, prüft nur der Host über das Netz;
+  dieser Teil bleibt in auditmysite, ebenso `frame-tested` (ob ein Rahmen
+  fremd ist, weiß nur der Browser).
+- `role="application"` ohne Namen (`media_rules`): kein Beleg — weder im
+  Korpus noch auf den 48 Seiten ein unbenanntes.
+- `role="img"` ohne Namen (`media_rules`): SVGs deckt `svg/name-missing`,
+  `<img>` deckt `images/alt-missing`; ein unbenanntes anderes Element mit
+  `role="img"` kommt weder im Korpus noch auf den 48 Seiten vor.
+- Benanntes dekoratives Element (`media_rules`): `aria-label` an
+  `role="presentation"`/`"none"` meldet schon `aria/attribute-prohibited`. Die
+  einzigen Fälle auf den 48 Seiten (wikipedia.org, `title` an
+  `role="presentation"`) tragen `aria-hidden="true"` und stehen nicht im
+  Accessibility-Tree.
+- `<embed>` aus `object-alt`: kein Beleg.
+
+#### Abweichungen von auditmysite
+
+- `aria-labelledby` zählt an `<area>`, `<input type="image">` und `<object>`
+  als Alternative, `aria-label` auch an `<area>`. auditmysite kennt an
+  `<area>` nur `alt` und sonst nur `aria-label`.
+- `media/audio-autoplay` ist `REVIEW` und führt 1.4.2 statt 1.4.7: Ob der Ton
+  länger als drei Sekunden läuft und sich anhalten lässt, steht nicht im
+  Markup; selbststartender Ton ist Gegenstand von 1.4.2 (Audio Control),
+  1.4.7 betrifft Hintergrundgeräusche unter Sprache.
+- `frames/name-missing` führt 2.4.1 und 4.1.2 (Technik H64), auditmysite nur
+  2.4.1. Ohne berechnete Stile gilt ein Rahmen mit Inline-`display: none`
+  als unsichtbar (craigslist.org), dazu wie in auditmysite einer mit Breite
+  und Höhe 0 oder 1 (duckduckgo.com). Mit Stilen (Tier 3) nimmt die Sicht
+  versteckte Rahmen ohnehin heraus; die Prüfung auf ≤ 1 px gerenderte Größe
+  bleibt beim Host.
+
+### Darstellungskonvention (#22)
+
+Die statischen Regeln der Darstellungskonvention (casoon/barrierlab#22,
+Entwurf v0): `figure[data-viz]` mit Text-, Standbild- und Live-Schicht,
+`html[data-display]` mit Umschalter. Die Konvention steht auf der Seite
+[Darstellungsmodi](../../docs/a11y/concepts/darstellungsmodi.md).
+
+**Entscheidung zum Paket:** `a11y-rules`, nicht `web-checks`. Die Regeln
+brauchen den DOM — Vorfahren, Nachfahren, Verweise per `aria-describedby` —
+und lesen dabei nur Attribute und Struktur; alle sieben sind Tier 1 (Modul
+`viz`). Sie melden nur auf Seiten, die die Konvention benutzen, tragen das
+Schlagwort `best-practice` und hängen wie in auditmysite am nächsten
+WCAG-Kriterium. Die Kennungen `display/*` sind dieselben wie in auditmysite
+(`src/wcag/rules/display_modes.rs`); der dort gemessene Teil (berechnete
+Sichtbarkeit, Zeitpunkt von `data-display`, Textmodus) bleibt dort.
+
+#### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | in auditmysite |
+|---|---|---|---|
+| `viz/text-missing` | 1 | `FAIL`, hoch (1.1.1) | — (`display/text-not-visible` misst den Textmodus) |
+| `display/text-hidden` | 1 | `FAIL`, hoch; `REVIEW`, niedrig bei Verweis per `aria-describedby`/`aria-details` (1.1.1) | `display/text-hidden`, Attribut-Teil |
+| `viz/caption-missing` | 1 | `FAIL`, niedrig (1.1.1) | — |
+| `viz/static-missing` | 1 | `FAIL`, mittel (2.2.2) | — |
+| `viz/table-missing` | 1 | `REVIEW`, niedrig (1.3.1) | — |
+| `display/toggle-missing` | 1 | `FAIL`, mittel (2.2.2) | `display/toggle-missing`, statischer Teil |
+| `display/init-missing` | 1 | `REVIEW`, niedrig (2.2.2) | `display/init-missing`, statischer Teil |
+
+Belege: die gebauten Seiten der Referenzumsetzung Geographia (371 Seiten,
+`web-geographia/apps/*/dist`, Stand 2026-10-03). `viz/text-missing` meldet
+die Startseite, die ihre Diagramme in `.viz-desc` ohne `[data-viz-text]`
+beschreibt, und „Build Earth 2.0" (`space/solar-system/settlement/`), das
+auch `viz/static-missing` auslöst; `viz/caption-missing` die Klima-Monitor-
+und Deutschlandkarten ohne `<figcaption>`; `display/toggle-missing` die
+Laborseiten ohne Kopfzeile; `viz/table-missing` 196 Diagramme, vor allem
+Sparklines. `display/text-hidden` folgt dem Fall aus auditmysite#704
+(`div#layers-home-desc` auf geographia.eu/atmosphere/) samt den dort
+festgehaltenen Testfällen; im heutigen Build blendet Geographia nur visuell
+aus. `display/init-missing` meldet dort nichts. Auf den 48 echten Seiten ohne
+Konvention meldet keine der sieben Regeln.
+
+- Die Kernaussage wird nur auf „nicht leer" geprüft, nicht auf Qualität.
+- `viz/orphan-media` aus dem Entwurf (`canvas`, `video`, `svg[role=img]`
+  außerhalb der Konvention) ist nicht aufgenommen: In Geographia steht jedes
+  solche Medium in `[data-viz]` oder unter `aria-hidden`, ein echter
+  Positivfall fehlt.
+- `display/init-missing` kann nur die Abwesenheit feststellen; ob ein
+  vorhandenes Skript den Modus setzt, zeigt erst die laufende Seite.
+
+#### Abweichungen von auditmysite
+
+- `viz/*` gibt es in auditmysite nicht; dort prüft `display/text-not-visible`
+  den Text erst im gerenderten Textmodus.
+- Ist die `figure` selbst per `hidden` ausgeblendet, meldet
+  `display/text-hidden` nichts (wie auditmysite#725); `aria-hidden` oder
+  `inert` an der `figure` dagegen bleiben ein Befund, weil die Grafik dann
+  sichtbar ist.
+- Keine Obergrenze je Seite (auditmysite: 20 Befunde).
+
+### Tabellen-, Dokument-, Sprach- und Rollenregeln (B7)
+
+Die Tabellen-, Dokument-, Sprach- und Rollenregeln aus auditmysite
+(casoon/barrierlab#20, B7). Norm sind WCAG 2.2 (1.3.1, 1.4.13, 2.2.1,
+2.4.10, 3.1.1, 3.1.2, 3.1.4, 4.1.2), der HTML-Standard (`headers`,
+`lang`/`xml:lang`, „shared declarative refresh steps"), ARIA in HTML
+(überflüssige Rollen) und WAI-ARIA 1.2. Alle Regeln sind Tier 1: Sie lesen
+Tags, Attribute und Text.
+
+#### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `tables/header-without-data` | 1 | `FAIL`, hoch (1.3.1) | `th-has-data-cells` (`table_extended`) |
+| `tables/data-undetermined` | 1 | `UNTESTED`, hoch (1.3.1) | `th-has-data-cells`, `incomplete` (`table_extended`) |
+| `tables/headers-attr-invalid` | 1 | `FAIL`, hoch (1.3.1) | `td-headers-attr` (`table_extended`) |
+| `document/lang-mismatch` | 1 | `FAIL`, mittel (3.1.1) | `html-xml-lang-mismatch` (`language_extended`) |
+| `language/part-unmarked` | 1 | `REVIEW`, mittel (3.1.2) | `language-of-parts` (`language_of_parts`) |
+| `language/part-undetermined` | 1 | `UNTESTED`, mittel (3.1.2) | — (auditmysite schweigt auf anderen Sprachen) |
+| `language/abbreviation-unexpanded` | 1 | `REVIEW`, niedrig (3.1.4, AAA) | `abbreviations` (`abbreviations`) |
+| `timing/meta-refresh` | 1 | `FAIL`, hoch (2.2.1) | `meta-refresh` (`timing_adjustable`) |
+| `headings/section-without-heading` | 1 | `REVIEW`, niedrig (2.4.10, AAA) | `heading-order` (`section_headings`, Abschnittszählung) |
+| `aria/role-redundant` | 1 | `FAIL`, niedrig (4.1.2) | `redundant-role` (`redundant_role`) |
+| `names/title-only` | 1 | `REVIEW`, mittel (4.1.2) | `title-only-description` (`content_on_hover`) |
+| `patterns/tooltip-unreferenced` | 1 | `FAIL`, niedrig (1.4.13) | `content-on-hover-focus` (`content_on_hover`) |
+
+Belege: der auditmysite-Korpus und dieselben 48 echten Seiten wie B5 (Abruf
+2026-10-03). Treffer dort:
+
+- `aria/role-redundant`: 251 Befunde auf 5 Seiten — wetter.com 188
+  (`li[role=menuitem] > a[href][role=link]`), lidl.de 39 und sparkasse.de 16
+  (`a[href][role=link]`), bahn.de und spiegel.de je 4 (`button[role=button]`
+  als Akkordeon-Auslöser). Dazu Korpus `redundant_role_list_style`.
+- `names/title-only`: 200 Befunde auf 10 Seiten — spiegel.de 163
+  (Teaser-Links um ein Bild mit leerem `alt`), focus.de 16 (Symbol-Links),
+  bahn.de 7 (Suchknöpfe), dazu heise.de, tagesschau.de, faz.net,
+  sueddeutsche.de, check24.de, zeit.de und basf.com. Dazu Korpus
+  `name_description_best_practice`.
+- `headings/section-without-heading`: ein Hinweis auf 7 Seiten, fast nur
+  Teaser-Karten als `<article>` (t-online.de 61, faz.net 39, bild.de 25,
+  check24.de 20, basf.com 15, web.de 4, spiegel.de 1).
+- Auf keiner der 48 Seiten, belegt im Korpus: `tables/header-without-data`
+  (`table_headers_no_data`, `table_grid_rows_unrendered`),
+  `tables/headers-attr-invalid` (`forms_extended`), `document/lang-mismatch`
+  und `language/abbreviation-unexpanded` (`misc_content_checks`),
+  `language/part-unmarked` (`text_and_layout`), `timing/meta-refresh`
+  (`meta_refresh_present`), `patterns/tooltip-unreferenced`
+  (`forms_and_misc`). Der einzige Treffer von `language/part-unmarked` auf
+  echten Seiten war ein Fehlalarm und ist behoben (siehe unten).
+
+Mitgebrachte Korrekturen aus auditmysite, je als Test:
+
+- auditmysite#638: leere Datenzellen, Zellen mit `aria-hidden`-Kind und ein
+  Spaltenkopf über Zeilenköpfen sind kein „Kopf ohne Daten"
+  (`korpus_table_headers_tbody_ignored_issue_638`,
+  `spaltenkopf_ueber_zeilenkoepfen_barrierlab_eu_issue_638`).
+- auditmysite#639: die Tabelle im Kapitel mit `<header>` im Artikel
+  (`tabelle_im_kapitel_geographia_issue_639`; der Landmark-Teil steht seit B4
+  in `tests/landmarks.rs`).
+- auditmysite#654: Ein noch nicht dargestellter Zeilenvorrat ist
+  `tables/data-undetermined`, nicht `FAIL`
+  (`korpus_table_grid_rows_unrendered_issue_654`,
+  `native_tabelle_mit_koerper_issue_654`).
+- auditmysite#659: `tbody > tr` mit Zeilenkopf und Datenzelle
+  (`korpus_table_required_rows_tbody_issue_659`; die Rollenregel steht seit
+  B1 in `tests/aria.rs`).
+- auditmysite#644: `role="list"` auf `<ul>`/`<ol>` wird nicht gemeldet
+  (`korpus_redundant_role_list_style_issue_644`).
+
+#### Nicht übernommen
+
+- `presentation-semantic-children` (`info_relationships`): Nach WAI-ARIA 1.2
+  nimmt `role="presentation"`/`"none"` nur dem Element selbst die Semantik;
+  Nachfahren behalten ihre, außer den erforderlichen Bestandteilen von
+  Tabellen und Listen. Den Tabellenfall meldet schon
+  `tables/presentational-with-headers`, F92 betrifft das Element selbst. Auf
+  den 48 Seiten hätte die Regel 187 `<li role="none">` um Menülinks gemeldet
+  (t-online.de: das APG-Muster Menüleiste) — durchweg Fehlalarme.
+- `section_headings`, Lücken in der Gliederung: meldet schon
+  `headings/skip-level`.
+- `section_headings`, „mehr als 10 Absätze, weniger als 3 Überschriften":
+  kein Beleg — auf keiner der 48 Seiten, in keinem Korpusfall.
+- `timing_adjustable`: Der seitenweite `UNTESTED`-Vermerk für Skript-Fristen
+  und `timeouts` (2.2.6) gehören zur Checkliste (`manual/timing`).
+- `redundant_role` für `<ul>`/`<ol>` mit `role="list"`: Ob die Rolle
+  überflüssig ist, hängt am berechneten `list-style-type` (auditmysite#644),
+  und `ComputedStyle` in `a11y-dom` hat dieses Feld nicht. Bis es das gibt,
+  wird das Paar nicht geprüft statt geraten; `aria/role-redundant` sagt über
+  Listen nichts aus. auditmysite meldet `ol#numbered-list` im Korpus mit Stil
+  weiterhin selbst, bis `a11y-dom` das Feld liefert.
+
+#### Abweichungen von auditmysite
+
+- `tables/data-undetermined` erkennt ausstehende Zeilen an einer
+  Zeilengruppe ohne Zeile in der Sicht — auch am leeren `<tbody>` im Markup,
+  das auf seine Daten wartet. Ist die ganze Zeilengruppe ausgeblendet, fehlt
+  sie in der Sicht, und die Kopfzellen melden `FAIL`.
+- `tables/headers-attr-invalid` prüft nur Zellen (`td`, `th` und ihre
+  Rollen); nur dort definiert HTML das Attribut.
+- `language/part-unmarked` meldet den innersten Textblock (`<li><p>` einmal),
+  lässt `<script>`, `<style>` und `<template>` aus — auf sparkasse.de las
+  sich das eingebettete CSS sonst als Englisch — und meldet auf Seiten, die
+  weder Deutsch noch Englisch sind, `language/part-undetermined` statt nichts.
+- `language/abbreviation-unexpanded` ist `REVIEW` statt Verstoß: 3.1.4 lässt
+  sich auch mit der Ausschreibung im Text oder einem Glossar erfüllen. Ein
+  leeres `title` zählt als fehlend.
+- `timing/meta-refresh` meldet `0` s nicht: Eine sofortige Weiterleitung ist
+  keine Frist (H76, axe `meta-refresh`); web.de und gmx.net leiten so ohne
+  JavaScript weiter. Eine Anweisung ohne Ziffern führt der Browser nicht aus.
+- `headings/section-without-heading` zählt Artikel und benannte Abschnitte
+  ohne eigene Überschrift, ohne Navigationen, statt alle Abschnitte gegen alle
+  Überschriften der Seite; `REVIEW` statt Verstoß.
+- `aria/role-redundant` meldet `<li role="listitem">` nur in einer Liste ohne
+  eigene Rolle: In `ul[role=list]` gehört es zur selben WebKit-Abhilfe
+  (lidl.de).
+- `names/title-only` ist `REVIEW` statt Verstoß, wie `forms/title-only-label`:
+  `title` ist eine gültige Namensquelle (H65). Textfelder meldet
+  `forms/title-only-label`; `submit` und `reset` haben einen Vorgabenamen.
+- `patterns/tooltip-unreferenced` lässt neben `aria-describedby` auch
+  `aria-labelledby` als Verweis gelten.
+- Keine Obergrenze je Seite (auditmysite: 5, 10 bzw. 20 Befunde).
+
 ## [0.17.0] - 2026-10-01
 
 Die Landmark-, Tastatur- und Strukturregeln aus auditmysite
