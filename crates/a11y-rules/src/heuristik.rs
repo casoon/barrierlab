@@ -273,9 +273,15 @@ fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
 /// 2.1.1 / 4.1.2: sieht anklickbar aus, ist aber weder Bedienelement noch per
 /// Tastatur erreichbar — das „Suchen" aus einem `<div>`.
+///
+/// Ein Inline-`onclick`, das schon `keyboard/click-handler-not-focusable`
+/// meldet, zählt hier nicht ein zweites Mal.
 fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if ist_bedienelement(n) || ancestors(n).any(ist_bedienelement) {
+        if ist_bedienelement(n)
+            || ancestors(n).any(ist_bedienelement)
+            || crate::links::klick_ohne_tastatur(n)
+        {
             continue;
         }
         let zeiger = |k| doc.layout(k).is_some_and(|l| l.cursor_pointer);

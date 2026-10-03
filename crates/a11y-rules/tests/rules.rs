@@ -143,8 +143,9 @@ fn sauber() -> a11y_dom::ArenaBuilder {
 /// Ein Dokument, das auch die Landmark- und Sprunglink-Regeln zufriedenstellt.
 ///
 /// Ein bloß wohlgeformtes Dokument genügt dafür nicht mehr: main, navigation,
-/// banner und contentinfo sind eigene Erwartungen, und der Sprunglink ist es
-/// auch. Die Vorlage hält fest, was „vollständig" heißt.
+/// banner und contentinfo sind eigene Erwartungen, der Sprunglink und die
+/// Ortsangabe (`aria-current`) auch. Die Vorlage hält fest, was „vollständig"
+/// heißt.
 fn vollstaendig() -> a11y_dom::ArenaBuilder {
     sauber()
         .open("body")
@@ -157,6 +158,7 @@ fn vollstaendig() -> a11y_dom::ArenaBuilder {
         .open("nav")
         .open("a")
         .attr("href", "/")
+        .attr("aria-current", "page")
         .text("Start")
         .close()
         .close()
