@@ -93,7 +93,10 @@ fn lesetext<'a, N: Node<'a>>(n: N, out: &mut String) {
                 out.push_str(k.text());
                 out.push(' ');
             }
-            NodeKind::Element if !matches!(k.local_name(), "script" | "style" | "template") => {
+            NodeKind::Element
+                if !matches!(k.local_name(), "script" | "style" | "template")
+                    && !k.attr("lang").is_some_and(|lang| !lang.trim().is_empty()) =>
+            {
                 lesetext(k, out);
             }
             _ => {}

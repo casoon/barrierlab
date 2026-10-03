@@ -5,6 +5,12 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.19.1] - 2026-10-04
+
+### Changed
+
+- Gleichschritt mit `a11y-rules` 0.19.1; keine eigene Änderung.
+
 ## [0.19.0] - 2026-10-03
 
 ### Added

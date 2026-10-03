@@ -2,6 +2,10 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.9.1] - 2026-10-04
+
+Gebaut auf `a11y-rules` 0.19.1. Keine Änderung an der Schnittstelle.
+
 ## [0.9.0] - 2026-10-03
 
 Gebaut auf `a11y-rules` 0.19.0. Die neuen Regeln über Stylesheets laufen hier

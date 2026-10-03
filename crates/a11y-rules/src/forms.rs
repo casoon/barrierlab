@@ -1070,8 +1070,15 @@ fn fragt_nach_namen(beschriftung: &str, attribute: [Option<Namensbezug>; 2]) -> 
 /// `name` erkannte.
 pub(crate) fn purpose_missing<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_input(n, &["text", "email", "tel", "url", "search", "password"])
+        if !ist_input(n, &["text", "email", "tel", "url", "password"])
             || doc.is_ignored(n)
+            || std::iter::once(n).chain(ancestors(n)).any(|a| {
+                a.attr("role").is_some_and(|role| {
+                    role.split_ascii_whitespace().any(|r| {
+                        r.eq_ignore_ascii_case("search") || r.eq_ignore_ascii_case("combobox")
+                    })
+                })
+            })
         {
             continue;
         }
@@ -1282,7 +1289,11 @@ pub(crate) fn instructions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
             || !beschreibung.trim().is_empty()
             || FORMATHINWEIS.iter().any(|h| name.contains(h))
             || n.attr("placeholder").is_some_and(|p| !p.trim().is_empty());
-        if !nativ_datum && !angeleitet && FORMATBEDARF.iter().any(|b| formatbegriff(&name, b)) {
+        if !ist_input(n, &["radio", "checkbox"])
+            && !nativ_datum
+            && !angeleitet
+            && FORMATBEDARF.iter().any(|b| formatbegriff(&name, b))
+        {
             out.push(
                 Finding::review(
                     "forms/instructions-missing",
