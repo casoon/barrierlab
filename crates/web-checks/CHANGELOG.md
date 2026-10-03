@@ -2,6 +2,26 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.5.0] - 2026-10-03
+
+### Added
+
+- Familie `hreflang` (casoon/barrierlab#32), zusammengeführt aus auditmysite
+  (`seo/technical.rs`: x-default und Verweis auf sich selbst;
+  `page_health`: `hreflang_invalid`) und astro-post-audit
+  (`checks/hreflang.rs`: x-default und Verweis auf sich selbst):
+  - `Alternate`, `is_x_default`, `has_x_default`
+  - `is_valid_code`, `invalid_codes`: Sprache (ISO 639), optional Schrift
+    (ISO 15924) und Region (ISO 3166-1 Alpha-2), Schreibung beliebig
+  - `has_self_reference`, `same_page`
+- Gegenüber beiden Hosts geändert: `x-default` zählt nicht als Verweis auf
+  sich selbst (Beleg: heise.de nennt seine deutsche Startseite nur so),
+  `x-default` ohne Rücksicht auf Schreibung. Gegenüber auditmysite: `de-de`
+  und Schrift-Subtags wie `zh-Hant` sind gültig. Gegenüber astro-post-audit:
+  Die Abfrage unterscheidet Seiten.
+- Bleiben beim Host: Rückverweise zwischen Seiten und ob ein Ziel im Build
+  existiert (beides nur astro-post-audit, braucht den ganzen Build).
+
 ## [0.4.0] - 2026-09-28
 
 ### Added
