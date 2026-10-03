@@ -1880,10 +1880,44 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test.",
     },
+    Meta {
+        ids: &["keyboard/click-handler-not-focusable"],
+        tier: Tier::Structure,
+        scope: Scope::Rendered,
+        wcag: &["2.1.1"],
+        severity: Severity::High,
+        help: "An element with a click handler must be a control: a <button> or <a href>, or a \
+               role and tabindex with keyboard handling.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
+                  <a href>, oder Rolle und tabindex mit Tastaturbedienung.",
+    },
+    Meta {
+        ids: &["links/used-as-button"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "A link that triggers an action instead of navigating should be a <button>.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein.",
+    },
+    Meta {
+        ids: &["navigation/location-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.8"],
+        severity: Severity::Low,
+        help: "Show users where they are: a breadcrumb trail or aria-current=\"page\" in the \
+               navigation.",
+        #[cfg(feature = "de")]
+        help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
+                  der Navigation.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 31] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 34] {
     [
         lang,
         title,
@@ -1916,6 +1950,9 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 31] {
         crate::forms::on_input,
         crate::forms::on_focus,
         crate::forms::captcha,
+        crate::links::click_handler,
+        crate::links::used_as_button,
+        crate::links::location,
     ]
 }
 

@@ -45,6 +45,7 @@ mod checkliste;
 mod forms;
 mod heuristik;
 mod landmarks;
+mod links;
 mod locale;
 mod names;
 mod registry;

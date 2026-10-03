@@ -5,6 +5,57 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Die Links- und Zeigerregeln aus auditmysite (casoon/barrierlab#18, B5). Norm
+sind WCAG 2.2 (2.1.1, 2.4.8, 4.1.2), der HTML-Standard (`<a>` ohne `href` ist
+ein Platzhalter, kein Link) und WAI-ARIA 1.2 (`aria-current`). Alle drei
+Regeln sind Tier 1: Sie lesen nur Attribute.
+
+### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `keyboard/click-handler-not-focusable` | 1 | `FAIL`, hoch (2.1.1) | `click-events-have-key-events` (`click_handlers`) |
+| `links/used-as-button` | 1 | `FAIL`, niedrig (4.1.2) | `link-as-button` (`fake_navigation_link`) |
+| `navigation/location-missing` | 1 | `REVIEW`, niedrig (2.4.8, AAA) | `location` (`location`) |
+
+Belege: der auditmysite-Korpus (`keyboard_and_targets`, `audit_exclude_cap`)
+und 48 echte Seiten, abgerufen am 2026-10-03 (auditmysites Referenzseiten
+und 40 verbreitete deutsche und internationale Seiten). Dort fand
+`links/used-as-button` den Aufruf der Consent-Einstellungen
+(`<a href="#" onclick="UC_UI_recall();">`, wetter.com) und einen
+Neu-laden-Link (craigslist.org), `keyboard/click-handler-not-focusable`
+nichts — wetter.com hängt Handler über `data-onclick` an, das kein Handler ist.
+`navigation/location-missing` meldet auf 30 der 48 Seiten, fast alle davon
+Startseiten; daher `REVIEW`.
+
+### Changed
+
+- `keyboard/pointer-only` (Tier 3) meldet ein Inline-`onclick` nicht mehr,
+  das `keyboard/click-handler-not-focusable` schon meldet. Auf einem Host mit
+  Darstellung entstand sonst für dasselbe Element ein zweiter Befund.
+
+### Nicht übernommen
+
+- `pointer_cancellation` (2.5.2): Der statische Teil sucht `onmousedown` und
+  `ontouchstart` an Bedienelementen. Auf keiner der 48 Seiten und in keinem
+  Korpusfall kam das vor — ohne Beleg kommt die Regel nicht hinein. Der
+  seitenweite `UNTESTED`-Vermerk gehört zur manuellen Checkliste
+  (casoon/barrierlab#39).
+
+### Abweichungen von auditmysite
+
+- `<a onclick>` **ohne** `href` meldet `keyboard/click-handler-not-focusable`,
+  nicht `links/used-as-button`: Ohne `href` ist das Element kein Link, wird
+  nicht als Link angesagt und ist nicht fokussierbar. auditmysite meldet es
+  als Scheinlink.
+- `navigation/location-missing` ist `REVIEW` statt Verstoß: 2.4.8 lässt sich
+  auch mit Titel, Überschriften oder einer Sitemap erfüllen.
+  `aria-current="true"` zählt wie in auditmysite nicht als Ortsangabe — auf
+  t-online.de markiert es Karussellpunkte.
+- Keine Obergrenze je Seite (auditmysite: 10 bzw. 20 Befunde).
+
 ## [0.17.0] - 2026-10-01
 
 Die Landmark-, Tastatur- und Strukturregeln aus auditmysite

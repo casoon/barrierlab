@@ -231,10 +231,10 @@ fn anklickbares_div_ohne_rolle() {
         .close()
         .close()
         .build();
-    assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "keyboard/pointer-only"),
-        2
-    );
+    let r = run_full(&Host::new(&arena));
+    // Das „Ablehnen" mit Inline-onclick meldet die Tier-1-Regel, nicht diese.
+    assert_eq!(nur_review(&r, "keyboard/pointer-only"), 1);
+    assert_eq!(befunde(&r, "keyboard/click-handler-not-focusable").len(), 1);
 }
 
 #[test]
