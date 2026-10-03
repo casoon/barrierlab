@@ -5,6 +5,26 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Fixed
+
+- Quiz radio buttons and checkboxes no longer trigger format-instruction hints (casoon/astro-post-audit#75).
+- Search inputs, search regions and comboboxes no longer request personal autocomplete tokens (casoon/astro-post-audit#76).
+- Language detection excludes descendants with their own non-empty `lang` (casoon/astro-post-audit#77).
+
+## [0.19.1] - 2026-10-04
+
+### Fixed
+
+- `motion/reduced-motion-ignored` fand keine Animation, die der Browser
+  geliefert hat: Chrome schreibt die Kurzschreibweise in `cssText` voll aus
+  (`2s linear 0s infinite normal none running spin`), und das `none` des
+  Füllmodus galt als Name. Jetzt nach CSS Animations: Ein Schlüsselwort geht
+  zuerst an die Eigenschaft, die es noch nicht hat, erst der Rest ist der Name.
+  Gefunden bei der Umstellung von auditmysite (casoon/auditmysite#743, Korpus
+  `media_and_motion`).
+
 ## [0.19.0] - 2026-10-03
 
 Die Regeln über Stylesheets aus auditmysite (casoon/barrierlab#21, erster
