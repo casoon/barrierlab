@@ -1,6 +1,6 @@
 ---
 title: "web-checks"
-description: "Die gemeinsame Auswertung zweier Auditoren: robots.txt, Meta-Längen, OpenGraph und Twitter Cards, strukturierte Daten."
+description: "Die gemeinsame Auswertung zweier Auditoren: robots.txt, Meta-Längen, OpenGraph und Twitter Cards, strukturierte Daten, hreflang."
 order: 8
 ---
 
@@ -10,7 +10,7 @@ ein gebautes `dist/`. Verschieden ist die Erhebung, gleich ist die Auswertung.
 
 ## Stand
 
-0.4.0, Familien `robots`, `meta`, `social` und `structured_data`. Weitere folgen
+0.5.0, Familien `robots`, `meta`, `social`, `structured_data` und `hreflang`. Weitere folgen
 einzeln; Render-blocking wurde geprüft und bleibt draußen (gemeinsam wären rund
 fünf Zeilen, der Rest sind verschiedene Prüfungen).
 
@@ -106,6 +106,26 @@ Statustexte bleiben beim Host.
 Abgleich mit sichtbarem Inhalt (braucht die gerenderte Seite), Konsistenz über
 alle Seiten eines Builds, Microdata und RDFa bleiben draußen.
 
+### `hreflang` (0.5.0)
+
+Beide Werkzeuge prüfen `x-default` und den Verweis auf die eigene Seite, nur
+auditmysite den Sprachcode. Abgleich Fall für Fall:
+
+| Punkt | astro-post-audit | auditmysite | jetzt |
+|---|---|---|---|
+| `x-default` vorhanden | exakt `x-default` | exakt `x-default` | ohne Rücksicht auf Schreibung |
+| Verweis auf sich selbst | jeder Eintrag, auch `x-default`; Abfrage verworfen | jeder Eintrag, auch `x-default`; Abfrage bleibt | ohne `x-default` (Google: jede Sprachfassung nennt sich selbst); Abfrage bleibt, Fragment und Schrägstrich am Ende zählen nicht |
+| Sprachcode | — | `xx`, `xxx`, `xx-YY` mit großer Region | Sprache, optional Schrift und Region, Schreibung beliebig (Googles Teilmenge von BCP 47) |
+| Rückverweise zwischen Seiten | ja | — | bleibt beim Host |
+| Ziel existiert im Build | ja | — | bleibt beim Host |
+
+Was sich ändert: Die deutsche Startseite von heise.de nennt sich nur als
+`x-default` und galt bei beiden als vollständig; jetzt fehlt ihr der Verweis
+auf sich selbst. Fassungen, die sich nur in der Abfrage unterscheiden
+(`?lang=de`), zählten bei astro-post-audit als Verweis aufeinander. auditmysite
+hielt `de-de` und `zh-Hant` für ungültig. Die 23 Codes auf neun der 48
+untersuchten echten Seiten sind nach alter und neuer Prüfung gültig.
+
 ## Öffentliche Fläche
 
 | Eintrag | Zweck |
@@ -124,6 +144,9 @@ alle Seiten eines Builds, Microdata und RDFa bleiben draußen.
 | `structured_data::inventory_fields` | Felder je Typ für ein Inventar |
 | `structured_data::duplicate_types` | `@type` in mehr als einem Block |
 | `structured_data::RULESET_VERSION` | Stand der Regeltabelle |
+| `hreflang::Alternate` | ein `link rel=alternate hreflang` mit vom Host aufgelöstem `href` |
+| `hreflang::is_valid_code`, `invalid_codes`, `is_x_default`, `has_x_default` | Sprachcode und `x-default` |
+| `hreflang::has_self_reference`, `same_page` | Verweis auf die eigene Seite, URL-Vergleich |
 
 ## Grenzen
 
