@@ -26,6 +26,8 @@ Two rules keep it small:
   structural issues as data, per-type property assessment against Google Search
   Central's documented required/recommended properties (with source URL and
   ruleset version), and `@type` values duplicated across blocks.
+- `hreflang` — language codes (Google's subset of BCP 47, case-insensitive),
+  `x-default`, and whether a page lists itself (`x-default` does not count).
 
 More families follow one at a time, each checked first for whether it really
 asks the same question. "Security" looked like duplication by name; in fact one
