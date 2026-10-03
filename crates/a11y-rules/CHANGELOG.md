@@ -5,7 +5,11 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.18.0] - 2026-10-03
+
+Die letzten drei Pakete der Regelmigration aus auditmysite (B5–B7,
+casoon/barrierlab#18–#20) und die statischen Regeln der
+Darstellungskonvention (casoon/barrierlab#22). 28 neue Kennungen.
 
 ### Links- und Zeigerregeln (B5)
 
