@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 68 in Tier 1 (Struktur, davon 7 Checkliste), 31 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 75 in Tier 1 (Struktur, davon 7 Checkliste und 7 Darstellungskonvention), 31 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
@@ -75,6 +75,18 @@ Wortlaut oder Handlern geraten werden kann — Zweck eines Felds, Formatvorgabe,
 Pflichtkennzeichnung, Wiederholung, Captcha —, ist `REVIEW`. Der Einfüge-Test
 an Passwortfeldern und das Lesen von Handlern über `window` bleiben im Host.
 
+## Darstellungskonvention
+
+`viz/*` und `display/*` prüfen die statische Hälfte der
+[Darstellungskonvention](../a11y/concepts/darstellungsmodi.md) (Entwurf v0,
+casoon/barrierlab#22): `figure[data-viz]` mit Text-, Standbild- und
+Live-Schicht, `html[data-display]` mit Umschalter. Die Regeln stehen hier und
+nicht in `web-checks`, weil sie den DOM brauchen; sie sind Tier 1. Sie melden
+nur auf Seiten, die die Konvention benutzen, tragen das Schlagwort
+`best-practice` und hängen am nächsten WCAG-Kriterium. Was erst die laufende
+Seite zeigt — berechnete Sichtbarkeit, der Zeitpunkt von `data-display`, der
+Textmodus —, misst auditmysite.
+
 ## Abhängigkeiten
 
 Nach unten: `a11y-dom`, `a11y-report`, `accname`. Nach oben: alle Hosts,
@@ -89,7 +101,7 @@ eine Sicht auf das Dokument, in der die übrigen fehlen:
 |---|---|---|
 | `AccessibilityTree` | `aria-hidden="true"`, nicht Dargestelltes | der Normalfall |
 | `Rendered` | nicht Dargestelltes | `keyboard/positive-tabindex`, `keyboard/hidden-focusable`, `keyboard/click-handler-not-focusable`, Kontrast |
-| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*` |
+| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `viz/*` und `display/*` |
 
 „Nicht dargestellt" heißt mit Tier 3 `display: none` oder `visibility: hidden`,
 ohne das `hidden`-Attribut. Ohne Stile bleibt per CSS Verstecktes in der Sicht

@@ -54,6 +54,7 @@ mod rendering;
 mod semantics;
 mod sicht;
 mod structure;
+mod viz;
 
 pub use locale::Locale;
 use locale::pick;
