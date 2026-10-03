@@ -12,7 +12,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 63 in Tier 1 (Struktur, davon 7 Checkliste), 30 in Tier 2 (Semantik),
+alle Oberflächen stabil und in `Meta::ids` deklariert: 68 in Tier 1 (Struktur, davon 7 Checkliste), 31 in Tier 2 (Semantik),
 10 in Tier 3 (Darstellung, davon 8 Heuristiken).
 
 ## Aufbau
