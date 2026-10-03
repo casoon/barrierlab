@@ -42,6 +42,7 @@
 
 mod aria;
 mod checkliste;
+mod document;
 mod forms;
 mod heuristik;
 mod landmarks;
@@ -50,9 +51,11 @@ mod locale;
 mod names;
 mod registry;
 mod rendering;
+mod rollen;
 mod semantics;
 mod sicht;
 mod structure;
+mod tables;
 
 pub use locale::Locale;
 use locale::pick;
