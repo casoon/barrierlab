@@ -19,6 +19,9 @@
 //! [`robots`] — Grammatik der robots.txt, Einordnung der Bots, Pfadauswertung
 //! nach der Längsten-Regel.
 //!
+//! [`hreflang`] — Sprachcodes nach BCP 47, `x-default` und der Verweis auf
+//! die eigene Seite.
+//!
 //! [`meta`] — Länge von Titel und Meta-Beschreibung, in Zeichen.
 //!
 //! [`social`] — OpenGraph und Twitter Cards: Tag-Listen, Anwesenheit,
@@ -36,6 +39,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod hreflang;
 pub mod meta;
 pub mod robots;
 pub mod social;
