@@ -1914,10 +1914,61 @@ pub const METAS: &[Meta] = &[
         help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
                   der Navigation.",
     },
+    Meta {
+        ids: &["images/area-alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An image map <area> with href needs alt text naming its target.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt.",
+    },
+    Meta {
+        ids: &["images/input-alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An <input type=\"image\"> needs alt text describing its action.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt.",
+    },
+    Meta {
+        ids: &["images/server-side-map"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::Medium,
+        help: "Do not use server-side image maps (ismap); use a client-side map or text links.",
+        #[cfg(feature = "de")]
+        help_de: "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
+                  Imagemap oder Textlinks.",
+    },
+    Meta {
+        ids: &["objects/alt-missing"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An <object> needs a text alternative: fallback content, aria-label or title.",
+        #[cfg(feature = "de")]
+        help_de: "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title.",
+    },
+    Meta {
+        ids: &["media/audio-autoplay"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.4.2"],
+        severity: Severity::Medium,
+        help: "Audio that plays automatically must stop within three seconds or be pausable.",
+        #[cfg(feature = "de")]
+        help_de: "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 34] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 39] {
     [
         lang,
         title,
@@ -1953,6 +2004,11 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 34] {
         crate::links::click_handler,
         crate::links::used_as_button,
         crate::links::location,
+        crate::media::area_alt,
+        crate::media::input_alt,
+        crate::media::server_side_map,
+        crate::media::object_alt,
+        crate::media::audio_autoplay,
     ]
 }
 

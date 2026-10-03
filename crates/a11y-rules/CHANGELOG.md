@@ -56,6 +56,82 @@ Startseiten; daher `REVIEW`.
   t-online.de markiert es Karussellpunkte.
 - Keine Obergrenze je Seite (auditmysite: 10 bzw. 20 Befunde).
 
+### Bild- und Medienregeln (B6)
+
+Die Bild- und Medienregeln aus auditmysite (casoon/barrierlab#19, B6). Norm
+sind WCAG 2.2 (1.1.1, 1.4.2, 2.4.1, 4.1.2) und der HTML-Standard (`<area>`,
+`<input type="image">`, `<object>`, `ismap`, `<iframe>`). Fünf Regeln lesen
+nur Attribute und Text und sind Tier 1; `frames/name-missing` braucht die
+Namensberechnung (`aria-labelledby`) und ist Tier 2.
+
+#### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | ersetzt in auditmysite |
+|---|---|---|---|
+| `images/area-alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `area-alt` (`image_input_rules`) |
+| `images/input-alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `input-image-alt` (`image_input_rules`) |
+| `objects/alt-missing` | 1 | `FAIL`, hoch (1.1.1) | `object-alt` (`image_input_rules`) |
+| `images/server-side-map` | 1 | `FAIL`, mittel (1.1.1) | `server-side-image-map` (`server_side_image_map`) |
+| `media/audio-autoplay` | 1 | `REVIEW`, mittel (1.4.2) | `background-audio` (`background_audio`) |
+| `frames/name-missing` | 2 | `FAIL`, hoch (2.4.1, 4.1.2) | `frame-title` (`media_rules`) |
+
+Belege: der auditmysite-Korpus (`misc_content_checks`, `forms_and_misc`,
+`object_no_alt`, `media_and_visual`, `frame_missing_title`) und die 48 echten
+Seiten vom 2026-10-03. Dort meldet nur `frames/name-missing`: die drei
+Sportdaten-Rahmen auf n-tv.de mit `title=""`. Den Sportdaten-Rahmen auf
+spiegel.de (ohne `title`) setzt Alpine erst im Browser aus einem `<template>`
+ein; er steht als Fall in den Tests. `<area>`, `<input type="image">`,
+`<object>`, `ismap` und `<audio autoplay>` kommen auf keiner der 48 Seiten vor
+— die Belege dafür sind die Korpusfälle.
+
+#### Changed
+
+- `manual/media-alternatives` erscheint auch, wenn die Seite ein Video von
+  YouTube, Vimeo, Dailymotion oder Wistia per `<iframe>` einbettet — die
+  Plattformliste aus auditmysites `video-caption`. Ob es Untertitel hat,
+  steuert der Player der Plattform. Beleg: das YouTube-Video auf w3.org/WAI,
+  das bisher keinen Checklistenpunkt auslöste.
+
+#### Nicht übernommen
+
+- `media-alt` (`media_alternative`, 1.2.8): meldet auf jeder Seite einen
+  `UNTESTED`-Hinweis, auch ohne Medien. Wo Medien sind, sagt
+  `manual/media-alternatives` dasselbe (Transkript, Audiodeskription); ohne
+  Medien gibt es nichts zu prüfen. Hosts bilden `media-alt` auf
+  `manual/media-alternatives` ab.
+- `video-caption` (`media_rules`, 1.2.2): ohne geprüfte Untertiteldatei bleibt
+  es beim `UNTESTED`-Hinweis, und den gibt `manual/media-alternatives`. Ob
+  eine `<track>`-Datei tatsächlich lädt, prüft nur der Host über das Netz;
+  dieser Teil bleibt in auditmysite, ebenso `frame-tested` (ob ein Rahmen
+  fremd ist, weiß nur der Browser).
+- `role="application"` ohne Namen (`media_rules`): kein Beleg — weder im
+  Korpus noch auf den 48 Seiten ein unbenanntes.
+- `role="img"` ohne Namen (`media_rules`): SVGs deckt `svg/name-missing`,
+  `<img>` deckt `images/alt-missing`; ein unbenanntes anderes Element mit
+  `role="img"` kommt weder im Korpus noch auf den 48 Seiten vor.
+- Benanntes dekoratives Element (`media_rules`): `aria-label` an
+  `role="presentation"`/`"none"` meldet schon `aria/attribute-prohibited`. Die
+  einzigen Fälle auf den 48 Seiten (wikipedia.org, `title` an
+  `role="presentation"`) tragen `aria-hidden="true"` und stehen nicht im
+  Accessibility-Tree.
+- `<embed>` aus `object-alt`: kein Beleg.
+
+#### Abweichungen von auditmysite
+
+- `aria-labelledby` zählt an `<area>`, `<input type="image">` und `<object>`
+  als Alternative, `aria-label` auch an `<area>`. auditmysite kennt an
+  `<area>` nur `alt` und sonst nur `aria-label`.
+- `media/audio-autoplay` ist `REVIEW` und führt 1.4.2 statt 1.4.7: Ob der Ton
+  länger als drei Sekunden läuft und sich anhalten lässt, steht nicht im
+  Markup; selbststartender Ton ist Gegenstand von 1.4.2 (Audio Control),
+  1.4.7 betrifft Hintergrundgeräusche unter Sprache.
+- `frames/name-missing` führt 2.4.1 und 4.1.2 (Technik H64), auditmysite nur
+  2.4.1. Ohne berechnete Stile gilt ein Rahmen mit Inline-`display: none`
+  als unsichtbar (craigslist.org), dazu wie in auditmysite einer mit Breite
+  und Höhe 0 oder 1 (duckduckgo.com). Mit Stilen (Tier 3) nimmt die Sicht
+  versteckte Rahmen ohnehin heraus; die Prüfung auf ≤ 1 px gerenderte Größe
+  bleibt beim Host.
+
 ## [0.17.0] - 2026-10-01
 
 Die Landmark-, Tastatur- und Strukturregeln aus auditmysite
