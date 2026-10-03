@@ -29,10 +29,11 @@
 //! assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 //! assert!(report.findings.iter().any(|f| f.rule_id == "document/lang-missing"));
 //!
-//! // Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
-//! // Semantik noch Darstellung liefert. Sie fehlen nicht im Bericht, sie
-//! // stehen mit `NotRun::CapabilityMissing` darin.
-//! assert_eq!(report.summary.rules_not_run, 41);
+//! // Nicht beurteilt: die Tier-2- und Tier-3-Regeln und die über
+//! // Stylesheets, weil dieser Host weder Semantik noch Darstellung noch
+//! // Stylesheets liefert. Sie fehlen nicht im Bericht, sie stehen mit
+//! // `NotRun::CapabilityMissing` darin.
+//! assert_eq!(report.summary.rules_not_run, 46);
 //! ```
 //!
 //! Mit einem Host, der [`a11y_dom::Semantics`] erfüllt, laufen die
@@ -53,15 +54,17 @@ mod names;
 mod registry;
 mod rendering;
 mod rollen;
+mod selektor;
 mod semantics;
 mod sicht;
+mod stile;
 mod structure;
 mod tables;
 mod viz;
 
 pub use locale::Locale;
 use locale::pick;
-pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule};
+pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule, StylesheetRule};
 pub use sicht::Scope;
 use sicht::{Sicht, Verborgen};
 
@@ -97,6 +100,17 @@ pub fn semantics_metas() -> &'static [Meta] {
 /// Siehe [`structure_metas`].
 pub fn rendering_metas() -> &'static [Meta] {
     rendering::METAS
+}
+
+/// Siehe [`structure_metas`]. Die Regeln über Stylesheets laufen über
+/// [`run_stylesheets`].
+pub fn stylesheet_metas() -> &'static [Meta] {
+    stile::METAS
+}
+
+/// Alle Regeln über Stylesheets.
+pub fn stylesheet_rules<D: Document>() -> Vec<StylesheetRule<D>> {
+    stile::rules()
 }
 
 /// Vermerkt je deklarierter Kennung, wie viele Befunde darauf entfallen.
@@ -140,6 +154,14 @@ fn ohne_darstellung(locale: Locale) -> &'static str {
     )
 }
 
+fn ohne_stylesheets(locale: Locale) -> &'static str {
+    pick!(
+        locale,
+        "host provides no stylesheets",
+        "Host liefert keine Stylesheets",
+    )
+}
+
 fn run_structure<D: Document>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
     for rule in structure_rules::<Sicht<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
@@ -164,6 +186,7 @@ pub fn run_in<D: Document>(doc: &D, locale: Locale) -> Report {
     run_structure(doc, &v, locale, &mut report);
     nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
     nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
+    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
     report.finish()
 }
 
@@ -179,6 +202,7 @@ pub fn run_with_semantics_in<D: Semantics>(doc: &D, locale: Locale) -> Report {
     run_structure(doc, &v, locale, &mut report);
     run_semantics(doc, &v, locale, &mut report);
     nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
+    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
     report.finish()
 }
 
@@ -216,6 +240,7 @@ pub fn run_full_in<D: Semantics + Rendering>(doc: &D, locale: Locale) -> Report 
     run_structure(doc, &v, locale, &mut report);
     run_semantics(doc, &v, locale, &mut report);
     run_rendering(doc, &v, locale, &mut report);
+    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
     report.finish()
 }
 
@@ -233,5 +258,59 @@ pub fn run_with_rendering_in<D: Rendering>(doc: &D, locale: Locale) -> Report {
     run_structure(doc, &v, locale, &mut report);
     nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
     run_rendering(doc, &v, locale, &mut report);
+    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
+    report.finish()
+}
+
+/// Ergänzt einen Bericht um die Regeln über Stylesheets.
+///
+/// Jedes `run_*` vermerkt diese Regeln zunächst als nicht gelaufen — ein
+/// Host, der keine Stylesheets liefert, sagt damit, was er nicht geprüft hat.
+/// Wer sie hat, reicht den Bericht hier durch: Die Vermerke werden durch die
+/// Läufe ersetzt, die Befunde kommen hinzu. Die Stylesheets parst der Host
+/// mit [`css_parse::parse_stylesheet`]; Reihenfolge wie im Dokument.
+///
+/// ```
+/// use a11y_dom::Arena;
+///
+/// let doc = Arena::builder().open("html").open("body").close().close().build();
+/// let sheets = [css_parse::parse_stylesheet("a:focus { outline: none }")];
+/// let report = a11y_rules::run_stylesheets(a11y_rules::run(&doc), &doc, &sheets);
+/// assert!(report.findings.iter().any(|f| f.rule_id == "focus/outline-removed"));
+/// ```
+pub fn run_stylesheets<D: Document>(
+    report: Report,
+    doc: &D,
+    sheets: &[css_parse::Stylesheet],
+) -> Report {
+    run_stylesheets_in(report, doc, sheets, Locale::En)
+}
+
+/// Wie [`run_stylesheets`], mit Befundtexten in der gewählten Sprache.
+pub fn run_stylesheets_in<D: Document>(
+    mut report: Report,
+    doc: &D,
+    sheets: &[css_parse::Stylesheet],
+    locale: Locale,
+) -> Report {
+    let ids: Vec<&str> = stylesheet_metas()
+        .iter()
+        .flat_map(|m| m.ids.iter().copied())
+        .collect();
+    report
+        .rule_runs
+        .retain(|r| !ids.contains(&r.rule_id.as_str()));
+    let v = Verborgen::nach_attribut(doc);
+    for rule in stylesheet_rules::<Sicht<'_, D>>() {
+        let mut out: Vec<Finding> = Vec::new();
+        (rule.run)(
+            &Sicht::new(doc, &v, rule.meta.scope),
+            sheets,
+            locale,
+            &mut out,
+        );
+        vermerke(&rule.meta, &out, &mut report);
+        report.extend(out);
+    }
     report.finish()
 }

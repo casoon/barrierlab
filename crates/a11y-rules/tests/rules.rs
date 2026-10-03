@@ -790,7 +790,9 @@ fn ohne_semantik_werden_tier2_regeln_als_nicht_gelaufen_vermerkt() {
 
     assert_eq!(
         r.summary.rules_not_run,
-        kennungen_in(a11y_rules::semantics_metas()) + kennungen_in(a11y_rules::rendering_metas())
+        kennungen_in(a11y_rules::semantics_metas())
+            + kennungen_in(a11y_rules::rendering_metas())
+            + kennungen_in(a11y_rules::stylesheet_metas())
     );
     assert!(
         !hat(&r, "links/name-missing"),
@@ -831,10 +833,11 @@ fn mit_semantik_laufen_tier2_regeln_mit() {
     let doc = MitSemantik::new(&arena);
     let r = run_with_semantics(&doc);
 
-    // Tier 2 laeuft, Tier 3 nicht -- dieser Host liefert keine Darstellung.
+    // Tier 2 laeuft, Tier 3 nicht -- dieser Host liefert keine Darstellung
+    // und keine Stylesheets.
     assert_eq!(
         r.summary.rules_not_run,
-        kennungen_in(a11y_rules::rendering_metas())
+        kennungen_in(a11y_rules::rendering_metas()) + kennungen_in(a11y_rules::stylesheet_metas())
     );
     assert_eq!(
         r.findings
@@ -923,6 +926,7 @@ fn jede_kennung_hinterlaesst_genau_einen_ausfuehrungsvermerk() {
         .iter()
         .chain(a11y_rules::semantics_metas())
         .chain(a11y_rules::rendering_metas())
+        .chain(a11y_rules::stylesheet_metas())
         .map(|m| m.ids.len())
         .sum();
     assert_eq!(anzahl, deklariert, "ein Vermerk je deklarierter Kennung");

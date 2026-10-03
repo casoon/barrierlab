@@ -31,6 +31,10 @@ pub enum Tier {
     Rendering,
     /// Fokus, Ereignisse, veränderlicher DOM.
     Interaction,
+    /// Die Stylesheets der Seite als geparste Regeln. Unabhängig von den
+    /// übrigen Schichten: Ein statischer Host hat sie aus seinen Dateien, ein
+    /// Browser aus `document.styleSheets`.
+    Stylesheets,
 }
 
 impl Tier {
@@ -40,6 +44,7 @@ impl Tier {
             Tier::Semantics => "semantics",
             Tier::Rendering => "rendering",
             Tier::Interaction => "interaction",
+            Tier::Stylesheets => "stylesheets",
         }
     }
 }
@@ -51,6 +56,7 @@ pub struct Caps {
     pub semantics: bool,
     pub rendering: bool,
     pub interaction: bool,
+    pub stylesheets: bool,
 }
 
 impl Caps {
@@ -59,6 +65,7 @@ impl Caps {
         semantics: false,
         rendering: false,
         interaction: false,
+        stylesheets: false,
     };
 
     pub fn has(self, tier: Tier) -> bool {
@@ -67,6 +74,7 @@ impl Caps {
             Tier::Semantics => self.semantics,
             Tier::Rendering => self.rendering,
             Tier::Interaction => self.interaction,
+            Tier::Stylesheets => self.stylesheets,
         }
     }
 
@@ -82,6 +90,11 @@ impl Caps {
 
     pub fn with_interaction(mut self) -> Self {
         self.interaction = true;
+        self
+    }
+
+    pub fn with_stylesheets(mut self) -> Self {
+        self.stylesheets = true;
         self
     }
 }
