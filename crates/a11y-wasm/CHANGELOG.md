@@ -2,6 +2,12 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.9.0] - 2026-10-03
+
+Gebaut auf `a11y-rules` 0.19.0. Die neuen Regeln über Stylesheets laufen hier
+noch nicht — das Paket gibt keine Stylesheets weiter; sie stehen als nicht
+gelaufen im Bericht. Keine Änderung an der Schnittstelle.
+
 ## [0.8.0] - 2026-10-03
 
 Gebaut auf `a11y-rules` 0.18.0: die Regeln aus B5–B7 (barrierlab#18–#20) —

@@ -5,6 +5,15 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.19.0] - 2026-10-03
+
+### Added
+
+- `Tier::Stylesheets` und `Caps::stylesheets` / `Caps::with_stylesheets`:
+  die Stylesheets der Seite als eigene Schicht, unabhängig von Semantik und
+  Darstellung (casoon/barrierlab#21). `Caps` bekommt damit ein Feld mehr;
+  wer `Caps { .. }` von Hand baut, ergänzt es.
+
 ## [0.18.0] - 2026-10-03
 
 ### Changed
