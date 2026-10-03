@@ -1965,10 +1965,90 @@ pub const METAS: &[Meta] = &[
         #[cfg(feature = "de")]
         help_de: "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen.",
     },
+    Meta {
+        ids: &["viz/text-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "Every visualisation (figure[data-viz]) needs a non-empty text layer \
+               [data-viz-text] with its statement.",
+        #[cfg(feature = "de")]
+        help_de: "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
+                  [data-viz-text] mit ihrer Aussage.",
+    },
+    Meta {
+        ids: &["display/text-hidden"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "Never put hidden, aria-hidden=\"true\" or inert on [data-viz-text] or its \
+               ancestors; hide it visually instead.",
+        #[cfg(feature = "de")]
+        help_de: "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
+                  Vorfahren; die Schicht nur visuell ausblenden.",
+    },
+    Meta {
+        ids: &["viz/caption-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.1.1"],
+        severity: Severity::Low,
+        help: "Every visualisation (figure[data-viz]) needs a <figcaption> that names it.",
+        #[cfg(feature = "de")]
+        help_de: "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
+                  benennt.",
+    },
+    Meta {
+        ids: &["viz/static-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Medium,
+        help: "A 3d or interactive visualisation needs a still image [data-viz-static] for calm \
+               mode.",
+        #[cfg(feature = "de")]
+        help_de: "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
+                  [data-viz-static] für den ruhigen Modus.",
+    },
+    Meta {
+        ids: &["viz/table-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["1.3.1"],
+        severity: Severity::Low,
+        help: "A chart (data-viz=\"chart\") should give its values as a <table>.",
+        #[cfg(feature = "de")]
+        help_de: "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben.",
+    },
+    Meta {
+        ids: &["display/toggle-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Medium,
+        help: "A page with visualisations needs a display-mode toggle marked \
+               [data-display-toggle].",
+        #[cfg(feature = "de")]
+        help_de: "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
+                  markierten Umschalter für den Darstellungsmodus.",
+    },
+    Meta {
+        ids: &["display/init-missing"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.2"],
+        severity: Severity::Low,
+        help: "Set html[data-display] in a small blocking script in <head>, before <body>.",
+        #[cfg(feature = "de")]
+        help_de: "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
+                  <body>.",
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 39] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 46] {
     [
         lang,
         title,
@@ -2009,6 +2089,13 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 39] {
         crate::media::server_side_map,
         crate::media::object_alt,
         crate::media::audio_autoplay,
+        crate::viz::text,
+        crate::viz::text_hidden,
+        crate::viz::caption,
+        crate::viz::static_layer,
+        crate::viz::table,
+        crate::viz::toggle,
+        crate::viz::init,
     ]
 }
 

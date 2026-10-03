@@ -132,6 +132,65 @@ ein; er steht als Fall in den Tests. `<area>`, `<input type="image">`,
   versteckte Rahmen ohnehin heraus; die Prüfung auf ≤ 1 px gerenderte Größe
   bleibt beim Host.
 
+### Darstellungskonvention (#22)
+
+Die statischen Regeln der Darstellungskonvention (casoon/barrierlab#22,
+Entwurf v0): `figure[data-viz]` mit Text-, Standbild- und Live-Schicht,
+`html[data-display]` mit Umschalter. Die Konvention steht auf der Seite
+[Darstellungsmodi](../../docs/a11y/concepts/darstellungsmodi.md).
+
+**Entscheidung zum Paket:** `a11y-rules`, nicht `web-checks`. Die Regeln
+brauchen den DOM — Vorfahren, Nachfahren, Verweise per `aria-describedby` —
+und lesen dabei nur Attribute und Struktur; alle sieben sind Tier 1 (Modul
+`viz`). Sie melden nur auf Seiten, die die Konvention benutzen, tragen das
+Schlagwort `best-practice` und hängen wie in auditmysite am nächsten
+WCAG-Kriterium. Die Kennungen `display/*` sind dieselben wie in auditmysite
+(`src/wcag/rules/display_modes.rs`); der dort gemessene Teil (berechnete
+Sichtbarkeit, Zeitpunkt von `data-display`, Textmodus) bleibt dort.
+
+### Added
+
+| Neue Kennung | Tier | Urteil, Schwere | in auditmysite |
+|---|---|---|---|
+| `viz/text-missing` | 1 | `FAIL`, hoch (1.1.1) | — (`display/text-not-visible` misst den Textmodus) |
+| `display/text-hidden` | 1 | `FAIL`, hoch; `REVIEW`, niedrig bei Verweis per `aria-describedby`/`aria-details` (1.1.1) | `display/text-hidden`, Attribut-Teil |
+| `viz/caption-missing` | 1 | `FAIL`, niedrig (1.1.1) | — |
+| `viz/static-missing` | 1 | `FAIL`, mittel (2.2.2) | — |
+| `viz/table-missing` | 1 | `REVIEW`, niedrig (1.3.1) | — |
+| `display/toggle-missing` | 1 | `FAIL`, mittel (2.2.2) | `display/toggle-missing`, statischer Teil |
+| `display/init-missing` | 1 | `REVIEW`, niedrig (2.2.2) | `display/init-missing`, statischer Teil |
+
+Belege: die gebauten Seiten der Referenzumsetzung Geographia (371 Seiten,
+`web-geographia/apps/*/dist`, Stand 2026-10-03). `viz/text-missing` meldet
+die Startseite, die ihre Diagramme in `.viz-desc` ohne `[data-viz-text]`
+beschreibt, und „Build Earth 2.0" (`space/solar-system/settlement/`), das
+auch `viz/static-missing` auslöst; `viz/caption-missing` die Klima-Monitor-
+und Deutschlandkarten ohne `<figcaption>`; `display/toggle-missing` die
+Laborseiten ohne Kopfzeile; `viz/table-missing` 196 Diagramme, vor allem
+Sparklines. `display/text-hidden` folgt dem Fall aus auditmysite#704
+(`div#layers-home-desc` auf geographia.eu/atmosphere/) samt den dort
+festgehaltenen Testfällen; im heutigen Build blendet Geographia nur visuell
+aus. `display/init-missing` meldet dort nichts. Auf den 48 echten Seiten ohne
+Konvention meldet keine der sieben Regeln.
+
+- Die Kernaussage wird nur auf „nicht leer" geprüft, nicht auf Qualität.
+- `viz/orphan-media` aus dem Entwurf (`canvas`, `video`, `svg[role=img]`
+  außerhalb der Konvention) ist nicht aufgenommen: In Geographia steht jedes
+  solche Medium in `[data-viz]` oder unter `aria-hidden`, ein echter
+  Positivfall fehlt.
+- `display/init-missing` kann nur die Abwesenheit feststellen; ob ein
+  vorhandenes Skript den Modus setzt, zeigt erst die laufende Seite.
+
+### Abweichungen von auditmysite
+
+- `viz/*` gibt es in auditmysite nicht; dort prüft `display/text-not-visible`
+  den Text erst im gerenderten Textmodus.
+- Ist die `figure` selbst per `hidden` ausgeblendet, meldet
+  `display/text-hidden` nichts (wie auditmysite#725); `aria-hidden` oder
+  `inert` an der `figure` dagegen bleiben ein Befund, weil die Grafik dann
+  sichtbar ist.
+- Keine Obergrenze je Seite (auditmysite: 20 Befunde).
+
 ## [0.17.0] - 2026-10-01
 
 Die Landmark-, Tastatur- und Strukturregeln aus auditmysite
