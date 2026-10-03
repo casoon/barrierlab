@@ -13,7 +13,7 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
 alle Oberflächen stabil und in `Meta::ids` deklariert: 87 in Tier 1 (Struktur, davon 7 Checkliste und 7 Darstellungskonvention), 31 in Tier 2 (Semantik),
-10 in Tier 3 (Darstellung, davon 8 Heuristiken).
+10 in Tier 3 (Darstellung, davon 8 Heuristiken), 5 über Stylesheets.
 
 ## Aufbau
 
@@ -35,9 +35,10 @@ flowchart LR
 | Eintrag | Zweck |
 |---|---|
 | `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | ein Lauf, je nach vorhandenen Tiers |
+| `run_stylesheets` | ergänzt einen Bericht um die Regeln über Stylesheets (`stylesheet-parse`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | die Regeln einzeln, wenn ein Host selbst orchestriert |
-| `structure_metas`, `semantics_metas`, `rendering_metas` | alle Kennungen vorab, ohne zu laufen — für Abdeckungsberichte |
-| `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule` | Regeltypen und ihre Deklaration |
+| `structure_metas`, `semantics_metas`, `rendering_metas`, `stylesheet_metas` | alle Kennungen vorab, ohne zu laufen — für Abdeckungsberichte |
+| `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule`, `StylesheetRule` | Regeltypen und ihre Deklaration |
 | `Scope` | welche Knoten eine Regel sieht: Accessibility-Tree, Dargestelltes oder das ganze Markup |
 
 Zwei Regelgruppen urteilen bewusst nicht: die **Checkliste** (`manual/*`,
@@ -87,9 +88,25 @@ nur auf Seiten, die die Konvention benutzen, tragen das Schlagwort
 Seite zeigt — berechnete Sichtbarkeit, der Zeitpunkt von `data-display`, der
 Textmodus —, misst auditmysite.
 
+## Stylesheets
+
+Fünf Regeln lesen die Stylesheets der Seite: `focus/outline-removed` (2.4.7),
+`motion/reduced-motion-ignored` (2.3.3), `orientation/content-hidden` (1.3.4),
+`text/justified` und `text/line-height-tight` (1.4.8). Der Host gibt den
+CSS-Text jedes Sheets an `stylesheet_parse::parse_stylesheet` und den Bericht eines
+`run_*` an `run_stylesheets`; ohne diesen Schritt stehen die fünf mit
+`NotRun::CapabilityMissing` im Bericht. Woher der Text kommt, ist Sache des
+Hosts: aus `document.styleSheets` im Browser oder aus den Dateien eines Builds.
+
+Ob eine Regel auf dieser Seite gilt, entscheidet ein eigener Selektor-Abgleich
+gegen das Dokument (Teilmenge von Selectors Level 4; Zustände und
+Pseudo-Elemente gelten als erfüllt, Unbekanntes wie `:has()` als möglicher
+Treffer). Keine Kaskade mit Spezifität: Für den Fließtext zählt die letzte
+treffende Angabe am Absatz, sonst am nächsten Vorfahren.
+
 ## Abhängigkeiten
 
-Nach unten: `a11y-dom`, `a11y-report`, `accname`. Nach oben: alle Hosts,
+Nach unten: `a11y-dom`, `a11y-report`, `accname`, `stylesheet-parse`. Nach oben: alle Hosts,
 künftig `a11y-wasm`.
 
 ## Geltungsbereich

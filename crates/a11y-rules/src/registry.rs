@@ -90,3 +90,18 @@ impl<D: Rendering> Clone for RenderingRule<D> {
 }
 
 impl<D: Rendering> Copy for RenderingRule<D> {}
+
+/// Eine Regel auf [`Tier::Stylesheets`] — braucht die Stylesheets der Seite
+/// und gleicht deren Selektoren mit dem Dokument ab.
+pub struct StylesheetRule<D: Document> {
+    pub meta: Meta,
+    pub run: fn(&D, &[stylesheet_parse::Stylesheet], Locale, &mut Vec<Finding>),
+}
+
+impl<D: Document> Clone for StylesheetRule<D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<D: Document> Copy for StylesheetRule<D> {}

@@ -2,7 +2,7 @@
 name = "a11y-rules"
 description = "Accessibility rules generic over the document model: one rule set for build-time, CI and in-page surfaces."
 keywords = ["accessibility", "a11y", "wcag", "rules", "audit"]
-version = "0.18.0"
+version = "0.19.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -17,6 +17,7 @@ default = ["de"]
 de = []
 
 [dependencies]
+stylesheet-parse = { workspace = true }
 a11y-dom = { workspace = true }
 a11y-report = { workspace = true }
 
