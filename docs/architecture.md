@@ -27,6 +27,7 @@ flowchart BT
     dom[a11y-dom]
     rep[a11y-report]
     hc[html-conform]
+    cssp[css-parse]
   end
   subgraph L2["L2 · Berechnung"]
     acc[accname]
@@ -46,6 +47,7 @@ flowchart BT
 
   sch --> xp
   hc --> h5 & csp & mq & rng & sch
+  cssp --> mq
   acc --> dom
   rules --> dom & rep & acc
   perc --> rep
@@ -60,7 +62,7 @@ flowchart BT
 | Schicht | Aufgabe | Regel |
 |---|---|---|
 | L0 | Syntax lesen: HTML, CSP, Media Queries, XPath, RELAX NG, Schematron | keine Bewertung, keine Zugänglichkeitsbegriffe |
-| L1 | Datenmodell: Baum, Befund, Konformanz | ein Befundmodell für alle Hosts (`a11y-report`) |
+| L1 | Datenmodell: Baum, Befund, Konformanz, Stylesheet | ein Befundmodell für alle Hosts (`a11y-report`) |
 | L2 | Berechnung: Name, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei |
 | L3 | Auslieferung in andere Laufzeiten (WASM) | reicht durch, bewertet nicht |
 | L4 | Erhebung, Orchestrierung, Ausgabe | außerhalb dieses Repositorys |
