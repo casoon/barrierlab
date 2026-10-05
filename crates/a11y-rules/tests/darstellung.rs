@@ -147,14 +147,16 @@ impl Rendering for Host<'_> {
         })
     }
 
-    fn layout<'n>(&'n self, node: Self::N<'n>) -> Option<Layout> {
+    fn layout<'n>(&'n self, _node: Self::N<'n>) -> Option<Layout> {
         Some(Layout {
-            scroll_overflow_px: self
-                .voll
-                .then(|| node.attr("data-scroll").map_or(0.0, |s| s.parse().unwrap())),
             focus_visible: Some(true),
             ..Default::default()
         })
+    }
+
+    fn scroll_overflow_px<'n>(&'n self, node: Self::N<'n>) -> Option<f32> {
+        self.voll
+            .then(|| node.attr("data-scroll").map_or(0.0, |s| s.parse().unwrap()))
     }
 }
 

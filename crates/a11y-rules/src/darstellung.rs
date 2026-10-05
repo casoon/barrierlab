@@ -383,7 +383,7 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
 pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut gemessen = false;
     for n in elements(doc).filter(|n| !matches!(n.local_name(), "html" | "body")) {
-        let Some(ueberhang) = doc.layout(n).and_then(|l| l.scroll_overflow_px) else {
+        let Some(ueberhang) = doc.scroll_overflow_px(n) else {
             continue;
         };
         gemessen = true;
