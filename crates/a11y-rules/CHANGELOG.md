@@ -5,7 +5,12 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.22.0] - 2026-10-05
+
+Vor dem Release hat auditmysite die neuen Felder in echten Läufen gefüllt:
+`pointer_events_none` (bundesregierung.de 114, spiegel.de 120, gov.uk 6,
+berlin.de 2) und `animating` (bundesregierung.de 246, wetter.com 89,
+spiegel.de 23, `target_size_animation` `a#slow`).
 
 Die Heuristiken nach dem Vergleich mit auditmysites lokalen Regeln
 (casoon/auditmysite#698, Korpus und sechs echte Seiten, 2026-10-05).
@@ -32,6 +37,10 @@ Gemeldet wird nur, was `targets/size` nicht schon meldet.
     werden auch selbst nicht gemessen.
   - Ein Ziel, das beim Messen noch wächst (`Layout::animating`), bleibt
     `UNTESTED` statt zu klein (`target_size_animation`, #706).
+  - Zeigerziele sind alle Bedienelemente, nicht nur die per Tab erreichbaren:
+    Bei „roving tabindex" haben die übrigen Elemente einer Gruppe
+    `tabindex="-1"` und werden trotzdem angeklickt (bundesregierung.de,
+    Karussellpunkte 10 × 10 px, `#slick-slide-control00`).
 - `order/visual-mismatch` zählt auch umgeordneten Text ohne Bedienelemente —
   1.3.2 betrifft die Lesereihenfolge (Korpus `text_and_layout`). Nicht mehr
   gemeldet: Behälter, deren Bedienelemente alle zum selben Ziel führen

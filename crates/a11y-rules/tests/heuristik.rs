@@ -744,3 +744,32 @@ fn karte_mit_link_ist_kein_nur_zeiger_bundesregierung_de() {
     let r = run_full(&Host::new(&arena));
     assert!(an_mit(&arena, &r, "keyboard/pointer-only", Outcome::Review).is_empty());
 }
+
+/// bundesregierung.de (mobil): Karussellpunkte mit „roving tabindex" — nur
+/// der aktive hat `tabindex="0"`. Die übrigen sind trotzdem Zeigerziele und
+/// engen den aktiven ein; alle drei sind zu klein.
+#[test]
+fn karussellpunkte_mit_roving_tabindex_bundesregierung_de() {
+    let mut b = seite();
+    for (i, tab) in ["0", "-1", "-1"].iter().enumerate() {
+        b = b
+            .open("button")
+            .attr("id", &format!("slick-slide-control0{i}"))
+            .attr("tabindex", tab)
+            .attr("data-size", &format!("10x10@{},0", i * 14))
+            .text(&format!("{}", i + 1))
+            .close();
+    }
+    let arena = b.close().close().build();
+    let r = run_full(&Host::new(&arena));
+    let mut gemeldet = an_mit(&arena, &r, "targets/size", Outcome::Review);
+    gemeldet.sort();
+    assert_eq!(
+        gemeldet,
+        [
+            "slick-slide-control00",
+            "slick-slide-control01",
+            "slick-slide-control02"
+        ]
+    );
+}

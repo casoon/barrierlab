@@ -511,6 +511,45 @@ fn ausserhalb(r: &Rect) -> bool {
     r.x + r.width <= 0.0 || r.y + r.height <= 0.0
 }
 
+/// Ein Zeigerziel im Sinne von 2.5.8: ein Bedienelement, unabhängig vom
+/// `tabindex`. Mit „roving tabindex" (Karussellpunkte, Tabs, Menüs) hat nur
+/// ein Element der Gruppe `tabindex="0"`, die übrigen `-1` — angeklickt
+/// werden sie trotzdem (bundesregierung.de, `#slick-slide-control00`,
+/// 10 × 10 px).
+fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
+    let nativ = match n.local_name() {
+        "a" | "area" => n.has_attr("href"),
+        "button" | "select" | "textarea" | "summary" => !n.has_attr("disabled"),
+        "input" => {
+            !n.has_attr("disabled")
+                && !n
+                    .attr("type")
+                    .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden"))
+        }
+        _ => false,
+    };
+    nativ
+        || crate::structure::explizite_rolle(n).is_some_and(|r| {
+            matches!(
+                r,
+                "button"
+                    | "link"
+                    | "checkbox"
+                    | "radio"
+                    | "switch"
+                    | "tab"
+                    | "menuitem"
+                    | "menuitemcheckbox"
+                    | "menuitemradio"
+                    | "option"
+                    | "slider"
+                    | "spinbutton"
+                    | "treeitem"
+            )
+        })
+        || per_tab_erreichbar(n)
+}
+
 /// Ob ein Element ein Ziel ist, das man sehen und anklicken kann: nicht
 /// `inert`, kein `pointer-events: none`, nicht optisch verborgen, nicht aus
 /// dem Bild geschoben.
@@ -585,7 +624,7 @@ fn ungemessen_ziel(locale: Locale, id: &str, wcag: &str, n: NodeId) -> Finding {
 fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let labels = labels_nach_ziel(doc);
     let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
-        .filter(|n| per_tab_erreichbar(*n))
+        .filter(|n| ist_zeigerziel(*n))
         .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
         .filter(|(n, r)| klickbar(doc, *n, r))
         .collect();
@@ -641,7 +680,7 @@ fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 fn zielgroesse_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let labels = labels_nach_ziel(doc);
     let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
-        .filter(|n| per_tab_erreichbar(*n))
+        .filter(|n| ist_zeigerziel(*n))
         .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
         .filter(|(n, r)| klickbar(doc, *n, r))
         .collect();
