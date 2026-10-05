@@ -167,6 +167,20 @@ pub struct Color {
     pub a: u8,
 }
 
+/// Eine Stichprobe des tatsächlich gezeichneten Hintergrunds hinter einem
+/// Text — für die Fälle, in denen keine einzelne Farbe gilt: Verlauf,
+/// Hintergrundbild, halbdurchsichtige Überlagerung.
+///
+/// Der Host tastet die Pixel im Kasten des Elements ab (etwa aus einem
+/// Screenshot), verrechnet Transparenz gegen Weiß und gibt ihre relative
+/// Leuchtdichte nach WCAG an, 0,0 bis 1,0, in beliebiger Reihenfolge. Die
+/// Glyphen selbst dürfen darin sein; die Regel urteilt über Median und
+/// 40. Perzentil, nicht über den ungünstigsten Pixel.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Backdrop {
+    pub luminance: Vec<f64>,
+}
+
 /// Die berechneten Stilwerte, die Accessibility-Regeln tatsächlich brauchen.
 /// Bewusst keine vollständige CSSOM-Abbildung.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -274,6 +288,14 @@ pub trait Rendering: Document {
     /// „nur für Screenreader"-Muster. Solcher Text hat keinen sichtbaren
     /// Kontrast. Vorgabe `None`: nicht gemessen.
     fn visually_hidden<'n>(&'n self, _node: Self::N<'n>) -> Option<bool> {
+        None
+    }
+
+    /// Abgetasteter Hintergrund hinter dem Text des Knotens. Die
+    /// Kontrastregel greift darauf nur zurück, wenn
+    /// [`ComputedStyle::background_color`] fehlt. Vorgabe `None`: nicht
+    /// abgetastet — dann bleibt der Kontrast nicht bestimmbar.
+    fn sampled_backdrop<'n>(&'n self, _node: Self::N<'n>) -> Option<Backdrop> {
         None
     }
 }
