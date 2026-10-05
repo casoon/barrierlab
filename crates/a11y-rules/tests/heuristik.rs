@@ -63,6 +63,7 @@ impl Rendering for Host<'_> {
             font_weight: None,
             display: Some(if ua_none { "none" } else { "block" }.into()),
             visibility: Some("visible".into()),
+            ..Default::default()
         })
     }
 
@@ -95,6 +96,7 @@ impl Rendering for Host<'_> {
             obscured: node.has_attr("data-verdeckt"),
             hides_focus: node.has_attr("data-leiste"),
             focus_visible: node.attr("data-fokus").map(|f| f == "sichtbar"),
+            scroll_overflow_px: node.attr("data-scroll").map(|s| s.parse().unwrap()),
         })
     }
 }

@@ -1620,6 +1620,7 @@ fn stil(
         font_weight: Some(400),
         display: Some("block".into()),
         visibility: Some("visible".into()),
+        ..Default::default()
     }
 }
 
