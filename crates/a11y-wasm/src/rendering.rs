@@ -160,6 +160,7 @@ impl Rendering for RenderArena<'_> {
             } else {
                 "visible".to_string()
             }),
+            ..Default::default()
         })
     }
 
