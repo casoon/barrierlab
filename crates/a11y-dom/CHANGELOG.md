@@ -5,6 +5,22 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Changed
+
+- **`Layout`: jedes Feld ist jetzt `Option`.** `None` heißt „nicht gemessen",
+  nicht „nein". Ein Host kann liefern, was er erhebt — etwa nur `obscured` —,
+  ohne dass die Heuristiken auf den übrigen Feldern mit Vorgabewerten laufen
+  (casoon/barrierlab#47). Wer `Layout { .. }` baut, setzt `Some(..)`.
+
+### Added
+
+- `Rendering::visually_hidden`: ob der Text eines Knotens optisch verborgen
+  ist, obwohl `display` und `visibility` ihn darstellen (`clip`,
+  `clip-path`, `text-indent`, Kasten von höchstens 1 px mit
+  `overflow: hidden`). Vorgabe `None`.
+
 ## [0.20.0] - 2026-10-05
 
 ### Added

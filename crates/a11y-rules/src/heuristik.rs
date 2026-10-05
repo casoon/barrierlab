@@ -22,8 +22,8 @@
 use std::collections::{HashMap, HashSet};
 
 use a11y_dom::{
-    Node, NodeId, NodeKind, Rect, Rendering, Tier, ancestors, closest, descendants, elements,
-    subtree_text,
+    Layout, Node, NodeId, NodeKind, Rect, Rendering, Tier, ancestors, closest, descendants,
+    elements, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -78,21 +78,62 @@ fn hat_tab_ziel<'a, N: Node<'a>>(n: N) -> bool {
         .any(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(d))
 }
 
+/// Ob irgendein Element dieses Layout-Feld gemessen hat.
+fn gemessen<D: Rendering>(doc: &D, feld: impl Fn(&Layout) -> bool) -> bool {
+    elements(doc).any(|n| doc.layout(n).is_some_and(|l| feld(&l)))
+}
+
+/// Nicht gemessen ist nicht bestanden: ein `UNTESTED` für die Seite, wenn
+/// kein Element das Feld trägt, das die Heuristik braucht.
+fn ungemessen<D: Rendering>(
+    doc: &D,
+    id: &str,
+    wcag: &[&str],
+    feld: &str,
+    locale: Locale,
+    out: &mut Vec<Finding>,
+) {
+    out.push(
+        Finding::untested(
+            id,
+            tr!(
+                locale,
+                "The host does not measure {feld}; this heuristic did not run.",
+                "Der Host misst {feld} nicht; diese Heuristik lief nicht."
+            ),
+        )
+        .with_severity(Severity::Low)
+        .with_wcag(wcag.iter().copied())
+        .at(at(doc.root().id())),
+    );
+}
+
 /// 1.3.2 / 2.4.3: umgekehrte Flex-Richtung oder `order` über bedienbarem
 /// Inhalt — Tabreihenfolge und sichtbare Reihenfolge laufen auseinander.
 fn reihenfolge<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !gemessen(doc, |l| l.flex_reversed.is_some() || l.order.is_some()) {
+        let feld = "flex-direction / order";
+        return ungemessen(
+            doc,
+            "order/visual-mismatch",
+            &["1.3.2", "2.4.3"],
+            feld,
+            locale,
+            out,
+        );
+    }
     for n in elements(doc) {
         let Some(layout) = doc.layout(n) else {
             continue;
         };
-        let umgekehrt = layout.flex_reversed
+        let umgekehrt = layout.flex_reversed == Some(true)
             && descendants(n)
                 .filter(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(*d))
                 .nth(1)
                 .is_some();
         let umsortiert = n.children().any(|k| {
             k.kind() == NodeKind::Element
-                && doc.layout(k).is_some_and(|l| l.order != 0)
+                && doc.layout(k).and_then(|l| l.order).is_some_and(|o| o != 0)
                 && hat_tab_ziel(k)
         });
         if umgekehrt || umsortiert {
@@ -194,8 +235,19 @@ fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<&'a str, Vec<D::N<'
 /// Kreisen ist eine Bewegung. Und gar nicht, wenn die Seite ein Bedienelement
 /// zum Anhalten hat — ob es wirkt, sagt diese Heuristik nicht.
 fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !gemessen(doc, |l| l.infinite_animation.is_some()) {
+        let feld = "animation-iteration-count";
+        return ungemessen(
+            doc,
+            "motion/infinite-animation",
+            &["2.2.2"],
+            feld,
+            locale,
+            out,
+        );
+    }
     let treffer = aeusserste(elements(doc), |n| {
-        doc.layout(n).is_some_and(|l| l.infinite_animation)
+        doc.layout(n).and_then(|l| l.infinite_animation) == Some(true)
     });
     if treffer.is_empty() {
         return;
@@ -218,7 +270,7 @@ fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
         }
         let n = if n.parent().is_some_and(|p| {
             p.children()
-                .filter(|k| doc.layout(*k).is_some_and(|l| l.infinite_animation))
+                .filter(|k| doc.layout(*k).and_then(|l| l.infinite_animation) == Some(true))
                 .nth(1)
                 .is_some()
         }) {
@@ -246,13 +298,26 @@ fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
 
 /// 1.4.10: ein `min-width`, das bei 320 CSS-px waagerechtes Scrollen erzwingt.
 fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !gemessen(doc, |l| l.min_width_px.is_some()) {
+        return ungemessen(
+            doc,
+            "reflow/min-width",
+            &["1.4.10"],
+            "min-width",
+            locale,
+            out,
+        );
+    }
     let treffer = aeusserste(elements(doc), |n| {
         !darf_breit_sein(n)
             && !ancestors(n).any(darf_breit_sein)
-            && doc.layout(n).is_some_and(|l| l.min_width_px > REFLOW_PX)
+            && doc
+                .layout(n)
+                .and_then(|l| l.min_width_px)
+                .is_some_and(|px| px > REFLOW_PX)
     });
     for n in treffer {
-        let px = doc.layout(n).map_or(0.0, |l| l.min_width_px);
+        let px = doc.layout(n).and_then(|l| l.min_width_px).unwrap_or(0.0);
         out.push(
             Finding::review(
                 "reflow/min-width",
@@ -277,6 +342,11 @@ fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Ein Inline-`onclick`, das schon `keyboard/click-handler-not-focusable`
 /// meldet, zählt hier nicht ein zweites Mal.
 fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    // Ohne gemessenes `cursor` läuft nur der `onclick`-Teil.
+    if !gemessen(doc, |l| l.cursor_pointer.is_some()) {
+        let wcag = &["2.1.1", "4.1.2"];
+        ungemessen(doc, "keyboard/pointer-only", wcag, "cursor", locale, out);
+    }
     for n in elements(doc) {
         if ist_bedienelement(n)
             || ancestors(n).any(ist_bedienelement)
@@ -284,7 +354,7 @@ fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         {
             continue;
         }
-        let zeiger = |k| doc.layout(k).is_some_and(|l| l.cursor_pointer);
+        let zeiger = |k| doc.layout(k).and_then(|l| l.cursor_pointer) == Some(true);
         let klickbar = n.has_attr("onclick") || zeiger(n);
         // `cursor` vererbt sich: gemeldet wird nur, wo er beginnt.
         let geerbt = n
@@ -317,11 +387,15 @@ fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Leiste, unter der ein fokussiertes Element verschwinden kann, weil
 /// `scroll-padding-top` sie nicht freihält.
 fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !gemessen(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
+        let feld = "overlap with fixed or sticky elements";
+        return ungemessen(doc, "focus/obscured", &["2.4.11"], feld, locale, out);
+    }
     for n in elements(doc) {
         let Some(layout) = doc.layout(n) else {
             continue;
         };
-        let meldung = if layout.hides_focus {
+        let meldung = if layout.hides_focus == Some(true) {
             pick!(
                 locale,
                 "This fixed or sticky bar reaches lower than scroll-padding-top. A control \
@@ -330,7 +404,7 @@ fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                  Ein Bedienelement, das rückwärts per Tab erreicht wird, kann ganz darunter \
                  verschwinden.",
             )
-        } else if layout.obscured && per_tab_erreichbar(n) {
+        } else if layout.obscured == Some(true) && per_tab_erreichbar(n) {
             pick!(
                 locale,
                 "A fixed or sticky element covers this control. Check that it stays \
