@@ -245,6 +245,13 @@ pub struct Layout {
     /// Fokussieren ändert den Zustand der Seite und ist deshalb ein eigener,
     /// ausdrücklicher Durchgang.
     pub focus_visible: Option<bool>,
+    /// Berechnetes `pointer-events: none`: Ein Klick geht durch das Element
+    /// hindurch, es ist kein Ziel.
+    pub pointer_events_none: Option<bool>,
+    /// Auf dem Element oder einem Vorfahren läuft beim Messen eine *endliche*
+    /// Animation — seine Größe ist noch nicht die endgültige. Endlose
+    /// Animationen zählen nicht; sie kommen nie zur Ruhe.
+    pub animating: Option<bool>,
 }
 
 /// **Tier 3** — berechnete Stile und Geometrie.

@@ -428,6 +428,7 @@ pub(crate) const METAS: &[Meta] = &[
     heuristik::METAS[4],
     heuristik::METAS[5],
     heuristik::METAS[6],
+    heuristik::METAS[7],
     darstellung::METAS[0],
     darstellung::METAS[1],
     darstellung::METAS[2],

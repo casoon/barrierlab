@@ -2,6 +2,12 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.12.0] - 2026-10-05
+
+Gebaut auf `a11y-rules` 0.22.0: `targets/size-enhanced` (2.5.5) und die
+überarbeiteten Heuristiken. `pointer_events_none` und `animating` liefert
+dieses Paket noch nicht (`None`). Keine Änderung an der Schnittstelle.
+
 ## [0.11.0] - 2026-10-05
 
 Gebaut auf `a11y-rules` 0.21.0: `contrast/text-enhanced` (1.4.6), Kontrast

@@ -196,6 +196,9 @@ impl Rendering for RenderArena<'_> {
             hides_focus: Some(f & LAYOUT_VERSTECKT_FOKUS != 0),
             focus_visible: (f & LAYOUT_FOKUS_GEMESSEN != 0)
                 .then_some(f & LAYOUT_FOKUS_SICHTBAR != 0),
+            // Misst dieses Paket noch nicht.
+            pointer_events_none: None,
+            animating: None,
         })
     }
 }
