@@ -84,13 +84,15 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
+      # 170 KB seit #47 (05.10.2026, Entscheidung des Nutzers): gemessen
+      # 149,0 KB gzip mit Kontrast-AAA, Stylesheet- und Darstellungsregeln.
       # 150 KB seit B5-B7 und #22 (03.10.2026, Entscheidung des Nutzers):
       # gemessen 142,8 KB gzip mit allen portierten Regeln.
       # 130 KB seit B3 (Formularregeln, barrierlab#16), einmalig fuer B3-B7
       # angehoben (Entscheidung vom 01.10.2026): alle Regeln sollen auch in der
       # laufenden Seite (LiveAudit) greifen, die deutschen Texte bleiben drin.
       # Vorher 110 KB seit B1 (30.09.2026).
-      - name: Groessenbudget (150 KB gzip)
+      - name: Groessenbudget (170 KB gzip)
         run: |
           python3 - <<'EOF'
           import gzip, sys
@@ -98,8 +100,8 @@ jobs:
           raw = open(p, "rb").read()
           gz = len(gzip.compress(raw, 9)) / 1024
           print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
-          if gz > 150:
-              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 150 KB")
+          if gz > 170:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 170 KB")
           EOF
 
   node:

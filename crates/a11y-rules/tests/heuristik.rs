@@ -86,15 +86,16 @@ impl Rendering for Host<'_> {
             return None;
         }
         Some(Layout {
-            flex_reversed: node.has_attr("data-reversed"),
-            order: node.attr("data-order").map_or(0, |o| o.parse().unwrap()),
-            min_width_px: node
-                .attr("data-min-width")
-                .map_or(0.0, |o| o.parse().unwrap()),
-            cursor_pointer: node.has_attr("data-pointer"),
-            infinite_animation: node.has_attr("data-endlos"),
-            obscured: node.has_attr("data-verdeckt"),
-            hides_focus: node.has_attr("data-leiste"),
+            flex_reversed: Some(node.has_attr("data-reversed")),
+            order: Some(node.attr("data-order").map_or(0, |o| o.parse().unwrap())),
+            min_width_px: Some(
+                node.attr("data-min-width")
+                    .map_or(0.0, |o| o.parse().unwrap()),
+            ),
+            cursor_pointer: Some(node.has_attr("data-pointer")),
+            infinite_animation: Some(node.has_attr("data-endlos")),
+            obscured: Some(node.has_attr("data-verdeckt")),
+            hides_focus: Some(node.has_attr("data-leiste")),
             focus_visible: node.attr("data-fokus").map(|f| f == "sichtbar"),
         })
     }
@@ -335,8 +336,11 @@ fn fokus_ohne_indikator_und_ungemessen() {
     assert_eq!(b[0].outcome, Outcome::Untested);
 }
 
+/// Ohne Layout laufen die Heuristiken nicht — und sagen das: je eine
+/// `UNTESTED`-Meldung für die Seite statt eines stillen Nichts. Bis 0.20.0
+/// meldeten sie hier gar nichts, und der Bericht zählte sie als gelaufen.
 #[test]
-fn ohne_layout_melden_die_heuristiken_nichts() {
+fn ohne_layout_melden_die_heuristiken_ungeprueft() {
     let arena = seite()
         .open("div")
         .attr("data-reversed", "")
@@ -357,7 +361,9 @@ fn ohne_layout_melden_die_heuristiken_nichts() {
         "reflow/min-width",
         "keyboard/pointer-only",
     ] {
-        assert!(befunde(&r, id).is_empty(), "{id}");
+        let b = befunde(&r, id);
+        assert_eq!(b.len(), 1, "{id}: {b:?}");
+        assert_eq!(b[0].outcome, Outcome::Untested, "{id}");
     }
 }
 

@@ -187,13 +187,13 @@ impl Rendering for RenderArena<'_> {
             return None;
         }
         Some(Layout {
-            flex_reversed: f & LAYOUT_UMGEKEHRT != 0,
-            order: spalten.order[i],
-            min_width_px: spalten.min_width_px[i],
-            cursor_pointer: f & LAYOUT_ZEIGER != 0,
-            infinite_animation: f & LAYOUT_ENDLOS != 0,
-            obscured: f & LAYOUT_VERDECKT != 0,
-            hides_focus: f & LAYOUT_VERSTECKT_FOKUS != 0,
+            flex_reversed: Some(f & LAYOUT_UMGEKEHRT != 0),
+            order: Some(spalten.order[i]),
+            min_width_px: Some(spalten.min_width_px[i]),
+            cursor_pointer: Some(f & LAYOUT_ZEIGER != 0),
+            infinite_animation: Some(f & LAYOUT_ENDLOS != 0),
+            obscured: Some(f & LAYOUT_VERDECKT != 0),
+            hides_focus: Some(f & LAYOUT_VERSTECKT_FOKUS != 0),
             focus_visible: (f & LAYOUT_FOKUS_GEMESSEN != 0)
                 .then_some(f & LAYOUT_FOKUS_SICHTBAR != 0),
         })

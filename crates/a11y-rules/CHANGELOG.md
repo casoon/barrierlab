@@ -5,6 +5,56 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.21.0] - 2026-10-05
+
+Vor dem Release hat auditmysite (casoon/auditmysite#698) die neuen Eingaben
+in echten Läufen gefüllt: `visually_hidden` und `obscured` auf gov.uk,
+bundesregierung.de, wetter.com, n-tv.de und spiegel.de (der Suchknopf von
+gov.uk als verborgen erkannt), `sampled_backdrop` auf berlin.de und in den
+Bild-Fixtures, die damit ihre bisherigen Urteile behalten.
+
+Kontrast und `Layout` nach dem Vergleich mit auditmysites eigener
+Kontrastregel (casoon/barrierlab#47, casoon/auditmysite#698).
+
+### Added
+
+| Neue Kennung | Urteil, Schwere | Norm |
+|---|---|---|
+| `contrast/text-enhanced` | `FAIL`, mittel | WCAG 1.4.6 (AAA): 7:1, bei großem Text 4,5:1 |
+
+Gemeldet wird nur, was 1.4.3 besteht; was schon dort verfehlt, steht nicht
+doppelt. Beleg: die Linkfarbe von gov.uk, #1d70b8 auf Weiß, 5,17:1.
+
+- Kontrast über Bildern und Verläufen: Fehlt die Hintergrundfarbe, liefert
+  der Host aber eine Abtastung (`Rendering::sampled_backdrop`), urteilt die
+  Regel wie auditmysite vor der Umstellung — Median verfehlt: `FAIL`; Median
+  und 40. Perzentil bestehen: bestanden; dazwischen `REVIEW` unter
+  `contrast/text-undetermined` (bzw. `contrast/text-enhanced` für AAA). Belege:
+  auditmysites `tests/fixtures/image_contrast.html` (dunkler Verlauf besteht,
+  heller verfehlt, geteilter ist Hinweis).
+- Kontrastbefunde tragen das gemessene und das geforderte Verhältnis als
+  `Evidence::computed` (`contrast_ratio`, `required_ratio`, bei Abtastung
+  zusätzlich `contrast_ratio_p40`) — für Berichte, die die Zahlen zeigen.
+
+### Changed
+
+- Kontrast: Optisch verborgener Text (`Rendering::visually_hidden`) wird
+  nicht gemessen — er hat keinen sichtbaren Kontrast. Beleg: gov.uk,
+  `button.gem-c-search__submit`, „Search GOV.UK" per `text-indent: -5000px`
+  versteckt, bisher `FAIL` 3,91:1.
+- Kontrast: Text, dessen Mitte ein fixiertes oder klebendes Element überdeckt
+  (`Layout::obscured`, etwa ein Cookie-Banner), ist
+  `contrast/text-undetermined` statt eines Urteils über Farben, die man so
+  nicht sieht (auditmysite #716).
+- Kontrast: Text unter `aria-hidden` wird weiter gemessen. WCAG 1.4.3 gilt
+  für sichtbaren Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn
+  aus (#395) — eine bewusste Abweichung.
+- Heuristiken: Ist das `Layout`-Feld, das eine Heuristik braucht, an keinem
+  Element gemessen, meldet sie einmal `UNTESTED` für die Seite. Vorher lief
+  sie still ohne Befund und zählte als gelaufen. Betrifft
+  `order/visual-mismatch`, `motion/infinite-animation`, `reflow/min-width`,
+  `focus/obscured` und den `cursor`-Teil von `keyboard/pointer-only`.
+
 ## [0.20.0] - 2026-10-05
 
 ### Fixed
