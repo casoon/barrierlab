@@ -5,6 +5,56 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.22.0] - 2026-10-05
+
+Vor dem Release hat auditmysite die neuen Felder in echten Läufen gefüllt:
+`pointer_events_none` (bundesregierung.de 114, spiegel.de 120, gov.uk 6,
+berlin.de 2) und `animating` (bundesregierung.de 246, wetter.com 89,
+spiegel.de 23, `target_size_animation` `a#slow`).
+
+Die Heuristiken nach dem Vergleich mit auditmysites lokalen Regeln
+(casoon/auditmysite#698, Korpus und sechs echte Seiten, 2026-10-05).
+
+### Added
+
+| Neue Kennung | Urteil, Schwere | Norm |
+|---|---|---|
+| `targets/size-enhanced` | `REVIEW`, niedrig | WCAG 2.5.5 (AAA): 44 × 44 CSS-px, Ausnahmen „inline" und „Equivalent", keine Abstandsausnahme |
+
+Gemeldet wird nur, was `targets/size` nicht schon meldet.
+
+### Changed
+
+- `targets/size` (2.5.8) folgt jetzt dem Korpus von auditmysite:
+  - Ausnahme „Equivalent": Ein sichtbarer Link zum selben Dokument von
+    mindestens 24 px genügt; Verweise innerhalb der Seite (`#setup`, `#`)
+    haben kein Gegenstück, ein Gegenstück unter `aria-hidden`, `inert`,
+    optisch verborgen oder außerhalb des Bilds zählt nicht
+    (`target_size_equivalent`).
+  - Nachbarn unter `inert` oder mit `pointer-events: none` engen nicht ein
+    (`target_size_hidden_neighbours`, #705); solche Ziele, optisch verborgene
+    und aus dem Bild geschobene (Sprunglinks bei −99999 px, bundesregierung.de)
+    werden auch selbst nicht gemessen.
+  - Ein Ziel, das beim Messen noch wächst (`Layout::animating`), bleibt
+    `UNTESTED` statt zu klein (`target_size_animation`, #706).
+  - Zeigerziele sind alle Bedienelemente, nicht nur die per Tab erreichbaren:
+    Bei „roving tabindex" haben die übrigen Elemente einer Gruppe
+    `tabindex="-1"` und werden trotzdem angeklickt (bundesregierung.de,
+    Karussellpunkte 10 × 10 px, `#slick-slide-control00`).
+- `order/visual-mismatch` zählt auch umgeordneten Text ohne Bedienelemente —
+  1.3.2 betrifft die Lesereihenfolge (Korpus `text_and_layout`). Nicht mehr
+  gemeldet: Behälter, deren Bedienelemente alle zum selben Ziel führen
+  (spiegel.de: 20 Teaserkarten mit Bild- und Titellink, `flex-row-reverse`).
+- `motion/infinite-animation` meldet `<marquee>` — ohne eigene Pause, auch
+  ohne gemessenes Layout (Korpus `no_focus_targets`). Lade-Kreisel mit kurzem
+  Durchlauf bleiben gemeldet: 2.2.2 gilt für Bewegung, die insgesamt länger
+  als fünf Sekunden läuft. auditmysite zählte nur Durchläufe über fünf
+  Sekunden — eine bewusste Abweichung.
+- `keyboard/pointer-only` übergeht das Kartenmuster: `cursor: pointer` auf
+  einem Kasten mit Link oder Knopf darin (bundesregierung.de: 27 Teaserkarten).
+- `focus/obscured` übergeht optisch verborgene Elemente (spiegel.de:
+  1 × 1 px großer Sprunglink).
+
 ## [0.21.0] - 2026-10-05
 
 Vor dem Release hat auditmysite (casoon/auditmysite#698) die neuen Eingaben

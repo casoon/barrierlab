@@ -5,6 +5,14 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.22.0] - 2026-10-05
+
+### Added
+
+- `Layout::pointer_events_none` und `Layout::animating` (eine endliche
+  Animation auf dem Element oder einem Vorfahren läuft beim Messen noch) —
+  für `targets/size` (casoon/auditmysite#705, #706).
+
 ## [0.21.0] - 2026-10-05
 
 ### Changed
