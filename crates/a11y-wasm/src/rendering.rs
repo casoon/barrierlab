@@ -196,8 +196,6 @@ impl Rendering for RenderArena<'_> {
             hides_focus: f & LAYOUT_VERSTECKT_FOKUS != 0,
             focus_visible: (f & LAYOUT_FOKUS_GEMESSEN != 0)
                 .then_some(f & LAYOUT_FOKUS_SICHTBAR != 0),
-            // Scroll-Überhang misst dieses Paket noch nicht (barrierlab#21).
-            scroll_overflow_px: None,
         })
     }
 }

@@ -5,7 +5,7 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.20.0] - 2026-10-05
 
 ### Fixed
 
@@ -27,7 +27,7 @@ steht je Regel und Seite ein `UNTESTED` im Bericht, kein stiller Nicht-Befund.
 |---|---|---|---|
 | `lists/role-redundant` | `FAIL`, niedrig (4.1.2) | `ComputedStyle::list_style_type` | `redundant-role` für `<ul>`/`<ol>` (`redundant_role`) |
 | `color/link-indistinct` | `FAIL`, mittel (1.4.1) | `text_decoration_line`, `font_style`, `font_family`, `border_bottom_style` | `link-in-text-block` (`use_of_color`) |
-| `keyboard/scrollable-region-not-focusable` | `FAIL`, hoch (2.1.1) | `Layout::scroll_overflow_px` | `scrollable-region-focusable` (`scrollable_region`) |
+| `keyboard/scrollable-region-not-focusable` | `FAIL`, hoch (2.1.1) | `Rendering::scroll_overflow_px` | `scrollable-region-focusable` (`scrollable_region`) |
 
 Belege und mitgebrachte Korrekturen aus dem auditmysite-Korpus
 (`tests/darstellung.rs`): `redundant_role_list_style` (#644: `role="list"`
@@ -37,9 +37,12 @@ und Fußzeilen mit Trennern zählen nicht), `scrollable_region_focusable`
 (#717: gov.si `div.menus`; Bereich mit `tabindex`, mit Link darin, mit
 `overflow: hidden` oder ohne Überhang bestehen; Puffer 13 px wie axe).
 
-**Noch von keinem Host gefüllt.** Die neuen Felder (siehe `a11y-dom`) sieht
-erst auditmysite#698 in einem echten Lauf; bis dahin melden die drei Regeln
-`UNTESTED`.
+Die neuen Felder hat auditmysite (casoon/auditmysite#698) vor diesem Release
+gegen den unveröffentlichten Stand gefüllt gesehen: auf gov.uk,
+bundesregierung.de, wetter.com, n-tv.de und spiegel.de jeweils an allen
+dargestellten Elementen, Farben und Hintergrund dort etwas seltener
+(Verlauf, Hintergrundbild, transparente Textfüllung). Die drei
+Korpusfälle melden wie erwartet.
 
 ### Abweichungen von auditmysite
 

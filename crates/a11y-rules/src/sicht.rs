@@ -273,4 +273,9 @@ impl<D: Rendering> Rendering for Sicht<'_, D> {
         let doc: &'n D = self.doc;
         doc.layout(node.inner)
     }
+
+    fn scroll_overflow_px<'n>(&'n self, node: Self::N<'n>) -> Option<f32> {
+        let doc: &'n D = self.doc;
+        doc.scroll_overflow_px(node.inner)
+    }
 }

@@ -2,6 +2,14 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.10.0] - 2026-10-05
+
+Gebaut auf `a11y-rules` 0.20.0: die Regeln `lists/role-redundant`,
+`color/link-indistinct` und `keyboard/scrollable-region-not-focusable`. Die
+Stilfelder und den Scroll-Überhang, die sie brauchen, liefert dieses Paket
+noch nicht; sie stehen als `UNTESTED` im Bericht, sobald es etwas zu prüfen
+gäbe. Keine Änderung an der Schnittstelle.
+
 ## [0.9.1] - 2026-10-04
 
 Gebaut auf `a11y-rules` 0.19.1. Keine Änderung an der Schnittstelle.

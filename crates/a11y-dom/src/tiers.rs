@@ -228,12 +228,6 @@ pub struct Layout {
     /// Fokussieren ändert den Zustand der Seite und ist deshalb ein eigener,
     /// ausdrücklicher Durchgang.
     pub focus_visible: Option<bool>,
-    /// Um wie viele CSS-Pixel der Inhalt über den Kasten hinausreicht, wenn
-    /// `overflow` auf der Achse `auto` oder `scroll` ist — das Größere von
-    /// `scrollHeight − clientHeight` und `scrollWidth − clientWidth`; `0`,
-    /// wenn nichts zu scrollen ist oder `overflow` es nicht zulässt. `None`,
-    /// wenn der Host den Überhang nicht misst.
-    pub scroll_overflow_px: Option<f32>,
 }
 
 /// **Tier 3** — berechnete Stile und Geometrie.
@@ -254,6 +248,19 @@ pub trait Rendering: Document {
     /// Layout-Angaben für die heuristischen Regeln. Vorgabe `None`: Ein Host,
     /// der sie nicht erhebt, bekommt diese Regeln nicht.
     fn layout<'n>(&'n self, _node: Self::N<'n>) -> Option<Layout> {
+        None
+    }
+
+    /// Um wie viele CSS-Pixel der Inhalt über den Kasten hinausreicht, wenn
+    /// `overflow` auf der Achse `auto` oder `scroll` ist — das Größere von
+    /// `scrollHeight − clientHeight` und `scrollWidth − clientWidth`; `0`,
+    /// wenn nichts zu scrollen ist oder `overflow` es nicht zulässt.
+    ///
+    /// Eine eigene Methode, nicht Teil von [`Layout`]: Ein Host, der nur den
+    /// Überhang misst, müsste sonst ein ganzes `Layout` liefern, und die
+    /// Heuristiken darauf liefen mit Vorgabewerten statt gar nicht.
+    /// Vorgabe `None`: nicht gemessen.
+    fn scroll_overflow_px<'n>(&'n self, _node: Self::N<'n>) -> Option<f32> {
         None
     }
 }
