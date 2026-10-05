@@ -5,7 +5,13 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
-## [Unreleased]
+## [0.21.0] - 2026-10-05
+
+Vor dem Release hat auditmysite (casoon/auditmysite#698) die neuen Eingaben
+in echten Läufen gefüllt: `visually_hidden` und `obscured` auf gov.uk,
+bundesregierung.de, wetter.com, n-tv.de und spiegel.de (der Suchknopf von
+gov.uk als verborgen erkannt), `sampled_backdrop` auf berlin.de und in den
+Bild-Fixtures, die damit ihre bisherigen Urteile behalten.
 
 Kontrast und `Layout` nach dem Vergleich mit auditmysites eigener
 Kontrastregel (casoon/barrierlab#47, casoon/auditmysite#698).

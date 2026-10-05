@@ -2,9 +2,13 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [Unreleased]
+## [0.11.0] - 2026-10-05
 
-- Größenbudget auf 170 KB gzip angehoben (gemessen 149,0 KB).
+Gebaut auf `a11y-rules` 0.21.0: `contrast/text-enhanced` (1.4.6), Kontrast
+ohne optisch verborgenen und mit überdecktem Text, Messwerte als Evidence.
+`Layout` ist feldweise optional; dieses Paket füllt jedes Feld. Abtastung
+und `visually_hidden` liefert es noch nicht. Größenbudget auf 170 KB gzip
+angehoben (gemessen 150,0 KB).
 
 ## [0.10.0] - 2026-10-05
 
