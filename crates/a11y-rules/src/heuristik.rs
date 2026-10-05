@@ -78,6 +78,30 @@ fn hat_tab_ziel<'a, N: Node<'a>>(n: N) -> bool {
         .any(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(d))
 }
 
+/// Ob ein Kind etwas trägt, dessen Reihenfolge zählt: ein Bedienelement oder
+/// Text. 1.3.2 betrifft die Lesereihenfolge, nicht nur die Tabreihenfolge
+/// (auditmysite-Korpus `text_and_layout`, `div.flex-reorder`).
+fn hat_inhalt<'a, N: Node<'a>>(n: N) -> bool {
+    hat_tab_ziel(n) || !subtree_text(n).trim().is_empty()
+}
+
+/// Alle Bedienelemente darin führen zum selben Ziel — die Teaserkarte mit
+/// Bild- und Titellink (spiegel.de: 20 Karten mit `flex-row-reverse`). Die
+/// Reihenfolge ändert dann nicht, wohin man kommt.
+fn ein_ziel<'a, N: Node<'a>>(n: N) -> bool {
+    let mut ziele =
+        descendants(n).filter(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(*d));
+    let Some(erstes) = ziele.next() else {
+        return false;
+    };
+    let href = |e: N| e.is_element("a").then(|| e.attr("href")).flatten();
+    let Some(ziel) = href(erstes) else {
+        return false;
+    };
+    let rest: Vec<N> = ziele.collect();
+    !rest.is_empty() && rest.into_iter().all(|e| href(e) == Some(ziel))
+}
+
 /// Ob irgendein Element dieses Layout-Feld gemessen hat.
 fn gemessen<D: Rendering>(doc: &D, feld: impl Fn(&Layout) -> bool) -> bool {
     elements(doc).any(|n| doc.layout(n).is_some_and(|l| feld(&l)))
@@ -127,15 +151,16 @@ fn reihenfolge<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             continue;
         };
         let umgekehrt = layout.flex_reversed == Some(true)
-            && descendants(n)
-                .filter(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(*d))
+            && n.children()
+                .filter(|k| k.kind() == NodeKind::Element && hat_inhalt(*k))
                 .nth(1)
-                .is_some();
+                .is_some()
+            && !ein_ziel(n);
         let umsortiert = n.children().any(|k| {
             k.kind() == NodeKind::Element
                 && doc.layout(k).and_then(|l| l.order).is_some_and(|o| o != 0)
-                && hat_tab_ziel(k)
-        });
+                && hat_inhalt(k)
+        }) && !ein_ziel(n);
         if umgekehrt || umsortiert {
             out.push(
                 Finding::review(
@@ -235,9 +260,13 @@ fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<&'a str, Vec<D::N<'
 /// Kreisen ist eine Bewegung. Und gar nicht, wenn die Seite ein Bedienelement
 /// zum Anhalten hat — ob es wirkt, sagt diese Heuristik nicht.
 fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !gemessen(doc, |l| l.infinite_animation.is_some()) {
+    // `<marquee>` läuft endlos, ohne eigene Pause und unabhängig von
+    // `prefers-reduced-motion` — dafür braucht es kein Layout
+    // (auditmysite `pause_stop_hide`, Korpus `no_focus_targets`).
+    let mit_layout = gemessen(doc, |l| l.infinite_animation.is_some());
+    if !mit_layout {
         let feld = "animation-iteration-count";
-        return ungemessen(
+        ungemessen(
             doc,
             "motion/infinite-animation",
             &["2.2.2"],
@@ -247,7 +276,8 @@ fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
         );
     }
     let treffer = aeusserste(elements(doc), |n| {
-        doc.layout(n).and_then(|l| l.infinite_animation) == Some(true)
+        n.is_element("marquee")
+            || (mit_layout && doc.layout(n).and_then(|l| l.infinite_animation) == Some(true))
     });
     if treffer.is_empty() {
         return;
@@ -348,8 +378,12 @@ fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         ungemessen(doc, "keyboard/pointer-only", wcag, "cursor", locale, out);
     }
     for n in elements(doc) {
+        // Kartenmuster: `cursor: pointer` auf einem Kasten, der einen Link oder
+        // Knopf enthält — der Klick landet dort (bundesregierung.de: 27
+        // Teaserkarten `div.bpa-teaser`).
         if ist_bedienelement(n)
             || ancestors(n).any(ist_bedienelement)
+            || descendants(n).any(|d| d.kind() == NodeKind::Element && ist_bedienelement(d))
             || crate::links::klick_ohne_tastatur(n)
         {
             continue;
@@ -404,7 +438,10 @@ fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                  Ein Bedienelement, das rückwärts per Tab erreicht wird, kann ganz darunter \
                  verschwinden.",
             )
-        } else if layout.obscured == Some(true) && per_tab_erreichbar(n) {
+        } else if layout.obscured == Some(true)
+            && per_tab_erreichbar(n)
+            && doc.visually_hidden(n) != Some(true)
+        {
             pick!(
                 locale,
                 "A fixed or sticky element covers this control. Check that it stays \
@@ -453,15 +490,104 @@ fn abstand(p: (f32, f32), r: &Rect) -> f32 {
     (dx * dx + dy * dy).sqrt()
 }
 
+/// Mindestgröße eines Ziels nach WCAG 2.5.5 (AAA).
+const ZIEL_ERHOEHT_PX: f32 = 44.0;
+
+fn inert<'a, N: Node<'a>>(n: N) -> bool {
+    std::iter::once(n)
+        .chain(ancestors(n))
+        .any(|a| a.has_attr("inert"))
+}
+
+fn aria_versteckt<'a, N: Node<'a>>(n: N) -> bool {
+    std::iter::once(n)
+        .chain(ancestors(n))
+        .any(|a| a.attr("aria-hidden").is_some_and(|v| v.trim() == "true"))
+}
+
+/// Ein Kasten ganz links oder über dem Dokument — das übliche Verschieben
+/// aus dem Bild (`left: -9999px`).
+fn ausserhalb(r: &Rect) -> bool {
+    r.x + r.width <= 0.0 || r.y + r.height <= 0.0
+}
+
+/// Ob ein Element ein Ziel ist, das man sehen und anklicken kann: nicht
+/// `inert`, kein `pointer-events: none`, nicht optisch verborgen, nicht aus
+/// dem Bild geschoben.
+fn klickbar<'d, D: Rendering>(doc: &'d D, n: D::N<'d>, r: &Rect) -> bool {
+    !inert(n)
+        && doc.layout(n).and_then(|l| l.pointer_events_none) != Some(true)
+        && doc.visually_hidden(n) != Some(true)
+        && !ausserhalb(r)
+}
+
+/// Das Ziel eines Links ohne Fragment — `None` für Verweise innerhalb der
+/// Seite, bei denen das Fragment die ganze Funktion ist (`#setup`, `#`).
+fn dokument_ziel<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
+    if !n.is_element("a") {
+        return None;
+    }
+    let href = n.attr("href")?.trim();
+    let dokument = href.split('#').next().unwrap_or("");
+    (!dokument.is_empty()).then_some(dokument)
+}
+
+/// 2.5.8 / 2.5.5, Ausnahme „Equivalent": Ein anderer, sichtbarer Link zum
+/// selben Dokument hat die geforderte Größe. Nach auditmysite#706
+/// (`target_size_equivalent`): Ein Gegenstück unter `aria-hidden`, `inert`,
+/// optisch verborgen oder außerhalb des Bilds zählt nicht.
+fn gleichwertig<'d, D: Rendering>(
+    doc: &'d D,
+    n: D::N<'d>,
+    ziele: &[(D::N<'d>, Rect)],
+    mindest: f32,
+) -> bool {
+    let Some(ziel) = dokument_ziel(n) else {
+        return false;
+    };
+    ziele.iter().any(|(k, kr)| {
+        k.id() != n.id()
+            && dokument_ziel(*k) == Some(ziel)
+            && kr.width >= mindest
+            && kr.height >= mindest
+            && !aria_versteckt(*k)
+            && klickbar(doc, *k, kr)
+    })
+}
+
+/// Ob die Größe des Ziels noch nicht die endgültige ist.
+fn wachsend<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> bool {
+    doc.layout(n).and_then(|l| l.animating) == Some(true)
+}
+
+fn ungemessen_ziel(locale: Locale, id: &str, wcag: &str, n: NodeId) -> Finding {
+    Finding::untested(
+        id,
+        pick!(
+            locale,
+            "The target was still animating when measured; its size was not judged.",
+            "Das Ziel war beim Messen noch in Bewegung; seine Größe wurde nicht beurteilt.",
+        ),
+    )
+    .with_severity(Severity::Medium)
+    .with_wcag([wcag])
+    .at(at(n))
+}
+
 /// 2.5.8: ein Ziel unter 24 × 24 CSS-px, das auch die Abstandsausnahme nicht
 /// erfüllt — nach dem Normtext: Ein Kreis von 24 px Durchmesser um die Mitte
 /// des Ziels schneidet ein anderes Ziel oder den Kreis eines anderen zu kleinen
-/// Ziels.
+/// Ziels. Dazu die Ausnahmen „inline" und „Equivalent".
+///
+/// Gemessen werden nur Ziele, die man sehen und anklicken kann; Nachbarn unter
+/// `inert` oder mit `pointer-events: none` engen nicht ein (auditmysite#705).
+/// Ein Ziel, das beim Messen noch wächst, bleibt ungemessen (#706).
 fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let labels = labels_nach_ziel(doc);
     let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
         .filter(|n| per_tab_erreichbar(*n))
         .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
+        .filter(|(n, r)| klickbar(doc, *n, r))
         .collect();
     let zu_klein = |r: &Rect| r.width < ZIEL_PX || r.height < ZIEL_PX;
     let radius = ZIEL_PX / 2.0;
@@ -480,7 +606,11 @@ fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     abstand(m, kr) < radius
                 }
         });
-        if !bedraengt {
+        if !bedraengt || gleichwertig(doc, *n, &ziele, ZIEL_PX) {
+            continue;
+        }
+        if wachsend(doc, *n) {
+            out.push(ungemessen_ziel(locale, "targets/size", "2.5.8", n.id()));
             continue;
         }
         let r = *r;
@@ -500,6 +630,60 @@ fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             )
             .with_severity(Severity::Medium)
             .with_wcag(["2.5.8"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+/// 2.5.5 (AAA): ein Ziel unter 44 × 44 CSS-px. Ohne Abstandsausnahme — die
+/// kennt 2.5.5 nicht —, mit den Ausnahmen „inline" und „Equivalent".
+/// Gemeldet wird nur, was 2.5.8 nicht schon meldet.
+fn zielgroesse_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let labels = labels_nach_ziel(doc);
+    let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
+        .filter(|n| per_tab_erreichbar(*n))
+        .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
+        .filter(|(n, r)| klickbar(doc, *n, r))
+        .collect();
+    let mut schon = Vec::new();
+    zielgroesse(doc, locale, &mut schon);
+    let gemeldet: HashSet<String> = schon
+        .iter()
+        .filter_map(|f| f.location.node.clone())
+        .collect();
+    for (n, r) in &ziele {
+        if (r.width >= ZIEL_ERHOEHT_PX && r.height >= ZIEL_ERHOEHT_PX)
+            || im_fliesstext(*n)
+            || ziel_durch_label(*n, &labels)
+            || gemeldet.contains(&n.id().to_string())
+            || gleichwertig(doc, *n, &ziele, ZIEL_ERHOEHT_PX)
+        {
+            continue;
+        }
+        if wachsend(doc, *n) {
+            out.push(ungemessen_ziel(
+                locale,
+                "targets/size-enhanced",
+                "2.5.5",
+                n.id(),
+            ));
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "targets/size-enhanced",
+                tr!(
+                    locale,
+                    "The target is {:.0} × {:.0}px; enhanced target size (AAA) asks for \
+                     44 × 44px.",
+                    "Das Ziel misst {:.0} × {:.0}px; die erhöhte Zielgröße (AAA) verlangt \
+                     44 × 44px.",
+                    r.width,
+                    r.height
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["2.5.5"])
             .at(at(n.id())),
         );
     }
@@ -557,7 +741,7 @@ fn fokus_sichtbar<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
     }
 }
 
-pub(crate) const METAS: [Meta; 7] = [
+pub(crate) const METAS: [Meta; 8] = [
     Meta {
         ids: &["order/visual-mismatch"],
         tier: Tier::Rendering,
@@ -630,6 +814,16 @@ pub(crate) const METAS: [Meta; 7] = [
                   Nachbarn.",
     },
     Meta {
+        ids: &["targets/size-enhanced"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &["2.5.5"],
+        severity: Severity::Low,
+        help: "Enhanced target size (AAA): targets of at least 44 × 44 CSS pixels.",
+        #[cfg(feature = "de")]
+        help_de: "Erhöhte Zielgröße (AAA): Ziele von mindestens 44 × 44 CSS-Pixeln.",
+    },
+    Meta {
         ids: &["focus/indicator-missing", "focus/indicator-unmeasured"],
         tier: Tier::Rendering,
         scope: Scope::Rendered,
@@ -642,7 +836,7 @@ pub(crate) const METAS: [Meta; 7] = [
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn funktionen<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 7] {
+pub(crate) fn funktionen<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 8] {
     [
         reihenfolge,
         endlos_animation,
@@ -650,6 +844,7 @@ pub(crate) fn funktionen<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 
         nur_zeiger,
         verdeckt,
         zielgroesse,
+        zielgroesse_erhoeht,
         fokus_sichtbar,
     ]
 }
