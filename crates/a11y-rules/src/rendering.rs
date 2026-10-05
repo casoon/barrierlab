@@ -98,24 +98,62 @@ fn wird_dargestellt(stil: &ComputedStyle) -> bool {
     stil.display.as_deref() != Some("none") && stil.visibility.as_deref() != Some("hidden")
 }
 
+/// Was eine Messung am Element ergibt.
+enum Messung {
+    /// Verhältnis und ob der Text groß ist.
+    Wert(f64, bool),
+    /// Nicht bestimmbar, mit Grund.
+    Unbestimmt(Grund),
+}
+
+enum Grund {
+    /// Vorder- oder Hintergrundfarbe fehlt — meist Bild oder Verlauf.
+    Farbe,
+    /// Ein fixiertes oder klebendes fremdes Element überdeckt die Mitte.
+    Verdeckt,
+}
+
+/// Misst den Kontrast eines Elements, das selbst Text trägt. `None`, wenn es
+/// nichts zu messen gibt: kein eigener Text, nicht dargestellt oder optisch
+/// verborgen (`Rendering::visually_hidden`).
+///
+/// Text unter `aria-hidden` wird gemessen: WCAG 1.4.3 gilt für sichtbaren
+/// Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn aus (#395).
+fn messe<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Messung> {
+    if !traegt_text(n) {
+        return None;
+    }
+    let stil = doc.computed_style(n)?;
+    if !wird_dargestellt(&stil) || doc.visually_hidden(n) == Some(true) {
+        return None;
+    }
+    if doc.layout(n).and_then(|l| l.obscured) == Some(true) {
+        return Some(Messung::Unbestimmt(Grund::Verdeckt));
+    }
+    Some(match (stil.color, stil.background_color) {
+        (Some(vorn), Some(hinten)) => Messung::Wert(
+            verhaeltnis(ueber(vorn, hinten), hinten),
+            ist_grosser_text(&stil),
+        ),
+        _ => Messung::Unbestimmt(Grund::Farbe),
+    })
+}
+
+fn text_art(locale: Locale, gross: bool) -> &'static str {
+    if gross {
+        pick!(locale, "large text", "großen Text")
+    } else {
+        pick!(locale, "normal text", "normalen Text")
+    }
+}
+
+/// 1.4.3 (AA): 4,5:1, bei großem Text 3:1.
 fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !traegt_text(n) {
-            continue;
-        }
-        let Some(stil) = doc.computed_style(n) else {
-            continue;
-        };
-        if !wird_dargestellt(&stil) {
-            continue;
-        }
-
-        let gross = ist_grosser_text(&stil);
-        let schwelle = if gross { 3.0 } else { 4.5 };
-
-        match (stil.color, stil.background_color) {
-            (Some(vorn), Some(hinten)) => {
-                let wert = verhaeltnis(ueber(vorn, hinten), hinten);
+        match messe(doc, n) {
+            None => {}
+            Some(Messung::Wert(wert, gross)) => {
+                let schwelle = if gross { 3.0 } else { 4.5 };
                 if wert + 0.005 < schwelle {
                     out.push(
                         Finding::fail(
@@ -126,11 +164,7 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                                  {schwelle:.1}:1 is required for {}.",
                                 "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
                                  gefordert sind {schwelle:.1}:1 für {}.",
-                                if gross {
-                                    pick!(locale, "large text", "großen Text")
-                                } else {
-                                    pick!(locale, "normal text", "normalen Text")
-                                }
+                                text_art(locale, gross)
                             ),
                         )
                         .with_severity(Severity::High)
@@ -139,26 +173,62 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                     );
                 }
             }
-            _ => {
-                // Rule 3: Nicht prüfbar ist nicht bestanden. Der Host konnte
-                // eine der beiden Farben nicht bestimmen — meist ein
-                // Hintergrundbild oder ein Verlauf.
-                out.push(
-                    Finding::untested(
-                        "contrast/text-undetermined",
-                        pick!(
+            // Rule 3: Nicht prüfbar ist nicht bestanden.
+            Some(Messung::Unbestimmt(grund)) => out.push(
+                Finding::untested(
+                    "contrast/text-undetermined",
+                    match grund {
+                        Grund::Farbe => pick!(
                             locale,
                             "The contrast cannot be determined automatically — the host could \
                              not resolve the foreground or background colour. Check it by hand.",
                             "Der Kontrast ist automatisiert nicht bestimmbar — der Host konnte \
                              Vorder- oder Hintergrundfarbe nicht auflösen. Von Hand prüfen.",
                         ),
-                    )
-                    .with_severity(Severity::Medium)
-                    .with_wcag(["1.4.3"])
-                    .at(at(n.id())),
-                );
-            }
+                        Grund::Verdeckt => pick!(
+                            locale,
+                            "A fixed or sticky element covers this text, so its contrast cannot \
+                             be determined. Check it by hand with the overlay closed.",
+                            "Ein fixiertes oder klebendes Element überdeckt diesen Text, sein \
+                             Kontrast ist so nicht bestimmbar. Mit geschlossener Überlagerung von \
+                             Hand prüfen.",
+                        ),
+                    },
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.4.3"])
+                .at(at(n.id())),
+            ),
+        }
+    }
+}
+
+/// 1.4.6 (AAA): 7:1, bei großem Text 4,5:1. Gemeldet wird nur, was AA
+/// besteht — was schon 1.4.3 verfehlt, steht dort und nicht doppelt.
+/// Nicht Bestimmbares meldet `contrast/text-undetermined`.
+fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        let Some(Messung::Wert(wert, gross)) = messe(doc, n) else {
+            continue;
+        };
+        let (aa, aaa) = if gross { (3.0, 4.5) } else { (4.5, 7.0) };
+        if wert + 0.005 >= aa && wert + 0.005 < aaa {
+            out.push(
+                Finding::fail(
+                    "contrast/text-enhanced",
+                    tr!(
+                        locale,
+                        "The text reaches {wert:.2}:1; enhanced contrast (AAA) requires \
+                         {aaa:.1}:1 for {}.",
+                        "Der Text erreicht {wert:.2}:1; erhöhter Kontrast (AAA) verlangt \
+                         {aaa:.1}:1 für {}.",
+                        text_art(locale, gross)
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.4.6"])
+                .at(at(n.id())),
+            );
         }
     }
 }
@@ -177,8 +247,20 @@ const KONTRAST: Meta = Meta {
               fettem Schnitt ab 14 pt.",
 };
 
+const KONTRAST_ERHOEHT: Meta = Meta {
+    ids: &["contrast/text-enhanced"],
+    tier: Tier::Rendering,
+    scope: Scope::Rendered,
+    wcag: &["1.4.6"],
+    severity: Severity::Medium,
+    help: "Enhanced contrast (AAA): at least 7:1, or 4.5:1 for large text.",
+    #[cfg(feature = "de")]
+    help_de: "Erhöhter Kontrast (AAA): mindestens 7:1, bei großem Text 4,5:1.",
+};
+
 pub(crate) const METAS: &[Meta] = &[
     KONTRAST,
+    KONTRAST_ERHOEHT,
     heuristik::METAS[0],
     heuristik::METAS[1],
     heuristik::METAS[2],
@@ -192,9 +274,13 @@ pub(crate) const METAS: &[Meta] = &[
 ];
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
-    let funktionen = std::iter::once(text_kontrast as fn(&D, Locale, &mut Vec<Finding>))
-        .chain(heuristik::funktionen::<D>())
-        .chain(darstellung::funktionen::<D>());
+    let funktionen = [
+        text_kontrast as fn(&D, Locale, &mut Vec<Finding>),
+        text_kontrast_erhoeht,
+    ]
+    .into_iter()
+    .chain(heuristik::funktionen::<D>())
+    .chain(darstellung::funktionen::<D>());
     METAS
         .iter()
         .zip(funktionen)

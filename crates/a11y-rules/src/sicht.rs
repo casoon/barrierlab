@@ -278,4 +278,79 @@ impl<D: Rendering> Rendering for Sicht<'_, D> {
         let doc: &'n D = self.doc;
         doc.scroll_overflow_px(node.inner)
     }
+
+    fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
+        let doc: &'n D = self.doc;
+        doc.visually_hidden(node.inner)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Die Sicht reicht jede Methode des Hosts durch. Eine Trait-Methode mit
+    //! Vorgabe, die hier fehlt, liefert sonst still `None` — so geschehen mit
+    //! `scroll_overflow_px` vor 0.20.0. Wer `Rendering` erweitert, ergänzt
+    //! diesen Test.
+
+    use super::*;
+    use a11y_dom::{Arena, ArenaNode, ComputedStyle, Layout, Rect, Rendering};
+
+    struct Voll<'a>(&'a Arena);
+
+    impl Document for Voll<'_> {
+        type N<'n>
+            = ArenaNode<'n>
+        where
+            Self: 'n;
+
+        fn root(&self) -> Self::N<'_> {
+            self.0.root()
+        }
+    }
+
+    impl Rendering for Voll<'_> {
+        fn computed_style<'n>(&'n self, _: Self::N<'n>) -> Option<ComputedStyle> {
+            Some(ComputedStyle::default())
+        }
+
+        fn bounds<'n>(&'n self, _: Self::N<'n>) -> Option<Rect> {
+            Some(Rect {
+                x: 0.0,
+                y: 0.0,
+                width: 1.0,
+                height: 1.0,
+            })
+        }
+
+        fn is_rendered<'n>(&'n self, _: Self::N<'n>) -> bool {
+            true
+        }
+
+        fn layout<'n>(&'n self, _: Self::N<'n>) -> Option<Layout> {
+            Some(Layout::default())
+        }
+
+        fn scroll_overflow_px<'n>(&'n self, _: Self::N<'n>) -> Option<f32> {
+            Some(7.0)
+        }
+
+        fn visually_hidden<'n>(&'n self, _: Self::N<'n>) -> Option<bool> {
+            Some(true)
+        }
+    }
+
+    #[test]
+    fn sicht_reicht_jede_rendering_methode_durch() {
+        let arena = Arena::builder().open("html").close().build();
+        let host = Voll(&arena);
+        let v = Verborgen::nach_attribut(&host);
+        let sicht = Sicht::new(&host, &v, Scope::Markup);
+        let n = sicht.root();
+        assert!(sicht.computed_style(n).is_some());
+        assert!(sicht.bounds(n).is_some());
+        assert!(sicht.is_rendered(n));
+        assert!(sicht.layout(n).is_some());
+        assert_eq!(sicht.scroll_overflow_px(n), Some(7.0));
+        assert_eq!(sicht.visually_hidden(n), Some(true));
+    }
 }

@@ -5,6 +5,39 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Kontrast und `Layout` nach dem Vergleich mit auditmysites eigener
+Kontrastregel (casoon/barrierlab#47, casoon/auditmysite#698).
+
+### Added
+
+| Neue Kennung | Urteil, Schwere | Norm |
+|---|---|---|
+| `contrast/text-enhanced` | `FAIL`, mittel | WCAG 1.4.6 (AAA): 7:1, bei großem Text 4,5:1 |
+
+Gemeldet wird nur, was 1.4.3 besteht; was schon dort verfehlt, steht nicht
+doppelt. Beleg: die Linkfarbe von gov.uk, #1d70b8 auf Weiß, 5,17:1.
+
+### Changed
+
+- Kontrast: Optisch verborgener Text (`Rendering::visually_hidden`) wird
+  nicht gemessen — er hat keinen sichtbaren Kontrast. Beleg: gov.uk,
+  `button.gem-c-search__submit`, „Search GOV.UK" per `text-indent: -5000px`
+  versteckt, bisher `FAIL` 3,91:1.
+- Kontrast: Text, dessen Mitte ein fixiertes oder klebendes Element überdeckt
+  (`Layout::obscured`, etwa ein Cookie-Banner), ist
+  `contrast/text-undetermined` statt eines Urteils über Farben, die man so
+  nicht sieht (auditmysite #716).
+- Kontrast: Text unter `aria-hidden` wird weiter gemessen. WCAG 1.4.3 gilt
+  für sichtbaren Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn
+  aus (#395) — eine bewusste Abweichung.
+- Heuristiken: Ist das `Layout`-Feld, das eine Heuristik braucht, an keinem
+  Element gemessen, meldet sie einmal `UNTESTED` für die Seite. Vorher lief
+  sie still ohne Befund und zählte als gelaufen. Betrifft
+  `order/visual-mismatch`, `motion/infinite-animation`, `reflow/min-width`,
+  `focus/obscured` und den `cursor`-Teil von `keyboard/pointer-only`.
+
 ## [0.20.0] - 2026-10-05
 
 ### Fixed
