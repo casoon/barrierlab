@@ -5,7 +5,9 @@
 //! 2026-10-05) und aus auditmysites eigener Kontrastregel (#716: überdeckter
 //! Text wird Hinweis, kein Verstoß).
 
-use a11y_dom::{Arena, ArenaNode, Color, ComputedStyle, Document, Layout, Node, Rect, Rendering};
+use a11y_dom::{
+    Arena, ArenaNode, Backdrop, Color, ComputedStyle, Document, Layout, Node, Rect, Rendering,
+};
 use a11y_report::{Outcome, Report};
 use a11y_rules::run_with_rendering;
 
@@ -42,7 +44,10 @@ impl Rendering for Host<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
         Some(ComputedStyle {
             color: Some(farbe(node.attr("data-fg").unwrap_or("000000"))),
-            background_color: Some(farbe(node.attr("data-bg").unwrap_or("ffffff"))),
+            background_color: match node.attr("data-bg") {
+                Some("none") => None,
+                b => Some(farbe(b.unwrap_or("ffffff"))),
+            },
             font_size_px: Some(node.attr("data-px").map_or(16.0, |p| p.parse().unwrap())),
             font_weight: Some(400),
             display: Some("block".into()),
@@ -71,6 +76,46 @@ impl Rendering for Host<'_> {
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         self.misst_verborgen.then(|| node.has_attr("data-hidden"))
     }
+
+    fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
+        node.attr("data-backdrop").map(abtastung)
+    }
+}
+
+fn lum(r: u8, g: u8, b: u8) -> f64 {
+    let k = |v: u8| {
+        let s = f64::from(v) / 255.0;
+        if s <= 0.03928 {
+            s / 12.92
+        } else {
+            ((s + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * k(r) + 0.7152 * k(g) + 0.0722 * k(b)
+}
+
+/// Eine Abtastung wie aus dem Screenshot: 100 Pixel über den Verlauf von
+/// links nach rechts, dazu 10 % Glyphenpixel in Weiß. Die Verläufe stammen
+/// aus auditmysites `tests/fixtures/image_contrast.html`.
+fn abtastung(art: &str) -> Backdrop {
+    let mischen = |a: (u8, u8, u8), b: (u8, u8, u8), t: f64| {
+        let m = |x: u8, y: u8| (f64::from(x) + (f64::from(y) - f64::from(x)) * t).round() as u8;
+        lum(m(a.0, b.0), m(a.1, b.1), m(a.2, b.2))
+    };
+    let mut l: Vec<f64> = (0..90)
+        .map(|i| {
+            let t = f64::from(i) / 89.0;
+            match art {
+                "dunkel" => mischen((15, 23, 42), (30, 41, 59), t),
+                "hell" => mischen((240, 240, 240), (255, 255, 255), t),
+                // Dunkel bis 65 %, danach Weiß.
+                _ if t < 0.65 => lum(15, 23, 42),
+                _ => 1.0,
+            }
+        })
+        .collect();
+    l.extend(std::iter::repeat_n(1.0, 10));
+    Backdrop { luminance: l }
 }
 
 fn seite(element: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
@@ -186,4 +231,66 @@ fn teilweises_layout_laesst_ungemessenes_ungeprueft() {
         assert_eq!(urteile(&r, id), [Outcome::Untested], "{id}");
     }
     assert!(urteile(&r, "focus/obscured").is_empty());
+}
+
+fn verlauf(art: &'static str) -> Arena {
+    seite(move |b| {
+        b.open("p")
+            .attr("data-fg", "ffffff")
+            .attr("data-bg", "none")
+            .attr("data-backdrop", art)
+            .text("Weißer Text über einem Verlauf")
+            .close()
+    })
+}
+
+/// `image_contrast.html`, `.dark-gradient-pass`: Weiß auf dunklem Verlauf.
+#[test]
+fn abgetastet_dunkler_verlauf_besteht() {
+    let r = pruefe(&verlauf("dunkel"), true);
+    for id in ["contrast/text-insufficient", "contrast/text-undetermined"] {
+        assert!(urteile(&r, id).is_empty(), "{id}");
+    }
+}
+
+/// `.light-gradient-fail`: Weiß auf hellem Verlauf, schon der Median verfehlt.
+#[test]
+fn abgetastet_heller_verlauf_verfehlt_mit_beleg() {
+    let r = pruefe(&verlauf("hell"), true);
+    assert_eq!(urteile(&r, "contrast/text-insufficient"), [Outcome::Fail]);
+    let f = r
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "contrast/text-insufficient")
+        .unwrap();
+    let felder: Vec<_> = f
+        .evidence
+        .iter()
+        .filter_map(|e| e.field.as_deref())
+        .collect();
+    assert_eq!(felder, ["contrast_ratio", "required_ratio"]);
+}
+
+/// `.split-gradient-warn`: Der Median besteht, das 40. Perzentil nicht.
+#[test]
+fn abgetastet_geteilter_verlauf_ist_hinweis() {
+    let r = pruefe(&verlauf("geteilt"), true);
+    assert!(urteile(&r, "contrast/text-insufficient").is_empty());
+    assert_eq!(urteile(&r, "contrast/text-undetermined"), [Outcome::Review]);
+}
+
+/// Ohne Abtastung bleibt Text über einem Verlauf nicht bestimmbar.
+#[test]
+fn ohne_abtastung_nicht_bestimmbar() {
+    let arena = seite(|b| {
+        b.open("p")
+            .attr("data-fg", "ffffff")
+            .attr("data-bg", "none")
+            .text("Text")
+            .close()
+    });
+    assert_eq!(
+        urteile(&pruefe(&arena, true), "contrast/text-undetermined"),
+        [Outcome::Untested]
+    );
 }

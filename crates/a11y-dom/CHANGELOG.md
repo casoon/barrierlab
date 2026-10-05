@@ -16,6 +16,9 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ### Added
 
+- `Backdrop` und `Rendering::sampled_backdrop`: eine Stichprobe der
+  relativen Leuchtdichten hinter einem Text, für Verläufe, Bilder und
+  Überlagerungen. Vorgabe `None`.
 - `Rendering::visually_hidden`: ob der Text eines Knotens optisch verborgen
   ist, obwohl `display` und `visibility` ihn darstellen (`clip`,
   `clip-path`, `text-indent`, Kasten von höchstens 1 px mit

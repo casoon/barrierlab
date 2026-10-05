@@ -22,7 +22,7 @@
 //! [`ComputedStyle::background_color`]: a11y_dom::ComputedStyle::background_color
 
 use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
-use a11y_report::{Finding, Location, Severity};
+use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::darstellung;
 use crate::heuristik;
@@ -100,17 +100,53 @@ fn wird_dargestellt(stil: &ComputedStyle) -> bool {
 
 /// Was eine Messung am Element ergibt.
 enum Messung {
-    /// Verhältnis und ob der Text groß ist.
+    /// Eine Hintergrundfarbe gilt: Verhältnis und ob der Text groß ist.
     Wert(f64, bool),
+    /// Abgetasteter Hintergrund: Median und 40. Perzentil der Verhältnisse
+    /// über die Stichprobe, und ob der Text groß ist.
+    Spanne { median: f64, p40: f64, gross: bool },
     /// Nicht bestimmbar, mit Grund.
     Unbestimmt(Grund),
 }
 
 enum Grund {
-    /// Vorder- oder Hintergrundfarbe fehlt — meist Bild oder Verlauf.
+    /// Vorder- oder Hintergrundfarbe fehlt, und keine Abtastung hilft.
     Farbe,
     /// Ein fixiertes oder klebendes fremdes Element überdeckt die Mitte.
     Verdeckt,
+}
+
+fn verhaeltnis_lum(a: f64, b: f64) -> f64 {
+    let (hell, dunkel) = if a >= b { (a, b) } else { (b, a) };
+    (hell + 0.05) / (dunkel + 0.05)
+}
+
+/// Median und 40. Perzentil der Verhältnisse zwischen Textfarbe und den
+/// abgetasteten Pixeln — wie auditmysite vor der Umstellung: Die Glyphen
+/// selbst liegen in der Stichprobe und ziehen die unteren Werte nach unten,
+/// deshalb nicht das Minimum.
+fn spanne(vorn: Color, stichprobe: &[f64]) -> Option<(f64, f64)> {
+    if stichprobe.is_empty() {
+        return None;
+    }
+    // Halbdurchsichtige Schrift wird gegen Weiß verrechnet; der genaue
+    // Untergrund ist hier gerade unbekannt.
+    let vorn = luminanz(ueber(
+        vorn,
+        Color {
+            r: 255,
+            g: 255,
+            b: 255,
+            a: 255,
+        },
+    ));
+    let mut v: Vec<f64> = stichprobe
+        .iter()
+        .map(|l| verhaeltnis_lum(vorn, l.clamp(0.0, 1.0)))
+        .collect();
+    v.sort_by(f64::total_cmp);
+    let bei = |q: f64| v[((v.len() as f64 * q) as usize).min(v.len() - 1)];
+    Some((bei(0.5), bei(0.4)))
 }
 
 /// Misst den Kontrast eines Elements, das selbst Text trägt. `None`, wenn es
@@ -130,11 +166,18 @@ fn messe<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Messung> {
     if doc.layout(n).and_then(|l| l.obscured) == Some(true) {
         return Some(Messung::Unbestimmt(Grund::Verdeckt));
     }
+    let gross = ist_grosser_text(&stil);
     Some(match (stil.color, stil.background_color) {
-        (Some(vorn), Some(hinten)) => Messung::Wert(
-            verhaeltnis(ueber(vorn, hinten), hinten),
-            ist_grosser_text(&stil),
-        ),
+        (Some(vorn), Some(hinten)) => {
+            Messung::Wert(verhaeltnis(ueber(vorn, hinten), hinten), gross)
+        }
+        (Some(vorn), None) => match doc
+            .sampled_backdrop(n)
+            .and_then(|b| spanne(vorn, &b.luminance))
+        {
+            Some((median, p40)) => Messung::Spanne { median, p40, gross },
+            None => Messung::Unbestimmt(Grund::Farbe),
+        },
         _ => Messung::Unbestimmt(Grund::Farbe),
     })
 }
@@ -147,34 +190,102 @@ fn text_art(locale: Locale, gross: bool) -> &'static str {
     }
 }
 
+fn belege(wert: f64, schwelle: f64) -> [Evidence; 2] {
+    [
+        Evidence::computed("contrast_ratio", format!("{wert:.2}")),
+        Evidence::computed("required_ratio", format!("{schwelle:.1}")),
+    ]
+}
+
+/// Eine Prüfung gegen eine Schwelle — für 1.4.3 und 1.4.6 dieselbe.
+enum Urteil {
+    Besteht,
+    Verfehlt(f64),
+    /// Abgetastet: Median besteht, das 40. Perzentil nicht.
+    Grenzwertig {
+        median: f64,
+        p40: f64,
+    },
+}
+
+fn urteile(m: &Messung, schwelle_klein: f64, schwelle_gross: f64) -> Option<(Urteil, f64, bool)> {
+    let knapp = |w: f64, s: f64| w + 0.005 < s;
+    match *m {
+        Messung::Wert(w, gross) => {
+            let s = if gross {
+                schwelle_gross
+            } else {
+                schwelle_klein
+            };
+            Some((
+                if knapp(w, s) {
+                    Urteil::Verfehlt(w)
+                } else {
+                    Urteil::Besteht
+                },
+                s,
+                gross,
+            ))
+        }
+        Messung::Spanne { median, p40, gross } => {
+            let s = if gross {
+                schwelle_gross
+            } else {
+                schwelle_klein
+            };
+            let u = if knapp(median, s) {
+                Urteil::Verfehlt(median)
+            } else if knapp(p40, s) {
+                Urteil::Grenzwertig { median, p40 }
+            } else {
+                Urteil::Besteht
+            };
+            Some((u, s, gross))
+        }
+        Messung::Unbestimmt(_) => None,
+    }
+}
+
+fn grenzwertig(
+    id: &str,
+    median: f64,
+    p40: f64,
+    schwelle: f64,
+    wcag: &str,
+    locale: Locale,
+    n: NodeId,
+) -> Finding {
+    Finding::review(
+        id,
+        tr!(
+            locale,
+            "The text lies over an image or gradient. Over most of its box the contrast \
+             reaches {median:.2}:1, in darker or lighter parts only {p40:.2}:1 \
+             ({schwelle:.1}:1 required). Check it by hand.",
+            "Der Text liegt über einem Bild oder Verlauf. Über den größten Teil seines Kastens \
+             erreicht der Kontrast {median:.2}:1, in helleren oder dunkleren Teilen nur \
+             {p40:.2}:1 (gefordert {schwelle:.1}:1). Von Hand prüfen."
+        ),
+    )
+    .with_severity(Severity::Medium)
+    .with_wcag([wcag])
+    .with_evidence([
+        Evidence::computed("contrast_ratio", format!("{median:.2}")),
+        Evidence::computed("contrast_ratio_p40", format!("{p40:.2}")),
+        Evidence::computed("required_ratio", format!("{schwelle:.1}")),
+    ])
+    .at(at(n))
+}
+
 /// 1.4.3 (AA): 4,5:1, bei großem Text 3:1.
 fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        match messe(doc, n) {
-            None => {}
-            Some(Messung::Wert(wert, gross)) => {
-                let schwelle = if gross { 3.0 } else { 4.5 };
-                if wert + 0.005 < schwelle {
-                    out.push(
-                        Finding::fail(
-                            "contrast/text-insufficient",
-                            tr!(
-                                locale,
-                                "The text reaches a contrast ratio of {wert:.2}:1; \
-                                 {schwelle:.1}:1 is required for {}.",
-                                "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
-                                 gefordert sind {schwelle:.1}:1 für {}.",
-                                text_art(locale, gross)
-                            ),
-                        )
-                        .with_severity(Severity::High)
-                        .with_wcag(["1.4.3"])
-                        .at(at(n.id())),
-                    );
-                }
-            }
+        let Some(messung) = messe(doc, n) else {
+            continue;
+        };
+        if let Messung::Unbestimmt(grund) = messung {
             // Rule 3: Nicht prüfbar ist nicht bestanden.
-            Some(Messung::Unbestimmt(grund)) => out.push(
+            out.push(
                 Finding::untested(
                     "contrast/text-undetermined",
                     match grund {
@@ -198,22 +309,61 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.4.3"])
                 .at(at(n.id())),
+            );
+            continue;
+        }
+        let Some((urteil, schwelle, gross)) = urteile(&messung, 4.5, 3.0) else {
+            continue;
+        };
+        match urteil {
+            Urteil::Besteht => {}
+            Urteil::Verfehlt(wert) => out.push(
+                Finding::fail(
+                    "contrast/text-insufficient",
+                    tr!(
+                        locale,
+                        "The text reaches a contrast ratio of {wert:.2}:1; \
+                         {schwelle:.1}:1 is required for {}.",
+                        "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
+                         gefordert sind {schwelle:.1}:1 für {}.",
+                        text_art(locale, gross)
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["1.4.3"])
+                .with_evidence(belege(wert, schwelle))
+                .at(at(n.id())),
             ),
+            Urteil::Grenzwertig { median, p40 } => out.push(grenzwertig(
+                "contrast/text-undetermined",
+                median,
+                p40,
+                schwelle,
+                "1.4.3",
+                locale,
+                n.id(),
+            )),
         }
     }
 }
 
 /// 1.4.6 (AAA): 7:1, bei großem Text 4,5:1. Gemeldet wird nur, was AA
-/// besteht — was schon 1.4.3 verfehlt, steht dort und nicht doppelt.
-/// Nicht Bestimmbares meldet `contrast/text-undetermined`.
+/// besteht — was schon 1.4.3 verfehlt oder dort offen ist, steht dort und
+/// nicht doppelt.
 fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let Some(Messung::Wert(wert, gross)) = messe(doc, n) else {
+        let Some(messung) = messe(doc, n) else {
             continue;
         };
-        let (aa, aaa) = if gross { (3.0, 4.5) } else { (4.5, 7.0) };
-        if wert + 0.005 >= aa && wert + 0.005 < aaa {
-            out.push(
+        if !matches!(urteile(&messung, 4.5, 3.0), Some((Urteil::Besteht, _, _))) {
+            continue;
+        }
+        let Some((urteil, aaa, gross)) = urteile(&messung, 7.0, 4.5) else {
+            continue;
+        };
+        match urteil {
+            Urteil::Besteht => {}
+            Urteil::Verfehlt(wert) => out.push(
                 Finding::fail(
                     "contrast/text-enhanced",
                     tr!(
@@ -227,8 +377,18 @@ fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Fi
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.4.6"])
+                .with_evidence(belege(wert, aaa))
                 .at(at(n.id())),
-            );
+            ),
+            Urteil::Grenzwertig { median, p40 } => out.push(grenzwertig(
+                "contrast/text-enhanced",
+                median,
+                p40,
+                aaa,
+                "1.4.6",
+                locale,
+                n.id(),
+            )),
         }
     }
 }

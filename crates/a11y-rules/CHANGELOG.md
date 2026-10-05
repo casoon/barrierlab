@@ -19,6 +19,17 @@ Kontrastregel (casoon/barrierlab#47, casoon/auditmysite#698).
 Gemeldet wird nur, was 1.4.3 besteht; was schon dort verfehlt, steht nicht
 doppelt. Beleg: die Linkfarbe von gov.uk, #1d70b8 auf Weiß, 5,17:1.
 
+- Kontrast über Bildern und Verläufen: Fehlt die Hintergrundfarbe, liefert
+  der Host aber eine Abtastung (`Rendering::sampled_backdrop`), urteilt die
+  Regel wie auditmysite vor der Umstellung — Median verfehlt: `FAIL`; Median
+  und 40. Perzentil bestehen: bestanden; dazwischen `REVIEW` unter
+  `contrast/text-undetermined` (bzw. `contrast/text-enhanced` für AAA). Belege:
+  auditmysites `tests/fixtures/image_contrast.html` (dunkler Verlauf besteht,
+  heller verfehlt, geteilter ist Hinweis).
+- Kontrastbefunde tragen das gemessene und das geforderte Verhältnis als
+  `Evidence::computed` (`contrast_ratio`, `required_ratio`, bei Abtastung
+  zusätzlich `contrast_ratio_p40`) — für Berichte, die die Zahlen zeigen.
+
 ### Changed
 
 - Kontrast: Optisch verborgener Text (`Rendering::visually_hidden`) wird

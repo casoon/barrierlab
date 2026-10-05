@@ -283,6 +283,11 @@ impl<D: Rendering> Rendering for Sicht<'_, D> {
         let doc: &'n D = self.doc;
         doc.visually_hidden(node.inner)
     }
+
+    fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::Backdrop> {
+        let doc: &'n D = self.doc;
+        doc.sampled_backdrop(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -337,6 +342,12 @@ mod tests {
         fn visually_hidden<'n>(&'n self, _: Self::N<'n>) -> Option<bool> {
             Some(true)
         }
+
+        fn sampled_backdrop<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::Backdrop> {
+            Some(a11y_dom::Backdrop {
+                luminance: vec![0.5],
+            })
+        }
     }
 
     #[test]
@@ -352,5 +363,6 @@ mod tests {
         assert!(sicht.layout(n).is_some());
         assert_eq!(sicht.scroll_overflow_px(n), Some(7.0));
         assert_eq!(sicht.visually_hidden(n), Some(true));
+        assert!(sicht.sampled_backdrop(n).is_some());
     }
 }
