@@ -2,6 +2,10 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unreleased]
+
+- Größenbudget auf 170 KB gzip angehoben (gemessen 149,0 KB).
+
 ## [0.10.0] - 2026-10-05
 
 Gebaut auf `a11y-rules` 0.20.0: die Regeln `lists/role-redundant`,
