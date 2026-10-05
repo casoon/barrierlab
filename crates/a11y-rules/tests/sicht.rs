@@ -85,6 +85,7 @@ impl Rendering for MitStil<'_> {
             font_weight: None,
             display: Some(node.attr("data-display").unwrap_or("block").to_string()),
             visibility: Some("visible".to_string()),
+            ..Default::default()
         })
     }
 

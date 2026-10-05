@@ -24,6 +24,7 @@
 use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
+use crate::darstellung;
 use crate::heuristik;
 use crate::locale::{Locale, pick, tr};
 use crate::registry::{Meta, RenderingRule};
@@ -185,11 +186,15 @@ pub(crate) const METAS: &[Meta] = &[
     heuristik::METAS[4],
     heuristik::METAS[5],
     heuristik::METAS[6],
+    darstellung::METAS[0],
+    darstellung::METAS[1],
+    darstellung::METAS[2],
 ];
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
     let funktionen = std::iter::once(text_kontrast as fn(&D, Locale, &mut Vec<Finding>))
-        .chain(heuristik::funktionen::<D>());
+        .chain(heuristik::funktionen::<D>())
+        .chain(darstellung::funktionen::<D>());
     METAS
         .iter()
         .zip(funktionen)
@@ -266,6 +271,7 @@ mod tests {
             font_weight: Some(w),
             display: None,
             visibility: None,
+            ..Default::default()
         };
         assert!(ist_grosser_text(&stil(24.0, 400)));
         assert!(!ist_grosser_text(&stil(23.0, 400)));

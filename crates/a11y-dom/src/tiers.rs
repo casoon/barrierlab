@@ -169,7 +169,7 @@ pub struct Color {
 
 /// Die berechneten Stilwerte, die Accessibility-Regeln tatsächlich brauchen.
 /// Bewusst keine vollständige CSSOM-Abbildung.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ComputedStyle {
     pub color: Option<Color>,
     /// Die *effektive* Hintergrundfarbe — der Host löst Transparenz über die
@@ -180,6 +180,19 @@ pub struct ComputedStyle {
     pub font_weight: Option<u16>,
     pub display: Option<String>,
     pub visibility: Option<String>,
+    /// Berechnetes `list-style-type`. An `<ul>`/`<ol>` mit `role="list"`
+    /// entscheidet es, ob die Rolle überflüssig ist: Bei `none` nimmt
+    /// WebKit der Liste ihre Semantik, die Rolle stellt sie wieder her.
+    pub list_style_type: Option<String>,
+    /// Berechnetes `text-decoration-line`, etwa `underline` oder `none`.
+    pub text_decoration_line: Option<String>,
+    /// Berechnetes `font-style`.
+    pub font_style: Option<String>,
+    /// Berechnetes `font-family`, als Zeichenkette zum Vergleich mit dem
+    /// Elternelement — nicht zum Auflösen von Schriften.
+    pub font_family: Option<String>,
+    /// Berechnetes `border-bottom-style`.
+    pub border_bottom_style: Option<String>,
 }
 
 /// Layout-Angaben für heuristische Prüfungen — was eine Regel braucht, um eine
@@ -235,6 +248,19 @@ pub trait Rendering: Document {
     /// Layout-Angaben für die heuristischen Regeln. Vorgabe `None`: Ein Host,
     /// der sie nicht erhebt, bekommt diese Regeln nicht.
     fn layout<'n>(&'n self, _node: Self::N<'n>) -> Option<Layout> {
+        None
+    }
+
+    /// Um wie viele CSS-Pixel der Inhalt über den Kasten hinausreicht, wenn
+    /// `overflow` auf der Achse `auto` oder `scroll` ist — das Größere von
+    /// `scrollHeight − clientHeight` und `scrollWidth − clientWidth`; `0`,
+    /// wenn nichts zu scrollen ist oder `overflow` es nicht zulässt.
+    ///
+    /// Eine eigene Methode, nicht Teil von [`Layout`]: Ein Host, der nur den
+    /// Überhang misst, müsste sonst ein ganzes `Layout` liefern, und die
+    /// Heuristiken darauf liefen mit Vorgabewerten statt gar nicht.
+    /// Vorgabe `None`: nicht gemessen.
+    fn scroll_overflow_px<'n>(&'n self, _node: Self::N<'n>) -> Option<f32> {
         None
     }
 }

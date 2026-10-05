@@ -63,6 +63,7 @@ impl Rendering for Host<'_> {
             font_weight: None,
             display: Some(if ua_none { "none" } else { "block" }.into()),
             visibility: Some("visible".into()),
+            ..Default::default()
         })
     }
 
