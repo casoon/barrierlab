@@ -167,6 +167,20 @@ pub struct Color {
     pub a: u8,
 }
 
+/// Eine Stichprobe des tatsächlich gezeichneten Hintergrunds hinter einem
+/// Text — für die Fälle, in denen keine einzelne Farbe gilt: Verlauf,
+/// Hintergrundbild, halbdurchsichtige Überlagerung.
+///
+/// Der Host tastet die Pixel im Kasten des Elements ab (etwa aus einem
+/// Screenshot), verrechnet Transparenz gegen Weiß und gibt ihre relative
+/// Leuchtdichte nach WCAG an, 0,0 bis 1,0, in beliebiger Reihenfolge. Die
+/// Glyphen selbst dürfen darin sein; die Regel urteilt über Median und
+/// 40. Perzentil, nicht über den ungünstigsten Pixel.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Backdrop {
+    pub luminance: Vec<f64>,
+}
+
 /// Die berechneten Stilwerte, die Accessibility-Regeln tatsächlich brauchen.
 /// Bewusst keine vollständige CSSOM-Abbildung.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -199,30 +213,33 @@ pub struct ComputedStyle {
 /// Barriere zu *vermuten*, nicht um sie zu belegen. Die Regeln darauf melden
 /// deshalb `REVIEW`, nie `FAIL`.
 ///
-/// Alles hier kostet den Host zusätzliche Arbeit; er liefert es über
-/// [`Rendering::layout`], und wer es nicht liefert, bekommt diese Heuristiken
-/// nicht.
+/// Jedes Feld ist einzeln optional: `None` heißt „nicht gemessen", nicht
+/// „nein". So kann ein Host liefern, was er erhebt, ohne dass die Regeln auf
+/// den übrigen Feldern mit Vorgabewerten laufen. Eine Regel, deren Feld an
+/// keinem Element gemessen ist, meldet das als `UNTESTED`.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Layout {
     /// Ein Flex-Container mit `flex-direction: row-reverse` oder
     /// `column-reverse`: Die Leserichtung weicht von der Quellreihenfolge ab.
-    pub flex_reversed: bool,
+    pub flex_reversed: Option<bool>,
     /// Berechnetes `order`. Ungleich 0 verschiebt das Element gegenüber der
     /// Quellreihenfolge.
-    pub order: i32,
+    pub order: Option<i32>,
     /// Berechnetes `min-width` in CSS-Pixeln, `0` ohne Angabe.
-    pub min_width_px: f32,
+    pub min_width_px: Option<f32>,
     /// Berechnetes `cursor: pointer` — das Element sieht anklickbar aus.
-    pub cursor_pointer: bool,
+    pub cursor_pointer: Option<bool>,
     /// Auf dem Element läuft eine Animation mit unendlich vielen Wiederholungen.
-    pub infinite_animation: bool,
+    pub infinite_animation: Option<bool>,
     /// Das Element liegt im sichtbaren Bereich, aber seine Mitte wird von
-    /// einem fixierten oder klebenden fremden Element überdeckt.
-    pub obscured: bool,
+    /// einem fixierten oder klebenden fremden Element überdeckt — etwa einem
+    /// Cookie-Banner. Die Kontrastregel meldet überdeckten Text als nicht
+    /// bestimmbar.
+    pub obscured: Option<bool>,
     /// Ein fixiertes oder klebendes Element am oberen Rand, das tiefer reicht
     /// als `scroll-padding-top`: Was beim Rückwärts-Tabben oben ausgerichtet
     /// wird, kann ganz darunter verschwinden.
-    pub hides_focus: bool,
+    pub hides_focus: Option<bool>,
     /// Ob der Fokus sichtbar wird: `Some(true)`, wenn sich beim Fokussieren
     /// ein Stil ändert, der als Indikator taugt; `None`, wenn nicht gemessen —
     /// Fokussieren ändert den Zustand der Seite und ist deshalb ein eigener,
@@ -261,6 +278,24 @@ pub trait Rendering: Document {
     /// Heuristiken darauf liefen mit Vorgabewerten statt gar nicht.
     /// Vorgabe `None`: nicht gemessen.
     fn scroll_overflow_px<'n>(&'n self, _node: Self::N<'n>) -> Option<f32> {
+        None
+    }
+
+    /// Ob der Text des Knotens optisch verborgen ist, obwohl `display` und
+    /// `visibility` ihn darstellen: abgeschnitten (`clip`, `clip-path`), aus
+    /// dem Kasten geschoben (`text-indent` weit ins Negative) oder in einem
+    /// Kasten von höchstens 1 px mit `overflow: hidden` — die üblichen
+    /// „nur für Screenreader"-Muster. Solcher Text hat keinen sichtbaren
+    /// Kontrast. Vorgabe `None`: nicht gemessen.
+    fn visually_hidden<'n>(&'n self, _node: Self::N<'n>) -> Option<bool> {
+        None
+    }
+
+    /// Abgetasteter Hintergrund hinter dem Text des Knotens. Die
+    /// Kontrastregel greift darauf nur zurück, wenn
+    /// [`ComputedStyle::background_color`] fehlt. Vorgabe `None`: nicht
+    /// abgetastet — dann bleibt der Kontrast nicht bestimmbar.
+    fn sampled_backdrop<'n>(&'n self, _node: Self::N<'n>) -> Option<Backdrop> {
         None
     }
 }
