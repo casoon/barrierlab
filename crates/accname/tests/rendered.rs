@@ -36,6 +36,7 @@ impl Rendering for Gestylt<'_> {
                     .unwrap_or("visible")
                     .to_string(),
             ),
+            ..Default::default()
         })
     }
 

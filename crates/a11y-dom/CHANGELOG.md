@@ -5,6 +5,22 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Added
+
+- `ComputedStyle`: `list_style_type`, `text_decoration_line`, `font_style`,
+  `font_family`, `border_bottom_style` (casoon/barrierlab#21). `ComputedStyle`
+  implementiert jetzt `Default`; neue Felder lassen sich so mit
+  `..Default::default()` auslassen.
+- `Layout::scroll_overflow_px`: Überhang eines Kastens mit `overflow: auto`
+  oder `scroll` in CSS-Pixeln, `None` wenn nicht gemessen.
+
+### Changed
+
+- Wer `ComputedStyle { .. }` oder `Layout { .. }` von Hand baut, ergänzt die
+  neuen Felder oder `..Default::default()`.
+
 ## [0.19.1] - 2026-10-04
 
 ### Changed

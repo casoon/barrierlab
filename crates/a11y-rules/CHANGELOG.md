@@ -13,6 +13,46 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 - Search inputs, search regions and comboboxes no longer request personal autocomplete tokens (casoon/astro-post-audit#76).
 - Language detection excludes descendants with their own non-empty `lang` (casoon/astro-post-audit#77).
 
+## [Unreleased]
+
+Der zweite Teil von casoon/barrierlab#21: drei Regeln aus auditmysite, die
+gemessene Darstellungswerte brauchen. Norm sind WCAG 2.2 (1.4.1, 2.1.1,
+4.1.2) und ARIA in HTML. Alle drei sind Tier 3 und urteilen mit `FAIL` —
+was sie lesen, ist gemessen, nicht vermutet. Liefert der Host ein Feld nicht,
+steht je Regel und Seite ein `UNTESTED` im Bericht, kein stiller Nicht-Befund.
+
+### Added
+
+| Neue Kennung | Urteil, Schwere | braucht | ersetzt in auditmysite |
+|---|---|---|---|
+| `lists/role-redundant` | `FAIL`, niedrig (4.1.2) | `ComputedStyle::list_style_type` | `redundant-role` für `<ul>`/`<ol>` (`redundant_role`) |
+| `color/link-indistinct` | `FAIL`, mittel (1.4.1) | `text_decoration_line`, `font_style`, `font_family`, `border_bottom_style` | `link-in-text-block` (`use_of_color`) |
+| `keyboard/scrollable-region-not-focusable` | `FAIL`, hoch (2.1.1) | `Layout::scroll_overflow_px` | `scrollable-region-focusable` (`scrollable_region`) |
+
+Belege und mitgebrachte Korrekturen aus dem auditmysite-Korpus
+(`tests/darstellung.rs`): `redundant_role_list_style` (#644: `role="list"`
+bei `list-style: none` ist nicht überflüssig), `link_in_text_block_context`
+(#710: nur Links im Fließtext; Navigation, Logo, Listen aus nur einem Link
+und Fußzeilen mit Trennern zählen nicht), `scrollable_region_focusable`
+(#717: gov.si `div.menus`; Bereich mit `tabindex`, mit Link darin, mit
+`overflow: hidden` oder ohne Überhang bestehen; Puffer 13 px wie axe).
+
+**Noch von keinem Host gefüllt.** Die neuen Felder (siehe `a11y-dom`) sieht
+erst auditmysite#698 in einem echten Lauf; bis dahin melden die drei Regeln
+`UNTESTED`.
+
+### Abweichungen von auditmysite
+
+- `color/link-indistinct` vergleicht wie auditmysite Unterstreichung,
+  Gewicht, Schnitt, Schrift, Unterkante und Hintergrund mit dem
+  Elternelement. Der Hintergrund ist hier der effektive, den der Host über
+  die Vorfahren auflöst (`ComputedStyle::background_color`), nicht der
+  eigene des Elements.
+- `keyboard/scrollable-region-not-focusable` prüft nicht selbst, ob Inhalt
+  sichtbar ist — das übernimmt die Sicht der Regel (versteckte Teilbäume
+  fehlen darin).
+- Keine Obergrenze je Seite (auditmysite: 10 bzw. 20 Befunde).
+
 ## [0.19.1] - 2026-10-04
 
 ### Fixed
