@@ -22,11 +22,13 @@ export default defineConfig({
       description:
         'Gemeinsame Bibliotheken für Web-Audits: Zugänglichkeit, HTML-Konformanz, Wahrnehmung.',
       repo: 'casoon/barrierlab',
+      lang: 'de',
       license: 'MIT',
       // Ein Monorepo hat keine gemeinsame Version und keinen gemeinsamen
       // Changelog: beides steht je Paket.
       changelog: false,
       showcase: false,
+      mdxComponents: './src/mdx-components.ts',
       packages: [
         { label: 'a11y-report', href: 'https://crates.io/crates/a11y-report' },
         { label: 'a11y-dom', href: 'https://crates.io/crates/a11y-dom' },

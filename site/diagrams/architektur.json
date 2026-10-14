@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "type": "flow",
+  "title": "Von den Bibliotheken zu den Werkzeugen",
+  "description": "Parser und ein gemeinsames Dokument- und Befundmodell tragen die Zugänglichkeitsregeln und die HTML-Konformanz; Wahrnehmung und Web-Checks rechnen eigenständig. Alles erscheint als Rust-Crates auf crates.io, die Regeln zusätzlich als WebAssembly-Paket auf npm. auditmysite, astro-post-audit und Relief binden die Crates ein, liveaudit das npm-Paket.",
+  "source": "Cargo.toml (Workspace), docs/consumers.md; Cargo.toml bzw. package.json der Werkzeuge, Stand 2026-10-14",
+  "width": 1100,
+  "height": 480,
+  "flow": {
+    "nodes": [
+      {
+        "id": "parser",
+        "label": "Parser",
+        "sublabel": "HTML, CSS, CSP, XPath"
+      },
+      {
+        "id": "model",
+        "label": "Gemeinsame Modelle",
+        "sublabel": "a11y-dom, a11y-report"
+      },
+      {
+        "id": "rules",
+        "label": "a11y-rules",
+        "sublabel": "WCAG 2.2, accname"
+      },
+      {
+        "id": "conform",
+        "label": "html-conform",
+        "sublabel": "Konformanz"
+      },
+      {
+        "id": "perception",
+        "label": "a11y-perception",
+        "sublabel": "Wahrnehmung"
+      },
+      {
+        "id": "checks",
+        "label": "web-checks",
+        "sublabel": "robots, Meta, JSON-LD"
+      },
+      {
+        "id": "crates",
+        "label": "crates.io",
+        "sublabel": "15 Rust-Crates",
+        "kind": "io"
+      },
+      {
+        "id": "npm",
+        "label": "npm",
+        "sublabel": "a11y-wasm",
+        "kind": "io"
+      },
+      {
+        "id": "auditmysite",
+        "label": "auditmysite",
+        "sublabel": "Audit im Terminal",
+        "kind": "external"
+      },
+      {
+        "id": "apa",
+        "label": "astro-post-audit",
+        "sublabel": "nach dem Astro-Build",
+        "kind": "external"
+      },
+      {
+        "id": "relief",
+        "label": "Relief",
+        "sublabel": "Browser",
+        "kind": "external"
+      },
+      {
+        "id": "liveaudit",
+        "label": "liveaudit",
+        "sublabel": "in der laufenden Seite",
+        "kind": "external"
+      }
+    ],
+    "edges": [
+      {
+        "from": "model",
+        "to": "rules"
+      },
+      {
+        "from": "parser",
+        "to": "rules"
+      },
+      {
+        "from": "parser",
+        "to": "conform"
+      },
+      {
+        "from": "rules",
+        "to": "crates"
+      },
+      {
+        "from": "conform",
+        "to": "crates"
+      },
+      {
+        "from": "perception",
+        "to": "crates"
+      },
+      {
+        "from": "checks",
+        "to": "crates"
+      },
+      {
+        "from": "rules",
+        "to": "npm",
+        "label": "WebAssembly"
+      },
+      {
+        "from": "crates",
+        "to": "auditmysite"
+      },
+      {
+        "from": "crates",
+        "to": "apa"
+      },
+      {
+        "from": "crates",
+        "to": "relief"
+      },
+      {
+        "from": "npm",
+        "to": "liveaudit"
+      }
+    ],
+    "mainPath": [
+      "model",
+      "rules",
+      "crates",
+      "auditmysite"
+    ],
+    "orientation": "landscape"
+  }
+}

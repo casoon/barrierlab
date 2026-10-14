@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "type": "flow",
+  "title": "Die 15 Crates und ihre Abhängigkeiten",
+  "description": "Ein Pfeil führt von einem Crate zu dem, das es benutzt. Abhängigkeiten zeigen nur nach unten, von L0 zu L3: html-conform baut auf sechs Parsern und Engines auf, a11y-rules auf a11y-dom, a11y-report und stylesheet-parse, a11y-wasm bündelt a11y-rules und accname für den Browser. a11y-perception und web-checks stehen für sich.",
+  "source": "[dependencies] der Crate-Manifeste in crates/*/Cargo.toml",
+  "width": 1100,
+  "height": 940,
+  "flow": {
+    "nodes": [
+      {
+        "id": "html5_parser",
+        "label": "html5-parser",
+        "sublabel": "HTML-Parser",
+        "lane": "l0"
+      },
+      {
+        "id": "csp_parse",
+        "label": "csp-parse",
+        "sublabel": "CSP",
+        "lane": "l0"
+      },
+      {
+        "id": "media_query_parse",
+        "label": "media-query-parse",
+        "sublabel": "Media Queries",
+        "lane": "l0"
+      },
+      {
+        "id": "xpath_eval",
+        "label": "xpath-eval",
+        "sublabel": "XPath 1.0",
+        "lane": "l0"
+      },
+      {
+        "id": "relax_ng",
+        "label": "relax-ng",
+        "sublabel": "RELAX NG",
+        "lane": "l0"
+      },
+      {
+        "id": "schematron_engine",
+        "label": "schematron-engine",
+        "sublabel": "Schematron",
+        "lane": "l0"
+      },
+      {
+        "id": "a11y_dom",
+        "label": "a11y-dom",
+        "sublabel": "Dokumentmodell",
+        "lane": "l1"
+      },
+      {
+        "id": "a11y_report",
+        "label": "a11y-report",
+        "sublabel": "Befundmodell",
+        "lane": "l1"
+      },
+      {
+        "id": "stylesheet_parse",
+        "label": "stylesheet-parse",
+        "sublabel": "CSS-Stylesheets",
+        "lane": "l1"
+      },
+      {
+        "id": "html_conform",
+        "label": "html-conform",
+        "sublabel": "HTML-Konformanz",
+        "lane": "l1"
+      },
+      {
+        "id": "accname",
+        "label": "accname",
+        "sublabel": "Accessible Name",
+        "lane": "l2"
+      },
+      {
+        "id": "a11y_rules",
+        "label": "a11y-rules",
+        "sublabel": "Regelbestand",
+        "lane": "l2"
+      },
+      {
+        "id": "a11y_perception",
+        "label": "a11y-perception",
+        "sublabel": "Wahrnehmung",
+        "lane": "l2"
+      },
+      {
+        "id": "web_checks",
+        "label": "web-checks",
+        "sublabel": "robots, Meta, JSON-LD",
+        "lane": "l2"
+      },
+      {
+        "id": "a11y_wasm",
+        "label": "a11y-wasm",
+        "sublabel": "WebAssembly, npm",
+        "lane": "l3"
+      }
+    ],
+    "edges": [
+      {
+        "from": "stylesheet_parse",
+        "to": "a11y_rules"
+      },
+      {
+        "from": "a11y_dom",
+        "to": "a11y_rules"
+      },
+      {
+        "from": "a11y_report",
+        "to": "a11y_rules"
+      },
+      {
+        "from": "a11y_dom",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "a11y_report",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "a11y_rules",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "accname",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "a11y_dom",
+        "to": "accname"
+      },
+      {
+        "from": "csp_parse",
+        "to": "html_conform"
+      },
+      {
+        "from": "html5_parser",
+        "to": "html_conform"
+      },
+      {
+        "from": "media_query_parse",
+        "to": "html_conform"
+      },
+      {
+        "from": "relax_ng",
+        "to": "html_conform"
+      },
+      {
+        "from": "schematron_engine",
+        "to": "html_conform"
+      },
+      {
+        "from": "xpath_eval",
+        "to": "html_conform"
+      },
+      {
+        "from": "xpath_eval",
+        "to": "schematron_engine"
+      },
+      {
+        "from": "media_query_parse",
+        "to": "stylesheet_parse"
+      }
+    ],
+    "orientation": "landscape",
+    "lanes": [
+      {
+        "id": "l0",
+        "label": "L0 · Parser und Engines"
+      },
+      {
+        "id": "l1",
+        "label": "L1 · Modell"
+      },
+      {
+        "id": "l2",
+        "label": "L2 · Berechnung"
+      },
+      {
+        "id": "l3",
+        "label": "L3 · Auslieferung"
+      }
+    ]
+  }
+}
