@@ -1,83 +1,105 @@
 ---
-import {
-  CodeBlock,
-  Facts,
-  Features,
-  Hero,
-  Install,
-  Quickstart,
-} from '@casoon/pages-theme/components';
+import { Button, Facts, Features, Hero, Install } from '@casoon/pages-theme/components';
 import Base from '@casoon/pages-theme/layouts/Base.astro';
-
-const beispiel = `use a11y_dom::Arena;
-use a11y_report::Outcome;
-
-// Derselbe Regelbestand, den auch der Browser-Auditor und die
-// laufende Seite benutzen — hier über einen geparsten Baum.
-let bericht = a11y_rules::run_with_semantics(&dokument);
-
-for befund in &bericht.findings {
-    println!("{} {:?}", befund.rule_id, befund.severity);
-}
-
-// Was nicht geprüft werden konnte, ist ein eigener Zustand —
-// kein stilles "bestanden".
-assert!(bericht.rule_runs.iter().any(|r| r.not_run.is_some()));`;
+import { url } from '@casoon/pages-theme/url';
+import Diagram from '../components/Diagram.astro';
 ---
 
 <Base>
   <Hero
     title="Eine Antwort statt vier."
-    lead="Gemeinsame Bibliotheken für Web-Audits: Zugänglichkeit, HTML-Konformanz, Wahrnehmung. Vier Werkzeuge prüfen damit dieselbe Seite — zur Bauzeit, in CI, im Browser und in der laufenden Seite — und kommen zum selben Ergebnis, mit denselben Kennungen."
+    lead="BarrierLab ist die gemeinsame Prüf-Engine hinter den CASOON-Audit-Werkzeugen: Zugänglichkeitsregeln nach WCAG 2.2, HTML-Konformanz, Wahrnehmung und Web-Checks als Rust-Bibliotheken. Ob eine Seite beim Astro-Build, im Terminal-Audit oder live im Browser geprüft wird — der Befund heißt überall gleich und bedeutet dasselbe."
   >
     <Install
       commands={[
-        { label: 'Rust', command: 'cargo add a11y-rules a11y-report a11y-dom' },
+        { label: 'Rust', command: 'cargo add a11y-rules a11y-dom a11y-report' },
         { label: 'npm', command: 'npm i @casoon/a11y-wasm' },
       ]}
     />
   </Hero>
 
-  <Facts
-    items={[
-      { value: '14', label: 'Crates in einem Workspace' },
-      { value: '42', label: 'Befundkennungen über drei Fähigkeitsstufen' },
-      { value: '4', label: 'Werkzeuge außerhalb, die daran hängen' },
-      { value: '80 KB', label: 'gzip für den Regelbestand als WebAssembly' },
-    ]}
-  />
-
   <Features
-    heading="Wofür das gut ist"
+    heading="Für wen das ist"
     items={[
       {
-        title: 'Ein Befund heißt überall gleich',
-        body: 'Regelkennung, Schweregrad und JSON kommen aus a11y-report. Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen.',
+        title: 'Wer Prüfwerkzeuge baut',
+        body: 'Ein Werkzeug, das Webseiten auf Barrieren oder HTML-Fehler prüft, muss die Regeln nicht selbst schreiben. Es liefert das Dokument, BarrierLab rechnet — in Rust oder als WebAssembly im Browser.',
       },
       {
-        title: '„Lief nicht" ist nicht „bestanden"',
-        body: 'Fehlt einer Prüfung ihre Voraussetzung — kein Accessibility-Tree, kein Fokus, abgebrochene Aufnahme —, entsteht ein eigener Zustand mit Grund. Kein stiller Erfolg.',
+        title: 'Wer die Ergebnisse liest',
+        body: 'Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen: gleiche Regelkennung, gleicher Schweregrad, gleiches JSON aus a11y-report.',
       },
       {
-        title: 'Berechnung ohne Erhebung',
-        body: 'Kein Paket hier öffnet eine Seite, spricht ein Protokoll oder liest eine Datei. Die Werkzeuge beschaffen die Daten, die Bibliotheken rechnen. Deshalb läuft derselbe Code auch als WebAssembly in der geöffneten Seite.',
+        title: '„Lief nicht“ ist nicht „bestanden“',
+        body: 'Fehlt einer Prüfung ihre Voraussetzung — kein Accessibility-Tree, kein Fokus, keine Darstellung —, steht sie mit Grund im Bericht. Ein stilles Bestanden gibt es nicht.',
       },
       {
         title: 'Widersprüche fallen auf',
-        body: 'Zwei Werkzeuge mit zwei Kopien derselben Prüfung sagten an derselben Seite Gegenteiliges: GPTBot galt einmal als Trainings-, einmal als Zitations-Crawler. Eine gemeinsame Implementierung macht solche Fälle sichtbar, statt sie zu verteilen.',
+        body: 'Zwei Werkzeuge mit zwei Kopien derselben Prüfung sagten an derselben Seite Gegenteiliges. Eine gemeinsame Implementierung macht solche Fälle sichtbar, statt sie zu verteilen.',
       },
     ]}
   />
 
-  <Quickstart
-    lead="Die Regeln laufen über jedes Dokumentmodell, das die Traits erfüllt. Was ein Host anbietet, entscheidet, welche Stufe läuft."
-    steps={[
-      'Crate einbinden: <code>cargo add a11y-rules</code>',
-      'Baum bereitstellen: <code>a11y_dom::Document</code> implementieren oder <code>Arena</code> benutzen',
-      'Laufen lassen: <code>run</code>, <code>run_with_semantics</code> oder <code>run_full</code>, je nach vorhandenen Daten',
-      'Bericht lesen: <code>Finding</code> und <code>RuleRun</code> aus <code>a11y-report</code>',
+  <Facts
+    items={[
+      { value: '15', label: 'Rust-Crates, alle auf crates.io' },
+      { value: '4', label: 'Werkzeuge, die sie heute einbinden' },
+      { value: '3', label: 'Regelstufen: Struktur, Semantik, Darstellung' },
+      { value: '1', label: 'Befundmodell für alle Pakete' },
     ]}
-  >
-    <CodeBlock code={beispiel} lang="rust" />
-  </Quickstart>
+  />
+
+  <section class="how" aria-labelledby="how-heading">
+    <h2 id="how-heading">So hängt es zusammen</h2>
+    <div class="text">
+      <p>
+        Hier liegen nur Bibliotheken. Keine davon öffnet eine Seite oder spricht ein
+        Browserprotokoll: Das Werkzeug beschafft die Daten, BarrierLab rechnet. Deshalb läuft
+        derselbe Regelbestand im Terminal, nach dem Build und als WebAssembly in der geöffneten
+        Seite.
+      </p>
+      <p>
+        Die Werkzeuge leben in eigenen Repositories und binden die Pakete über crates.io und npm
+        ein: auditmysite prüft gerenderte Seiten im Terminal, astro-post-audit das fertige
+        Astro-Build, liveaudit die laufende Seite, und Relief nutzt Regeln und Wahrnehmung im
+        eigenen Browser.
+      </p>
+    </div>
+    <Diagram name="architektur" format="svg" narrow={{ width: 470, height: 700 }} />
+    <div class="links">
+      <Button href={url('docs/a11y/getting-started/schnellstart/')}>Schnellstart in Rust</Button>
+      <Button href={url('docs/packages/')} variant="secondary">Alle Pakete im Überblick</Button>
+      <Button href={url('docs/html-conform/')} variant="quiet">HTML-Konformanz →</Button>
+    </div>
+  </section>
 </Base>
+
+<style>
+  .how {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+  h2 {
+    margin: 0 0 14px;
+    color: var(--heading);
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .text {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    gap: 0 48px;
+  }
+  .text p {
+    margin: 0 0 16px;
+    font-size: 15.5px;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+</style>

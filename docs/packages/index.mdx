@@ -1,0 +1,32 @@
+---
+title: "Übersicht"
+description: "Die 15 Crates in vier Schichten, ihre Abhängigkeiten und wofür jedes da ist."
+order: 0
+---
+
+Die Crates liegen in vier Schichten. Abhängigkeiten zeigen nur nach unten: Ein Paket benutzt
+nie eines derselben oder einer höheren Schicht. Keines öffnet eine Seite oder spricht ein
+Browserprotokoll — die Daten bringt das Werkzeug mit, das die Pakete einbindet.
+
+<Diagram name="crates" />
+
+| Schicht | Crate | Wofür |
+|---|---|---|
+| L0 | [`html5-parser`](https://docs.rs/html5-parser) | WHATWG-HTML5-Tokenizer und Baumaufbau |
+| L0 | [`csp-parse`](https://docs.rs/csp-parse) | Grammatik der Content Security Policy |
+| L0 | [`media-query-parse`](https://docs.rs/media-query-parse) | Grammatik der CSS Media Queries |
+| L0 | [`xpath-eval`](https://docs.rs/xpath-eval) | XPath 1.0, generisch über das Dokumentmodell |
+| L0 | [`relax-ng`](https://docs.rs/relax-ng) | RELAX-NG-Schemas lesen und prüfen |
+| L0 | [`schematron-engine`](https://docs.rs/schematron-engine) | ISO-Schematron-Regeln, XPath über `xpath-eval` |
+| L1 | [`a11y-dom`](a11y-dom.md) | Dokumentmodell als Trait plus Fähigkeitsstufen |
+| L1 | [`a11y-report`](a11y-report.md) | ein Befund- und Berichtsmodell mit stabilem JSON |
+| L1 | [`stylesheet-parse`](stylesheet-parse.md) | CSS-Stylesheets samt `@media`-Kontext |
+| L1 | [`html-conform`](html-conform.md) | HTML5-Konformanz, vergleichbar mit vnu, ohne JVM |
+| L2 | [`accname`](accname.md) | Accessible Name und Description nach WAI-ARIA |
+| L2 | [`a11y-rules`](a11y-rules.md) | der Regelbestand, generisch über das Dokumentmodell |
+| L2 | [`a11y-perception`](a11y-perception.md) | Wahrnehmung über Browserdaten: AX-Baum, Lesereihenfolge, Differenz zweier Aufnahmen |
+| L2 | [`web-checks`](web-checks.md) | robots.txt, Meta-Längen, OpenGraph, JSON-LD, hreflang |
+| L3 | [`a11y-wasm`](a11y-wasm.md) | der Regelbestand als WebAssembly, auf npm als `@casoon/a11y-wasm` |
+
+Alle 15 stehen auf crates.io. Die vier a11y-Crates `a11y-dom`, `a11y-report`, `accname` und
+`a11y-rules` werden im Gleichschritt versioniert, alle anderen eigenständig.
