@@ -2068,7 +2068,9 @@ fn nichtssagender_linktext_ist_eine_eigene_regel() {
         .filter(|f| f.rule_id == "links/generic-name")
         .map(|f| f.message.as_str())
         .collect();
-    assert_eq!(generisch.len(), 2, "{:?}", ids(&r));
+    // Dazu „Start" aus der Navigation der Vorlage: Seit der Übernahme von
+    // auditmysites Liste (Plan 98) zählen auch Beschriftungen ohne Ziel.
+    assert_eq!(generisch.len(), 3, "{:?}", ids(&r));
     // Heuristisch -- die Liste kann einen Namen treffen, der im Zusammenhang
     // doch eindeutig ist.
     assert!(
@@ -2389,4 +2391,195 @@ fn li_mit_anderer_rolle_ist_kein_listeneintrag() {
         .filter(|f| f.rule_id == "lists/invalid-structure")
         .count();
     assert_eq!(n, 1, "{:?}", r.findings);
+}
+
+// --- Linkzweck aus auditmysites link_purpose (Plan 98, barrierlab#13) ------
+
+/// Ein Dokument aus `<html><body>…</body></html>` mit dem gegebenen Inhalt.
+fn mit_body(inhalt: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
+    inhalt(
+        Arena::builder()
+            .open("html")
+            .attr("lang", "de")
+            .open("body"),
+    )
+    .close()
+    .close()
+    .build()
+}
+
+fn befunde<'r>(r: &'r Report, rule: &str) -> Vec<&'r a11y_report::Finding> {
+    r.findings.iter().filter(|f| f.rule_id == rule).collect()
+}
+
+/// Ohne erkennbaren Zusammenhang Medium, auch in fremden Sprachen.
+#[test]
+fn generischer_link_ohne_kontext_ist_medium() {
+    let arena = mit_body(|b| {
+        b.open("a")
+            .attr("href", "/a")
+            .text("Click here")
+            .close()
+            .open("a")
+            .attr("href", "/b")
+            .text("Lire la suite")
+            .close()
+            .open("a")
+            .attr("href", "/c")
+            .text("Mehr ›")
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    let g = befunde(&r, "links/generic-name");
+    assert_eq!(g.len(), 3, "{:?}", ids(&r));
+    assert!(
+        g.iter()
+            .all(|f| f.outcome == Outcome::Review && f.severity == a11y_report::Severity::Medium)
+    );
+}
+
+/// auditmysite #569: „Weiter" hinter beschreibendem Text im selben Absatz.
+#[test]
+fn generischer_link_mit_text_daneben_ist_low() {
+    let arena = mit_body(|b| {
+        b.open("p")
+            .text("Zum Blogartikel über Barrierefreiheit ")
+            .open("a")
+            .attr("href", "/blog")
+            .text("weiter")
+            .close()
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    let g = befunde(&r, "links/generic-name");
+    assert_eq!(g.len(), 1);
+    assert_eq!(g[0].severity, a11y_report::Severity::Low);
+}
+
+/// auditmysite Plan 71 (inros-lackner.de): Teaserkarte, Überschrift zwei
+/// Ebenen über dem Link, davor — Kontext nach H80. Danach zählt sie nicht.
+#[test]
+fn ueberschrift_vor_dem_link_ist_kontext_danach_nicht() {
+    let karte = |vorher: bool| {
+        mit_body(|b| {
+            let b = b.open("div");
+            let b = if vorher {
+                b.open("h3").text("Building Information Modeling").close()
+            } else {
+                b
+            };
+            let b = b
+                .open("div")
+                .open("a")
+                .attr("href", "/bim")
+                .text("Mehr erfahren")
+                .close()
+                .close();
+            let b = if vorher {
+                b
+            } else {
+                b.open("h3").text("Nächster Abschnitt").close()
+            };
+            b.close()
+        })
+    };
+    let mit = karte(true);
+    let r = run_with_semantics(&MitSemantik::new(&mit));
+    assert_eq!(
+        befunde(&r, "links/generic-name")[0].severity,
+        a11y_report::Severity::Low
+    );
+    let ohne = karte(false);
+    let r = run_with_semantics(&MitSemantik::new(&ohne));
+    assert_eq!(
+        befunde(&r, "links/generic-name")[0].severity,
+        a11y_report::Severity::Medium
+    );
+}
+
+/// Eine Adresse als Linktext: ohne Kontext gemeldet, mit Text daneben nicht.
+#[test]
+fn adresse_als_linktext() {
+    let arena = mit_body(|b| {
+        b.open("div")
+            .open("a")
+            .attr("href", "https://example.com/page")
+            .attr("id", "nackt")
+            .text("https://example.com/page")
+            .close()
+            .close()
+            .open("p")
+            .text("Go to ")
+            .open("a")
+            .attr("href", "https://example.com")
+            .text("www.example.com")
+            .close()
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    assert_eq!(befunde(&r, "links/url-name").len(), 1, "{:?}", ids(&r));
+}
+
+/// Ein Zeichen ist kein Name; Seitenzahlen einer Blätternavigation schon.
+#[test]
+fn einzelnes_zeichen_aber_keine_seitenzahl() {
+    let arena = mit_body(|b| {
+        b.open("a")
+            .attr("href", "/x")
+            .text("x")
+            .close()
+            .open("a")
+            .attr("href", "/seite/2")
+            .text("2")
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    assert_eq!(befunde(&r, "links/single-character-name").len(), 1);
+}
+
+/// G201: `target="_blank"` ohne Ankündigung. auditmysite prüfte
+/// `aria-haspopup` und traf diesen Fall nie.
+#[test]
+fn neues_fenster_ohne_ankuendigung() {
+    let arena = mit_body(|b| {
+        b.open("a")
+            .attr("href", "/a")
+            .attr("target", "_blank")
+            .text("Preisliste")
+            .close()
+            .open("a")
+            .attr("href", "/b")
+            .attr("target", "_blank")
+            .text("Preisliste (öffnet in neuem Fenster)")
+            .close()
+            .open("a")
+            .attr("href", "/c")
+            .attr("aria-haspopup", "true")
+            .text("Menü")
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    let f = befunde(&r, "links/new-window-unannounced");
+    assert_eq!(f.len(), 1, "{:?}", ids(&r));
+    assert_eq!(f[0].wcag, vec!["3.2.5".to_string()]);
+}
+
+/// 2.4.9 (AAA): Zusammenhang hilft hier nicht.
+#[test]
+fn nur_linktext_ignoriert_kontext() {
+    let arena = mit_body(|b| {
+        b.open("p")
+            .text("Unser Jahresbericht 2026: ")
+            .open("a")
+            .attr("href", "/bericht")
+            .text("Öffnen")
+            .close()
+            .close()
+            .open("a")
+            .attr("href", "/agb")
+            .text("Allgemeine Geschäftsbedingungen")
+            .close()
+    });
+    let r = run_with_semantics(&MitSemantik::new(&arena));
+    assert_eq!(befunde(&r, "links/purpose-link-only").len(), 1);
 }

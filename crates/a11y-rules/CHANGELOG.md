@@ -5,6 +5,42 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+Linkzweck aus auditmysite (`link_purpose`, `link_purpose_link_only`;
+casoon/barrierlab#13, #18). Beide Regeln hatte auditmysite#690 auf B5
+verschoben, B5 hat sie dann nicht mitgenommen. Alle Befunde sind Tier 2 und
+`REVIEW`: Ob ein Linktext reicht, entscheidet am Ende der Zusammenhang.
+
+### Changed
+
+- `links/generic-name` nutzt auditmysites Liste: rund 150 Phrasen in
+  15 Sprachen. **Bewusste Kehrtwende:** Die Liste war bisher eng gehalten,
+  Navigationsbeschriftungen wie „Start", „Weiter", „Download" oder „Info"
+  zählten nicht. Jetzt zählen sie (Entscheidung des Nutzers vom 23.10.2026).
+  Erwartbar mehr Hinweise in Navigationen; die Testvorlage meldet jetzt
+  „Start".
+- `links/generic-name` wertet den Zusammenhang aus (auditmysite #569, Plan 71,
+  Technik H80): Mit `aria-describedby`, Text daneben, Text im selben `p`/`li`/
+  `td`/`th`/`dd` oder einer Überschrift davor im selben Baustein (bis vier
+  Ebenen hoch) ist der Befund Low statt Medium. Nachgestellte Pfeile und
+  Satzzeichen („Mehr ›") werden vor dem Vergleich entfernt.
+
+### Added
+
+| Neue Kennung | WCAG, Schwere | ersetzt in auditmysite |
+|---|---|---|
+| `links/url-name` | 2.4.4, niedrig; nur ohne Kontext | „raw URL" aus `link_purpose` |
+| `links/single-character-name` | 2.4.4, mittel; Ziffern ausgenommen | „single character" aus `link_purpose` |
+| `links/new-window-unannounced` | 3.2.5 (AAA), niedrig | „opens in new window" aus `link_purpose` |
+| `links/purpose-link-only` | 2.4.9 (AAA), niedrig | `link-name-only` (`link_purpose_link_only`) |
+
+- `links/new-window-unannounced` prüft `target="_blank"`. auditmysite prüfte
+  `aria-haspopup` und traf den gemeinten Fall nie; die Hinweisliste kennt
+  jetzt auch deutsche Ankündigungen („öffnet in neuem Fenster"). G201 gehört
+  zu 3.2.5, nicht zu 2.4.4 wie bisher in auditmysite.
+- WASM: 154,4 KB gzip (Budget 170 KB).
+
 ## [0.23.0] - 2026-10-23
 
 ### Changed (Baumbereiche, #23)
