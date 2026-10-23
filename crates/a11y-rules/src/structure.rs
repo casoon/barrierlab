@@ -1800,6 +1800,7 @@ pub const METAS: &[Meta] = &[
         help_de: "Ein offener Dialog darf nicht inert sein.",
     },
     crate::checkliste::META,
+    crate::checkliste::META_BEWEGUNG,
     Meta {
         ids: &["forms/autocomplete-invalid"],
         tier: Tier::Structure,
@@ -2156,7 +2157,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 56] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
     [
         lang,
         title,
@@ -2181,6 +2182,7 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 56] {
         crate::aria::popover,
         crate::aria::inert_dialog,
         crate::checkliste::checkliste,
+        crate::checkliste::bewegung,
         crate::forms::autocomplete_invalid,
         crate::forms::error_unidentified,
         crate::forms::group_missing,
