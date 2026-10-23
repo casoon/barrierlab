@@ -224,6 +224,14 @@
     </rule>
   </pattern>
 
+  <pattern id="elements-track-default">
+    <rule context="h:audio | h:video">
+      <assert id="elements.track-multiple-default" role="error" test="count(h:track[@default]) &lt;= 1">
+        The "default" attribute must not occur on more than one "track" element within the same "audio" or "video" element.
+      </assert>
+    </rule>
+  </pattern>
+
   <pattern id="elements-input-button">
     <rule context="h:input[@type = 'button']">
       <assert id="elements.input-button-empty-value" role="error" test="@value and normalize-space(@value) != ''">
