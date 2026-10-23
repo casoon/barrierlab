@@ -393,6 +393,110 @@ fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Fi
     }
 }
 
+/// Ob das Element ein Kontrollkästchen, Optionsfeld, Schalter oder
+/// Schieberegler ist — die Bedienelemente, deren Grenze 1.4.11 betrifft und
+/// die Autoren mit `appearance: none` gern selbst zeichnen.
+fn ist_auswahlelement<'a, N: Node<'a>>(n: N) -> bool {
+    let typ = n
+        .attr("type")
+        .map(|t| t.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    (n.is_element("input") && matches!(typ.as_str(), "checkbox" | "radio" | "range"))
+        || matches!(n.attr("role"), Some("checkbox" | "radio" | "switch"))
+}
+
+/// 1.4.11: Die Grenze eines selbst gezeichneten Bedienelements braucht 3:1
+/// gegenüber dem Hintergrund, auf dem es steht.
+///
+/// Nur `appearance: none`: Ein natives Element zeichnet der Browser, sein
+/// Kontrast steht in keinem berechneten Stil. Die Grenze ist der obere
+/// Rahmen, wenn er gezeichnet wird, sonst die eigene Fläche. Ist beides
+/// durchsichtig, gibt es keine Grenze zu messen. Kein Hintergrund am
+/// Elternelement heißt `UNTESTED`, nicht ein Vergleich gegen Weiß.
+fn bedienelement_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if !ist_auswahlelement(n) || doc.bounds(n).is_some_and(|b| b.is_empty()) {
+            continue;
+        }
+        let Some(stil) = doc.computed_style(n) else {
+            continue;
+        };
+        if !wird_dargestellt(&stil) || stil.appearance.as_deref() != Some("none") {
+            continue;
+        }
+        let rahmen = stil.border_top_width_px.is_some_and(|w| w > 0.0)
+            && !matches!(stil.border_top_style.as_deref(), Some("none" | "hidden"));
+        let grenze = if rahmen {
+            stil.border_top_color
+        } else {
+            stil.own_background_color
+        };
+        let Some(grenze) = grenze.filter(|c| c.a > 0) else {
+            continue;
+        };
+        let hinten = n
+            .parent()
+            .and_then(|p| doc.computed_style(p))
+            .and_then(|s| s.background_color);
+        let Some(hinten) = hinten else {
+            out.push(
+                Finding::untested(
+                    "contrast/control-undetermined",
+                    pick!(
+                        locale,
+                        "The contrast of this custom control cannot be determined — the host \
+                         could not resolve the background behind it. Check it by hand.",
+                        "Der Kontrast dieses selbst gezeichneten Bedienelements ist nicht \
+                         bestimmbar — der Host konnte den Hintergrund dahinter nicht auflösen. \
+                         Von Hand prüfen.",
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.4.11"])
+                .at(at(n.id())),
+            );
+            continue;
+        };
+        let wert = verhaeltnis(ueber(grenze, hinten), hinten);
+        if wert >= 3.0 {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "contrast/control-insufficient",
+                tr!(
+                    locale,
+                    "The boundary of this custom control reaches {wert:.2}:1 against its \
+                     background; 3:1 is required.",
+                    "Die Grenze dieses selbst gezeichneten Bedienelements erreicht {wert:.2}:1 \
+                     gegenüber ihrem Hintergrund, gefordert sind 3:1.",
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["1.4.11"])
+            .with_evidence(belege(wert, 3.0))
+            .at(at(n.id())),
+        );
+    }
+}
+
+const KONTRAST_BEDIENELEMENT: Meta = Meta {
+    ids: &[
+        "contrast/control-insufficient",
+        "contrast/control-undetermined",
+    ],
+    tier: Tier::Rendering,
+    scope: Scope::Rendered,
+    wcag: &["1.4.11"],
+    severity: Severity::Medium,
+    help: "A custom-drawn checkbox, radio button, switch or slider (appearance: none) needs \
+           a boundary with a contrast ratio of at least 3:1 against its background.",
+    #[cfg(feature = "de")]
+    help_de: "Ein selbst gezeichnetes Kontrollkästchen, Optionsfeld, Schalter oder \
+              Schieberegler (appearance: none) braucht eine Grenze mit mindestens 3:1 \
+              gegenüber seinem Hintergrund.",
+};
+
 const KONTRAST: Meta = Meta {
     ids: &["contrast/text-insufficient", "contrast/text-undetermined"],
     tier: Tier::Rendering,
@@ -421,6 +525,7 @@ const KONTRAST_ERHOEHT: Meta = Meta {
 pub(crate) const METAS: &[Meta] = &[
     KONTRAST,
     KONTRAST_ERHOEHT,
+    KONTRAST_BEDIENELEMENT,
     heuristik::METAS[0],
     heuristik::METAS[1],
     heuristik::METAS[2],
@@ -438,6 +543,7 @@ pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
     let funktionen = [
         text_kontrast as fn(&D, Locale, &mut Vec<Finding>),
         text_kontrast_erhoeht,
+        bedienelement_kontrast,
     ]
     .into_iter()
     .chain(heuristik::funktionen::<D>())

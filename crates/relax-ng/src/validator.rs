@@ -284,8 +284,15 @@ fn validate_element_content<E: Element>(
     }
 
     // Children are ordered.
-    for child in element.children() {
+    let children: Vec<_> = element.children().collect();
+    // §6.2.7 weak match: next to other children, whitespace-only text is
+    // stripped before matching, not offered to the pattern. Offering it
+    // lets a `text` further on consume it and so skip an optional element
+    // that has to come first — `<fieldset> <legend>` would lose its legend.
+    let strip_whitespace = children.len() > 1;
+    for child in children {
         match child {
+            Content::Text(text) if strip_whitespace && text.trim().is_empty() => {}
             Content::Text(text) => {
                 let derived = deriv_text(&pattern, &text, definitions, registry, &context);
                 if matches!(derived, Pattern::NotAllowed) {

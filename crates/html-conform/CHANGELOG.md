@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-23
+
+### Fixed
+- Inter-element whitespace before a leading optional child no longer breaks the content model: `<fieldset> <legend>`, `<figure> <figcaption>`, `<details> <summary>` and `<table> <caption>` were reported as "unexpected element" (barrierlab#41, auditmysite#738). The cause was in `relax-ng` 0.2.0, which offered whitespace-only text to the pattern next to other children instead of stripping it (RELAX NG §6.2.7). Bumped `relax-ng` to 0.2.1.
+
+### Added
+- `assertion.elements.track-multiple-default`: more than one `track` with `default` in the same `audio`/`video` (vnu's message). The differential corpus caught this case before only by accident, through the whitespace bug above.
+
 ## [0.3.1] - 2026-09-29
 
 ### Fixed

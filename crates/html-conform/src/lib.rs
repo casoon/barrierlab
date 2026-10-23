@@ -110,6 +110,24 @@ mod tests {
     }
 
     #[test]
+    fn whitespace_before_a_leading_optional_child_is_ignored() {
+        // barrierlab#41: inter-element whitespace before `legend` (and the
+        // other "optionally X first, then flow content" models) is not text.
+        for body in [
+            "<fieldset> <legend>F</legend> <div>x</div></fieldset>",
+            "<figure> <figcaption>F</figcaption> <img src=a.png alt=x></figure>",
+            "<details> <summary>F</summary> <p>x</p></details>",
+            "<table> <caption>F</caption> <tr><td>x</td></tr></table>",
+        ] {
+            let report = check(&format!(
+                "<!doctype html><html lang=en><title>t</title>{body}"
+            ))
+            .expect("HTML5 parsing should recover");
+            assert!(report.findings.is_empty(), "{body}: {:?}", report.findings);
+        }
+    }
+
+    #[test]
     fn parser_diagnostics_can_be_excluded() {
         // Otherwise fully schema-conformant (has a <title>, per
         // schema/html5/meta.rnc's required head.inner) so that excluding

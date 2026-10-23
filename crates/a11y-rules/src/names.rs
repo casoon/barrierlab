@@ -12,7 +12,10 @@
 //! für die ARIA einen Namen verlangt, laufen unter `names/required-missing` —
 //! die Rolle steht in der Meldung, nicht in der Kennung.
 
-use a11y_dom::{NameSource, Node, NodeId, NodeKind, Semantics, ancestors, descendants, elements};
+use a11y_dom::{
+    NameSource, Node, NodeId, NodeKind, ScopedId, Semantics, ancestors, descendants, elements,
+    scoped_id,
+};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
@@ -62,18 +65,19 @@ const NAME_PFLICHT: &[&str] = &[
 /// Ob ein natives Formularfeld überhaupt eine Beschriftung behauptet — dieselbe
 /// Prüfung wie `forms/label-missing`. Fehlt sie, meldet jene Regel das Feld;
 /// hier bleibt der Fall, dass die Beschriftung da ist, aber leer ausgeht.
-fn beschriftung_behauptet<'a, N: Node<'a>>(n: N, label_for: &[&str]) -> bool {
+fn beschriftung_behauptet<'a, N: Node<'a>>(n: N, label_for: &[ScopedId]) -> bool {
     n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
         || n.has_attr("aria-labelledby")
-        || n.attr("id").is_some_and(|id| label_for.contains(&id))
+        || n.attr("id")
+            .is_some_and(|id| label_for.contains(&scoped_id(n, id)))
         || ancestors(n).any(|a| a.is_element("label"))
         || n.attr("title").is_some_and(|v| !v.trim().is_empty())
 }
 
 pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let label_for: Vec<&str> = elements(doc)
+    let label_for: Vec<ScopedId> = elements(doc)
         .filter(|n| n.is_element("label"))
-        .filter_map(|n| n.attr("for"))
+        .filter_map(|n| n.attr("for").map(|f| scoped_id(n, f)))
         .collect();
 
     for n in elements(doc) {

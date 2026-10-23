@@ -8,7 +8,7 @@
 //! Für Hosts mit eigener Baumdarstellung (`scraper::Html`, ein AXTree) ist sie
 //! nicht gedacht — die implementieren die Traits direkt über ihre eigenen Typen.
 
-use crate::tree::{Document, Node, NodeId, NodeKind};
+use crate::tree::{Document, Node, NodeId, NodeKind, TreeScope};
 
 #[derive(Debug)]
 struct Entry {
@@ -18,6 +18,7 @@ struct Entry {
     parent: Option<u32>,
     children: Vec<u32>,
     attrs: Vec<(String, String)>,
+    scope: u32,
 }
 
 /// Ein Dokument als flache Knotenliste.
@@ -31,6 +32,8 @@ impl Arena {
         ArenaBuilder {
             arena: Arena::default(),
             open: Vec::new(),
+            scopes: vec![0],
+            next_scope: 1,
         }
     }
 
@@ -110,6 +113,10 @@ impl<'a> Node<'a> for ArenaNode<'a> {
     fn text(self) -> &'a str {
         &self.entry().text
     }
+
+    fn tree_scope(self) -> TreeScope {
+        TreeScope(self.entry().scope)
+    }
 }
 
 impl Document for Arena {
@@ -151,6 +158,9 @@ impl Document for Arena {
 pub struct ArenaBuilder {
     arena: Arena,
     open: Vec<u32>,
+    /// Die Bereiche, in die neue Knoten fallen; oben der aktuelle.
+    scopes: Vec<u32>,
+    next_scope: u32,
 }
 
 impl ArenaBuilder {
@@ -164,6 +174,7 @@ impl ArenaBuilder {
             parent,
             children: Vec::new(),
             attrs: Vec::new(),
+            scope: *self.scopes.last().expect("Dokumentbereich bleibt liegen"),
         });
         if let Some(p) = parent {
             self.arena.nodes[p as usize].children.push(idx);
@@ -198,6 +209,34 @@ impl ArenaBuilder {
     /// Schließt das gerade offene Element.
     pub fn close(mut self) -> Self {
         self.open.pop();
+        self
+    }
+
+    /// Beginnt eine Shadow Root: Was danach geöffnet wird, gehört zu einem
+    /// neuen Baumbereich, bis [`ArenaBuilder::end_scope`] ihn schließt. Die
+    /// Knoten hängen im flachen Baum unter dem gerade offenen Host.
+    pub fn shadow_root(mut self) -> Self {
+        self.scopes.push(self.next_scope);
+        self.next_scope += 1;
+        self
+    }
+
+    /// Beginnt per `<slot>` eingesetzten Inhalt: Er gehört zum Bereich außen
+    /// um die aktuelle Shadow Root, nicht zu ihr. Schließen mit
+    /// [`ArenaBuilder::end_scope`].
+    pub fn slotted(mut self) -> Self {
+        let n = self.scopes.len();
+        let aussen = if n >= 2 { self.scopes[n - 2] } else { 0 };
+        self.scopes.push(aussen);
+        self
+    }
+
+    /// Schließt den mit [`ArenaBuilder::shadow_root`] oder
+    /// [`ArenaBuilder::slotted`] begonnenen Bereich.
+    pub fn end_scope(mut self) -> Self {
+        if self.scopes.len() > 1 {
+            self.scopes.pop();
+        }
         self
     }
 

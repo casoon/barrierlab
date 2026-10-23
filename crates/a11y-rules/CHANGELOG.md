@@ -5,6 +5,46 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.23.0] - 2026-10-23
+
+### Changed (Baumbereiche, #23)
+
+- Alle ID-Verweise lösen je Baumbereich auf (`ids/duplicate`,
+  `aria/reference-missing`, `aria/owns-conflict`, `popover/target-missing`,
+  `label[for]`, `headers`, `form`, `aria-describedby` in den Formularregeln,
+  Tooltips, Visualisierungen). **Befunde ändern sich für Dokumente mit Shadow
+  DOM**, wenn der Host die Bereiche liefert: gleiche IDs in getrennten Roots
+  sind kein Duplikat mehr; ein Verweis aus dem Light DOM in eine Shadow Root
+  ist `aria/reference-missing`; ein `<label for>` über die Grenze lässt
+  `forms/label-missing` stehen. Ohne Shadow DOM unverändert.
+
+### Added
+
+- Checkliste: sieben neue `manual/*`-Punkte für die Prüfhinweise, die
+  auditmysite bisher selbst erzeugte (#39, casoon/auditmysite#722). Wie die
+  übrigen `UNTESTED`, einmal je Seite und nur mit Anlass:
+
+  | Kennung | WCAG | Anlass |
+  |---|---|---|
+  | `manual/pointer-gestures` | 2.5.1 | `draggable`, Touch-/Zeiger-Handler im Markup, Karussell- und Kartenbibliotheken (`swiper`, `slick`, `leaflet` …) |
+  | `manual/motion-actuation` | 2.5.4 | Inline-Skript mit `devicemotion`/`deviceorientation` (eigene Regel, `Scope::Markup`) |
+  | `manual/no-timing` | 2.2.3 | Felder oder `meta refresh` |
+  | `manual/interruptions` | 2.2.4 | Live-Region, `role=alert/status/log/marquee/timer`, `<dialog>`, `meta refresh` |
+  | `manual/re-authenticating` | 2.2.5 | Anmeldung (Passwortfeld, Captcha) |
+  | `manual/unusual-words` | 3.1.3 | Text |
+  | `manual/help` | 3.3.5 | Felder |
+
+  Bisher stand bei auditmysite jeder dieser Hinweise auf jeder Seite, auch
+  ohne Anlass.
+- `contrast/control-insufficient` (FAIL, mittel) und
+  `contrast/control-undetermined` (UNTESTED), WCAG 1.4.11: die Grenze eines
+  selbst gezeichneten Kontrollkästchens, Optionsfelds, Schalters oder
+  Schiebereglers (`appearance: none`) braucht 3:1 gegenüber dem Hintergrund
+  des Elternelements. Grenze ist der obere Rahmen, sonst die eigene Fläche.
+  Native Elemente werden nicht gemessen. Port von auditmysites
+  `non_text_contrast_css` (#21, casoon/auditmysite#698); anders als dort kein
+  Vergleich gegen Weiß, wenn der Hintergrund fehlt, sondern `UNTESTED`.
+
 ## [0.22.0] - 2026-10-05
 
 Vor dem Release hat auditmysite die neuen Felder in echten Läufen gefüllt:

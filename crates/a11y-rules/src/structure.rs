@@ -3,8 +3,8 @@
 use std::collections::{HashMap, HashSet};
 
 use a11y_dom::{
-    Document, Node, NodeId, Tier, ancestors, closest, elements, has_text, self_and_descendants,
-    subtree_text,
+    Document, Node, NodeId, ScopedId, Tier, ancestors, closest, elements, has_text, scoped_id,
+    self_and_descendants, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -803,13 +803,13 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Ein Fragmentlink auf den Anfang des Hauptinhalts ist ein Sprunglink,
     // wo immer er steht (G1, ARIA11) — auch hinter den Links eines
     // Cookie-Banners. Beleg: bund.de, „Inhalt" → `#main` (barrierlab#26).
-    let ids: HashMap<&str, _> = elements(doc)
-        .filter_map(|n| n.attr("id").map(|id| (id, n)))
+    let ids: HashMap<ScopedId, _> = elements(doc)
+        .filter_map(|n| n.attr("id").map(|id| (scoped_id(n, id), n)))
         .collect();
     let zum_hauptinhalt = links.iter().any(|n| {
         n.attr("href")
             .filter(|h| ist_fragmentlink(h))
-            .and_then(|h| ids.get(&h[1..]))
+            .and_then(|h| ids.get(&scoped_id(*n, &h[1..])))
             .is_some_and(|ziel| beginnt_hauptinhalt(*ziel))
     });
     // Am Ziel erkannt, wie axe `isSkipLink`: Links vor dem ersten, der die
@@ -956,9 +956,9 @@ fn suspicious_alt(alt: &str) -> bool {
 /// verschachteltes `<label>`, `aria-label`, `aria-labelledby`, `title`. Dafür
 /// braucht es keine Accessible-Name-Berechnung.
 fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let label_targets: HashSet<&str> = elements(doc)
+    let label_targets: HashSet<ScopedId> = elements(doc)
         .filter(|n| n.is_element("label"))
-        .filter_map(|n| n.attr("for"))
+        .filter_map(|n| n.attr("for").map(|f| scoped_id(n, f)))
         .collect();
 
     for n in elements(doc) {
@@ -976,7 +976,9 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
         let aria_named = n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
             || n.has_attr("aria-labelledby");
-        let for_labelled = n.attr("id").is_some_and(|id| label_targets.contains(id));
+        let for_labelled = n
+            .attr("id")
+            .is_some_and(|id| label_targets.contains(&scoped_id(n, id)));
         let wrapped = closest(n, "label").is_some();
         let titled = n.attr("title").is_some_and(|v| !v.trim().is_empty());
 
@@ -1052,7 +1054,9 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 }
 
 fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let ids: HashSet<&str> = elements(doc).filter_map(|n| n.attr("id")).collect();
+    let ids: HashSet<ScopedId> = elements(doc)
+        .filter_map(|n| n.attr("id").map(|id| scoped_id(n, id)))
+        .collect();
 
     for n in elements(doc) {
         for rel in [
@@ -1106,7 +1110,7 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             }
             let fehlend: Vec<&str> = v
                 .split_whitespace()
-                .filter(|id| !ids.contains(id))
+                .filter(|id| !ids.contains(&scoped_id(n, id)))
                 .collect();
             if !fehlend.is_empty() {
                 out.push(
@@ -1154,11 +1158,11 @@ const IDREF_ATTRS: &[&str] = &[
 /// Rolle oder Wert der Beziehung bricht. Gemeldet als 4.1.2, dieselbe Zuordnung,
 /// die axe-core für `duplicate-id-aria` führt.
 fn duplicate_ids<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut referenced: HashSet<&str> = HashSet::new();
+    let mut referenced: HashSet<ScopedId> = HashSet::new();
     for n in elements(doc) {
         for attr in IDREF_ATTRS {
             if let Some(value) = n.attr(attr) {
-                referenced.extend(value.split_whitespace());
+                referenced.extend(value.split_whitespace().map(|id| scoped_id(n, id)));
             }
         }
     }
@@ -1166,13 +1170,13 @@ fn duplicate_ids<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         return;
     }
 
-    let mut seen: HashMap<&str, usize> = HashMap::new();
+    let mut seen: HashMap<ScopedId, usize> = HashMap::new();
     for n in elements(doc) {
         let Some(id) = n.attr("id") else { continue };
-        if id.is_empty() || !referenced.contains(id) {
+        if id.is_empty() || !referenced.contains(&scoped_id(n, id)) {
             continue;
         }
-        let count = seen.entry(id).or_insert(0);
+        let count = seen.entry(scoped_id(n, id)).or_insert(0);
         *count += 1;
         if *count == 2 {
             out.push(
@@ -1800,6 +1804,7 @@ pub const METAS: &[Meta] = &[
         help_de: "Ein offener Dialog darf nicht inert sein.",
     },
     crate::checkliste::META,
+    crate::checkliste::META_BEWEGUNG,
     Meta {
         ids: &["forms/autocomplete-invalid"],
         tier: Tier::Structure,
@@ -2156,7 +2161,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 56] {
+fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
     [
         lang,
         title,
@@ -2181,6 +2186,7 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 56] {
         crate::aria::popover,
         crate::aria::inert_dialog,
         crate::checkliste::checkliste,
+        crate::checkliste::bewegung,
         crate::forms::autocomplete_invalid,
         crate::forms::error_unidentified,
         crate::forms::group_missing,

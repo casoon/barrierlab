@@ -96,7 +96,7 @@ pub fn description<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Str
         ctx.besucht.insert(node.id());
         let mut teile = Vec::new();
         for id in v.split_whitespace() {
-            if let Some(ziel) = ids.get(id) {
+            if let Some(ziel) = ids.get(node, id) {
                 teile.push(berechne(&mut ctx, ziel, true, true));
             }
         }
@@ -155,7 +155,7 @@ fn berechne<'a, N: Node<'a>>(
         if let Some(v) = node.attr("aria-labelledby") {
             let mut teile = Vec::new();
             for id in v.split_whitespace() {
-                if let Some(ziel) = ctx.ids.get(id) {
+                if let Some(ziel) = ctx.ids.get(node, id) {
                     teile.push(berechne(ctx, ziel, true, true));
                 }
             }
@@ -406,15 +406,13 @@ fn label_elemente<'a, N: Node<'a>>(
 ) -> Option<String> {
     let mut teile: Vec<String> = Vec::new();
 
-    if let Some(id) = node.attr("id") {
-        for &l in ids.labels_for(id) {
-            if per_stil_versteckt(stil, l, true) {
-                continue;
-            }
-            let t = teilbaum_text(stil, l, Some(node));
-            if !t.trim().is_empty() {
-                teile.push(t);
-            }
+    for &l in ids.labels_for(node) {
+        if per_stil_versteckt(stil, l, true) {
+            continue;
+        }
+        let t = teilbaum_text(stil, l, Some(node));
+        if !t.trim().is_empty() {
+            teile.push(t);
         }
     }
     if teile.is_empty() {
