@@ -5,6 +5,27 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Added
+
+- Checkliste: sieben neue `manual/*`-Punkte für die Prüfhinweise, die
+  auditmysite bisher selbst erzeugte (#39, casoon/auditmysite#722). Wie die
+  übrigen `UNTESTED`, einmal je Seite und nur mit Anlass:
+
+  | Kennung | WCAG | Anlass |
+  |---|---|---|
+  | `manual/pointer-gestures` | 2.5.1 | `draggable`, Touch-/Zeiger-Handler im Markup, Karussell- und Kartenbibliotheken (`swiper`, `slick`, `leaflet` …) |
+  | `manual/motion-actuation` | 2.5.4 | Inline-Skript mit `devicemotion`/`deviceorientation` (eigene Regel, `Scope::Markup`) |
+  | `manual/no-timing` | 2.2.3 | Felder oder `meta refresh` |
+  | `manual/interruptions` | 2.2.4 | Live-Region, `role=alert/status/log/marquee/timer`, `<dialog>`, `meta refresh` |
+  | `manual/re-authenticating` | 2.2.5 | Anmeldung (Passwortfeld, Captcha) |
+  | `manual/unusual-words` | 3.1.3 | Text |
+  | `manual/help` | 3.3.5 | Felder |
+
+  Bisher stand bei auditmysite jeder dieser Hinweise auf jeder Seite, auch
+  ohne Anlass.
+
 ## [0.22.0] - 2026-10-05
 
 Vor dem Release hat auditmysite die neuen Felder in echten Läufen gefüllt:

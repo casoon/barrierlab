@@ -402,9 +402,13 @@ fn checkliste_erscheint_nur_mit_anlass() {
         [
             "manual/authentication",
             "manual/error-handling",
+            "manual/help",
             "manual/image-alternatives",
             "manual/media-alternatives",
+            "manual/no-timing",
+            "manual/re-authenticating",
             "manual/timing",
+            "manual/unusual-words",
             "manual/use-of-color",
             "manual/visual-structure",
         ],
@@ -417,6 +421,49 @@ fn checkliste_erscheint_nur_mit_anlass() {
             .all(|f| f.outcome == a11y_report::Outcome::Untested
                 && f.location.node.as_deref() == Some("0"))
     );
+}
+
+#[test]
+fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
+    let arena = seite()
+        .open("div")
+        .attr("class", "swiper-container")
+        .close()
+        .open("div")
+        .attr("aria-live", "polite")
+        .close()
+        .open("script")
+        .text("addEventListener('devicemotion', shake)")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run(&arena);
+    let mut punkte = manuell(&r);
+    punkte.sort_unstable();
+    assert_eq!(
+        punkte,
+        [
+            "manual/interruptions",
+            "manual/motion-actuation",
+            "manual/pointer-gestures",
+        ]
+    );
+
+    let still = seite()
+        .open("div")
+        .attr("class", "swipe")
+        .close()
+        .open("div")
+        .attr("aria-live", "off")
+        .close()
+        .open("script")
+        .text("console.log(1)")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(manuell(&run(&still)).is_empty());
 }
 
 #[test]
