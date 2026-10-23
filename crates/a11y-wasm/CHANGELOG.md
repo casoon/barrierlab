@@ -2,6 +2,14 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.13.0] - 2026-10-23
+
+Gebaut auf `a11y-rules` 0.23.0: sieben neue `manual/*`-Punkte und
+`contrast/control-*` (1.4.11). Baumbereiche (Shadow DOM) liefert dieses Paket
+noch nicht; alle Knoten liegen im Dokumentbereich, die ID-Auflösung bleibt
+damit wie bisher. Die neuen Stilfelder für 1.4.11 sind `None`. Keine Änderung
+an der Schnittstelle.
+
 ## [0.12.0] - 2026-10-05
 
 Gebaut auf `a11y-rules` 0.22.0: `targets/size-enhanced` (2.5.5) und die
