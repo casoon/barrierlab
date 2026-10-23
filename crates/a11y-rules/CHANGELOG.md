@@ -25,6 +25,14 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
   Bisher stand bei auditmysite jeder dieser Hinweise auf jeder Seite, auch
   ohne Anlass.
+- `contrast/control-insufficient` (FAIL, mittel) und
+  `contrast/control-undetermined` (UNTESTED), WCAG 1.4.11: die Grenze eines
+  selbst gezeichneten Kontrollkästchens, Optionsfelds, Schalters oder
+  Schiebereglers (`appearance: none`) braucht 3:1 gegenüber dem Hintergrund
+  des Elternelements. Grenze ist der obere Rahmen, sonst die eigene Fläche.
+  Native Elemente werden nicht gemessen. Port von auditmysites
+  `non_text_contrast_css` (#21, casoon/auditmysite#698); anders als dort kein
+  Vergleich gegen Weiß, wenn der Hintergrund fehlt, sondern `UNTESTED`.
 
 ## [0.22.0] - 2026-10-05
 

@@ -12,7 +12,9 @@ use a11y_report::{Outcome, Report};
 use a11y_rules::run_with_rendering;
 
 /// `data-fg`/`data-bg` als `rrggbb`, `data-px` die Schriftgröße,
-/// `data-hidden` für optisch verborgen, `data-covered` für überdeckt.
+/// `data-hidden` für optisch verborgen, `data-covered` für überdeckt;
+/// `data-appearance`, `data-border` (Farbe des oberen Rahmens, 1 px) und
+/// `data-own` (eigene Fläche) für selbst gezeichnete Bedienelemente.
 struct Host<'a> {
     doc: &'a Arena,
     /// Ob der Host `visually_hidden` misst.
@@ -52,6 +54,11 @@ impl Rendering for Host<'_> {
             font_weight: Some(400),
             display: Some("block".into()),
             visibility: Some("visible".into()),
+            appearance: node.attr("data-appearance").map(Into::into),
+            border_top_style: node.attr("data-border").map(|_| "solid".into()),
+            border_top_width_px: node.attr("data-border").map(|_| 1.0),
+            border_top_color: node.attr("data-border").map(farbe),
+            own_background_color: node.attr("data-own").map(farbe),
             ..Default::default()
         })
     }
@@ -293,4 +300,80 @@ fn ohne_abtastung_nicht_bestimmbar() {
         urteile(&pruefe(&arena, true), "contrast/text-undetermined"),
         [Outcome::Untested]
     );
+}
+
+// --- 1.4.11 Bedienelemente (auditmysite `non_text_contrast_css`) ------------
+
+fn kaestchen(attrs: &[(&str, &str)]) -> Arena {
+    seite(|b| {
+        let mut b = b.open("input").attr("type", "checkbox");
+        for (k, v) in attrs {
+            b = b.attr(k, v);
+        }
+        b.close()
+    })
+}
+
+/// #cccccc auf Weiß sind 1,61:1 — das blasse Kästchen, das axe und Pa11y in
+/// der Praxis finden.
+#[test]
+fn blasser_rahmen_eines_eigenen_kaestchens_verfehlt() {
+    let r = pruefe(
+        &kaestchen(&[("data-appearance", "none"), ("data-border", "cccccc")]),
+        false,
+    );
+    assert_eq!(
+        urteile(&r, "contrast/control-insufficient"),
+        [Outcome::Fail]
+    );
+}
+
+#[test]
+fn dunkler_rahmen_besteht() {
+    let r = pruefe(
+        &kaestchen(&[("data-appearance", "none"), ("data-border", "767676")]),
+        false,
+    );
+    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
+}
+
+#[test]
+fn ohne_rahmen_zaehlt_die_eigene_flaeche() {
+    let r = pruefe(
+        &kaestchen(&[("data-appearance", "none"), ("data-own", "eeeeee")]),
+        false,
+    );
+    assert_eq!(
+        urteile(&r, "contrast/control-insufficient"),
+        [Outcome::Fail]
+    );
+}
+
+/// Ein natives Kästchen zeichnet der Browser; sein Kontrast steht in keinem
+/// berechneten Stil.
+#[test]
+fn natives_kaestchen_wird_nicht_gemessen() {
+    let r = pruefe(&kaestchen(&[("data-border", "cccccc")]), false);
+    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
+    assert!(urteile(&r, "contrast/control-undetermined").is_empty());
+}
+
+#[test]
+fn ohne_hintergrund_dahinter_nicht_bestimmbar() {
+    let arena = seite(|b| {
+        b.open("div")
+            .attr("data-bg", "none")
+            .open("span")
+            .attr("role", "switch")
+            .attr("data-appearance", "none")
+            .attr("data-border", "cccccc")
+            .close()
+            .close()
+    });
+    let r = pruefe(&arena, false);
+    assert_eq!(
+        urteile(&r, "contrast/control-undetermined"),
+        [Outcome::Untested]
+    );
+    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
 }
