@@ -7,6 +7,15 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added (Baumbereiche, #23)
+
+- `TreeScope`, `ScopedId`, `scoped_id` und `Node::tree_scope()`: IDs gelten
+  je Baumbereich, dem Dokument oder einer Shadow Root. Die Methode hat eine
+  Vorgabe (ein einziger Bereich), ein Host ohne Shadow DOM ändert nichts.
+- `ArenaBuilder::shadow_root()`, `slotted()` und `end_scope()`. Per `<slot>`
+  eingesetzter Inhalt gehört zum äußeren Bereich, auch wenn er im flachen Baum
+  unter der Shadow Root hängt.
+
 ### Added
 
 - `ComputedStyle::appearance`, `border_top_style`, `border_top_width_px`,

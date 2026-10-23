@@ -14,7 +14,8 @@
 use std::collections::HashSet;
 
 use a11y_dom::{
-    ComputedStyle, Document, Layout, NameSource, Node, NodeId, NodeKind, Rect, Rendering, Semantics,
+    ComputedStyle, Document, Layout, NameSource, Node, NodeId, NodeKind, Rect, Rendering,
+    Semantics, TreeScope,
 };
 
 /// Welche Knoten eine Regel betrachtet.
@@ -203,6 +204,10 @@ impl<'a, N: Node<'a>> Node<'a> for SichtNode<'a, N> {
 
     fn attr(self, name: &str) -> Option<&'a str> {
         self.inner.attr(name)
+    }
+
+    fn tree_scope(self) -> TreeScope {
+        self.inner.tree_scope()
     }
 
     fn document_order(self, other: Self) -> std::cmp::Ordering {

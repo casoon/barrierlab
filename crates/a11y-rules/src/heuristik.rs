@@ -22,8 +22,8 @@
 use std::collections::{HashMap, HashSet};
 
 use a11y_dom::{
-    Layout, Node, NodeId, NodeKind, Rect, Rendering, Tier, ancestors, closest, descendants,
-    elements, subtree_text,
+    Layout, Node, NodeId, NodeKind, Rect, Rendering, ScopedId, Tier, ancestors, closest,
+    descendants, elements, scoped_id, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -218,7 +218,7 @@ const ANHALTEN: &[&str] = &[
 /// Der sichtbare oder beschriftende Text eines Bedienelements — eine Näherung
 /// ohne Namensberechnung (Tier 3 hat keine Semantik), aber mit den Wegen, auf
 /// denen eine Checkbox „Pause motion" üblicherweise beschriftet ist.
-fn beschriftung<'a, N: Node<'a>>(n: N, labels: &HashMap<&str, Vec<N>>) -> String {
+fn beschriftung<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> String {
     let mut s = String::new();
     for a in ["aria-label", "title", "value"] {
         if let Some(v) = n.attr(a) {
@@ -231,7 +231,7 @@ fn beschriftung<'a, N: Node<'a>>(n: N, labels: &HashMap<&str, Vec<N>>) -> String
         s.push_str(&subtree_text(l));
     }
     if let Some(id) = n.attr("id") {
-        for l in labels.get(id).into_iter().flatten() {
+        for l in labels.get(&scoped_id(n, id)).into_iter().flatten() {
             s.push_str(&subtree_text(*l));
         }
     }
@@ -244,11 +244,11 @@ fn ist_schalter<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Die `<label for>` des Dokuments, nach Ziel-ID.
-fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<&'a str, Vec<D::N<'a>>> {
-    let mut m: HashMap<&str, Vec<D::N<'a>>> = HashMap::new();
+fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<ScopedId<'a>, Vec<D::N<'a>>> {
+    let mut m: HashMap<ScopedId<'a>, Vec<D::N<'a>>> = HashMap::new();
     for l in elements(doc).filter(|n| n.is_element("label")) {
         if let Some(ziel) = l.attr("for") {
-            m.entry(ziel).or_default().push(l);
+            m.entry(scoped_id(l, ziel)).or_default().push(l);
         }
     }
     m
@@ -472,11 +472,13 @@ fn im_fliesstext<'a, N: Node<'a>>(n: N) -> bool {
 
 /// Eine Checkbox oder ein Radio mit Label: Das Label ist Teil des Ziels, ein
 /// Klick darauf trifft das Feld.
-fn ziel_durch_label<'a, N: Node<'a>>(n: N, labels: &HashMap<&str, Vec<N>>) -> bool {
+fn ziel_durch_label<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> bool {
     n.is_element("input")
         && n.attr("type")
             .is_some_and(|t| matches!(t.trim().to_ascii_lowercase().as_str(), "checkbox" | "radio"))
-        && (closest(n, "label").is_some() || n.attr("id").is_some_and(|id| labels.contains_key(id)))
+        && (closest(n, "label").is_some()
+            || n.attr("id")
+                .is_some_and(|id| labels.contains_key(&scoped_id(n, id))))
 }
 
 fn mitte(r: &Rect) -> (f32, f32) {

@@ -20,8 +20,8 @@
 use std::collections::HashMap;
 
 use a11y_dom::{
-    Document, NameSource, Node, NodeId, Semantics, ancestors, closest, descendants, elements,
-    subtree_text,
+    Document, NameSource, Node, NodeId, ScopedId, Semantics, ancestors, closest, descendants,
+    elements, scoped_id, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -43,11 +43,11 @@ fn ist_input<'a, N: Node<'a>>(n: N, typen: &[&str]) -> bool {
 }
 
 /// Die IDs der Sicht. Was in einem versteckten Teilbaum liegt, fehlt darin.
-fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<&'a str, D::N<'a>> {
+fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<ScopedId<'a>, D::N<'a>> {
     let mut ids = HashMap::new();
     for n in elements(doc) {
         if let Some(id) = n.attr("id") {
-            ids.entry(id).or_insert(n);
+            ids.entry(scoped_id(n, id)).or_insert(n);
         }
     }
     ids
@@ -55,9 +55,12 @@ fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<&'a str, D::N<'a>> {
 
 /// Der Formulareigentümer nach HTML: das `form`-Attribut, sonst das nächste
 /// `<form>` darüber.
-fn formular<'a, N: Node<'a>>(n: N, ids: &HashMap<&str, N>) -> Option<N> {
+fn formular<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Option<N> {
     match n.attr("form") {
-        Some(f) => ids.get(f.trim()).copied().filter(|f| f.is_element("form")),
+        Some(f) => ids
+            .get(&scoped_id(n, f.trim()))
+            .copied()
+            .filter(|f| f.is_element("form")),
         None => closest(n, "form"),
     }
 }
@@ -68,11 +71,15 @@ fn formular<'a, N: Node<'a>>(n: N, ids: &HashMap<&str, N>) -> Option<N> {
 /// Ein Ziel außerhalb der Sicht ist entweder versteckt — dann trägt es nach
 /// accname trotzdem zur Beschreibung bei — oder fehlt ganz, und das meldet
 /// `aria/reference-missing`. Beide Fälle zählen hier als beschrieben.
-fn beschreibung<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<&str, N>) -> (String, bool) {
+fn beschreibung<'a, N: Node<'a>>(
+    n: N,
+    attr: &str,
+    ids: &HashMap<ScopedId<'a>, N>,
+) -> (String, bool) {
     let mut text = String::new();
     let mut offen = false;
     for t in n.attr(attr).unwrap_or("").split_whitespace() {
-        match ids.get(t) {
+        match ids.get(&scoped_id(n, t)) {
             Some(z) => {
                 text.push_str(z.attr("aria-label").unwrap_or(""));
                 text.push(' ');
@@ -85,7 +92,7 @@ fn beschreibung<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<&str, N>) -> (S
     (text, offen)
 }
 
-fn beschrieben<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<&str, N>) -> bool {
+fn beschrieben<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<ScopedId<'a>, N>) -> bool {
     let (text, offen) = beschreibung(n, attr, ids);
     offen || !text.trim().is_empty()
 }
@@ -576,10 +583,10 @@ fn angabe(text: &str) -> Option<usize> {
 /// meinen, entscheidet ein Mensch. Geprüft wird je `<form>`, wie in
 /// auditmysite.
 pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut labels: HashMap<&str, Vec<_>> = HashMap::new();
+    let mut labels: HashMap<ScopedId, Vec<_>> = HashMap::new();
     for l in elements(doc).filter(|n| n.is_element("label")) {
         if let Some(f) = l.attr("for") {
-            labels.entry(f).or_default().push(l);
+            labels.entry(scoped_id(l, f)).or_default().push(l);
         }
     }
     for form in elements(doc).filter(|n| n.is_element("form")) {
@@ -612,7 +619,7 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
                 text.push_str(n.attr(a).unwrap_or(""));
                 text.push(' ');
             }
-            if let Some(l) = n.attr("id").and_then(|id| labels.get(id)) {
+            if let Some(l) = n.attr("id").and_then(|id| labels.get(&scoped_id(n, id))) {
                 text.push_str(&subtree_text(l[0]));
                 text.push(' ');
             }
@@ -1331,9 +1338,9 @@ const TITEL_ROLLEN: &[&str] = &[
 /// und keine andere Beschriftung da ist. Mit `placeholder` meldet
 /// `forms/placeholder-as-label` denselben Mangel.
 pub(crate) fn title_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let label_for: Vec<&str> = elements(doc)
+    let label_for: Vec<ScopedId> = elements(doc)
         .filter(|n| n.is_element("label"))
-        .filter_map(|n| n.attr("for"))
+        .filter_map(|n| n.attr("for").map(|f| scoped_id(n, f)))
         .collect();
     for n in elements(doc) {
         if doc.is_ignored(n) || n.has_attr("placeholder") {
@@ -1353,7 +1360,9 @@ pub(crate) fn title_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
                     && !n
                         .attr("aria-labelledby")
                         .is_some_and(|v| !v.trim().is_empty())
-                    && !n.attr("id").is_some_and(|id| label_for.contains(&id))
+                    && !n
+                        .attr("id")
+                        .is_some_and(|id| label_for.contains(&scoped_id(n, id)))
                     && closest(n, "label").is_none()
             }
         };
