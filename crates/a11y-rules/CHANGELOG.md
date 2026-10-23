@@ -7,6 +7,17 @@ die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Changed (Baumbereiche, #23)
+
+- Alle ID-Verweise lösen je Baumbereich auf (`ids/duplicate`,
+  `aria/reference-missing`, `aria/owns-conflict`, `popover/target-missing`,
+  `label[for]`, `headers`, `form`, `aria-describedby` in den Formularregeln,
+  Tooltips, Visualisierungen). **Befunde ändern sich für Dokumente mit Shadow
+  DOM**, wenn der Host die Bereiche liefert: gleiche IDs in getrennten Roots
+  sind kein Duplikat mehr; ein Verweis aus dem Light DOM in eine Shadow Root
+  ist `aria/reference-missing`; ein `<label for>` über die Grenze lässt
+  `forms/label-missing` stehen. Ohne Shadow DOM unverändert.
+
 ### Added
 
 - Checkliste: sieben neue `manual/*`-Punkte für die Prüfhinweise, die

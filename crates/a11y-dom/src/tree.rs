@@ -14,6 +14,32 @@ impl std::fmt::Display for NodeId {
     }
 }
 
+/// Ein Baumbereich: das Dokument oder eine Shadow Root. IDs gelten je
+/// Bereich — zwei Shadow Roots dürfen dieselbe ID tragen, und ein Verweis
+/// trifft nur Ziele im eigenen Bereich (DOM, „tree scope").
+///
+/// `TreeScope(0)` ist das Dokument. Welche Zahl eine Shadow Root bekommt,
+/// bestimmt der Host; sie muss nur je Dokument eindeutig sein.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct TreeScope(pub u32);
+
+/// Eine ID samt dem Bereich, in dem sie gilt — der Schlüssel jeder
+/// ID-Tabelle. Beim Eintragen der Bereich des Elements mit der ID, beim
+/// Nachschlagen der Bereich des verweisenden Elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ScopedId<'a> {
+    pub scope: TreeScope,
+    pub id: &'a str,
+}
+
+/// Die ID `id`, gesehen aus dem Bereich von `node`.
+pub fn scoped_id<'a, N: Node<'a>>(node: N, id: &'a str) -> ScopedId<'a> {
+    ScopedId {
+        scope: node.tree_scope(),
+        id,
+    }
+}
+
 /// Welche Art von Knoten. Kommentare, Processing Instructions und Doctype
 /// kommen nicht vor — für Accessibility-Regeln sind sie ohne Bedeutung, und
 /// sie wegzulassen spart bei großen Dokumenten spürbar Arbeit.
@@ -63,6 +89,16 @@ pub trait Node<'a>: Copy + Eq + 'a {
 
     fn is_element(self, local_name: &str) -> bool {
         self.kind() == NodeKind::Element && self.local_name() == local_name
+    }
+
+    /// Der Baumbereich, zu dem der Knoten gehört. Vorgabe: das Dokument —
+    /// ein Host ohne Shadow DOM muss nichts tun.
+    ///
+    /// Maßgeblich ist der DOM-Baum, nicht der flache Baum: Ein per `<slot>`
+    /// eingesetzter Knoten gehört zum äußeren Bereich, auch wenn er im
+    /// flachen Baum unter dem Slot in der Shadow Root hängt.
+    fn tree_scope(self) -> TreeScope {
+        TreeScope::default()
     }
 
     /// Dokumentreihenfolge. Wird für Regeln gebraucht, die auf Abfolge prüfen —

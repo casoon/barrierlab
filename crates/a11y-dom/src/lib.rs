@@ -65,8 +65,8 @@ pub use tiers::{
     Semantics, Tier,
 };
 pub use tree::{
-    Document, Node, NodeId, NodeKind, ancestors, closest, descendants, elements, has_text,
-    self_and_descendants, subtree_text,
+    Document, Node, NodeId, NodeKind, ScopedId, TreeScope, ancestors, closest, descendants,
+    elements, has_text, scoped_id, self_and_descendants, subtree_text,
 };
 
 #[cfg(test)]
