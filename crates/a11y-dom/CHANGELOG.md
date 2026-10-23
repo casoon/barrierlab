@@ -5,6 +5,15 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Added
+
+- `ComputedStyle::appearance`, `border_top_style`, `border_top_width_px`,
+  `border_top_color` und `own_background_color` (das eigene, nicht über die
+  Vorfahren aufgelöste `background-color`) — für den Kontrast selbst
+  gezeichneter Bedienelemente nach 1.4.11 (#21).
+
 ## [0.22.0] - 2026-10-05
 
 ### Added
