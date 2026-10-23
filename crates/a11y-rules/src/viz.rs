@@ -144,6 +144,7 @@ fn beschrieben_in<'a, N: Node<'a>>(fig: N, text: N) -> bool {
     };
     std::iter::once(fig).chain(descendants(fig)).any(|r| {
         r != text
+            && r.tree_scope() == text.tree_scope()
             && !ancestors(r).any(|a| a == text)
             && verborgen_durch(r).is_none()
             && ["aria-describedby", "aria-details"]

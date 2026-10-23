@@ -10,7 +10,9 @@
 
 use std::collections::HashSet;
 
-use a11y_dom::{Document, Node, NodeId, ancestors, descendants, elements, has_text};
+use a11y_dom::{
+    Document, Node, NodeId, ScopedId, ancestors, descendants, elements, has_text, scoped_id,
+};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
@@ -119,14 +121,15 @@ fn name_vor_title<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Ein Eingabefeld mit zugeordnetem `<label>` — umschließend oder über `for`.
-fn hat_label<'a, N: Node<'a>>(n: N, label_for: &HashSet<&str>) -> bool {
+fn hat_label<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
     ancestors(n).any(|a| a.is_element("label"))
-        || n.attr("id").is_some_and(|id| label_for.contains(id))
+        || n.attr("id")
+            .is_some_and(|id| label_for.contains(&scoped_id(n, id)))
 }
 
 /// Bedienelemente, deren Name nur aus `title` stammen kann. Textfelder meldet
 /// `forms/title-only-label`; `submit` und `reset` haben einen Vorgabenamen.
-fn kandidat<'a, N: Node<'a>>(n: N, label_for: &HashSet<&str>) -> bool {
+fn kandidat<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
     match n.local_name() {
         "button" => !name_vor_title(n),
         "a" => n.has_attr("href") && !name_vor_title(n),
@@ -150,9 +153,9 @@ fn kandidat<'a, N: Node<'a>>(n: N, label_for: &HashSet<&str>) -> bool {
 /// Beleg: auditmysite-Korpus `name_description_best_practice`
 /// (`<button title="Search">` mit verstecktem SVG).
 pub(crate) fn title_only<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let label_for: HashSet<&str> = elements(doc)
+    let label_for: HashSet<ScopedId> = elements(doc)
         .filter(|n| n.is_element("label"))
-        .filter_map(|n| n.attr("for"))
+        .filter_map(|n| n.attr("for").map(|f| scoped_id(n, f)))
         .collect();
     for n in elements(doc) {
         if !nicht_leer(n.attr("title")) || !kandidat(n, &label_for) {
@@ -189,17 +192,19 @@ pub(crate) fn title_only<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
 /// erst beim Überfahren. Beleg: auditmysite-Korpus `forms_and_misc`
 /// (`<div role="tooltip" id="orphan-tip">`).
 pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let verwiesen: HashSet<&str> = elements(doc)
+    let verwiesen: HashSet<ScopedId> = elements(doc)
         .flat_map(|n| {
             ["aria-describedby", "aria-labelledby"]
                 .into_iter()
                 .filter_map(move |a| n.attr(a))
+                .flat_map(str::split_whitespace)
+                .map(move |id| scoped_id(n, id))
         })
-        .flat_map(str::split_whitespace)
         .collect();
     for n in elements(doc) {
         if explizite_rolle(n) != Some("tooltip")
-            || n.attr("id").is_some_and(|id| verwiesen.contains(id))
+            || n.attr("id")
+                .is_some_and(|id| verwiesen.contains(&scoped_id(n, id)))
         {
             continue;
         }

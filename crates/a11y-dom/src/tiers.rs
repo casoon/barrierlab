@@ -207,6 +207,19 @@ pub struct ComputedStyle {
     pub font_family: Option<String>,
     /// Berechnetes `border-bottom-style`.
     pub border_bottom_style: Option<String>,
+    /// Berechnetes `appearance`. `none` heißt: Der Autor zeichnet das
+    /// Bedienelement selbst, sein Kontrast liegt nicht beim Browser.
+    pub appearance: Option<String>,
+    /// Berechnetes `border-top-style`.
+    pub border_top_style: Option<String>,
+    /// Berechnetes `border-top-width` in CSS-Pixeln.
+    pub border_top_width_px: Option<f32>,
+    /// Berechnetes `border-top-color`, mit Alpha.
+    pub border_top_color: Option<Color>,
+    /// Das eigene `background-color` des Elements, mit Alpha und *nicht*
+    /// über die Vorfahren aufgelöst — anders als [`Self::background_color`].
+    /// Die Fläche eines selbst gezeichneten Bedienelements.
+    pub own_background_color: Option<Color>,
 }
 
 /// Layout-Angaben für heuristische Prüfungen — was eine Regel braucht, um eine

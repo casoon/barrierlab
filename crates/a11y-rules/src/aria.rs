@@ -11,7 +11,9 @@
 //! [`ATTRIBUTE`], kein Vec je Rolle — das Crate läuft auch als WASM, und dort
 //! zählt jedes Kilobyte.
 
-use a11y_dom::{Document, Node, NodeId, Semantics, ancestors, descendants, elements};
+use a11y_dom::{
+    Document, Node, NodeId, ScopedId, Semantics, ancestors, descendants, elements, scoped_id,
+};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
@@ -360,17 +362,18 @@ pub(crate) fn attribute_values<D: Document>(doc: &D, locale: Locale, out: &mut V
 pub(crate) fn owns_conflict<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Vec statt HashMap: aria-owns ist selten, und jede weitere
     // HashMap-Ausprägung kostet im WASM-Build Platz.
-    let mut erster: Vec<(&str, NodeId)> = Vec::new();
-    let mut gemeldet: Vec<&str> = Vec::new();
+    let mut erster: Vec<(ScopedId, NodeId)> = Vec::new();
+    let mut gemeldet: Vec<ScopedId> = Vec::new();
     for n in elements(doc) {
         let Some(v) = n.attr("aria-owns") else {
             continue;
         };
         for id in v.split_whitespace() {
-            match erster.iter().find(|(i, _)| *i == id) {
-                None => erster.push((id, n.id())),
-                Some((_, e)) if *e != n.id() && !gemeldet.contains(&id) => {
-                    gemeldet.push(id);
+            let schluessel = scoped_id(n, id);
+            match erster.iter().find(|(i, _)| *i == schluessel) {
+                None => erster.push((schluessel, n.id())),
+                Some((_, e)) if *e != n.id() && !gemeldet.contains(&schluessel) => {
+                    gemeldet.push(schluessel);
                     out.push(
                     Finding::fail(
                         "aria/owns-conflict",
@@ -520,7 +523,7 @@ pub(crate) fn popover<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
     }
     for n in ausloeser {
         let ziel = n.attr("popovertarget").unwrap_or("");
-        let (kennung, text) = match mit_id(doc, ziel) {
+        let (kennung, text) = match mit_id(doc, n, ziel) {
             None => (
                 "popover/target-missing",
                 tr!(
@@ -817,21 +820,22 @@ fn wirksame_rolle<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Wirksam {
     }
 }
 
-/// Das erste Element mit dieser ID, wie `getElementById`.
-fn mit_id<'n, D: Document>(doc: &'n D, id: &str) -> Option<D::N<'n>> {
-    elements(doc).find(|n| n.attr("id") == Some(id))
+/// Das erste Element mit dieser ID im Bereich von `von`, wie
+/// `getElementById` auf dessen Wurzel.
+fn mit_id<'n, D: Document>(doc: &'n D, von: D::N<'n>, id: &str) -> Option<D::N<'n>> {
+    elements(doc).find(|n| n.attr("id") == Some(id) && n.tree_scope() == von.tree_scope())
 }
 
 /// Wem ein Element per `aria-owns` gehört, nach ID. Eine Liste statt einer
 /// HashMap: aria-owns ist selten, und jede HashMap-Ausprägung kostet im
 /// WASM-Build Platz.
-type Besitzer<'n, N> = Vec<(&'n str, N)>;
+type Besitzer<'n, N> = Vec<(ScopedId<'n>, N)>;
 
 fn besitzer<'n, D: Document>(doc: &'n D) -> Besitzer<'n, D::N<'n>> {
     let mut m: Besitzer<'n, D::N<'n>> = Vec::new();
     for n in elements(doc) {
         if let Some(v) = n.attr("aria-owns") {
-            for id in v.split_whitespace() {
+            for id in v.split_whitespace().map(|id| scoped_id(n, id)) {
                 if !m.iter().any(|(i, _)| *i == id) {
                     m.push((id, n));
                 }
@@ -842,7 +846,7 @@ fn besitzer<'n, D: Document>(doc: &'n D) -> Besitzer<'n, D::N<'n>> {
 }
 
 fn besitzer_von<'n, N: Node<'n>>(besitzer: &Besitzer<'n, N>, n: N) -> Option<N> {
-    let id = n.attr("id")?;
+    let id = scoped_id(n, n.attr("id")?);
     besitzer.iter().find(|(i, _)| *i == id).map(|(_, b)| *b)
 }
 
@@ -890,7 +894,7 @@ fn besitzt<'n, D: Semantics>(
         .attr("aria-owns")
         .into_iter()
         .flat_map(str::split_whitespace)
-        .filter_map(|id| mit_id(doc, id))
+        .filter_map(|id| mit_id(doc, n, id))
         .collect();
     stapel.extend(n.children());
     let mut irgendwas = false;

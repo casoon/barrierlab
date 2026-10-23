@@ -5,6 +5,24 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.23.0] - 2026-10-23
+
+### Added (Baumbereiche, #23)
+
+- `TreeScope`, `ScopedId`, `scoped_id` und `Node::tree_scope()`: IDs gelten
+  je Baumbereich, dem Dokument oder einer Shadow Root. Die Methode hat eine
+  Vorgabe (ein einziger Bereich), ein Host ohne Shadow DOM ändert nichts.
+- `ArenaBuilder::shadow_root()`, `slotted()` und `end_scope()`. Per `<slot>`
+  eingesetzter Inhalt gehört zum äußeren Bereich, auch wenn er im flachen Baum
+  unter der Shadow Root hängt.
+
+### Added
+
+- `ComputedStyle::appearance`, `border_top_style`, `border_top_width_px`,
+  `border_top_color` und `own_background_color` (das eigene, nicht über die
+  Vorfahren aufgelöste `background-color`) — für den Kontrast selbst
+  gezeichneter Bedienelemente nach 1.4.11 (#21).
+
 ## [0.22.0] - 2026-10-05
 
 ### Added

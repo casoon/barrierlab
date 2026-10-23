@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.22.0"
+version = "0.23.0"
 
 [[package]]
 name = "a11y-perception"
@@ -16,7 +16,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -24,7 +24,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -47,7 +47,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "a11y-dom",
 ]
@@ -316,7 +316,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "criterion",
  "csp-parse",
@@ -634,7 +634,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "relax-ng"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "regex",
  "roxmltree",

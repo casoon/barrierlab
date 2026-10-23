@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use a11y_dom::{Document, Node, NodeId, NodeKind, ancestors, elements};
+use a11y_dom::{Document, Node, NodeId, NodeKind, ScopedId, ancestors, elements, scoped_id};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
@@ -173,10 +173,10 @@ fn tabelle_von<'a, N: Node<'a>>(n: N) -> Option<N> {
 /// Attribut. Beleg: auditmysite-Korpus `forms_extended`
 /// (`<td headers="does-not-exist">`).
 pub(crate) fn headers_attr<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut ids: HashMap<&str, D::N<'_>> = HashMap::new();
+    let mut ids: HashMap<ScopedId, D::N<'_>> = HashMap::new();
     for n in elements(doc) {
         if let Some(id) = n.attr("id") {
-            ids.entry(id).or_insert(n);
+            ids.entry(scoped_id(n, id)).or_insert(n);
         }
     }
     for zelle in elements(doc) {
@@ -188,7 +188,7 @@ pub(crate) fn headers_attr<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
         }
         let tabelle = tabelle_von(zelle);
         let ungueltig = headers.split_whitespace().find(|r| {
-            ids.get(r).is_none_or(|k| {
+            ids.get(&scoped_id(zelle, r)).is_none_or(|k| {
                 !ist_kopfzelle(*k)
                     || *k == zelle
                     || tabelle.is_some_and(|t| tabelle_von(*k) != Some(t))

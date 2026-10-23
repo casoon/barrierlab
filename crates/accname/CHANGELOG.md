@@ -5,6 +5,16 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.23.0] - 2026-10-23
+
+### Changed (Baumbereiche, #23)
+
+- **Bruch:** `IdIndex::get(from, id)` statt `get(id)`, und
+  `IdIndex::labels_for(control)` statt `labels_for(id)`. Verweise lösen nur
+  im Bereich des verweisenden Knotens auf: `aria-labelledby` aus dem Light
+  DOM in eine Shadow Root ergibt keinen Namen mehr, ein `<label for>` über
+  eine Bereichsgrenze beschriftet nicht. Ohne Shadow DOM unverändert.
+
 ## [0.22.0] - 2026-10-05
 
 ### Changed
