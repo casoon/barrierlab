@@ -5,6 +5,12 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.24.1] - 2026-10-25
+
+### Fixed
+
+- `zoom/viewport-scale-limited` (Begrenzung zwischen 200 % und 500 %) trägt nicht mehr 1.4.4, sondern das Schlagwort `best-practice`: 1.4.4 verlangt 200 % und ist in diesem Fall erfüllt. Hosts zählten den Befund bisher als WCAG-Verstoß (auditmysite, inros-lackner.de mit `maximum-scale=2`). Der Verstoß unter 200 % (`zoom/viewport-locked`) trägt 1.4.4 weiter.
+
 ## [0.24.0] - 2026-10-24
 
 Linkzweck aus auditmysite (`link_purpose`, `link_purpose_link_only`;

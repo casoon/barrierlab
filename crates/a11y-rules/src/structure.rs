@@ -328,7 +328,10 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
         // Zwischen 200 % und 500 %: 1.4.4 ist erfüllt, aber die Begrenzung
         // trifft alle, die stärker vergrößern müssen. Eigene Kennung statt
-        // derselben, weil der eine Fall ein Verstoß ist und der andere nicht.
+        // derselben, weil der eine Fall ein Verstoß ist und der andere nicht —
+        // und deshalb ohne 1.4.4, als Best Practice. Mit 1.4.4 zählten Hosts
+        // ihn als WCAG-Verstoß (auditmysite, inros-lackner.de mit
+        // `maximum-scale=2`).
         if max.is_some_and(|v| v < 5.0) {
             out.push(
                 Finding::fail(
@@ -340,7 +343,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_wcag(["1.4.4"])
+                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }
