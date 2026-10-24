@@ -21,6 +21,7 @@ export default defineConfig({
       name: 'BarrierLab',
       description:
         'Gemeinsame Bibliotheken für Web-Audits: Zugänglichkeit, HTML-Konformanz, Wahrnehmung.',
+      tagline: 'Bibliotheken für Web-Audits',
       repo: 'casoon/barrierlab',
       lang: 'de',
       license: 'MIT',
