@@ -2,6 +2,14 @@
 
 Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [0.14.0] - 2026-10-24
+
+Gebaut auf `a11y-rules` 0.24.0: `links/generic-name` mit der Liste aus
+auditmysite (15 Sprachen) und Kontextauswertung, neu `links/url-name`,
+`links/single-character-name`, `links/new-window-unannounced` und
+`links/purpose-link-only`. 154,4 KB gzip. Keine Änderung an der
+Schnittstelle.
+
 ## [0.13.0] - 2026-10-23
 
 Gebaut auf `a11y-rules` 0.23.0: sieben neue `manual/*`-Punkte und
