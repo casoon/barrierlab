@@ -1517,6 +1517,40 @@ fn viewport_unterscheidet_verstoss_von_begrenzung() {
 }
 
 #[test]
+fn viewport_begrenzung_ist_best_practice_ohne_1_4_4() {
+    // Zwischen 200 und 500 % ist 1.4.4 erfüllt; der Befund darf das
+    // Kriterium nicht tragen, sonst zählen Hosts ihn als Verstoß. Der
+    // Verstoß unter 200 % trägt es weiter.
+    let befund = |content: &str, id: &str| {
+        let doc = Arena::builder()
+            .open("html")
+            .attr("lang", "de")
+            .open("head")
+            .open("title")
+            .text("x")
+            .close()
+            .open("meta")
+            .attr("name", "viewport")
+            .attr("content", content)
+            .close()
+            .close()
+            .close()
+            .build();
+        run(&doc)
+            .findings
+            .into_iter()
+            .find(|f| f.rule_id == id)
+            .expect("Befund")
+    };
+    let begrenzt = befund("maximum-scale=2", "zoom/viewport-scale-limited");
+    assert!(begrenzt.wcag.is_empty(), "{:?}", begrenzt.wcag);
+    assert_eq!(begrenzt.tags, vec!["best-practice".to_string()]);
+
+    let gesperrt = befund("maximum-scale=1", "zoom/viewport-locked");
+    assert_eq!(gesperrt.wcag, vec!["1.4.4".to_string()]);
+}
+
+#[test]
 fn listeneintrag_ausserhalb_einer_liste() {
     // Die Listenpruefung laeuft ueber Listen und sieht nur, was darin steht.
     // Ein verwaistes <li> wird dabei nie besucht.
