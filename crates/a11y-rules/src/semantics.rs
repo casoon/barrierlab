@@ -126,67 +126,517 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Wer eine Liste aller Links abruft — Screenreader können das —, hört eine
 /// Folge von „mehr", „hier", „weiterlesen". Welcher wohin führt, steht nur im
 /// umgebenden Text, den diese Liste nicht mitliefert.
-/// Bewusst eng gehalten. „Start" oder „Info" sind als Navigationsbeschriftung
-/// völlig in Ordnung — aufgenommen ist nur, was auf den umgebenden Satz
-/// angewiesen ist („hier", „dieser Link") oder gar nichts benennt („mehr",
-/// „weiterlesen").
+///
+/// Übernommen aus auditmysites `link_purpose` (casoon/barrierlab#13, Plan 98):
+/// 15 Sprachen und, anders als die frühere enge Liste, auch Beschriftungen wie
+/// „Start", „Weiter", „Download" oder „Info" — sie benennen eine Handlung,
+/// aber kein Ziel. Ob der Zusammenhang das Ziel klärt, entscheidet
+/// [`hat_kontext`] über die Schwere, nicht über die Meldung.
 const NICHTSSAGEND: &[&str] = &[
-    "hier",
+    // Englisch
+    "click here",
+    "click",
+    "here",
+    "read more",
+    "more",
+    "learn more",
+    "info",
+    "information",
+    "details",
+    "link",
+    "this link",
+    "link here",
+    "go",
+    "continue",
+    "download",
+    "view",
+    "see more",
+    "see all",
+    "read",
+    "start",
+    "begin",
+    "submit",
+    "next",
+    "previous",
+    // Deutsch
+    "weiterlesen",
+    "mehr erfahren",
+    "mehr",
+    "mehr dazu",
+    "mehr lesen",
     "hier klicken",
     "klick hier",
     "klicken sie hier",
     "siehe hier",
-    "mehr",
-    "mehr dazu",
-    "mehr erfahren",
-    "mehr lesen",
-    "weiterlesen",
+    "hier",
     "weiter",
     "dieser link",
-    "link",
+    "alle anzeigen",
+    "ansehen",
+    "jetzt lesen",
+    "öffnen",
+    // Französisch
+    "cliquez ici",
+    "ici",
+    "en savoir plus",
+    "lire la suite",
+    "lire plus",
+    "plus",
+    "voir plus",
+    "voir tout",
+    "continuer",
+    "télécharger",
+    "suivant",
+    "précédent",
+    "commencer",
+    // Spanisch
+    "haz clic aquí",
+    "aquí",
+    "leer más",
+    "más",
+    "saber más",
+    "ver más",
+    "ver todo",
+    "continuar",
+    "descargar",
+    "siguiente",
+    "anterior",
+    "empezar",
+    // Italienisch
+    "clicca qui",
+    "qui",
+    "leggi di più",
+    "scopri di più",
+    "più",
+    "vedi di più",
+    "vedi tutto",
+    "continua",
+    "scarica",
+    "successivo",
+    "precedente",
+    "inizia",
+    // Portugiesisch
+    "clique aqui",
+    "aqui",
+    "leia mais",
+    "saiba mais",
+    "mais",
+    "ver mais",
+    "ver tudo",
+    "baixar",
+    "próximo",
+    "começar",
+    // Niederländisch
+    "klik hier",
+    "meer lezen",
+    "lees meer",
+    "meer",
+    "bekijk meer",
+    "volgende",
+    "vorige",
+    "downloaden",
+    "beginnen",
+    // Schwedisch
+    "klicka här",
+    "här",
+    "läs mer",
+    "mer",
+    "nästa",
+    "föregående",
+    "ladda ner",
+    "börja",
+    // Norwegisch
+    "klikk her",
+    "her",
+    "les mer",
+    "neste",
+    "forrige",
+    "last ned",
+    // Dänisch
+    "klik her",
+    "læs mere",
+    "mere",
+    "næste",
+    // Finnisch
+    "klikkaa tästä",
+    "lue lisää",
+    "lisää",
+    "seuraava",
+    "edellinen",
+    "lataa",
+    // Polnisch
+    "kliknij tutaj",
+    "tutaj",
+    "czytaj więcej",
+    "więcej",
+    "następny",
+    "poprzedni",
+    "pobierz",
+    // Türkisch
+    "buraya tıklayın",
+    "devamını oku",
+    "daha fazla",
+    "sonraki",
+    "önceki",
+    "indir",
+    // Tschechisch / Slowakisch
+    "klikněte zde",
+    "zde",
+    "číst více",
+    "více",
+    "další",
+    "předchozí",
+    "stáhnout",
+    // Rumänisch
+    "citește mai mult",
+    "mai mult",
+    "următor",
+    "descărcați",
+    // Ungarisch
+    "tovább olvas",
+    "több",
+    "következő",
+    "előző",
+    "letöltés",
+    // Zeichen
+    "...",
+    ">",
+    ">>",
+    "→",
+];
+
+/// Für 2.4.9 (AAA) reicht der Linktext allein; Zusammenhang zählt nicht.
+/// Deshalb eine weitere Liste: Wörter, die eine Handlung oder Gattung nennen,
+/// aber kein Ziel („Seite", „Artikel", „Öffnen", „Speichern").
+const NUR_LINKTEXT_VAGE: &[&str] = &[
     "click here",
     "click",
     "here",
-    "more",
     "read more",
+    "more",
     "learn more",
-    "see more",
-    "continue",
+    "info",
+    "information",
+    "details",
+    "link",
     "this link",
-    "link here",
+    "go",
+    "continue",
+    "download",
+    "view",
+    "see more",
+    "see all",
+    "read",
+    "start",
+    "begin",
+    "submit",
+    "next",
+    "previous",
+    "page",
+    "article",
+    "post",
+    "weiterlesen",
+    "mehr erfahren",
+    "mehr",
+    "hier klicken",
+    "klicken sie hier",
+    "hier",
+    "weiter",
+    "alle anzeigen",
+    "ansehen",
+    "jetzt lesen",
+    "öffnen",
+    "seite",
+    "yes",
+    "no",
+    "ok",
+    "okay",
+    "open",
+    "close",
+    "show",
+    "hide",
+    "toggle",
+    "buy",
+    "get",
+    "add",
+    "remove",
+    "edit",
+    "update",
+    "save",
+    "send",
+    "try",
+    "see",
+    "...",
+    ">",
+    ">>",
+    "→",
+    "»",
 ];
 
+/// Der Vergleichsschlüssel eines Linknamens: getrimmt, kleingeschrieben,
+/// ohne nachgestellte Pfeile und Satzzeichen („Mehr ›", „Weiter →").
+fn schluessel(name: &str) -> String {
+    let t = name.trim().to_lowercase();
+    let ohne = t
+        .trim_end_matches(['.', '!', '…', '>', '›', '→', '»'])
+        .trim();
+    // Reine Zeichenfolgen wie „..." oder „>>" behalten ihre Zeichen.
+    if ohne.is_empty() { t } else { ohne.to_string() }
+}
+
+/// Links mit `href`, die der Baum nicht auslässt, samt Namen.
+fn links_mit_namen<'d, D: Semantics>(doc: &'d D) -> Vec<(D::N<'d>, String)> {
+    elements(doc)
+        .filter(|n| n.is_element("a") && n.has_attr("href") && !doc.is_ignored(*n))
+        .filter_map(|n| {
+            let name = doc.accessible_name(n)?;
+            let name = name.trim().to_string();
+            (!name.is_empty()).then_some((n, name))
+        })
+        .collect()
+}
+
+/// Ob der Zusammenhang den Zweck des Links programmatisch bestimmbar macht
+/// (2.4.4): eine Beschreibung, Text direkt daneben, Text im selben Absatz,
+/// Listenpunkt oder in derselben Tabellenzelle, oder eine Überschrift davor im
+/// selben Baustein (Technik H80) — eine Teaserkarte „Building Information
+/// Modeling … Mehr erfahren" nennt ihren Zweck so. Höchstens vier Ebenen
+/// hinauf: eine ferne Überschrift ist kein Kontext für diesen Link.
+fn hat_kontext<'a, D: Semantics>(doc: &'a D, link: D::N<'a>) -> bool {
+    if link
+        .attr("aria-describedby")
+        .is_some_and(|v| !v.trim().is_empty())
+    {
+        return true;
+    }
+    let mut aktuell = link;
+    for tiefe in 0..4 {
+        let Some(eltern) = aktuell.parent() else {
+            break;
+        };
+        let behaelter = ["p", "li", "td", "th", "dd"]
+            .iter()
+            .any(|t| eltern.is_element(t));
+        if (tiefe == 0 && text_daneben(doc, eltern, link))
+            || (behaelter && text_ausser(doc, eltern, link))
+            || ueberschrift_davor(doc, eltern, link)
+        {
+            return true;
+        }
+        aktuell = eltern;
+    }
+    false
+}
+
+fn sichtbarer_text<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
+    n.kind() == a11y_dom::NodeKind::Text
+        && !n.text().trim().is_empty()
+        && !a11y_dom::ancestors(n).any(|a| doc.is_ignored(a))
+}
+
+/// Text als Geschwister des Links, unmittelbar oder in einem `<p>`.
+fn text_daneben<'a, D: Semantics>(doc: &'a D, eltern: D::N<'a>, link: D::N<'a>) -> bool {
+    eltern.children().filter(|k| *k != link).any(|k| {
+        sichtbarer_text(doc, k)
+            || (k.is_element("p") && a11y_dom::descendants(k).any(|t| sichtbarer_text(doc, t)))
+    })
+}
+
+/// Text irgendwo im Teilbaum von `behaelter`, außerhalb des Links.
+fn text_ausser<'a, D: Semantics>(doc: &'a D, behaelter: D::N<'a>, link: D::N<'a>) -> bool {
+    a11y_dom::descendants(behaelter)
+        .filter(|n| *n != link && !a11y_dom::ancestors(*n).any(|a| a == link))
+        .any(|n| sichtbarer_text(doc, n))
+}
+
+/// Eine benannte Überschrift in `behaelter`, die in Dokumentreihenfolge vor
+/// dem Link steht.
+fn ueberschrift_davor<'a, D: Semantics>(doc: &'a D, behaelter: D::N<'a>, link: D::N<'a>) -> bool {
+    for n in a11y_dom::descendants(behaelter) {
+        if n == link {
+            return false;
+        }
+        let ist_ueberschrift = ["h1", "h2", "h3", "h4", "h5", "h6"]
+            .iter()
+            .any(|t| n.is_element(t))
+            || doc.role(n).as_deref() == Some("heading");
+        if ist_ueberschrift && !doc.is_ignored(n) && named(doc, n) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Heuristisch: Die Liste kann einen Namen treffen, der im Zusammenhang doch
-/// eindeutig ist. Deshalb `REVIEW`, nicht `FAIL`.
+/// eindeutig ist. Deshalb `REVIEW`, nicht `FAIL` — mit erkennbarem Kontext
+/// als Low, ohne als Medium.
 fn generic_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for n in elements(doc) {
-        if !n.is_element("a") || !n.has_attr("href") || doc.is_ignored(n) {
+    for (n, name) in links_mit_namen(doc) {
+        if !NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
             continue;
         }
-        let Some(name) = doc.accessible_name(n) else {
-            continue;
+        let kontext = hat_kontext(doc, n);
+        let meldung = if kontext {
+            tr!(
+                locale,
+                "The link text \"{}\" says nothing about its target; the surrounding text may explain it.",
+                "Der Linktext \"{}\" sagt nichts über das Ziel; der umgebende Text erklärt es womöglich.",
+                name
+            )
+        } else {
+            tr!(
+                locale,
+                "The link text \"{}\" says nothing about its target.",
+                "Der Linktext \"{}\" sagt nichts über das Ziel.",
+                name
+            )
         };
-        let key = name
-            .trim()
-            .trim_end_matches(['.', '!', '…', '>', '›', '→'])
-            .trim()
-            .to_lowercase();
-        if NICHTSSAGEND.contains(&key.as_str()) {
-            out.push(
-                Finding::review(
-                    "links/generic-name",
-                    tr!(
-                        locale,
-                        "The link text \"{}\" says nothing about its target.",
-                        "Der Linktext \"{}\" sagt nichts über das Ziel.",
-                        name.trim()
-                    ),
-                )
-                .with_severity(Severity::Medium)
+        out.push(
+            Finding::review("links/generic-name", meldung)
+                .with_severity(if kontext {
+                    Severity::Low
+                } else {
+                    Severity::Medium
+                })
                 .with_wcag(["2.4.4"])
                 .at(at(n.id())),
-            );
+        );
+    }
+}
+
+/// Eine nackte Adresse als Linktext („https://…", „www.…") — vorgelesen ein
+/// Zeichensalat, und sie sagt nicht, was dort steht. Mit erkennbarem Kontext
+/// keine Meldung.
+fn url_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for (n, name) in links_mit_namen(doc) {
+        if !sieht_aus_wie_url(&name) || hat_kontext(doc, n) {
+            continue;
         }
+        out.push(
+            Finding::review(
+                "links/url-name",
+                tr!(
+                    locale,
+                    "The link text is a bare address: \"{}\".",
+                    "Der Linktext ist eine nackte Adresse: \"{}\".",
+                    name
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["2.4.4"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+fn sieht_aus_wie_url(text: &str) -> bool {
+    let t = text.trim().to_lowercase();
+    t.starts_with("http://")
+        || t.starts_with("https://")
+        || t.starts_with("www.")
+        || (!t.contains(' ') && [".com", ".org", ".net"].iter().any(|e| t.contains(e)))
+}
+
+/// Ein einzelnes Zeichen als Linkname („x", „i"). Ziffern bleiben außen vor:
+/// Seitenzahlen einer Blätternavigation sind im Zusammenhang verständlich.
+/// Zeichen aus [`NICHTSSAGEND`] meldet `links/generic-name`.
+fn single_character_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for (n, name) in links_mit_namen(doc) {
+        let mut zeichen = name.chars();
+        let (Some(c), None) = (zeichen.next(), zeichen.next()) else {
+            continue;
+        };
+        if c.is_ascii_digit() || NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "links/single-character-name",
+                tr!(
+                    locale,
+                    "The link is named by a single character: \"{}\".",
+                    "Der Link heißt nur \"{}\" — ein einzelnes Zeichen.",
+                    name
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["2.4.4"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+/// Hinweise im Linknamen, dass ein neues Fenster oder Tab aufgeht.
+const NEUES_FENSTER: &[&str] = &[
+    "new window",
+    "new tab",
+    "opens in",
+    "(external)",
+    "external link",
+    "[external]",
+    "neues fenster",
+    "neuem fenster",
+    "neuen tab",
+    "neuer tab",
+    "neuem tab",
+    "öffnet in",
+    "externer link",
+    "(extern)",
+];
+
+/// `target="_blank"` ohne Ankündigung im Namen (Technik G201, 3.2.5 AAA).
+/// auditmysite prüfte hier `aria-haspopup` statt `target` — das traf nie den
+/// gemeinten Fall.
+fn new_window_links<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for (n, name) in links_mit_namen(doc) {
+        if !n
+            .attr("target")
+            .is_some_and(|t| t.trim().eq_ignore_ascii_case("_blank"))
+        {
+            continue;
+        }
+        let klein = name.to_lowercase();
+        if NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "links/new-window-unannounced",
+                tr!(
+                    locale,
+                    "The link \"{}\" opens a new window without saying so.",
+                    "Der Link \"{}\" öffnet ein neues Fenster, ohne es anzukündigen.",
+                    name
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["3.2.5"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+/// 2.4.9 (AAA): Der Linktext allein muss den Zweck nennen; Zusammenhang zählt
+/// hier nicht.
+fn purpose_link_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for (n, name) in links_mit_namen(doc) {
+        if !NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "links/purpose-link-only",
+                tr!(
+                    locale,
+                    "The link text \"{}\" does not name its purpose on its own.",
+                    "Der Linktext \"{}\" nennt seinen Zweck nicht für sich allein.",
+                    name
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["2.4.9"])
+            .at(at(n.id())),
+        );
     }
 }
 
@@ -290,6 +740,46 @@ pub const METAS: &[Meta] = &[
         help: "Link text should say where it leads without the surrounding sentence.",
         #[cfg(feature = "de")]
         help_de: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+    },
+    Meta {
+        ids: &["links/url-name"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.4"],
+        severity: Severity::Low,
+        help: "A bare address as link text does not say what the target contains.",
+        #[cfg(feature = "de")]
+        help_de: "Eine nackte Adresse als Linktext sagt nicht, was das Ziel enthält.",
+    },
+    Meta {
+        ids: &["links/single-character-name"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.4"],
+        severity: Severity::Medium,
+        help: "A single character does not name a link's target.",
+        #[cfg(feature = "de")]
+        help_de: "Ein einzelnes Zeichen benennt kein Linkziel.",
+    },
+    Meta {
+        ids: &["links/new-window-unannounced"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["3.2.5"],
+        severity: Severity::Low,
+        help: "Say in the link text when a link opens a new window or tab.",
+        #[cfg(feature = "de")]
+        help_de: "Im Linktext ankündigen, wenn ein Link ein neues Fenster oder Tab öffnet.",
+    },
+    Meta {
+        ids: &["links/purpose-link-only"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["2.4.9"],
+        severity: Severity::Low,
+        help: "The link text alone should name the link's purpose.",
+        #[cfg(feature = "de")]
+        help_de: "Der Linktext allein soll den Zweck des Links nennen.",
     },
     Meta {
         ids: &["aria/attribute-not-allowed", "aria/attribute-prohibited"],
@@ -504,13 +994,17 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 25] {
+fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
     [
         link_names,
         button_names,
         svg_names,
         ambiguous_link_names,
         generic_link_names,
+        url_link_names,
+        single_character_link_names,
+        new_window_links,
+        purpose_link_only,
         crate::aria::attributes_allowed,
         crate::aria::required_context,
         crate::names::required_names,
