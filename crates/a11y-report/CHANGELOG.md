@@ -5,6 +5,14 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Added
+
+- `FindingId` und `RootCauseId`: stabile Kennungen für einen Befund (Regel und Menge der normalisierten Selektoren) und eine Ursache (Regel und Selektor-Muster). Seitenübergreifend gleich, unabhängig von Reihenfolge und Knoten-IDs, über Versionen festgehalten (FNV-1a).
+- `normalize_selector` und `PAGEWIDE_SELECTOR`: die Form, in der zwei Seiten desselben Templates übereinstimmen.
+- `CauseConfidence`, `ImpactArea`, `EvidenceBasis`, `CriterionState`: Belegstärke einer Ursache und einer Auswirkung, Zustand eines Bewertungskriteriums.
+
 ## [0.24.1] - 2026-10-25
 
 ### Changed

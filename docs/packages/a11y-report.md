@@ -36,6 +36,9 @@ flowchart LR
 | `Finding`, `Evidence`, `Location` | ein Befund und woran er festgemacht ist |
 | `Report`, `RuleRun`, `NotRun`, `Summary` | was ein Lauf ergeben hat, einschließlich der Regeln, die nicht liefen |
 | `Extra` | hostspezifische Zusatzfelder, ohne den Vertrag zu brechen |
+| `FindingId`, `RootCauseId`, `normalize_selector` | stabile Kennung eines Befunds (Regel + Element-Muster) und einer Ursache, seitenübergreifend und über Läufe gleich |
+| `CauseConfidence`, `ImpactArea`, `EvidenceBasis` | wie gut eine gemeinsame Ursache und eine Auswirkung belegt sind |
+| `CriterionState` | Zustand eines Bewertungskriteriums; „nicht erkannt" ist nicht „nicht erfüllt"
 
 ## Abhängigkeiten
 
