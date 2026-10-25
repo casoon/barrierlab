@@ -59,11 +59,16 @@
 
 mod extra;
 mod finding;
+mod identity;
 mod outcome;
 mod report;
 
 pub use extra::Extra;
 pub use finding::{Evidence, Finding, Location};
+pub use identity::{
+    CauseConfidence, CriterionState, EvidenceBasis, FindingId, ImpactArea, PAGEWIDE_SELECTOR,
+    RootCauseId, normalize_selector,
+};
 pub use outcome::{Outcome, Severity, WcagLevel};
 pub use report::{NotRun, Report, RuleRun, Summary};
 
