@@ -10,7 +10,7 @@ einbindet, hängt davon ab, was es tun will.
 ## Regeln ausführen
 
 ```sh
-cargo add a11y-rules@0.10.0 a11y-dom@0.10.0 a11y-report@0.10.0
+cargo add a11y-rules@0.26.0 a11y-dom@0.26.0 a11y-report@0.26.0
 ```
 
 `a11y-rules` bringt die Regeln und die Einstiegsfunktionen `run`, `run_with_semantics`,
@@ -20,7 +20,7 @@ für den Bericht, den die Regeln zurückgeben.
 ## Accessible Name berechnen
 
 ```sh
-cargo add accname@0.10.0 a11y-dom@0.10.0
+cargo add accname@0.26.0 a11y-dom@0.26.0
 ```
 
 `accname` ist generisch über das Dokumentmodell aus `a11y-dom` und lässt sich ohne die Regeln
@@ -30,7 +30,7 @@ verwenden. Ein Host, der die Rolle und den Namen nicht selbst liefert, hängt es
 ## Nur das Berichtsmodell
 
 ```sh
-cargo add a11y-report@0.10.0
+cargo add a11y-report@0.26.0
 ```
 
 Für Werkzeuge, die eigene Prüfungen haben, aber denselben JSON-Vertrag sprechen wollen.

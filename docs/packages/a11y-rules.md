@@ -10,10 +10,11 @@ Build-Zeit, CI und laufende Seite. Ergebnis ist immer ein `Report` aus
 
 ## Stand
 
-0.10.1 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
+0.26.0 auf crates.io. Benutzt von auditmysite (`wcag/shared.rs` ruft
 `run_with_semantics`), astro-post-audit und liveaudit. Die Kennungen sind über
-alle Oberflächen stabil und in `Meta::ids` deklariert: 87 in Tier 1 (Struktur, davon 7 Checkliste und 7 Darstellungskonvention), 31 in Tier 2 (Semantik),
-15 in Tier 3 (Darstellung, davon 9 Heuristiken), 5 über Stylesheets.
+alle Oberflächen stabil und in `Meta::ids` deklariert: 94 in Tier 1 (Struktur),
+35 in Tier 2 (Semantik), 17 in Tier 3 (Darstellung), 5 über Stylesheets. Die
+vollständige Liste steht in der [Regelreferenz](../a11y/reference/regeln.mdx).
 
 ## Aufbau
 
