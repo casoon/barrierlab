@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "type": "flow",
+  "title": "Von den Bibliotheken zu den Werkzeugen",
+  "description": "Parser und ein gemeinsames Dokument- und Befundmodell tragen die Zugänglichkeitsregeln und die HTML-Konformanz; Wahrnehmung und Web-Checks rechnen eigenständig. Alles erscheint als Rust-Crates auf crates.io, die Regeln zusätzlich als WebAssembly-Paket auf npm. auditmysite, astro-post-audit und Relief binden die Crates ein, liveaudit das npm-Paket.",
+  "source": "Cargo.toml (Workspace), docs/consumers.md; Cargo.toml bzw. package.json der Werkzeuge, Stand 2026-10-14",
+  "width": 380,
+  "height": 560,
+  "flow": {
+    "nodes": [
+      {
+        "id": "parser",
+        "label": "Parser",
+        "sublabel": "HTML, CSS, CSP, XPath"
+      },
+      {
+        "id": "model",
+        "label": "Modelle",
+        "sublabel": "a11y-dom, a11y-report"
+      },
+      {
+        "id": "rules",
+        "label": "a11y-rules",
+        "sublabel": "WCAG 2.2, accname"
+      },
+      {
+        "id": "conform",
+        "label": "html-conform",
+        "sublabel": "Konformanz"
+      },
+      {
+        "id": "more",
+        "label": "Wahrnehmung",
+        "sublabel": "a11y-perception, web-checks"
+      },
+      {
+        "id": "reg",
+        "label": "crates.io, npm",
+        "sublabel": "15 Crates, a11y-wasm",
+        "kind": "io"
+      },
+      {
+        "id": "tools",
+        "label": "auditmysite, astro-post-audit",
+        "sublabel": "Relief, liveaudit",
+        "kind": "external"
+      }
+    ],
+    "edges": [
+      {
+        "from": "model",
+        "to": "rules"
+      },
+      {
+        "from": "parser",
+        "to": "rules"
+      },
+      {
+        "from": "parser",
+        "to": "conform"
+      },
+      {
+        "from": "rules",
+        "to": "reg"
+      },
+      {
+        "from": "conform",
+        "to": "reg"
+      },
+      {
+        "from": "more",
+        "to": "reg"
+      },
+      {
+        "from": "reg",
+        "to": "tools"
+      }
+    ],
+    "mainPath": [
+      "model",
+      "rules",
+      "reg",
+      "tools"
+    ],
+    "orientation": "portrait"
+  }
+}

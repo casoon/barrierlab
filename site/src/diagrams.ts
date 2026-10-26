@@ -19,8 +19,11 @@ export interface DiagramOptions {
    * `svg`: the figure alone, for the start page; its title and description stay in the SVG.
    */
   format?: 'html' | 'svg';
-  /** Also render a portrait version of a flow chart for narrow screens (≤ 640 px). */
-  narrow?: { width: number; height: number };
+  /**
+   * Also render a portrait version of a flow chart for narrow screens (≤ 640 px). `spec` names
+   * a separate, condensed specification in site/diagrams/ for when the full chart does not fit.
+   */
+  narrow?: { width: number; height: number; spec?: string };
 }
 
 /** A diagram from site/diagrams/<name>.json. */
@@ -40,10 +43,13 @@ export function diagram(name: string, options: DiagramOptions = {}): string {
       })
       .join('');
   if (!narrow) return `${SURFACE_STYLE}${variants(spec, name)}`;
+  const { spec: narrowName, ...size } = narrow;
+  const base = narrowName ? specs[`../diagrams/${narrowName}.json`] : spec;
+  if (!base) throw new Error(`unknown diagram: ${narrowName}`);
   const portrait = {
-    ...spec,
-    ...narrow,
-    flow: { ...(spec.flow as Spec), orientation: 'portrait' },
+    ...base,
+    ...size,
+    flow: { ...(base.flow as Spec), orientation: 'portrait' },
   };
   return `${SURFACE_STYLE}<div class="cl-wide">${variants(spec, name)}</div><div class="cl-narrow">${variants(portrait, `${name}-narrow`)}</div>`;
 }
