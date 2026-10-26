@@ -22,7 +22,7 @@ Regelbestand bedient drei Oberflächen mit identischen Regelkennungen und identi
 | [`accname`](https://docs.rs/accname) | WAI-ARIA Accessible Name und Role Computation |
 | [`a11y-rules`](https://docs.rs/a11y-rules) | die Regeln, generisch über das Dokumentmodell |
 
-Alle vier stehen auf crates.io in Version 0.10.0 und werden im Gleichschritt versioniert. Geplant,
+Alle vier stehen auf crates.io in Version 0.26.0 und werden im Gleichschritt versioniert. Geplant,
 aber noch nicht vorhanden, ist `a11y-conformance`: ein geteiltes Fixture-Korpus, das die drei
 Oberflächen gegen Auseinanderlaufen absichert.
 

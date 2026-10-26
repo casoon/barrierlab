@@ -9,7 +9,7 @@ die Differenz zweier Aufnahmen. Das Paket berechnet, es erhebt nicht.
 
 ## Stand
 
-0.2.0. Herausgezogen aus auditmysite
+0.2.1. Herausgezogen aus auditmysite
 (`accessibility/{tree,diff,snapshot}.rs`, `screen_reader/{linearizer,types}.rs`)
 nach dem Umbau, der an 133 Seiten mit 692 Journey-Instanzen gemessen wurde.
 27 Tests sind mitgekommen und laufen ohne Browser.

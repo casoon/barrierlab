@@ -57,5 +57,5 @@ aufgelöst. Kann der Host sie nicht bestimmen, etwa bei Hintergrundbild, Verlauf
 `contrast/text-undetermined` mit `untested`. Eine Prüfung gegen geratenes Weiß würde ein `pass`
 erzeugen, auf das sich jemand verlässt.
 
-`Interaction` ist als Trait definiert, im Regelbestand von 0.10.0 gibt es aber noch keine Regel
+`Interaction` ist als Trait definiert, im Regelbestand von 0.26.0 gibt es aber noch keine Regel
 auf diesem Tier.

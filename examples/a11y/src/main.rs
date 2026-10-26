@@ -3,16 +3,21 @@
 //! Jedes Dokument wird als HTML-Ansicht geschrieben (aus dem Baum selbst
 //! serialisiert) und dann zweimal geprüft: einmal nur mit Struktur, wie ein
 //! Host ohne Semantik, und einmal mit Rolle und Accessible Name aus `accname`.
-//! Dazu kommt `rules.json`, der deklarierte Regelbestand.
+//! Dazu kommt `rules.json`, der deklarierte Regelbestand, und aus demselben
+//! Bestand die Tabellen der Regelreferenz (`docs/a11y/reference/regeln.mdx`,
+//! zwischen den Markierungen `generiert:anfang` und `generiert:ende`).
 //!
 //! Aufruf aus der Wurzel des Repositorys:
-//! `cargo run --manifest-path examples/Cargo.toml`
+//! `cargo run --manifest-path examples/a11y/Cargo.toml`
 
 use std::fs;
 use std::path::Path;
 
 use a11y_dom::{Arena, ArenaNode, Document, Node, NodeKind, Semantics};
-use a11y_rules::{rendering_metas, run, run_with_semantics, semantics_metas, structure_metas, Meta};
+use a11y_rules::{
+    rendering_metas, run, run_with_semantics, semantics_metas, structure_metas, stylesheet_metas,
+    Meta,
+};
 use accname::IdIndex;
 use serde_json::{json, Value};
 
@@ -214,6 +219,119 @@ fn metas_json(metas: &[Meta]) -> Vec<Value> {
         .collect()
 }
 
+/// Macht einen Regelhinweis tabellenfest für MDX: `<tag>` wird Code, Zeichen
+/// mit Bedeutung in Markdown, MDX oder einer Tabellenzeile werden maskiert.
+fn mdx_text(help: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in help.chars() {
+        match c {
+            '<' if !in_tag => {
+                in_tag = true;
+                out.push_str("`<");
+            }
+            '>' if in_tag => {
+                in_tag = false;
+                out.push_str(">`");
+            }
+            _ if in_tag => out.push(c),
+            '|' | '{' | '}' | '*' | '_' | '\\' => {
+                out.push('\\');
+                out.push(c);
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Ein Abschnitt der Regelreferenz: Überschrift, Zahl der Kennungen, Tabelle.
+fn mdx_tier(out: &mut String, heading: &str, needs: &str, metas: &[Meta]) {
+    let ids: usize = metas.iter().map(|m| m.ids.len()).sum();
+    out.push_str(&format!("## {heading}\n\n{ids} Kennungen, {needs}\n\n"));
+    out.push_str("| Kennung | WCAG | Schwere | Hinweis der Regel |\n|---|---|---|---|\n");
+    for m in metas {
+        for id in m.ids {
+            out.push_str(&format!(
+                "| `{id}` | {} | {} | {} |\n",
+                if m.wcag.is_empty() {
+                    "–".to_string()
+                } else {
+                    m.wcag.join(", ")
+                },
+                m.severity.as_str(),
+                mdx_text(m.help),
+            ));
+        }
+    }
+    out.push('\n');
+}
+
+/// Die Version von a11y-rules aus seinem Manifest, gegen das hier gebaut wird.
+fn rules_version() -> String {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/a11y-rules/Cargo.toml");
+    let toml = fs::read_to_string(manifest).expect("Manifest von a11y-rules lesen");
+    let zeile = toml
+        .lines()
+        .find(|l| l.starts_with("version = "))
+        .expect("version in crates/a11y-rules/Cargo.toml");
+    zeile
+        .trim_start_matches("version = ")
+        .trim_matches('"')
+        .to_string()
+}
+
+/// Ersetzt in der Regelreferenz alles zwischen den beiden Markierungen.
+fn regelreferenz(path: &Path) {
+    const ANFANG: &str = "{/* generiert:anfang */}\n";
+    const ENDE: &str = "{/* generiert:ende */}";
+    let alt = fs::read_to_string(path).expect("Regelreferenz lesen");
+    let a = alt.find(ANFANG).expect("Markierung generiert:anfang") + ANFANG.len();
+    let e = alt.find(ENDE).expect("Markierung generiert:ende");
+
+    let alle = [
+        structure_metas(),
+        semantics_metas(),
+        rendering_metas(),
+        stylesheet_metas(),
+    ];
+    let gesamt: usize = alle
+        .iter()
+        .flat_map(|t| t.iter())
+        .map(|m| m.ids.len())
+        .sum();
+    let mut neu = format!(
+        "a11y-rules {} deklariert {gesamt} Kennungen.\n\n",
+        rules_version()
+    );
+    mdx_tier(
+        &mut neu,
+        "Tier 1: Struktur",
+        "`Document`, läuft auf jedem Host.",
+        alle[0],
+    );
+    mdx_tier(
+        &mut neu,
+        "Tier 2: Semantik",
+        "braucht `Semantics`, also Rolle und Accessible Name.",
+        alle[1],
+    );
+    mdx_tier(
+        &mut neu,
+        "Tier 3: Darstellung",
+        "braucht `Rendering`, also berechnete Stile und Geometrie.",
+        alle[2],
+    );
+    mdx_tier(
+        &mut neu,
+        "Stylesheets",
+        "braucht die geparsten Stylesheets der Seite und läuft über `run_stylesheets`.",
+        alle[3],
+    );
+
+    fs::write(path, format!("{}{neu}{}", &alt[..a], &alt[e..])).expect("Regelreferenz schreiben");
+}
+
 fn write(dir: &Path, name: &str, content: String) {
     fs::write(dir.join(name), content).expect("Beispieldatei schreiben");
 }
@@ -245,9 +363,12 @@ fn main() {
     let mut rules = metas_json(structure_metas());
     rules.extend(metas_json(semantics_metas()));
     rules.extend(metas_json(rendering_metas()));
+    rules.extend(metas_json(stylesheet_metas()));
     write(
         dir,
         "rules.json",
         serde_json::to_string_pretty(&rules).unwrap() + "\n",
     );
+
+    regelreferenz(&dir.join("../../docs/a11y/reference/regeln.mdx"));
 }
