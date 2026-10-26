@@ -144,7 +144,9 @@ pub(crate) fn not_unique<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
 
 /// `banner`, `contentinfo` und `main` gehören auf die oberste Ebene (WAI-ARIA
 /// 1.2 bei den drei Rollen); `banner` und `contentinfo` je höchstens einmal.
-/// Wie in auditmysite `FAIL`, mittel. Ein unbenanntes `<form>` oder
+/// Best Practice ohne Kriterium wie axe `landmark-*-is-top-level` und
+/// `landmark-no-duplicate-*`: 1.3.1 verlangt keine Landmarks
+/// (auditmysite#779). Ein unbenanntes `<form>` oder
 /// `<section>` ist keine Landmark und macht nichts darin verschachtelt
 /// (auditmysite#727). Der Duplikatbefund zeigt wie `landmarks/main-duplicate`
 /// auf die zweite Landmark, nicht wie auditmysite auf die erste.
@@ -167,7 +169,7 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
                 ),
             )
             .with_severity(Severity::Medium)
-            .with_wcag(["1.3.1"])
+            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }
@@ -190,7 +192,7 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
                 ),
             )
             .with_severity(Severity::Medium)
-            .with_wcag(["1.3.1"])
+            .with_tags(["best-practice"])
             .at(at(gleiche[1].0.id())),
         );
     }
@@ -264,8 +266,9 @@ fn hat_inhalt<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, sprung: &HashSet<NodeId
 /// Gemeldet wird das äußerste Element ohne Landmark darin, nicht jeder
 /// Textknoten und jedes benannte Element einzeln wie in auditmysite — ein
 /// Block, ein Befund (wie axe `region`). Steht Text unmittelbar neben einer
-/// Landmark, trägt der umgebende Container den Befund. `FAIL`, mittel wie in
-/// auditmysite.
+/// Landmark, trägt der umgebende Container den Befund. Mittel wie in auditmysite,
+/// aber Best Practice ohne Kriterium wie axe `region`: 1.3.1 verlangt keine
+/// Landmarks (auditmysite#779).
 pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let sprung = sprunglinks(doc);
     let mut mit_landmark: HashSet<NodeId> = HashSet::new();
@@ -313,7 +316,7 @@ fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
             ),
         )
         .with_severity(Severity::Medium)
-        .with_wcag(["1.3.1"])
+        .with_tags(["best-practice"])
         .at(at(id)),
     );
 }
@@ -464,8 +467,10 @@ pub(crate) fn keyboard<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Find
 // --- dialog/focusable-missing -------------------------------------------------
 
 /// Ein offener Dialog ohne ein einziges fokussierbares Element darin: Wer mit
-/// der Tastatur arbeitet, kann ihn weder bedienen noch schließen. `FAIL`,
-/// mittel, 2.4.3 wie auditmysite `dialog-no-focusable`. Abweichend zählt jeder
+/// der Tastatur arbeitet, kann ihn weder bedienen noch schließen. Mittel,
+/// 2.4.3 wie auditmysite `dialog-no-focusable`, aber `REVIEW`: Der Dialog
+/// selbst kann den Fokus tragen (`tabindex="-1"`), und Escape schließt ihn
+/// (auditmysite#779). Abweichend zählt jeder
 /// Nachfahre, nicht nur die direkten Kinder.
 pub(crate) fn dialog_focusable<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
@@ -481,7 +486,7 @@ pub(crate) fn dialog_focusable<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             continue;
         }
         out.push(
-            Finding::fail(
+            Finding::review(
                 "dialog/focusable-missing",
                 pick!(
                     locale,

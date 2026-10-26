@@ -572,7 +572,7 @@ fn korpus_dialog_ohne_fokussierbares() {
         assert_eq!(an(src, &r, "dialog/focusable-missing"), ["leer"]);
         assert_eq!(
             urteile(&r, "dialog/focusable-missing"),
-            [(Outcome::Fail, Severity::Medium)]
+            [(Outcome::Review, Severity::Medium)]
         );
     }
 
@@ -618,32 +618,68 @@ fn korpus_accordion_ohne_controls() {
 
 // --- headings/none ------------------------------------------------------------
 
-/// auditmysite `bypass_blocks`: eine Seite ganz ohne Überschriften.
+/// auditmysite#779: Eine Seite ohne Überschriften verletzt 2.4.1 nur, wenn
+/// auch die anderen Mechanismen fehlen — main-Landmark (ARIA11) und
+/// Sprunglink (G1) überspringen wiederholte Blöcke genauso.
 #[test]
-fn seite_ohne_ueberschriften() {
+fn seite_ohne_ueberschriften_mit_main_issue_779() {
+    // Der Fall aus dem Issue: einfache Seite, keine Navigation, aber main.
     let src = "<main><p>Some text</p></main>";
+    for r in beide(src) {
+        assert_eq!(anzahl(&r, "headings/none"), 0, "{:?}", r.findings);
+        assert_eq!(anzahl(&r, "headings/h1-missing"), 0);
+        assert!(
+            r.findings
+                .iter()
+                .all(|f| !f.wcag.contains(&"2.4.1".to_string()) || f.outcome != Outcome::Fail),
+            "kein 2.4.1-Verstoß: {:?}",
+            r.findings
+        );
+    }
+
+    // Ein Sprunglink genügt ebenso.
+    let src = r##"<a href="#inhalt">Skip</a><nav><a href="/a">A</a></nav><div id="inhalt"><p>Text</p></div>"##;
+    for r in beide(src) {
+        assert_eq!(anzahl(&r, "headings/none"), 0, "{:?}", r.findings);
+    }
+}
+
+/// Ohne jeden Mechanismus: Verstoß, wenn eine Navigation als Landmark
+/// ausgezeichnet ist, sonst ein Hinweis — ob sich Blöcke über Seiten
+/// wiederholen, zeigt ein Dokument allein nicht.
+#[test]
+fn seite_ohne_jeden_mechanismus() {
+    let wcag = |r: &Report| {
+        r.findings
+            .iter()
+            .find(|f| f.rule_id == "headings/none")
+            .unwrap()
+            .wcag
+            .clone()
+    };
+    let src = r#"<nav><a href="/a">A</a><a href="/b">B</a></nav><div><p>Text</p></div>"#;
     for r in beide(src) {
         assert_eq!(
             urteile(&r, "headings/none"),
             [(Outcome::Fail, Severity::Medium)]
         );
+        assert_eq!(wcag(&r), ["2.4.1"]);
+    }
+    let src = "<div><p>Some text</p></div>";
+    for r in beide(src) {
         assert_eq!(
-            r.findings
-                .iter()
-                .find(|f| f.rule_id == "headings/none")
-                .unwrap()
-                .wcag,
-            ["2.4.1"]
+            urteile(&r, "headings/none"),
+            [(Outcome::Review, Severity::Low)]
         );
-        assert_eq!(anzahl(&r, "headings/h1-missing"), 0);
+        assert_eq!(wcag(&r), ["2.4.1"]);
     }
 
     // role="heading" zählt; versteckte Überschriften nicht.
-    let src = r#"<main><div role="heading" aria-level="1">Title</div></main>"#;
+    let src = r#"<nav><a href="/a">A</a></nav><div role="heading" aria-level="1">Title</div>"#;
     for r in beide(src) {
         assert_eq!(anzahl(&r, "headings/none"), 0);
     }
-    let src = r#"<main><h1 hidden>Hidden</h1><p>Text</p></main>"#;
+    let src = r#"<nav><a href="/a">A</a></nav><h1 hidden>Hidden</h1><p>Text</p>"#;
     for r in beide(src) {
         assert_eq!(anzahl(&r, "headings/none"), 1);
     }

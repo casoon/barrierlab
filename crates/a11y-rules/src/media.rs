@@ -93,16 +93,17 @@ pub(crate) fn input_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
 
 // --- images/server-side-map -------------------------------------------------
 
-/// 1.1.1: Eine serverseitige Imagemap (`<img ismap>`). Die Ziele stecken in
+/// 2.1.1: Eine serverseitige Imagemap (`<img ismap>`). Die Ziele stecken in
 /// Koordinaten, die erst der Server auswertet; per Tastatur und für
-/// Screenreader sind sie nicht erreichbar.
+/// Screenreader sind sie nicht erreichbar. `REVIEW`: Gleichwertige Textlinks
+/// daneben erfüllen 2.1.1 (auditmysite#779).
 ///
 /// Beleg: auditmysite-Korpus `forms_and_misc`.
 pub(crate) fn server_side_map<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if n.is_element("img") && n.has_attr("ismap") {
             out.push(
-                Finding::fail(
+                Finding::review(
                     "images/server-side-map",
                     pick!(
                         locale,
@@ -115,7 +116,7 @@ pub(crate) fn server_side_map<D: Document>(doc: &D, locale: Locale, out: &mut Ve
                     ),
                 )
                 .with_severity(Severity::Medium)
-                .with_wcag(["1.1.1"])
+                .with_wcag(["2.1.1"])
                 .at(at(n.id())),
             );
         }
@@ -214,7 +215,8 @@ fn unsichtbarer_rahmen<'a, N: Node<'a>>(n: N) -> bool {
     (winzig("width") && winzig("height")) || ausgeblendet
 }
 
-/// 2.4.1, 4.1.2: Ein `<iframe>` ohne Namen. Screenreader nennen beim Betreten
+/// 4.1.2 (ACT cae760): Ein `<iframe>` ohne Namen. Für 2.4.1 ist der Titel
+/// eine von mehreren Techniken (H64), sein Fehlen also kein Verstoß dort. Screenreader nennen beim Betreten
 /// des Rahmens dessen Namen; ohne ihn bleibt offen, was darin steckt.
 ///
 /// Ausgenommen sind Rahmen mit `role="none"`/`"presentation"` und solche, die
@@ -246,7 +248,7 @@ pub(crate) fn frame_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<F
                 ),
             )
             .with_severity(Severity::High)
-            .with_wcag(["2.4.1", "4.1.2"])
+            .with_wcag(["4.1.2"])
             .at(at(n.id())),
         );
     }

@@ -350,8 +350,10 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 
     // Ohne Viewport-Angabe legen mobile Browser eine Desktop-Breite zugrunde
-    // und verkleinern die Seite. Der Text landet damit unter jeder lesbaren
-    // Größe, und Zoomen holt ihn nur teilweise zurück.
+    // und verkleinern die Seite. Ein Verstoß ist das nicht: Zoomen bleibt
+    // erlaubt (1.4.4), und 1.4.10 wird über die Vergrößerung im Browser
+    // geprüft, die die Angabe nicht berührt. Best Practice ohne Kriterium
+    // (auditmysite#779).
     if !gefunden {
         out.push(
             Finding::fail(
@@ -363,7 +365,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_wcag(["1.4.4", "1.4.10"])
+            .with_tags(["best-practice"])
             .at(at(doc.root().id())),
         );
     }
@@ -421,6 +423,10 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .at(at(n.id())),
             );
         }
+        // Eine übersprungene Ebene ist kein Verstoß: 1.3.1 verlangt, dass die
+        // Überschriften als solche bestimmbar sind, nicht, dass ihre Ebenen
+        // lückenlos aufeinander folgen (G141 ist Empfehlung, axe
+        // `heading-order` Best Practice). Deshalb ohne Kriterium.
         if last > 0 && level > last + 1 {
             out.push(
                 Finding::fail(
@@ -432,20 +438,31 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     ),
                 )
                 .with_severity(Severity::Medium)
-                .with_wcag(["1.3.1"])
+                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }
         last = level;
     }
 
-    // Gar keine Überschrift: nichts, wonach sich navigieren ließe (2.4.1).
-    // `headings/h1-missing` setzt voraus, dass es Überschriften gibt.
-    // Gezählt wird auch `role="heading"`. Hinter einem offenen Dialog fehlen
-    // sie für den Moment der Messung, nicht für die Seite — ein Hinweis wie
-    // bei `landmarks/main-missing` (auditmysite#709).
+    // Gar keine Überschrift ist für sich kein Verstoß gegen 2.4.1: Eine
+    // main-Landmark (ARIA11) und ein Sprunglink (G1) überspringen
+    // wiederholte Blöcke genauso, jede Technik reicht allein. Gemeldet wird
+    // deshalb nur, wenn keiner der drei Mechanismen da ist — als Verstoß,
+    // wenn Navigation oder Kopfbereich als Landmark ausgezeichnet sind (die
+    // Blöcke, die Understanding 2.4.1 als wiederholt nennt), sonst als
+    // Hinweis: Ob sich Blöcke über mehrere Seiten wiederholen, zeigt ein
+    // einzelnes Dokument nicht (auditmysite#779). Gezählt wird auch
+    // `role="heading"`. Hinter einem offenen Dialog fehlen die Mechanismen
+    // für den Moment der Messung, nicht für die Seite (auditmysite#709).
     let ueberschrift = any || elements(doc).any(|n| explizite_rolle(n) == Some("heading"));
-    if !ueberschrift {
+    let main = elements(doc).any(|n| ist_landmark(n, "main", "main"));
+    if !ueberschrift && !main && !sprunglink_vorhanden(doc) {
+        let wiederholt = elements(doc).any(|n| {
+            ist_landmark(n, "nav", "navigation")
+                || (ist_landmark(n, "header", "banner")
+                    && (n.attr("role").is_some() || ist_dokumentweit(n)))
+        });
         let f = if modal_offen(doc) {
             Finding::review(
                 "headings/none",
@@ -456,20 +473,34 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-        } else {
+        } else if wiederholt {
             Finding::fail(
                 "headings/none",
                 pick!(
                     locale,
-                    "The document has no headings to navigate by.",
-                    "Das Dokument hat keine Überschriften, über die sich navigieren ließe.",
+                    "Navigation or header blocks have no way to be bypassed: no headings, no main landmark, no skip link.",
+                    "Navigation oder Kopfbereich lassen sich nicht überspringen: keine Überschriften, keine main-Landmark, kein Sprunglink.",
                 ),
             )
             .with_severity(Severity::Medium)
+        } else {
+            Finding::review(
+                "headings/none",
+                pick!(
+                    locale,
+                    "No headings, no main landmark and no skip link; if blocks repeat across pages, nothing bypasses them.",
+                    "Keine Überschriften, keine main-Landmark und kein Sprunglink; wiederholen sich Blöcke über mehrere Seiten, überspringt sie nichts.",
+                ),
+            )
+            .with_severity(Severity::Low)
         };
         out.push(f.with_wcag(["2.4.1"]).at(at(doc.root().id())));
     }
 
+    // Eine fehlende h1 belegt keinen Verstoß: Eine korrekt ausgezeichnete h2
+    // ist als Überschrift bestimmbar (1.3.1), und WCAG verlangt keine
+    // bestimmte Ebene. Best Practice ohne Kriterium, wie axe
+    // `page-has-heading-one` (auditmysite#779).
     if any && h1s.is_empty() {
         out.push(
             Finding::fail(
@@ -481,7 +512,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Medium)
-            .with_wcag(["1.3.1"]),
+            .with_tags(["best-practice"]),
         );
     }
 
@@ -647,6 +678,12 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         .filter(|n| ist_landmark(*n, "main", "main"))
         .collect();
 
+    // Fehlende und doppelte main-Landmark sind Best Practice ohne Kriterium
+    // (axe `landmark-one-main`, `landmark-no-duplicate-main`): 1.3.1
+    // verlangt keine Landmarks, und für 2.4.1 genügen Überschriften oder ein
+    // Sprunglink genauso — fehlt alles zugleich, meldet das
+    // `headings/none` (auditmysite#779). Mehrere `<main>` verbietet HTML,
+    // nicht WCAG, seit 2.2 4.1.1 entfallen ist.
     match mains.len() {
         // Hinter einem offenen Modal ist die fehlende main-Landmark kein
         // Befund über die Seite, sondern über den Moment der Messung — ein
@@ -662,7 +699,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-            .with_wcag(["1.3.1", "2.4.1"])
+            .with_tags(["best-practice"])
             .at(at(wurzel)),
         ),
         0 => out.push(
@@ -675,7 +712,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_wcag(["1.3.1", "2.4.1"])
+            .with_tags(["best-practice"])
             .at(at(wurzel)),
         ),
         1 => {}
@@ -689,7 +726,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_wcag(["1.3.1"])
+            .with_tags(["best-practice"])
             // Die zweite ist die überzählige — dorthin zeigt der Befund.
             .at(at(mains[1].id())),
         ),
@@ -799,7 +836,9 @@ fn beginnt_hauptinhalt<'a, N: Node<'a>>(ziel: N) -> bool {
     }
 }
 
-fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+/// Ob die Seite einen Sprunglink hat — am Ziel, an der Lage vor dem ersten
+/// Link, der die Seite verlässt, oder an Text und Klasse erkannt.
+fn sprunglink_vorhanden<D: Document>(doc: &D) -> bool {
     let links: Vec<_> = elements(doc)
         .filter(|n| n.is_element("a") && n.has_attr("href"))
         .collect();
@@ -831,12 +870,15 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         .iter()
         .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
         .count();
-    let vorhanden = zum_hauptinhalt
+    zum_hauptinhalt
         || (voran > 0 && voran < echte)
         || links
             .iter()
-            .any(|n| n.attr("href").is_some_and(ist_fragmentlink) && sieht_aus_wie_sprunglink(*n));
-    if !vorhanden {
+            .any(|n| n.attr("href").is_some_and(ist_fragmentlink) && sieht_aus_wie_sprunglink(*n))
+}
+
+fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !sprunglink_vorhanden(doc) {
         out.push(
             Finding::review(
                 "keyboard/skip-link-missing",
@@ -984,8 +1026,12 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             .is_some_and(|id| label_targets.contains(&scoped_id(n, id)));
         let wrapped = closest(n, "label").is_some();
         let titled = n.attr("title").is_some_and(|v| !v.trim().is_empty());
+        // Ein Platzhalter stiftet nach HTML-AAM den Namen (ACT e086e5 besteht
+        // damit); ein Feld mit ihm ist nicht unbeschriftet, sondern ein Fall
+        // für `forms/placeholder-as-label` (auditmysite#779).
+        let placeholder = n.attr("placeholder").is_some_and(|v| !v.trim().is_empty());
 
-        if !(aria_named || for_labelled || wrapped || titled) {
+        if !(aria_named || for_labelled || wrapped || titled || placeholder) {
             out.push(
                 Finding::fail(
                     "forms/label-missing",
@@ -999,9 +1045,13 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .with_wcag(["1.3.1", "3.3.2", "4.1.2"])
                 .at(at(n.id())),
             );
-        } else if n.has_attr("placeholder") && !aria_named && !for_labelled && !wrapped {
+        } else if placeholder && !aria_named && !for_labelled && !wrapped {
+            // Der Platzhalter ist sichtbar, solange das Feld leer ist, und
+            // stiftet den Namen; 3.3.2 ist damit nicht sicher verletzt. Ob er
+            // als Beschriftung genügt, ist eine Frage an den Prüfer
+            // (auditmysite#779).
             out.push(
-                Finding::fail(
+                Finding::review(
                     "forms/placeholder-as-label",
                     pick!(
                         locale,
@@ -1181,9 +1231,11 @@ fn duplicate_ids<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         }
         let count = seen.entry(scoped_id(n, id)).or_insert(0);
         *count += 1;
+        // `REVIEW`: Der Browser löst den Verweis auf das erste Element auf.
+        // Ob das das gemeinte ist, zeigt das Markup nicht (auditmysite#779).
         if *count == 2 {
             out.push(
-                Finding::fail(
+                Finding::review(
                     "ids/duplicate",
                     tr!(
                         locale,
@@ -1209,9 +1261,12 @@ fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         let Ok(value) = raw.trim().parse::<i32>() else {
             continue;
         };
+        // Ein positiver tabindex verletzt 2.4.3 erst, wenn die entstehende
+        // Reihenfolge Sinn oder Bedienung bricht (F44) — das zeigt das Markup
+        // nicht. Deshalb `REVIEW` (auditmysite#779).
         if value > 0 {
             out.push(
-                Finding::fail(
+                Finding::review(
                     "keyboard/positive-tabindex",
                     tr!(
                         locale,
@@ -1219,7 +1274,7 @@ fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                         "tabindex=\"{value}\" bricht die natürliche Tabreihenfolge."
                     ),
                 )
-                // Hoch, nicht mittel: Ein positiver tabindex bricht die
+                // Hoch, nicht mittel: Ein positiver tabindex verschiebt die
                 // Tabreihenfolge reproduzierbar und für jeden, der mit der
                 // Tastatur navigiert — das ist kein Schönheitsfehler.
                 .with_severity(Severity::High)
@@ -1371,7 +1426,9 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         }
 
         // Eine Liste ohne Eintraege kuendigt der Assistenztechnik eine
-        // Struktur an, die es nicht gibt.
+        // Struktur an, die es nicht gibt. Verloren geht dabei keine
+        // Information, also kein Verstoss gegen 1.3.1: Best Practice
+        // (auditmysite#779).
         if !kinder.iter().any(|c| ist_listeneintrag(*c)) {
             out.push(
                 Finding::fail(
@@ -1383,7 +1440,7 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_wcag(["1.3.1"])
+                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }
@@ -1536,9 +1593,13 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .at(at(n.id())),
             );
         }
+        // Ohne `<th>` fehlt die Kopfzeile nur einer Datentabelle mit
+        // sichtbaren Köpfen (F91); eine Layouttabelle oder eine Tabelle ohne
+        // Köpfe ist zulässig. Was davon vorliegt, zeigt das Markup nicht —
+        // `REVIEW` (auditmysite#779).
         if !hat_kopfzelle(n) {
             out.push(
-                Finding::fail(
+                Finding::review(
                     "tables/header-missing",
                     pick!(
                         locale,
@@ -1586,7 +1647,7 @@ pub const METAS: &[Meta] = &[
         ],
         tier: Tier::Structure,
         scope: Scope::Markup,
-        wcag: &["1.4.4", "1.4.10"],
+        wcag: &["1.4.4"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
         #[cfg(feature = "de")]
@@ -1946,7 +2007,7 @@ pub const METAS: &[Meta] = &[
         ids: &["images/server-side-map"],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
-        wcag: &["1.1.1"],
+        wcag: &["2.1.1"],
         severity: Severity::Medium,
         help: "Do not use server-side image maps (ismap); use a client-side map or text links.",
         #[cfg(feature = "de")]
@@ -2134,7 +2195,7 @@ pub const METAS: &[Meta] = &[
         ids: &["aria/role-redundant"],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
-        wcag: &["4.1.2"],
+        wcag: &[],
         severity: Severity::Low,
         help: "Do not set a role the element already has implicitly.",
         #[cfg(feature = "de")]
@@ -2154,7 +2215,7 @@ pub const METAS: &[Meta] = &[
         ids: &["patterns/tooltip-unreferenced"],
         tier: Tier::Structure,
         scope: Scope::Markup,
-        wcag: &["1.4.13"],
+        wcag: &[],
         severity: Severity::Low,
         help: "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
         #[cfg(feature = "de")]

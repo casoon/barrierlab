@@ -5,6 +5,25 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [0.26.0] - 2026-10-26
+
+Normative Zuordnung aller Regeln geprüft (auditmysite#779): Ein `FAIL` mit
+WCAG-Kriterium steht nur noch dort, wo das Markup den Verstoß belegt. Liste
+mit Entscheidung und Begründung je Regel:
+[Normative Zuordnung](../../docs/packages/a11y-rules.md#normative-zuordnung).
+
+### Changed
+
+- **Überschriften:** `headings/h1-missing` und `headings/skip-level` tragen das Schlagwort `best-practice` statt 1.3.1. Eine korrekt ausgezeichnete h2 ohne h1 ist kein Verstoß.
+- **Überschriften:** `headings/none` (2.4.1) meldet nur noch, wenn neben Überschriften auch main-Landmark und Sprunglink fehlen — `FAIL`, wenn Navigation oder Kopfbereich als Landmark ausgezeichnet sind, sonst `REVIEW`. Eine einfache Seite mit `<main>` erzeugt keinen Befund mehr.
+- **Landmarks:** `landmarks/main-missing`, `main-duplicate`, `not-top-level`, `banner-duplicate`, `contentinfo-duplicate` und `content-outside` sind Best Practice ohne 1.3.1 bzw. 2.4.1.
+- **Viewport:** `zoom/viewport-missing` ist Best Practice ohne 1.4.4 und 1.4.10.
+- **Rollen und Listen:** `aria/role-redundant`, `lists/role-redundant`, `patterns/tooltip-unreferenced` und `lists/empty` sind Best Practice ohne Kriterium.
+- **Vermutungen:** `REVIEW` statt `FAIL` für `tables/header-missing`, `keyboard/positive-tabindex`, `ids/duplicate`, `links/used-as-button`, `images/server-side-map` (jetzt 2.1.1 statt 1.1.1), `dialog/focusable-missing` und `forms/error-unidentified`, `group-missing`, `group-name-missing`, `no-submit`, `placeholder-as-label`.
+- **Bedingt:** `keyboard/click-handler-not-focusable` ist `REVIEW`, wenn ein per Tab erreichbares Element darin steckt; `svg/name-missing` ist `FAIL` nur mit Rolle `img` oder `graphics-*`, sonst `REVIEW`.
+- **Formulare:** Ein Feld, das nur einen Platzhalter hat, meldet nicht mehr `forms/label-missing`, sondern `forms/placeholder-as-label` (`REVIEW`): Der Platzhalter stiftet den Namen.
+- **Rahmen:** `frames/name-missing` trägt nur noch 4.1.2, nicht mehr 2.4.1.
+
 ## [0.25.0] - 2026-10-25
 
 ### Changed

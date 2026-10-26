@@ -277,7 +277,8 @@ fn ungueltig<'a, N: Node<'a>>(n: N) -> bool {
 /// Screenreader sagt „ungültig", aber nicht, was falsch ist (3.3.1).
 ///
 /// Als Beschreibung zählen `aria-describedby` und `aria-errormessage` mit
-/// Text. Ersetzt zwei auditmysite-Regeln, die denselben Fall doppelt meldeten.
+/// Text. `REVIEW`: Eine sichtbare Fehlermeldung neben dem Feld erfüllt 3.3.1
+/// auch ohne Verknüpfung (G83, auditmysite#779). Ersetzt zwei auditmysite-Regeln, die denselben Fall doppelt meldeten.
 pub(crate) fn error_unidentified<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids = id_index(doc);
     for n in elements(doc) {
@@ -288,7 +289,7 @@ pub(crate) fn error_unidentified<D: Document>(doc: &D, locale: Locale, out: &mut
             continue;
         }
         out.push(
-            Finding::fail(
+            Finding::review(
                 "forms/error-unidentified",
                 pick!(
                     locale,
@@ -335,6 +336,8 @@ fn checkbox_name<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
 /// Auswahl beantwortet, steht im Namen der Gruppe. Kontrollkästchen gehören
 /// zusammen, wenn sie im selben Formular denselben `name` tragen — ein
 /// einzelnes („AGB akzeptieren") ist keine Gruppe (auditmysite#643).
+/// `REVIEW`: `fieldset` ist eine Technik (H71), keine Pflicht — sagen die
+/// Beschriftungen schon alles, ist 1.3.1 erfüllt (auditmysite#779).
 pub(crate) fn group_missing<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids = id_index(doc);
     let schluessel = |n| checkbox_name(n).map(|name| (formular(n, &ids).map(|f| f.id()), name));
@@ -351,7 +354,7 @@ pub(crate) fn group_missing<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
             continue;
         }
         out.push(
-            Finding::fail(
+            Finding::review(
                 "forms/group-missing",
                 pick!(
                     locale,
@@ -426,7 +429,9 @@ struct Bestand {
     texteingabe: bool,
 }
 
-/// Ein Formular mit Eingaben, aber ohne Absende-Element (H32, 3.2.2).
+/// Ein Formular mit Eingaben, aber ohne Absende-Element (H32, 3.2.2). Immer
+/// `REVIEW`: 3.2.2 verletzt erst ein Kontextwechsel bei der Eingabe, nicht
+/// der fehlende Knopf (auditmysite#779).
 ///
 /// Ohne `action` und ohne Textfeld kann nur ein Skript das Formular absenden —
 /// meist sind das Schalter, die Inhalte auf der Seite ändern. Dann `REVIEW`
@@ -467,7 +472,7 @@ pub(crate) fn no_submit<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
             )
             .with_severity(Severity::Low)
         } else {
-            Finding::fail(
+            Finding::review(
                 "forms/no-submit",
                 tr!(
                     locale,
@@ -1394,7 +1399,9 @@ const KEINE_FORMULARGRUPPE: &[&str] = &[
 
 /// Eine Formulargruppe ohne Namen: `<fieldset>` ohne `<legend>` oder ein
 /// `role="group"` mit Eingabefeldern darin (1.3.1, 3.3.2). Die Gruppe sagt
-/// dann nicht, welche Frage ihre Felder beantworten. `radiogroup` meldet
+/// dann nicht, welche Frage ihre Felder beantworten — sofern sie eine stellt:
+/// Ein `fieldset` kann auch nur gestalten, deshalb `REVIEW`
+/// (auditmysite#779). `radiogroup` meldet
 /// `names/required-missing`.
 pub(crate) fn group_name_missing<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
@@ -1410,7 +1417,7 @@ pub(crate) fn group_name_missing<D: Semantics>(doc: &D, locale: Locale, out: &mu
             continue;
         }
         out.push(
-            Finding::fail(
+            Finding::review(
                 "forms/group-name-missing",
                 pick!(
                     locale,

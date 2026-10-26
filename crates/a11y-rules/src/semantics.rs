@@ -105,15 +105,31 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         }) {
             continue;
         }
+        // Verstoß nur mit ausdrücklicher Bildrolle (ACT 7d6734): Sie sagt,
+        // dass die Grafik etwas mitteilt. Ein SVG ohne Rolle kann ebenso gut
+        // Schmuck neben Text sein — `REVIEW` (auditmysite#779).
         if !named(doc, n) {
+            let bild = n.attr("role").is_some_and(|r| {
+                r.split_whitespace().next().is_some_and(|x| {
+                    ["img", "graphics-document", "graphics-symbol"]
+                        .iter()
+                        .any(|b| x.eq_ignore_ascii_case(b))
+                })
+            });
+            let text = pick!(
+                locale,
+                "The SVG has no accessible name and is not marked decorative.",
+                "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."
+            );
+            let f = if bild {
+                Finding::fail("svg/name-missing", text)
+            } else {
+                Finding::review("svg/name-missing", text)
+            };
             out.push(
-                Finding::fail(
-                    "svg/name-missing",
-                    pick!(locale, "The SVG has no accessible name and is not marked decorative.", "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."),
-                )
-                .with_severity(Severity::High)
-                .with_wcag(["1.1.1"])
-                .at(at(n.id())),
+                f.with_severity(Severity::High)
+                    .with_wcag(["1.1.1"])
+                    .at(at(n.id())),
             );
         }
     }
@@ -932,7 +948,7 @@ pub const METAS: &[Meta] = &[
         ],
         tier: Tier::Semantics,
         scope: Scope::AccessibilityTree,
-        wcag: &["1.3.1"],
+        wcag: &[],
         severity: Severity::Medium,
         help: "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
         #[cfg(feature = "de")]
@@ -942,7 +958,7 @@ pub const METAS: &[Meta] = &[
         ids: &["landmarks/content-outside"],
         tier: Tier::Semantics,
         scope: Scope::AccessibilityTree,
-        wcag: &["1.3.1"],
+        wcag: &[],
         severity: Severity::Medium,
         help: "All content belongs inside a landmark.",
         #[cfg(feature = "de")]
@@ -985,7 +1001,7 @@ pub const METAS: &[Meta] = &[
         ids: &["frames/name-missing"],
         tier: Tier::Semantics,
         scope: Scope::AccessibilityTree,
-        wcag: &["2.4.1", "4.1.2"],
+        wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Every iframe needs a name, usually a title saying what it contains.",
         #[cfg(feature = "de")]

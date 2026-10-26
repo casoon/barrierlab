@@ -203,6 +203,15 @@ fn korpus_redundant_role_list_style_auditmysite_644() {
         urteile(&r, "lists/role-redundant"),
         [(Outcome::Fail, Severity::Low)]
     );
+    // Die Rolle stimmt, sie ist nur überflüssig: Best Practice ohne 4.1.2
+    // (auditmysite#779).
+    let f = r
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "lists/role-redundant")
+        .unwrap();
+    assert!(f.wcag.is_empty(), "{:?}", f.wcag);
+    assert_eq!(f.tags, ["best-practice"]);
 }
 
 #[test]
