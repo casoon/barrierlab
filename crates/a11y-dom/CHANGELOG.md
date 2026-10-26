@@ -19,7 +19,7 @@ Repository `casoon/a11y-core`.
 
 - **Gleichschritt:** mit `a11y-report` 0.25.0; keine eigene Änderung.
 
-## [0.24.1] - 2026-10-25
+## [0.24.1] - 2026-10-24
 
 ### Changed
 
@@ -88,7 +88,7 @@ Repository `casoon/a11y-core`.
   eines `Layout`-Felds: Ein Host, der nur den Überhang misst, liefert kein halbes `Layout`,
   auf dem die Heuristiken mit Vorgabewerten liefen (gefunden bei auditmysite#698).
 
-## [0.19.1] - 2026-10-04
+## [0.19.1] - 2026-10-03
 
 ### Changed
 
@@ -142,7 +142,7 @@ Repository `casoon/a11y-core`.
 
 - **Gleichschritt:** mit `a11y-rules` 0.14.1; keine eigene Änderung.
 
-## [0.14.0] - 2026-09-30
+## [0.14.0] - 2026-10-01
 
 ### Changed
 
