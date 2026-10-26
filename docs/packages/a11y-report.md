@@ -9,7 +9,7 @@ WCAG-Zuordnung und ein stabiler JSON-Vertrag. Es bewertet nichts selbst.
 
 ## Stand
 
-0.10.1 auf crates.io. Benutzt von auditmysite, astro-post-audit und liveaudit —
+0.26.0 auf crates.io. Benutzt von auditmysite, astro-post-audit und liveaudit —
 das erste Paket, das wirklich überall im Einsatz ist.
 
 ## Aufbau

@@ -10,7 +10,7 @@ braucht.
 
 ## Stand
 
-0.10.1 auf crates.io. Gegen Chrome differentiell geprüft: auditmysite hat dafür
+0.26.0 auf crates.io. Gegen Chrome differentiell geprüft: auditmysite hat dafür
 `accname-diff`; am ersten Korpus stimmten 381 von 395 Namen überein, die
 Abweichungen kamen sämtlich aus `contents` — dominante Ursache ist CSS
 `text-transform`, das Chrome auf den Namen anwendet und `accname` nicht.

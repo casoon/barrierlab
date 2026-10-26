@@ -10,9 +10,10 @@ bewertet nicht.
 
 ## Stand
 
-0.1.0, neu in barrierlab — herausgezogen aus `liveaudit/packages/core`
-(`liveaudit-core`, war `publish = false`). Crate auf crates.io, WASM-Artefakt als
-npm-Paket `@casoon/a11y-wasm`. Erster Konsument ist liveaudit.
+Crate 0.14.0 auf crates.io, herausgezogen aus `liveaudit/packages/core`
+(`liveaudit-core`, war `publish = false`). Das WASM-Artefakt erscheint als
+npm-Paket `@casoon/a11y-wasm`; auf npm liegt derzeit 0.3.0, die npm-Veröffentlichung
+läuft der Crate hinterher. Erster Konsument ist liveaudit.
 
 ## Aufbau
 
