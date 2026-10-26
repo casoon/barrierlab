@@ -7,6 +7,7 @@ import Diagram from '../components/Diagram.astro';
 
 <Base>
   <Hero
+    layout="editorial"
     title="Eine Antwort statt vier."
     lead="BarrierLab ist die gemeinsame Prüf-Engine hinter den CASOON-Audit-Werkzeugen: Zugänglichkeitsregeln nach WCAG 2.2, HTML-Konformanz, Wahrnehmung und Web-Checks als Rust-Bibliotheken. Ob eine Seite beim Astro-Build, im Terminal-Audit oder live im Browser geprüft wird — der Befund heißt überall gleich und bedeutet dasselbe."
   >
@@ -16,6 +17,13 @@ import Diagram from '../components/Diagram.astro';
         { label: 'npm', command: 'npm i @casoon/a11y-wasm' },
       ]}
     />
+    <div slot="output">
+      <Diagram
+        name="architektur"
+        format="svg"
+        narrow={{ width: 380, height: 560, spec: 'architektur-schmal' }}
+      />
+    </div>
   </Hero>
 
   <Features
@@ -27,15 +35,11 @@ import Diagram from '../components/Diagram.astro';
       },
       {
         title: 'Wer die Ergebnisse liest',
-        body: 'Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen: gleiche Regelkennung, gleicher Schweregrad, gleiches JSON aus a11y-report.',
+        body: 'Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen: gleiche Regelkennung, gleicher Schweregrad, gleiches JSON aus a11y-report. Früher steckte dieselbe Prüfung als zwei Kopien in zwei Werkzeugen, die sich an derselben Seite widersprachen; mit einer gemeinsamen Implementierung fällt so ein Fall auf.',
       },
       {
         title: '„Lief nicht“ ist nicht „bestanden“',
         body: 'Fehlt einer Prüfung ihre Voraussetzung — kein Accessibility-Tree, kein Fokus, keine Darstellung —, steht sie mit Grund im Bericht. Ein stilles Bestanden gibt es nicht.',
-      },
-      {
-        title: 'Widersprüche fallen auf',
-        body: 'Zwei Werkzeuge mit zwei Kopien derselben Prüfung sagten an derselben Seite Gegenteiliges. Eine gemeinsame Implementierung macht solche Fälle sichtbar, statt sie zu verteilen.',
       },
     ]}
   />
@@ -65,7 +69,6 @@ import Diagram from '../components/Diagram.astro';
         eigenen Browser.
       </p>
     </div>
-    <Diagram name="architektur" format="svg" narrow={{ width: 470, height: 700 }} />
     <div class="links">
       <Button href={url('docs/a11y/getting-started/schnellstart/')}>Schnellstart in Rust</Button>
       <Button href={url('docs/packages/')} variant="secondary">Alle Pakete im Überblick</Button>
