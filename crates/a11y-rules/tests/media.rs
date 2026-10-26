@@ -184,8 +184,15 @@ fn korpus_forms_and_misc() {
     assert_eq!(an(src, &r, "images/server-side-map"), ["karte"]);
     assert_eq!(
         urteile(&r, "images/server-side-map"),
-        [(Outcome::Fail, Severity::Medium)]
+        [(Outcome::Review, Severity::Medium)]
     );
+    // Tastatur (2.1.1), nicht Textalternative: Das Bild hat ein alt.
+    let f = r
+        .findings
+        .iter()
+        .find(|f| f.rule_id == "images/server-side-map")
+        .unwrap();
+    assert_eq!(f.wcag, ["2.1.1"]);
 }
 
 // --- objects/alt-missing ----------------------------------------------------

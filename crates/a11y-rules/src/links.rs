@@ -11,11 +11,11 @@
 //! auf dem Rendering-Tier `keyboard/pointer-only`, das `cursor: pointer`
 //! auswertet.
 
-use a11y_dom::{Document, Node, NodeId, ancestors, elements};
+use a11y_dom::{Document, Node, NodeId, ancestors, descendants, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick};
-use crate::structure::explizite_rolle;
+use crate::structure::{explizite_rolle, per_tab_erreichbar};
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -64,22 +64,28 @@ pub(crate) fn klick_ohne_tastatur<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// 2.1.1: Klickbar, aber per Tastatur weder erreichbar noch auslösbar.
+///
+/// Steckt ein per Tab erreichbares Element darin, fängt der Handler meist
+/// nur dessen Klick ab (eine Karte um ihren Link) — dann ist die Funktion per
+/// Tastatur da, und der Befund ist `REVIEW` statt Verstoß (auditmysite#779).
 pub(crate) fn click_handler<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc).filter(|n| klick_ohne_tastatur(*n)) {
+        let text = pick!(
+            locale,
+            "This element has an onclick handler but is neither a control nor in the tab \
+             order; keyboard users cannot trigger it.",
+            "Das Element hat einen onclick-Handler, ist aber weder Bedienelement noch in \
+             der Tabfolge; per Tastatur lässt es sich nicht auslösen.",
+        );
+        let f = if descendants(n).any(per_tab_erreichbar) {
+            Finding::review("keyboard/click-handler-not-focusable", text)
+        } else {
+            Finding::fail("keyboard/click-handler-not-focusable", text)
+        };
         out.push(
-            Finding::fail(
-                "keyboard/click-handler-not-focusable",
-                pick!(
-                    locale,
-                    "This element has an onclick handler but is neither a control nor in the tab \
-                     order; keyboard users cannot trigger it.",
-                    "Das Element hat einen onclick-Handler, ist aber weder Bedienelement noch in \
-                     der Tabfolge; per Tastatur lässt es sich nicht auslösen.",
-                ),
-            )
-            .with_severity(Severity::High)
-            .with_wcag(["2.1.1"])
-            .at(at(n.id())),
+            f.with_severity(Severity::High)
+                .with_wcag(["2.1.1"])
+                .at(at(n.id())),
         );
     }
 }
@@ -98,7 +104,8 @@ fn fuehrt_nirgendwohin(href: &str) -> bool {
 }
 
 /// 4.1.2: Ein Link, der eine Aktion auslöst statt zu navigieren. Angesagt
-/// wird „Link", die Leertaste löst ihn nicht aus.
+/// wird „Link", die Leertaste löst ihn nicht aus. `REVIEW`: Ob der Handler
+/// doch navigiert, zeigt das Markup nicht (auditmysite#779).
 ///
 /// Beleg aus echten Seiten: Der Aufruf der Consent-Einstellungen
 /// (`<a href="#" onclick="UC_UI_recall();">`, wetter.com) und
@@ -114,7 +121,7 @@ pub(crate) fn used_as_button<D: Document>(doc: &D, locale: Locale, out: &mut Vec
             && explizite_rolle(n) != Some("button")
         {
             out.push(
-                Finding::fail(
+                Finding::review(
                     "links/used-as-button",
                     pick!(
                         locale,

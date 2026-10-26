@@ -143,7 +143,7 @@ fn consent_aufruf_wetter_com() {
     assert_eq!(an(&doc, &r, "links/used-as-button"), ["uc"]);
     assert_eq!(
         urteile(&r, "links/used-as-button"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
 }
 

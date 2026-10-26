@@ -198,7 +198,7 @@ fn korpus_forms_and_misc() {
         assert_eq!(an(src, &r, "forms/group-missing"), ["c1", "c2"]);
         assert_eq!(
             urteile(&r, "forms/group-missing")[0],
-            (Outcome::Fail, Severity::Medium)
+            (Outcome::Review, Severity::Medium)
         );
         assert_eq!(anzahl(&r, "forms/no-submit"), 0);
     }
@@ -230,7 +230,7 @@ fn korpus_forms_extended() {
         assert_eq!(an(src, &r, "forms/error-unidentified"), ["ungueltig"]);
         assert_eq!(
             urteile(&r, "forms/error-unidentified"),
-            [(Outcome::Fail, Severity::Medium)]
+            [(Outcome::Review, Severity::Medium)]
         );
         assert_eq!(an(src, &r, "context/on-input"), ["springen"]);
         assert_eq!(
@@ -399,12 +399,14 @@ fn korpus_form_toggles_without_submit() {
     let src = TOGGLES;
     for r in beide(src) {
         assert_eq!(an(src, &r, "forms/no-submit"), ["filter", "toggles"]);
+        // Beide `REVIEW`: Der fehlende Knopf verletzt 3.2.2 nicht, erst ein
+        // Kontextwechsel bei der Eingabe (auditmysite#779).
         let mut u = urteile(&r, "forms/no-submit");
-        u.sort_by_key(|(o, _)| *o == Outcome::Review);
+        u.sort_by_key(|(_, s)| *s == Severity::Low);
         assert_eq!(
             u,
             [
-                (Outcome::Fail, Severity::Medium),
+                (Outcome::Review, Severity::Medium),
                 (Outcome::Review, Severity::Low)
             ]
         );
@@ -421,12 +423,13 @@ fn absende_element_auch_ueber_form_attribut() {
         <form id="bild"><label>Q <input name="q"></label><input type="image" alt="Los" src="go.png"></form>
         <form id="aus"><label>Q <input name="q"></label><button disabled>Los</button></form>"#;
     for r in beide(src) {
-        // Mit Textfeld kann die Eingabetaste absenden: Verstoß, kein Hinweis.
+        // Mit Textfeld kann die Eingabetaste absenden: mittel statt niedrig,
+        // aber `REVIEW` wie jeder Fall dieser Regel.
         assert_eq!(an(src, &r, "forms/no-submit"), ["aus", "text"]);
         assert!(
             urteile(&r, "forms/no-submit")
                 .iter()
-                .all(|u| *u == (Outcome::Fail, Severity::Medium))
+                .all(|u| *u == (Outcome::Review, Severity::Medium))
         );
     }
 }

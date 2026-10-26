@@ -73,7 +73,9 @@ fn implizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
     })
 }
 
-/// 4.1.2: `role` wiederholt nur die Rolle, die das Element ohnehin hat. Ohne
+/// `role` wiederholt nur die Rolle, die das Element ohnehin hat. Best Practice
+/// ohne Kriterium: Rolle, Name und Wert bleiben richtig, 4.1.2 ist erfüllt
+/// (auditmysite#779). Ohne
 /// Wirkung, aber manche Kombinationen aus Browser und Screenreader sagen sie
 /// doppelt an; ARIA in HTML rät davon ab. Beleg: bahn.de und spiegel.de
 /// (`<button role="button">`), wetter.com, lidl.de und sparkasse.de
@@ -99,7 +101,7 @@ pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
                 ),
             )
             .with_severity(Severity::Low)
-            .with_wcag(["4.1.2"])
+            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }
@@ -183,8 +185,10 @@ pub(crate) fn title_only<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
 
 // --- patterns/tooltip-unreferenced -----------------------------------------
 
-/// 1.4.13: Ein `role="tooltip"`, auf das nichts verweist. Ohne Verweis sagt
-/// die Assistenztechnik ihn nie an, wenn er erscheint.
+/// Ein `role="tooltip"`, auf das nichts verweist. Ohne Verweis sagt die
+/// Assistenztechnik ihn nie an, wenn er erscheint. Best Practice ohne
+/// Kriterium: 1.4.13 regelt, wie Inhalt bei Hover und Fokus erscheint und
+/// verschwindet, nicht seine Verknüpfung (auditmysite#779).
 ///
 /// Anders als auditmysite zählt neben `aria-describedby` auch
 /// `aria-labelledby`: Ein Symbolknopf, der seinen Namen aus dem Tooltip
@@ -220,7 +224,7 @@ pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
                 ),
             )
             .with_severity(Severity::Low)
-            .with_wcag(["1.4.13"])
+            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }

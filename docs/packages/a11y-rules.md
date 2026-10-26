@@ -47,6 +47,70 @@ die **Heuristiken** in Tier 3 (`REVIEW`, aus `Rendering::layout` und
 `bounds`; ohne diese Daten melden sie nichts, nur die ungemessene
 Fokus-Sichtbarkeit bleibt als `UNTESTED` stehen).
 
+## Normative Zuordnung
+
+Ein Befund mit WCAG-Kriterium und `FAIL` behauptet einen Verstoß. Das darf er
+nur, wenn das Markup ihn belegt. Belegt eine Regel nur eine Empfehlung, trägt
+der Befund das Schlagwort `best-practice` und kein Kriterium; belegt sie eine
+Vermutung, die erst ein Prüfer entscheidet, ist er `REVIEW`. Maßstab sind WCAG
+2.2 mit Understanding und Techniken (Fxx sind Fehlertechniken, alles andere
+nur hinreichend), die ACT-Regeln des W3C und als Vergleich axe-core.
+
+Geprüft wurden alle `FAIL`-Befunde mit Kriterium (Stand 0.26.0,
+auditmysite#779):
+
+| Regel | Entscheidung | Begründung |
+|---|---|---|
+| `headings/h1-missing` | Best Practice | Eine h2 ist als Überschrift bestimmbar (1.3.1); WCAG verlangt keine Ebene. axe `page-has-heading-one` ist Best Practice. |
+| `headings/skip-level` | Best Practice | 1.3.1 verlangt bestimmbare, nicht lückenlose Ebenen; G141 ist hinreichend, nicht Pflicht. axe `heading-order` ist Best Practice. |
+| `headings/none` | 2.4.1 nur ohne jeden Mechanismus | Überschriften (H69), main-Landmark (ARIA11) und Sprunglink (G1) reichen je allein. Fehlen alle drei: `FAIL`, wenn Navigation oder Kopfbereich als Landmark ausgezeichnet sind, sonst `REVIEW` — ob Blöcke sich über Seiten wiederholen, zeigt ein Dokument nicht. |
+| `landmarks/main-missing`, `landmarks/main-duplicate` | Best Practice | 1.3.1 verlangt keine Landmarks, 2.4.1 ist auch über Überschriften oder Sprunglink erfüllt. Mehrere `<main>` verbietet HTML, nicht WCAG (4.1.1 ist entfallen). |
+| `landmarks/not-top-level`, `landmarks/banner-duplicate`, `landmarks/contentinfo-duplicate`, `landmarks/content-outside` | Best Practice | Wie axe `landmark-*-is-top-level`, `landmark-no-duplicate-*`, `region`; kein Kriterium verlangt Landmarks. |
+| `zoom/viewport-missing` | Best Practice | Ohne Angabe bleibt Zoomen erlaubt (1.4.4); 1.4.10 wird über die Vergrößerung im Browser geprüft, die die Angabe nicht berührt. |
+| `aria/role-redundant`, `lists/role-redundant` | Best Practice | Die Rolle stimmt; 4.1.2 ist erfüllt. ARIA in HTML rät nur ab. |
+| `patterns/tooltip-unreferenced` | Best Practice | 1.4.13 regelt Erscheinen und Verschwinden bei Hover und Fokus, nicht die Verknüpfung. |
+| `lists/empty` | Best Practice | Eine leere Liste unterschlägt keine Information. |
+| `tables/header-missing` | `REVIEW` | F91 trifft nur Datentabellen mit sichtbaren Köpfen; ob eine vorliegt, zeigt das Markup nicht. |
+| `keyboard/positive-tabindex` | `REVIEW` | F44 verlangt ein Urteil, ob die entstehende Reihenfolge Sinn und Bedienung bricht. axe `tabindex` ist Best Practice. |
+| `ids/duplicate` | `REVIEW` | Der Browser löst auf das erste Element auf; ob das gemeint ist, sagt das Markup nicht. |
+| `keyboard/click-handler-not-focusable` | `REVIEW`, wenn ein per Tab erreichbares Element darin steckt | Der Handler fängt dann meist nur dessen Klick ab (Karte um ihren Link). Ohne ein solches Element bleibt es ein Verstoß gegen 2.1.1. |
+| `links/used-as-button` | `REVIEW` | Ob der Handler doch navigiert, zeigt das Markup nicht. |
+| `images/server-side-map` | `REVIEW`, 2.1.1 statt 1.1.1 | Das Problem ist die Bedienung per Tastatur (axe: 2.1.1); gleichwertige Textlinks daneben erfüllen sie. |
+| `frames/name-missing` | 4.1.2, ohne 2.4.1 | ACT cae760 führt nur 4.1.2; für 2.4.1 ist der Titel eine Technik unter mehreren (H64). |
+| `svg/name-missing` | `FAIL` nur mit Bildrolle, sonst `REVIEW` | ACT 7d6734 gilt nur für SVG mit ausdrücklicher Rolle `img` oder `graphics-*`; ein SVG ohne Rolle kann Schmuck sein. |
+| `forms/label-missing`, `forms/placeholder-as-label` | Platzhalter allein: kein `label-missing`, sondern `REVIEW` | Der Platzhalter stiftet den Namen (HTML-AAM, ACT e086e5 besteht) und ist sichtbar, solange das Feld leer ist. |
+| `forms/error-unidentified` | `REVIEW` | Eine sichtbare Fehlermeldung neben dem Feld erfüllt 3.3.1 auch ohne Verknüpfung (G83). |
+| `forms/group-missing`, `forms/group-name-missing` | `REVIEW` | `fieldset` ist hinreichend (H71), nicht Pflicht; ein `fieldset` kann auch nur gestalten. |
+| `forms/no-submit` | `REVIEW` | 3.2.2 verletzt erst ein Kontextwechsel bei der Eingabe, nicht der fehlende Knopf (H32 ist hinreichend). |
+| `dialog/focusable-missing` | `REVIEW` | Der Dialog selbst kann den Fokus tragen (`tabindex="-1"`), Escape kann ihn schließen. |
+
+Unverändert `FAIL` mit Kriterium, weil eine ACT-Regel oder Fehlertechnik den
+Befund trägt: `images/alt-missing`, `images/area-alt-missing`,
+`images/input-alt-missing`, `objects/alt-missing` (1.1.1);
+`links/name-missing`, `buttons/name-missing`, `summary/name-missing`,
+`dialog/name-missing`, `names/required-missing` (4.1.2, ARIA „Name
+Required"); `document/lang-missing`, `document/lang-invalid`,
+`document/lang-mismatch` (3.1.1, ACT b5c3f8, bf051a, 5b7ae0);
+`document/title-*` (2.4.2, ACT 2779a5); `zoom/viewport-locked` (1.4.4, ACT
+b4f0c3); `timing/meta-refresh` (2.2.1, ACT bc659a); `headings/empty` (ACT
+ffd0e9); `aria/*` und `popover/*` (4.1.2, ACT 5c01ea, 6a7281, 4e8ab6; Kontext
+und Bestandteile 1.3.1, ACT ff89c9, bc4a75); `keyboard/hidden-focusable` (ACT
+6cfa84); `keyboard/scrollable-region-not-focusable` (2.1.1, ACT 0ssw9k);
+`inert/dialog-inert` (offenes `<dialog>`); `context/on-input` (F37 mit Beleg
+im Handler); `lists/invalid-structure`, `lists/item-outside-list`,
+`lists/term-without-definition`, `tables/header-without-data`,
+`tables/headers-attr-invalid`, `tables/presentational-with-headers` (1.3.1,
+F46, ACT d0f69e, a25f45); `forms/label-missing` ohne jeden Namen (ACT e086e5);
+`forms/autocomplete-invalid` (1.3.5, ACT 73f2c2); `label-in-name/mismatch`
+(2.5.3, ACT 2ee8b8); `contrast/*` (gemessen); `color/link-indistinct` (F73,
+gemessen); `focus/outline-removed` (F78, seitenweit ohne Ersatz);
+`status/live-overridden` mit `aria-live="off"` (4.1.3).
+
+Die `viz/*`- und `display/*`-Regeln der Darstellungskonvention tragen
+`best-practice` und zugleich das nächste Kriterium (siehe unten); sie melden
+nur auf Seiten, die die Konvention benutzen. Diese Doppelung ist dort
+beabsichtigt und hier nicht geändert.
+
 ## ARIA nach WAI-ARIA 1.2
 
 Die `aria/*`-Regeln prüfen Attributnamen, Wertebereiche, erlaubte und

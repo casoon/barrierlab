@@ -34,7 +34,8 @@ fn seite<D: Rendering>(doc: &D) -> Location {
 
 // --- lists/role-redundant -----------------------------------------------------
 
-/// 4.1.2: `role="list"` an `<ul>`/`<ol>`, deren Listenzeichen sichtbar sind.
+/// `role="list"` an `<ul>`/`<ol>`, deren Listenzeichen sichtbar sind. Best
+/// Practice ohne Kriterium: Die Rolle stimmt, nur überflüssig (auditmysite#779).
 ///
 /// Mit `list-style-type: none` ist die Rolle nicht überflüssig: WebKit und
 /// VoiceOver nehmen einer solchen Liste ihre Semantik, und die ausdrückliche
@@ -60,7 +61,7 @@ pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_wcag(["4.1.2"])
+                .with_tags(["best-practice"])
                 .at(at(n.id())),
             ),
         }
@@ -437,7 +438,7 @@ pub(crate) const METAS: [Meta; 3] = [
         ids: &["lists/role-redundant"],
         tier: Tier::Rendering,
         scope: Scope::AccessibilityTree,
-        wcag: &["4.1.2"],
+        wcag: &[],
         severity: Severity::Low,
         help: "role=\"list\" on a <ul> or <ol> is only needed when list-style-type is none.",
         #[cfg(feature = "de")]
