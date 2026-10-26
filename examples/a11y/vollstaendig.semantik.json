@@ -175,6 +175,10 @@
       "findings": 0
     },
     {
+      "rule_id": "lists/item-outside-list",
+      "findings": 0
+    },
+    {
       "rule_id": "lists/term-without-definition",
       "findings": 0
     },

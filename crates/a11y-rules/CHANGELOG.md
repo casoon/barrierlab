@@ -5,6 +5,12 @@ Einträge bis 0.10.1 stehen gesammelt in
 [docs/packages/a11y-core-history.md](../../docs/packages/a11y-core-history.md) —
 die vier Crates lagen bis dahin im Repository `casoon/a11y-core`.
 
+## [Unreleased]
+
+### Fixed
+
+- **Listen:** `lists/item-outside-list` steht jetzt in `Meta::ids` der Listenregel. Bisher fehlte für die Kennung der `RuleRun`, und sie fehlte in der [Regelreferenz](https://casoon.github.io/barrierlab/docs/a11y/reference/regeln/).
+
 ## [0.26.0] - 2026-10-26
 
 Normative Zuordnung aller Regeln geprüft (auditmysite#779): Ein `FAIL` mit
