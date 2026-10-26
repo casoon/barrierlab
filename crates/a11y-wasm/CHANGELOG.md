@@ -52,7 +52,7 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   dieses Paket noch nicht; sie stehen als `UNTESTED` im Bericht, sobald es etwas zu prüfen
   gäbe.
 
-## [0.9.1] - 2026-10-04
+## [0.9.1] - 2026-10-03
 
 ### Changed
 
@@ -102,7 +102,7 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - **Regeln:** Gebaut auf `a11y-rules` 0.15.0: die Namensregeln aus B2 (barrierlab#15) —
   Pflichtnamen, Dialoge, `<summary>`, Live-Regionen, Label in Name. Keine Änderung an der Schnittstelle.
 
-## [0.4.0] - 2026-09-30
+## [0.4.0] - 2026-10-01
 
 ### Changed
 

@@ -26,7 +26,7 @@ Repository `casoon/a11y-core`.
 - **Kennungen:** `normalize_selector` und `PAGEWIDE_SELECTOR`: die Form, in der zwei Seiten
   desselben Templates übereinstimmen.
 
-## [0.24.1] - 2026-10-25
+## [0.24.1] - 2026-10-24
 
 ### Changed
 
@@ -62,7 +62,7 @@ Repository `casoon/a11y-core`.
 
 - **Gleichschritt:** mit `a11y-rules` 0.20.0; keine eigene Änderung.
 
-## [0.19.1] - 2026-10-04
+## [0.19.1] - 2026-10-03
 
 ### Changed
 
@@ -110,7 +110,7 @@ Repository `casoon/a11y-core`.
 
 - **Gleichschritt:** mit `a11y-rules` 0.14.1; keine eigene Änderung.
 
-## [0.14.0] - 2026-09-30
+## [0.14.0] - 2026-10-01
 
 ### Changed
 
