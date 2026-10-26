@@ -1753,15 +1753,18 @@ pub const METAS: &[Meta] = &[
         ids: &[
             "lists/invalid-structure",
             "lists/empty",
+            "lists/item-outside-list",
             "lists/term-without-definition",
         ],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
         wcag: &["1.3.1"],
         severity: Severity::Medium,
-        help: "<ul> and <ol> may only have <li> as direct children and must not be empty.",
+        help: "<ul> and <ol> may only have <li> as direct children and must not be empty; \
+               a list item must stand inside a list.",
         #[cfg(feature = "de")]
-        help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein.",
+        help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein; \
+                  ein Listeneintrag muss in einer Liste stehen.",
     },
     Meta {
         ids: &[
