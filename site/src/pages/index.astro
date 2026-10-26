@@ -7,6 +7,7 @@ import Diagram from '../components/Diagram.astro';
 
 <Base>
   <Hero
+    layout="editorial"
     title="Eine Antwort statt vier."
     lead="BarrierLab ist die gemeinsame Prüf-Engine hinter den CASOON-Audit-Werkzeugen: Zugänglichkeitsregeln nach WCAG 2.2, HTML-Konformanz, Wahrnehmung und Web-Checks als Rust-Bibliotheken. Ob eine Seite beim Astro-Build, im Terminal-Audit oder live im Browser geprüft wird — der Befund heißt überall gleich und bedeutet dasselbe."
   >
@@ -16,6 +17,13 @@ import Diagram from '../components/Diagram.astro';
         { label: 'npm', command: 'npm i @casoon/a11y-wasm' },
       ]}
     />
+    <div slot="output">
+      <Diagram
+        name="architektur"
+        format="svg"
+        narrow={{ width: 380, height: 560, spec: 'architektur-schmal' }}
+      />
+    </div>
   </Hero>
 
   <Features
@@ -65,7 +73,6 @@ import Diagram from '../components/Diagram.astro';
         eigenen Browser.
       </p>
     </div>
-    <Diagram name="architektur" format="svg" narrow={{ width: 470, height: 700 }} />
     <div class="links">
       <Button href={url('docs/a11y/getting-started/schnellstart/')}>Schnellstart in Rust</Button>
       <Button href={url('docs/packages/')} variant="secondary">Alle Pakete im Überblick</Button>
