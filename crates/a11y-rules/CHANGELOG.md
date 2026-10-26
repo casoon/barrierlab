@@ -38,7 +38,7 @@ abweichen, steht je Schritt in
 
 - **Gleichschritt:** mit `a11y-report` 0.25.0; keine eigene Änderung.
 
-## [0.24.1] - 2026-10-25
+## [0.24.1] - 2026-10-24
 
 ### Fixed
 
@@ -208,7 +208,7 @@ abweichen, steht je Schritt in
   2.1.1): ein scrollbarer Bereich ohne Tastaturzugang; braucht
   `Rendering::scroll_overflow_px`, Puffer 13 px wie axe.
 
-## [0.19.1] - 2026-10-04
+## [0.19.1] - 2026-10-03
 
 ### Fixed
 
@@ -405,7 +405,7 @@ abweichen, steht je Schritt in
   diesen Fall ab; mit B1 ist sie entfallen. Beleg: berlin.de,
   `ul.swiper-wrapper > li[role=group]` (wie axe `list`).
 
-## [0.14.0] - 2026-09-30
+## [0.14.0] - 2026-10-01
 
 ### Added
 

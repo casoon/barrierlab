@@ -61,7 +61,7 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
   `*_FIELDS`), `is_present` (leerer Inhalt gilt als fehlend), `is_complete`, `completeness` in
   Prozent, `is_valid_twitter_card`, `is_absolute_url`.
 
-## [0.2.0] - 2026-09-24
+## [0.2.0] - 2026-09-25
 
 ### Added
 
