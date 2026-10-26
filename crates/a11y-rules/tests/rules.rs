@@ -104,6 +104,9 @@ fn fehlerhaft() -> Arena {
         .open("div")
         .close()
         .close()
+        .open("li")
+        .text("verwaist")
+        .close()
         .open("table")
         .open("tr")
         .open("td")
@@ -1005,6 +1008,9 @@ fn jede_erzeugte_kennung_ist_deklariert() {
             f.rule_id
         );
     }
+    // Erzeugt von einer Hilfsfunktion der Listenregel, nicht von der Prüfung
+    // über die Listen selbst — fehlte deshalb einmal in `Meta::ids`.
+    assert!(hat(&r, "lists/item-outside-list"), "{:?}", ids(&r));
 }
 
 /// Keine Kennung darf doppelt deklariert sein — sonst gäbe es zwei Vermerke
