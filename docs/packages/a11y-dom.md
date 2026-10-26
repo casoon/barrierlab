@@ -10,7 +10,7 @@ Fähigkeits-Tiers. Damit läuft dieselbe Regel über einen geparsten HTML-Baum,
 
 ## Stand
 
-0.10.1 auf crates.io. Benutzt von `accname`, `a11y-rules` und allen Hosts;
+0.26.0 auf crates.io. Benutzt von `accname`, `a11y-rules` und allen Hosts;
 auditmysite baut daraus in `dom_document.rs` einen Baum aus CDP-Daten.
 
 ## Aufbau

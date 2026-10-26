@@ -8,8 +8,8 @@
       "location": {
         "node": "13"
       },
-      "wcag": [
-        "1.3.1"
+      "tags": [
+        "best-practice"
       ]
     },
     {
@@ -37,17 +37,15 @@
       ]
     },
     {
-      "rule_id": "forms/label-missing",
-      "outcome": "fail",
-      "severity": "critical",
-      "message": "The input has no label.",
+      "rule_id": "forms/placeholder-as-label",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "The field uses the placeholder instead of a label.",
       "location": {
         "node": "24"
       },
       "wcag": [
-        "1.3.1",
-        "3.3.2",
-        "4.1.2"
+        "3.3.2"
       ]
     },
     {
@@ -60,6 +58,115 @@
       },
       "wcag": [
         "2.4.1"
+      ]
+    },
+    {
+      "rule_id": "manual/image-alternatives",
+      "outcome": "untested",
+      "severity": "high",
+      "message": "Check by hand: every alt text says what the image means in its place, and only purely decorative images have alt=\"\".",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "1.1.1"
+      ]
+    },
+    {
+      "rule_id": "manual/visual-structure",
+      "outcome": "untested",
+      "severity": "medium",
+      "message": "Check by hand: what looks like a heading, list, table or menu is marked up as one — not just styled to look like it.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "1.3.1"
+      ]
+    },
+    {
+      "rule_id": "manual/use-of-color",
+      "outcome": "untested",
+      "severity": "medium",
+      "message": "Check by hand: colour is never the only way to tell something — links in text, required fields, errors, states.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "1.4.1"
+      ]
+    },
+    {
+      "rule_id": "manual/timing",
+      "outcome": "untested",
+      "severity": "high",
+      "message": "Check by hand: any time limit can be turned off, adjusted or extended.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "2.2.1"
+      ]
+    },
+    {
+      "rule_id": "manual/error-handling",
+      "outcome": "untested",
+      "severity": "high",
+      "message": "Check by hand: submit the form with errors — each error is named in text, next to its field, with a suggestion how to fix it.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "3.3.1",
+        "3.3.3"
+      ]
+    },
+    {
+      "rule_id": "manual/no-timing",
+      "outcome": "untested",
+      "severity": "low",
+      "message": "Check by hand: no task depends on timing at all, except synchronised media and real-time events.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "2.2.3"
+      ]
+    },
+    {
+      "rule_id": "manual/unusual-words",
+      "outcome": "untested",
+      "severity": "low",
+      "message": "Check by hand: jargon, idioms and unusual words are explained — inline, with <dfn> or in a glossary.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "3.1.3"
+      ]
+    },
+    {
+      "rule_id": "manual/help",
+      "outcome": "untested",
+      "severity": "low",
+      "message": "Check by hand: fields that need it have context-sensitive help — instructions, examples or a link to help.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "3.3.5"
+      ]
+    },
+    {
+      "rule_id": "navigation/location-missing",
+      "outcome": "review",
+      "severity": "low",
+      "message": "The page has navigation but neither a breadcrumb trail nor a link marked aria-current=\"page\". Check that users can tell where they are in the site.",
+      "location": {
+        "node": "0"
+      },
+      "wcag": [
+        "2.4.8"
       ]
     },
     {
@@ -76,7 +183,7 @@
     },
     {
       "rule_id": "svg/name-missing",
-      "outcome": "fail",
+      "outcome": "review",
       "severity": "high",
       "message": "The SVG has no accessible name and is not marked decorative.",
       "location": {
@@ -114,7 +221,19 @@
       "rule_id": "links/generic-name",
       "outcome": "review",
       "severity": "medium",
-      "message": "The link text \"mehr\" says nothing about its target.",
+      "message": "The link text \"Start\" says nothing about its target.",
+      "location": {
+        "node": "8"
+      },
+      "wcag": [
+        "2.4.4"
+      ]
+    },
+    {
+      "rule_id": "links/generic-name",
+      "outcome": "review",
+      "severity": "low",
+      "message": "The link text \"mehr\" says nothing about its target; the surrounding text may explain it.",
       "location": {
         "node": "16"
       },
@@ -125,13 +244,61 @@
     {
       "rule_id": "links/generic-name",
       "outcome": "review",
-      "severity": "medium",
-      "message": "The link text \"mehr\" says nothing about its target.",
+      "severity": "low",
+      "message": "The link text \"mehr\" says nothing about its target; the surrounding text may explain it.",
       "location": {
         "node": "21"
       },
       "wcag": [
         "2.4.4"
+      ]
+    },
+    {
+      "rule_id": "links/purpose-link-only",
+      "outcome": "review",
+      "severity": "low",
+      "message": "The link text \"Start\" does not name its purpose on its own.",
+      "location": {
+        "node": "8"
+      },
+      "wcag": [
+        "2.4.9"
+      ]
+    },
+    {
+      "rule_id": "links/purpose-link-only",
+      "outcome": "review",
+      "severity": "low",
+      "message": "The link text \"mehr\" does not name its purpose on its own.",
+      "location": {
+        "node": "16"
+      },
+      "wcag": [
+        "2.4.9"
+      ]
+    },
+    {
+      "rule_id": "links/purpose-link-only",
+      "outcome": "review",
+      "severity": "low",
+      "message": "The link text \"mehr\" does not name its purpose on its own.",
+      "location": {
+        "node": "21"
+      },
+      "wcag": [
+        "2.4.9"
+      ]
+    },
+    {
+      "rule_id": "forms/purpose-missing",
+      "outcome": "review",
+      "severity": "medium",
+      "message": "The field \"E-Mail\" seems to ask for information about the user but has no autocomplete token.",
+      "location": {
+        "node": "24"
+      },
+      "wcag": [
+        "1.3.5"
       ]
     }
   ],
@@ -181,6 +348,10 @@
       "findings": 0
     },
     {
+      "rule_id": "headings/none",
+      "findings": 0
+    },
+    {
       "rule_id": "images/alt-missing",
       "findings": 1
     },
@@ -190,11 +361,11 @@
     },
     {
       "rule_id": "forms/label-missing",
-      "findings": 1
+      "findings": 0
     },
     {
       "rule_id": "forms/placeholder-as-label",
-      "findings": 0
+      "findings": 1
     },
     {
       "rule_id": "aria/role-invalid",
@@ -273,6 +444,242 @@
       "findings": 1
     },
     {
+      "rule_id": "aria/attribute-unknown",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/attribute-value-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/owns-conflict",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/tab-selected-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/tabpanel-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/combobox-popup-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "popover/target-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "popover/target-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "inert/dialog-inert",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/media-alternatives",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/image-alternatives",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/visual-structure",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/use-of-color",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/timing",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/error-handling",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/authentication",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/pointer-gestures",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/no-timing",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/interruptions",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/re-authenticating",
+      "findings": 0
+    },
+    {
+      "rule_id": "manual/unusual-words",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/help",
+      "findings": 1
+    },
+    {
+      "rule_id": "manual/motion-actuation",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/autocomplete-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/error-unidentified",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/group-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/no-submit",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/redundant-entry",
+      "findings": 0
+    },
+    {
+      "rule_id": "context/on-input",
+      "findings": 0
+    },
+    {
+      "rule_id": "context/on-focus",
+      "findings": 0
+    },
+    {
+      "rule_id": "context/autofocus",
+      "findings": 0
+    },
+    {
+      "rule_id": "auth/captcha",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/click-handler-not-focusable",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/used-as-button",
+      "findings": 0
+    },
+    {
+      "rule_id": "navigation/location-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "images/area-alt-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "images/input-alt-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "images/server-side-map",
+      "findings": 0
+    },
+    {
+      "rule_id": "objects/alt-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "media/audio-autoplay",
+      "findings": 0
+    },
+    {
+      "rule_id": "viz/text-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "display/text-hidden",
+      "findings": 0
+    },
+    {
+      "rule_id": "viz/caption-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "viz/static-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "viz/table-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "display/toggle-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "display/init-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/header-without-data",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/data-undetermined",
+      "findings": 0
+    },
+    {
+      "rule_id": "tables/headers-attr-invalid",
+      "findings": 0
+    },
+    {
+      "rule_id": "document/lang-mismatch",
+      "findings": 0
+    },
+    {
+      "rule_id": "language/part-unmarked",
+      "findings": 0
+    },
+    {
+      "rule_id": "language/part-undetermined",
+      "findings": 0
+    },
+    {
+      "rule_id": "language/abbreviation-unexpanded",
+      "findings": 0
+    },
+    {
+      "rule_id": "timing/meta-refresh",
+      "findings": 0
+    },
+    {
+      "rule_id": "headings/section-without-heading",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/role-redundant",
+      "findings": 0
+    },
+    {
+      "rule_id": "names/title-only",
+      "findings": 0
+    },
+    {
+      "rule_id": "patterns/tooltip-unreferenced",
+      "findings": 0
+    },
+    {
       "rule_id": "links/name-missing",
       "findings": 0
     },
@@ -290,7 +697,127 @@
     },
     {
       "rule_id": "links/generic-name",
-      "findings": 2
+      "findings": 3
+    },
+    {
+      "rule_id": "links/url-name",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/single-character-name",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/new-window-unannounced",
+      "findings": 0
+    },
+    {
+      "rule_id": "links/purpose-link-only",
+      "findings": 3
+    },
+    {
+      "rule_id": "aria/attribute-not-allowed",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/attribute-prohibited",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/required-parent-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "aria/required-children-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "names/required-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "names/symbol-only",
+      "findings": 0
+    },
+    {
+      "rule_id": "dialog/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "dialog/modal-unmarked",
+      "findings": 0
+    },
+    {
+      "rule_id": "summary/name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "status/live-overridden",
+      "findings": 0
+    },
+    {
+      "rule_id": "label-in-name/mismatch",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/purpose-missing",
+      "findings": 1
+    },
+    {
+      "rule_id": "forms/required-unmarked",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/instructions-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/title-only-label",
+      "findings": 0
+    },
+    {
+      "rule_id": "forms/group-name-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/not-unique",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/not-top-level",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/banner-duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/contentinfo-duplicate",
+      "findings": 0
+    },
+    {
+      "rule_id": "landmarks/content-outside",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/focusable-no-role",
+      "findings": 0
+    },
+    {
+      "rule_id": "keyboard/interactive-not-focusable",
+      "findings": 0
+    },
+    {
+      "rule_id": "dialog/focusable-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "patterns/accordion-controls-missing",
+      "findings": 0
+    },
+    {
+      "rule_id": "frames/name-missing",
+      "findings": 0
     },
     {
       "rule_id": "contrast/text-insufficient",
@@ -303,17 +830,137 @@
       "not_run": "capability_missing",
       "findings": 0,
       "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "contrast/text-enhanced",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "contrast/control-insufficient",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "contrast/control-undetermined",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "order/visual-mismatch",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "motion/infinite-animation",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "reflow/min-width",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "keyboard/pointer-only",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "focus/obscured",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "targets/size",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "targets/size-enhanced",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "focus/indicator-missing",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "focus/indicator-unmeasured",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "lists/role-redundant",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "color/link-indistinct",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "keyboard/scrollable-region-not-focusable",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
+      "rule_id": "focus/outline-removed",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no stylesheets"
+    },
+    {
+      "rule_id": "motion/reduced-motion-ignored",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no stylesheets"
+    },
+    {
+      "rule_id": "orientation/content-hidden",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no stylesheets"
+    },
+    {
+      "rule_id": "text/justified",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no stylesheets"
+    },
+    {
+      "rule_id": "text/line-height-tight",
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no stylesheets"
     }
   ],
   "summary": {
-    "fail": 5,
-    "review": 6,
+    "fail": 3,
+    "review": 14,
     "pass": 0,
-    "untested": 0,
-    "critical": 2,
+    "untested": 8,
+    "critical": 1,
     "high": 2,
-    "medium": 7,
-    "low": 0,
-    "rules_not_run": 2
+    "medium": 8,
+    "low": 6,
+    "rules_not_run": 22
   }
 }

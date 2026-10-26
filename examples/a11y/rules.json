@@ -41,8 +41,7 @@
     "severity": "high",
     "tier": "structure",
     "wcag": [
-      "1.4.4",
-      "1.4.10"
+      "1.4.4"
     ]
   },
   {
@@ -51,8 +50,7 @@
     "severity": "high",
     "tier": "structure",
     "wcag": [
-      "1.4.4",
-      "1.4.10"
+      "1.4.4"
     ]
   },
   {
@@ -61,8 +59,7 @@
     "severity": "high",
     "tier": "structure",
     "wcag": [
-      "1.4.4",
-      "1.4.10"
+      "1.4.4"
     ]
   },
   {
@@ -72,6 +69,7 @@
     "tier": "structure",
     "wcag": [
       "1.3.1",
+      "2.4.1",
       "2.4.6"
     ]
   },
@@ -82,6 +80,7 @@
     "tier": "structure",
     "wcag": [
       "1.3.1",
+      "2.4.1",
       "2.4.6"
     ]
   },
@@ -92,6 +91,7 @@
     "tier": "structure",
     "wcag": [
       "1.3.1",
+      "2.4.1",
       "2.4.6"
     ]
   },
@@ -102,6 +102,18 @@
     "tier": "structure",
     "wcag": [
       "1.3.1",
+      "2.4.1",
+      "2.4.6"
+    ]
+  },
+  {
+    "help": "Headings form the outline; do not skip levels.",
+    "id": "headings/none",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "2.4.1",
       "2.4.6"
     ]
   },
@@ -183,12 +195,12 @@
     ]
   },
   {
-    "help": "IDs must be unique within the document.",
+    "help": "An ID that another element references must be unique.",
     "id": "ids/duplicate",
     "severity": "medium",
     "tier": "structure",
     "wcag": [
-      "4.1.1"
+      "4.1.2"
     ]
   },
   {
@@ -324,6 +336,745 @@
     ]
   },
   {
+    "help": "Use only aria-* attributes defined by WAI-ARIA.",
+    "id": "aria/attribute-unknown",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "ARIA attributes need a value of their type.",
+    "id": "aria/attribute-value-invalid",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "An element may be owned by only one aria-owns.",
+    "id": "aria/owns-conflict",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Tabs mark the selected tab; an expanded combobox references its popup.",
+    "id": "aria/tab-selected-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Tabs mark the selected tab; an expanded combobox references its popup.",
+    "id": "aria/tabpanel-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Tabs mark the selected tab; an expanded combobox references its popup.",
+    "id": "aria/combobox-popup-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "popovertarget must reference an element with the popover attribute.",
+    "id": "popover/target-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "popovertarget must reference an element with the popover attribute.",
+    "id": "popover/target-invalid",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "An open dialog must not be inert.",
+    "id": "inert/dialog-inert",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.1.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/media-alternatives",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/image-alternatives",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/visual-structure",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/use-of-color",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/timing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/error-handling",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/authentication",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/pointer-gestures",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/no-timing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/interruptions",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/re-authenticating",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/unusual-words",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Criteria no machine can decide. Each appears once per page when the page contains something it applies to, as UNTESTED — a checklist, not a verdict.",
+    "id": "manual/help",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1",
+      "1.2.1",
+      "1.2.2",
+      "1.2.3",
+      "1.2.5",
+      "1.3.1",
+      "1.4.1",
+      "2.2.1",
+      "2.2.3",
+      "2.2.4",
+      "2.2.5",
+      "2.5.1",
+      "3.1.3",
+      "3.3.1",
+      "3.3.3",
+      "3.3.5",
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "Checklist item for motion actuation, shown when an inline script listens to device motion or orientation.",
+    "id": "manual/motion-actuation",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "2.5.4"
+    ]
+  },
+  {
+    "help": "autocomplete must use the autofill tokens of the HTML standard.",
+    "id": "forms/autocomplete-invalid",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "1.3.5"
+    ]
+  },
+  {
+    "help": "A field marked aria-invalid needs an error description via aria-describedby or aria-errormessage.",
+    "id": "forms/error-unidentified",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.3.1"
+    ]
+  },
+  {
+    "help": "Radio buttons and checkboxes sharing a name belong in a fieldset with legend or a named group.",
+    "id": "forms/group-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "A form that collects input needs an explicit submit control.",
+    "id": "forms/no-submit",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.2.2"
+    ]
+  },
+  {
+    "help": "Information entered once is prefilled, autofillable or selectable when asked again.",
+    "id": "forms/redundant-entry",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.3.7"
+    ]
+  },
+  {
+    "help": "Changing a selection must not submit, navigate or open a window by itself.",
+    "id": "context/on-input",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.2.2"
+    ]
+  },
+  {
+    "help": "Receiving focus must not change the context.",
+    "id": "context/on-focus",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "3.2.1"
+    ]
+  },
+  {
+    "help": "Receiving focus must not change the context.",
+    "id": "context/autofocus",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "3.2.1"
+    ]
+  },
+  {
+    "help": "A CAPTCHA in a sign-in form needs an alternative without a cognitive function test.",
+    "id": "auth/captcha",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.3.8"
+    ]
+  },
+  {
+    "help": "An element with a click handler must be a control: a <button> or <a href>, or a role and tabindex with keyboard handling.",
+    "id": "keyboard/click-handler-not-focusable",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.1.1"
+    ]
+  },
+  {
+    "help": "A link that triggers an action instead of navigating should be a <button>.",
+    "id": "links/used-as-button",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Show users where they are: a breadcrumb trail or aria-current=\"page\" in the navigation.",
+    "id": "navigation/location-missing",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "2.4.8"
+    ]
+  },
+  {
+    "help": "An image map <area> with href needs alt text naming its target.",
+    "id": "images/area-alt-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "An <input type=\"image\"> needs alt text describing its action.",
+    "id": "images/input-alt-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Do not use server-side image maps (ismap); use a client-side map or text links.",
+    "id": "images/server-side-map",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "2.1.1"
+    ]
+  },
+  {
+    "help": "An <object> needs a text alternative: fallback content, aria-label or title.",
+    "id": "objects/alt-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Audio that plays automatically must stop within three seconds or be pausable.",
+    "id": "media/audio-autoplay",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "1.4.2"
+    ]
+  },
+  {
+    "help": "Every visualisation (figure[data-viz]) needs a non-empty text layer [data-viz-text] with its statement.",
+    "id": "viz/text-missing",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Never put hidden, aria-hidden=\"true\" or inert on [data-viz-text] or its ancestors; hide it visually instead.",
+    "id": "display/text-hidden",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "Every visualisation (figure[data-viz]) needs a <figcaption> that names it.",
+    "id": "viz/caption-missing",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "A 3d or interactive visualisation needs a still image [data-viz-static] for calm mode.",
+    "id": "viz/static-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "2.2.2"
+    ]
+  },
+  {
+    "help": "A chart (data-viz=\"chart\") should give its values as a <table>.",
+    "id": "viz/table-missing",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "A page with visualisations needs a display-mode toggle marked [data-display-toggle].",
+    "id": "display/toggle-missing",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "2.2.2"
+    ]
+  },
+  {
+    "help": "Set html[data-display] in a small blocking script in <head>, before <body>.",
+    "id": "display/init-missing",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "2.2.2"
+    ]
+  },
+  {
+    "help": "Header cells need data cells to label; a table of headers only labels nothing.",
+    "id": "tables/header-without-data",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "Header cells need data cells to label; a table of headers only labels nothing.",
+    "id": "tables/data-undetermined",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "The headers attribute of a cell must list the ids of header cells in the same table.",
+    "id": "tables/headers-attr-invalid",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "lang and xml:lang on <html> must name the same language.",
+    "id": "document/lang-mismatch",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.1.1"
+    ]
+  },
+  {
+    "help": "A passage in another language than the page needs its own lang attribute.",
+    "id": "language/part-unmarked",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.1.2"
+    ]
+  },
+  {
+    "help": "A passage in another language than the page needs its own lang attribute.",
+    "id": "language/part-undetermined",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "3.1.2"
+    ]
+  },
+  {
+    "help": "Make the expansion of an abbreviation available, e.g. in the title of <abbr>.",
+    "id": "language/abbreviation-unexpanded",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "3.1.4"
+    ]
+  },
+  {
+    "help": "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\">; redirect on the server or let users trigger it.",
+    "id": "timing/meta-refresh",
+    "severity": "high",
+    "tier": "structure",
+    "wcag": [
+      "2.2.1"
+    ]
+  },
+  {
+    "help": "Give articles and named sections a heading so users can find their content.",
+    "id": "headings/section-without-heading",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": [
+      "2.4.10"
+    ]
+  },
+  {
+    "help": "Do not set a role the element already has implicitly.",
+    "id": "aria/role-redundant",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": []
+  },
+  {
+    "help": "Do not rely on the title attribute as a control's only name.",
+    "id": "names/title-only",
+    "severity": "medium",
+    "tier": "structure",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
+    "id": "patterns/tooltip-unreferenced",
+    "severity": "low",
+    "tier": "structure",
+    "wcag": []
+  },
+  {
     "help": "Every link needs a name that describes its target.",
     "id": "links/name-missing",
     "severity": "critical",
@@ -370,6 +1121,272 @@
     ]
   },
   {
+    "help": "A bare address as link text does not say what the target contains.",
+    "id": "links/url-name",
+    "severity": "low",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.4"
+    ]
+  },
+  {
+    "help": "A single character does not name a link's target.",
+    "id": "links/single-character-name",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.4"
+    ]
+  },
+  {
+    "help": "Say in the link text when a link opens a new window or tab.",
+    "id": "links/new-window-unannounced",
+    "severity": "low",
+    "tier": "semantics",
+    "wcag": [
+      "3.2.5"
+    ]
+  },
+  {
+    "help": "The link text alone should name the link's purpose.",
+    "id": "links/purpose-link-only",
+    "severity": "low",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.9"
+    ]
+  },
+  {
+    "help": "Use only ARIA attributes the element's role supports.",
+    "id": "aria/attribute-not-allowed",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Use only ARIA attributes the element's role supports.",
+    "id": "aria/attribute-prohibited",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Roles that belong together must be nested as WAI-ARIA requires.",
+    "id": "aria/required-parent-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Roles that belong together must be nested as WAI-ARIA requires.",
+    "id": "aria/required-children-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Elements whose role requires a name (fields, toggles, menu items, meters, …) need one.",
+    "id": "names/required-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.1.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "An accessible name should be words, not a single symbol.",
+    "id": "names/symbol-only",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Every dialog needs a name, usually via aria-labelledby on its heading.",
+    "id": "dialog/name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "A modal dialog should carry aria-modal=\"true\".",
+    "id": "dialog/modal-unmarked",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "The <summary> of a <details> element needs text.",
+    "id": "summary/name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Live regions should keep the aria-live their role implies.",
+    "id": "status/live-overridden",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.3"
+    ]
+  },
+  {
+    "help": "The accessible name must contain the visible label text.",
+    "id": "label-in-name/mismatch",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "2.5.3"
+    ]
+  },
+  {
+    "help": "Fields asking for information about the user carry the matching autocomplete token.",
+    "id": "forms/purpose-missing",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.5"
+    ]
+  },
+  {
+    "help": "Required fields and expected formats are stated in the label or description.",
+    "id": "forms/required-unmarked",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "3.3.2"
+    ]
+  },
+  {
+    "help": "Required fields and expected formats are stated in the label or description.",
+    "id": "forms/instructions-missing",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "3.3.2"
+    ]
+  },
+  {
+    "help": "A field should have a visible label, not only a title attribute.",
+    "id": "forms/title-only-label",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "A fieldset needs a legend, a form group a name.",
+    "id": "forms/group-name-missing",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.1",
+      "3.3.2"
+    ]
+  },
+  {
+    "help": "Landmarks of the same role should have distinct names.",
+    "id": "landmarks/not-unique",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "1.3.1"
+    ]
+  },
+  {
+    "help": "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
+    "id": "landmarks/not-top-level",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": []
+  },
+  {
+    "help": "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
+    "id": "landmarks/banner-duplicate",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": []
+  },
+  {
+    "help": "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
+    "id": "landmarks/contentinfo-duplicate",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": []
+  },
+  {
+    "help": "All content belongs inside a landmark.",
+    "id": "landmarks/content-outside",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": []
+  },
+  {
+    "help": "Interactive roles must be focusable; focusable elements need an interactive role.",
+    "id": "keyboard/focusable-no-role",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "2.1.1"
+    ]
+  },
+  {
+    "help": "Interactive roles must be focusable; focusable elements need an interactive role.",
+    "id": "keyboard/interactive-not-focusable",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "2.1.1"
+    ]
+  },
+  {
+    "help": "A dialog needs at least one focusable element.",
+    "id": "dialog/focusable-missing",
+    "severity": "medium",
+    "tier": "semantics",
+    "wcag": [
+      "2.4.3"
+    ]
+  },
+  {
+    "help": "An expanded button should reference the region it controls with aria-controls.",
+    "id": "patterns/accordion-controls-missing",
+    "severity": "low",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "Every iframe needs a name, usually a title saying what it contains.",
+    "id": "frames/name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
     "help": "Text needs a contrast ratio against its background of at least 4.5:1, or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
     "id": "contrast/text-insufficient",
     "severity": "high",
@@ -385,6 +1402,186 @@
     "tier": "rendering",
     "wcag": [
       "1.4.3"
+    ]
+  },
+  {
+    "help": "Enhanced contrast (AAA): at least 7:1, or 4.5:1 for large text.",
+    "id": "contrast/text-enhanced",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.6"
+    ]
+  },
+  {
+    "help": "A custom-drawn checkbox, radio button, switch or slider (appearance: none) needs a boundary with a contrast ratio of at least 3:1 against its background.",
+    "id": "contrast/control-insufficient",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.11"
+    ]
+  },
+  {
+    "help": "A custom-drawn checkbox, radio button, switch or slider (appearance: none) needs a boundary with a contrast ratio of at least 3:1 against its background.",
+    "id": "contrast/control-undetermined",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.11"
+    ]
+  },
+  {
+    "help": "Visual order and tab order should match; CSS reordering (flex-direction: *-reverse, order) over focusable content is a hint they do not.",
+    "id": "order/visual-mismatch",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.3.2",
+      "2.4.3"
+    ]
+  },
+  {
+    "help": "Movement that lasts longer than five seconds needs a way to pause, stop or hide it.",
+    "id": "motion/infinite-animation",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "2.2.2"
+    ]
+  },
+  {
+    "help": "Content must reflow at 320 CSS pixels wide; a min-width above that forces horizontal scrolling.",
+    "id": "reflow/min-width",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.10"
+    ]
+  },
+  {
+    "help": "Whatever reacts to a click must be a control: a <button> or <a>, or a role and tabindex with keyboard handling.",
+    "id": "keyboard/pointer-only",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "2.1.1",
+      "4.1.2"
+    ]
+  },
+  {
+    "help": "A focused control must not be entirely hidden by fixed or sticky content.",
+    "id": "focus/obscured",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "2.4.11"
+    ]
+  },
+  {
+    "help": "Targets need at least 24 × 24 CSS pixels, or enough spacing to their neighbours.",
+    "id": "targets/size",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "2.5.8"
+    ]
+  },
+  {
+    "help": "Enhanced target size (AAA): targets of at least 44 × 44 CSS pixels.",
+    "id": "targets/size-enhanced",
+    "severity": "low",
+    "tier": "rendering",
+    "wcag": [
+      "2.5.5"
+    ]
+  },
+  {
+    "help": "Keyboard focus must be visible on every control.",
+    "id": "focus/indicator-missing",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "2.4.7"
+    ]
+  },
+  {
+    "help": "Keyboard focus must be visible on every control.",
+    "id": "focus/indicator-unmeasured",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "2.4.7"
+    ]
+  },
+  {
+    "help": "role=\"list\" on a <ul> or <ol> is only needed when list-style-type is none.",
+    "id": "lists/role-redundant",
+    "severity": "low",
+    "tier": "rendering",
+    "wcag": []
+  },
+  {
+    "help": "A link in running text needs more than colour to stand out: an underline, or a different weight, style, border or background.",
+    "id": "color/link-indistinct",
+    "severity": "medium",
+    "tier": "rendering",
+    "wcag": [
+      "1.4.1"
+    ]
+  },
+  {
+    "help": "A scrollable region needs keyboard access: tabindex=\"0\" on the region or a focusable element inside it.",
+    "id": "keyboard/scrollable-region-not-focusable",
+    "severity": "high",
+    "tier": "rendering",
+    "wcag": [
+      "2.1.1"
+    ]
+  },
+  {
+    "help": "Keep a visible focus indicator: do not remove the outline on :focus without a replacement, or limit the removal to :focus:not(:focus-visible).",
+    "id": "focus/outline-removed",
+    "severity": "high",
+    "tier": "stylesheets",
+    "wcag": [
+      "2.4.7"
+    ]
+  },
+  {
+    "help": "Switch off movement under @media (prefers-reduced-motion: reduce).",
+    "id": "motion/reduced-motion-ignored",
+    "severity": "medium",
+    "tier": "stylesheets",
+    "wcag": [
+      "2.3.3"
+    ]
+  },
+  {
+    "help": "Content must work in portrait and landscape; do not hide or rotate it per orientation.",
+    "id": "orientation/content-hidden",
+    "severity": "medium",
+    "tier": "stylesheets",
+    "wcag": [
+      "1.3.4"
+    ]
+  },
+  {
+    "help": "Running text: no justified alignment, line height at least 1.5.",
+    "id": "text/justified",
+    "severity": "low",
+    "tier": "stylesheets",
+    "wcag": [
+      "1.4.8"
+    ]
+  },
+  {
+    "help": "Running text: no justified alignment, line height at least 1.5.",
+    "id": "text/line-height-tight",
+    "severity": "low",
+    "tier": "stylesheets",
+    "wcag": [
+      "1.4.8"
     ]
   }
 ]
