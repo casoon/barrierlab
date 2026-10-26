@@ -1,6 +1,7 @@
 # Changelog
 
-Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
+Alle nennenswerten Änderungen an `a11y-perception` stehen hier. Das Format folgt
+[Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
@@ -8,51 +9,45 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Fixed
 
-- `AXTree::iter()` — und damit `images`, `headings`, `form_controls`, `links`,
-  `nodes_with_role` — lässt alles unterhalb eines `Video`- oder `Audio`-Knotens
-  aus. Mit `controls` legt Chrome dort die Bedienoberfläche des Players aus dem
-  Shadow DOM des Browsers ab: Wiedergabe-, Stumm- und Vollbild-Button und eine
-  Zeitleiste als `slider` ohne `valuenow`. Die ARIA-Regeln eines Hosts meldeten
-  diese Zeitleiste als Critical „fehlendes aria-valuenow" — auf jeder Seite mit
-  `<video controls>`, ohne dass ein Autor sie geschrieben hätte oder beheben
-  könnte. In auditmysite kappte das den Score einer solchen Seite auf 49. Der
-  Medien-Knoten selbst bleibt; `iter_all()` und `text_nodes()` sind unverändert.
+- **AXTree:** `AXTree::iter()` und damit `images`, `headings`, `form_controls`, `links`,
+  `nodes_with_role` lassen alles unterhalb eines `Video`- oder `Audio`-Knotens aus.
+- **AXTree:** Grund: mit `controls` legt Chrome dort die Player-Bedienung aus seinem Shadow DOM
+  ab (Wiedergabe-, Stumm-, Vollbild-Button, Zeitleiste als `slider` ohne `valuenow`). ARIA-Regeln
+  eines Hosts meldeten diese Zeitleiste auf jeder Seite mit `<video controls>` als Critical
+  „fehlendes aria-valuenow", ohne dass ein Autor sie geschrieben hätte oder beheben könnte; in
+  auditmysite kappte das den Score auf 49.
+- **AXTree:** Der Medien-Knoten selbst bleibt; `iter_all()` und `text_nodes()` sind unverändert.
 
 ## [0.2.0] - 2026-09-25
 
 ### Added
 
-- `announce` und `Announcement`: woraus die Ansage zu einer Leseeinheit besteht
-  — Name, Rolle, Zustände, in Ansagereihenfolge und als benannte Teile
-  (`AnnouncedRole`, `AnnouncedState`), nicht als Zeichenkette. Die Struktur ist
-  überall dieselbe: dass die Ebene einer Überschrift in die Rolle gehört, dass
-  `expanded=false` „eingeklappt" zu sagen hat und `required=false` nichts, dass
-  „fokussierbar" nur dort etwas hinzufügt, wo die Rolle es nicht schon sagt. Die
-  Wörter bringt ein Host mit seiner Lokalisierung mit.
-
-  Herkunft: auditmysites `screen_reader/announcer.rs`. Dort waren Struktur und
-  Sprache in einer Funktion verschränkt, weshalb das Paket den Renderer bisher
-  nicht übernehmen konnte (siehe `docs/packages/a11y-perception.md`, 0.1.0).
+- **announce:** `announce` und `Announcement`: woraus die Ansage zu einer Leseeinheit besteht,
+  Name, Rolle und Zustände in Ansagereihenfolge als benannte Teile (`AnnouncedRole`,
+  `AnnouncedState`) statt als Zeichenkette. Die Wörter bringt ein Host mit seiner Lokalisierung mit.
+- **announce:** Die Struktur ist überall dieselbe: die Ebene einer Überschrift gehört in die
+  Rolle, `expanded=false` sagt „eingeklappt", `required=false` nichts, „fokussierbar" kommt nur
+  hinzu, wo die Rolle es nicht schon sagt.
+- **announce:** Herkunft: auditmysites `screen_reader/announcer.rs`. Dort waren Struktur und
+  Sprache in einer Funktion verschränkt, weshalb das Paket den Renderer bisher nicht übernehmen
+  konnte (siehe [a11y-perception](https://casoon.github.io/barrierlab/docs/packages/a11y-perception/), 0.1.0).
 
 ### Fixed
 
-- `AXTreeDiff` meldet jetzt Wechsel an `checked` und `pressed` (Tristate-Token
-  „true"/„false"/„mixed"). Bisher blieb der Diff bei Checkbox, Switch und
-  Toggle-Button leer, obwohl die Bedienung gewirkt hatte. Gesehen im
-  Relief-CDP-Spike gegen Chrome: Checkbox angeklickt, `checked` wechselte auf
-  `true`, der Diff zeigte nichts.
+- **AXTreeDiff:** meldet jetzt Wechsel an `checked` und `pressed` (Tristate „true"/„false"/„mixed");
+  bisher blieb der Diff bei Checkbox, Switch und Toggle-Button leer, obwohl die Bedienung gewirkt
+  hatte. Gesehen im Relief-CDP-Spike gegen Chrome: Checkbox angeklickt, `checked` auf `true`, Diff leer.
 
 ## [0.1.1] - 2026-09-24
 
 ### Fixed
 
-- Doku-Verweis auf ein privates Item entschärft (`is_layout_only_role`), damit
-  `rustdoc -D warnings` durchläuft. Die Korrektur stammt aus auditmysite und ist
-  hierher mitgewandert, weil der Code das auch getan hat.
+- **Doku:** Verweis auf das private Item `is_layout_only_role` entschärft, damit
+  `rustdoc -D warnings` durchläuft. Die Korrektur stammt aus auditmysite und ist mit dem Code mitgewandert.
 
 ## [0.1.0] - 2026-09-24
 
 ### Added
 
-- Erster Release. Herausgezogen aus `casoon/auditmysite`: `AXTree`, `AXSnapshot`,
+- **Paket:** Erster Release, herausgezogen aus `casoon/auditmysite`: `AXTree`, `AXSnapshot`,
   `AXTreeDiff` und die Projektion in Lesereihenfolge. Berechnet, erhebt nicht.
