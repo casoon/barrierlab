@@ -117,9 +117,13 @@ impl Verborgen {
 /// `<audio>` ohne `controls` spielt trotzdem (HTML, „Rendering"). Für sie
 /// zählt nur das `hidden`-Attribut — sonst sähen `images/area-alt-missing`
 /// und `media/audio-autoplay` mit berechneten Stilen nie etwas
-/// (auditmysite-Korpus `misc_content_checks`, `media_and_visual`).
+/// (auditmysite-Korpus `misc_content_checks`, `media_and_visual`). Ebenso der
+/// Ersatzinhalt eines `<object>`: Lädt das Objekt, stellt der Browser ihn
+/// nicht dar, er bleibt aber dessen Textalternative (H53).
 fn unsichtbar_nach_ua<'a, N: Node<'a>>(n: N) -> bool {
-    n.is_element("area") || (n.is_element("audio") && !n.has_attr("controls"))
+    n.is_element("area")
+        || (n.is_element("audio") && !n.has_attr("controls"))
+        || n.parent().is_some_and(|p| p.is_element("object"))
 }
 
 fn versteckt_per_stil(stil: &ComputedStyle) -> bool {

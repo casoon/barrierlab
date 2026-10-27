@@ -400,10 +400,16 @@ fn schluessel(name: &str) -> String {
     if ohne.is_empty() { t } else { ohne.to_string() }
 }
 
-/// Links mit `href`, die der Baum nicht auslässt, samt Namen.
+/// Links, die der Baum nicht auslässt, samt Namen: Elemente mit der Rolle
+/// `link`, ohne gemeldete Rolle `a[href]` (2.4.4 und 2.4.9 gelten für jeden
+/// Link, gleich wie die Rolle zustande kommt).
 fn links_mit_namen<'d, D: Semantics>(doc: &'d D) -> Vec<(D::N<'d>, String)> {
     elements(doc)
-        .filter(|n| n.is_element("a") && n.has_attr("href") && !doc.is_ignored(*n))
+        .filter(|n| match doc.role(*n) {
+            Some(r) => r == "link",
+            None => n.is_element("a") && n.has_attr("href"),
+        })
+        .filter(|n| !doc.is_ignored(*n))
         .filter_map(|n| {
             let name = doc.accessible_name(n)?;
             let name = name.trim().to_string();

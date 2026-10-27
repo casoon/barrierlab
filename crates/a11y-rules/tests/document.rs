@@ -149,7 +149,12 @@ fn zwanzig_stunden_und_ohne_ziffern_html_standard() {
            <meta id="kaputt" http-equiv="refresh" content="url=/x">
            <meta id="kurz" http-equiv="REFRESH" content=" 5; url=/weiter"></head><body></body></html>"#,
     );
-    assert_eq!(an(&doc, &run(&doc), "timing/meta-refresh"), ["kurz"]);
+    // Genau 20 Stunden sind nicht „länger als 20 Stunden" (2.2.1; ACT bc659a:
+    // „greater than 72000") — casoon/auditmysite#783.
+    assert_eq!(
+        an(&doc, &run(&doc), "timing/meta-refresh"),
+        ["lang", "kurz"]
+    );
 }
 
 // --- language/part-unmarked -------------------------------------------------
@@ -185,8 +190,13 @@ fn ausgezeichnete_und_ausgenommene_passagen_auditmysite_language_of_parts() {
            <p id="code" translate="no">{GRUNDGESETZ}</p>
            <ul><li id="li"><p id="innen">{GRUNDGESETZ}</p></li></ul>"#
     ));
-    // Gemeldet wird nur der innerste Textblock.
-    assert_eq!(an(&doc, &run(&doc), "language/part-unmarked"), ["innen"]);
+    // Gemeldet wird nur der innerste Textblock. Ein Zitat ist nicht
+    // ausgenommen: 3.1.2 nennt nur Eigennamen, Fachbegriffe, Wörter
+    // unbestimmter Sprache und Lehnwörter (casoon/auditmysite#783).
+    assert_eq!(
+        an(&doc, &run(&doc), "language/part-unmarked"),
+        ["zitat", "innen"]
+    );
 }
 
 /// sparkasse.de setzt ein `<style>` von Emotion in jeden Listeneintrag. Sein
