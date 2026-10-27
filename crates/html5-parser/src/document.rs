@@ -220,15 +220,27 @@ impl Document {
     /// "clone" algorithm: no custom-element callbacks, no
     /// registered-observer copying, no `Document`/shadow-root special
     /// cases — none apply without a live, scripted DOM.
+    ///
+    /// Iterative (an explicit work list, not one call frame per level): the
+    /// subtree comes from the input, and tree construction itself puts no
+    /// limit on nesting depth.
     pub(crate) fn clone_subtree(&mut self, source: NodeId) -> NodeId {
         let kind = self.node(source).kind.clone();
-        let clone = self.new_node(kind, None);
-        let children: Vec<_> = self.children(source).collect();
-        for child in children {
-            let child_clone = self.clone_subtree(child);
-            self.append_child(clone, child_clone);
+        let root_clone = self.new_node(kind, None);
+        // (original, parent of its clone), popped in tree order: children are
+        // pushed in reverse, so each parent gets its clones appended in order.
+        let mut pending: Vec<(NodeId, NodeId)> = Vec::new();
+        pending.extend(self.children(source).map(|child| (child, root_clone)));
+        pending.reverse();
+        while let Some((original, parent_clone)) = pending.pop() {
+            let kind = self.node(original).kind.clone();
+            let clone = self.new_node(kind, None);
+            self.append_child(parent_clone, clone);
+            let first_child = pending.len();
+            pending.extend(self.children(original).map(|child| (child, clone)));
+            pending[first_child..].reverse();
         }
-        clone
+        root_clone
     }
 
     /// Detaches `node` from its current parent and siblings, if any — a

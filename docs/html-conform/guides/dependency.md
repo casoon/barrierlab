@@ -16,7 +16,7 @@ root:
 | `Finding` | `rule_id`, `severity`, `message`, `location` |
 | `Severity` | `Error`, `Warning`, `Info` |
 | `SourceLocation` | one-based `line` and `column`, zero-based `byte_offset` |
-| `CheckError` | a setup failure of the checker itself |
+| `CheckError` | the document was not checked: too deeply nested, or a setup failure |
 
 ## Input
 
@@ -44,9 +44,19 @@ removes parser diagnostics.
 
 ## Errors
 
-`CheckError` is returned only when the checker cannot run at all: the embedded HTML schema
-failed to compile or the embedded rule set failed to parse. A document that is merely
-non-conforming always produces `Ok` with findings. `CheckError` is `#[non_exhaustive]` and
+`CheckError` is returned only when the document was not checked at all:
+
+- `DocumentTooDeep { depth, limit }`: the parsed tree nests elements deeper than 512 levels.
+  The validation layers walk the tree recursively; past that depth they would overflow a
+  2 MiB thread stack (the tokio worker default) and abort the process. Report it as "not
+  run", never as a pass: there are no findings, not even the parser's, and the HTML itself
+  may well be conforming. Browsers' parsers stop nesting at the same depth (Blink appends
+  further elements as siblings from level 512 on), so pages a browser renders as authored
+  stay below it. The parser itself has no limit, as WHATWG tree construction has none.
+- `Initialization { message }`: the embedded HTML schema failed to compile or the embedded
+  rule set failed to parse.
+
+A document that is merely non-conforming always produces `Ok` with findings. `CheckError` is `#[non_exhaustive]` and
 implements `std::error::Error`, so `?` into `Box<dyn Error>` or `anyhow::Error` works.
 
 ## Reading a report

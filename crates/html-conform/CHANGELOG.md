@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **API:** `CheckError::DocumentTooDeep { depth, limit }`: a document nesting elements deeper
+  than 512 levels is not checked and returns this error instead of a report. Hosts report it as
+  "not run", never as passed. Details:
+  [Errors](https://casoon.github.io/barrierlab/docs/html-conform/guides/dependency/#errors).
+
+### Fixed
+
+- **Check:** A deeply nested document (a few thousand `div`s) no longer aborts the process with a
+  stack overflow on a 2 MiB thread such as a tokio worker (auditmysite#783).
+
 ## [0.3.2] - 2026-10-23
 
 ### Added

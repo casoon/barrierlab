@@ -152,16 +152,10 @@ pub fn validate<E: Element>(
     }
 
     let mut errors = Vec::new();
-    let mut path = Vec::new();
     match find_element_contents(&schema.start, &root.name(), &schema.definitions) {
-        Some(content) => validate_element_content(
-            &content,
-            root,
-            &schema.definitions,
-            registry,
-            &mut path,
-            &mut errors,
-        ),
+        Some(content) => {
+            validate_element_content(content, root, &schema.definitions, registry, &mut errors)
+        }
         None => errors.push(ValidationError {
             kind: ValidationErrorKind::UnexpectedElement(root.name()),
             path: Vec::new(),
@@ -248,16 +242,123 @@ impl fmt::Display for ValidationErrorKind {
     }
 }
 
+/// One element whose content is being validated: its remaining pattern
+/// and the children not yet consumed. [`validate_element_content`] keeps
+/// these on an explicit stack instead of recursing per nesting level.
+///
+/// `element` is `None` for the root, which the caller only lends.
+struct Frame<E: Element> {
+    element: Option<E>,
+    pattern: Pattern,
+    context: DatatypeContext,
+    children: std::vec::IntoIter<Content<E>>,
+    strip_whitespace: bool,
+}
+
+/// Validates `root` (whose content must match `content`) and every
+/// descendant. Iterative over document depth: each open element is a
+/// [`Frame`] on a heap-allocated stack, so a document nested arbitrarily
+/// deep cannot overflow the call stack (the pattern walks below still
+/// recurse, but only as deep as the schema's own pattern nesting).
 fn validate_element_content<E: Element>(
-    content: &Pattern,
+    content: Pattern,
+    root: &E,
+    definitions: &Definitions,
+    registry: &DatatypeRegistry,
+    errors: &mut Vec<ValidationError<E::Location>>,
+) {
+    let mut path = Vec::new();
+    let mut stack = vec![open_frame(
+        content,
+        root,
+        definitions,
+        registry,
+        &mut path,
+        errors,
+    )];
+
+    while let Some(frame) = stack.last_mut() {
+        let Some(child) = frame.children.next() else {
+            let frame = stack.pop().expect("the loop just saw a frame");
+            if !nullable(&frame.pattern, definitions, registry) {
+                errors.push(ValidationError {
+                    kind: ValidationErrorKind::MissingContent,
+                    path: path.clone(),
+                    location: frame.element.as_ref().unwrap_or(root).location(),
+                });
+            }
+            path.pop();
+            continue;
+        };
+        match child {
+            Content::Text(text) if frame.strip_whitespace && text.trim().is_empty() => {}
+            Content::Text(text) => {
+                let derived =
+                    deriv_text(&frame.pattern, &text, definitions, registry, &frame.context);
+                if matches!(derived, Pattern::NotAllowed) {
+                    // §6.2.7: a text node that consists entirely of
+                    // whitespace is treated as if it weren't there at all
+                    // when it doesn't otherwise fit the content model —
+                    // but *only* if nothing reachable there actually wants
+                    // text (`wants_text`); a bare `data`/`value` (or a
+                    // `choice` where every branch wants text) still must
+                    // see a real, matching event. Non-whitespace text that
+                    // doesn't fit is always an error.
+                    if !text.trim().is_empty() || wants_text(&frame.pattern, definitions) {
+                        errors.push(ValidationError {
+                            kind: ValidationErrorKind::UnexpectedText,
+                            path: path.clone(),
+                            location: frame.element.as_ref().unwrap_or(root).location(),
+                        });
+                    }
+                } else {
+                    frame.pattern = derived;
+                }
+            }
+            Content::Element(child_element) => {
+                let name = child_element.name();
+                match find_element_contents(&frame.pattern, &name, definitions) {
+                    Some(child_content) => {
+                        // The parent's derivative depends only on the
+                        // child's name, not on how its content validates,
+                        // so it can be taken before the child is entered.
+                        frame.pattern = deriv_element_event(&frame.pattern, &name, definitions);
+                        let mut child_frame = open_frame(
+                            child_content,
+                            &child_element,
+                            definitions,
+                            registry,
+                            &mut path,
+                            errors,
+                        );
+                        child_frame.element = Some(child_element);
+                        stack.push(child_frame);
+                    }
+                    None => errors.push(ValidationError {
+                        kind: ValidationErrorKind::UnexpectedElement(name),
+                        path: path.clone(),
+                        location: child_element.location(),
+                    }),
+                }
+            }
+        }
+    }
+}
+
+/// Enters `element`: pushes its name onto `path`, derives `content`
+/// through its (unordered) attributes and collects its children for the
+/// ordered pass in [`validate_element_content`]. The frame's `element`
+/// is left `None`; the caller moves an owned child in.
+fn open_frame<E: Element>(
+    content: Pattern,
     element: &E,
     definitions: &Definitions,
     registry: &DatatypeRegistry,
     path: &mut Vec<ExpandedName>,
     errors: &mut Vec<ValidationError<E::Location>>,
-) {
+) -> Frame<E> {
     path.push(element.name());
-    let mut pattern = content.clone();
+    let mut pattern = content;
     let context = DatatypeContext::from_bindings(element.namespace_bindings().collect());
 
     // Attributes are unordered — fold the derivative over them in
@@ -290,63 +391,13 @@ fn validate_element_content<E: Element>(
     // lets a `text` further on consume it and so skip an optional element
     // that has to come first — `<fieldset> <legend>` would lose its legend.
     let strip_whitespace = children.len() > 1;
-    for child in children {
-        match child {
-            Content::Text(text) if strip_whitespace && text.trim().is_empty() => {}
-            Content::Text(text) => {
-                let derived = deriv_text(&pattern, &text, definitions, registry, &context);
-                if matches!(derived, Pattern::NotAllowed) {
-                    // §6.2.7: a text node that consists entirely of
-                    // whitespace is treated as if it weren't there at all
-                    // when it doesn't otherwise fit the content model —
-                    // but *only* if nothing reachable there actually wants
-                    // text (`wants_text`); a bare `data`/`value` (or a
-                    // `choice` where every branch wants text) still must
-                    // see a real, matching event. Non-whitespace text that
-                    // doesn't fit is always an error.
-                    if !text.trim().is_empty() || wants_text(&pattern, definitions) {
-                        errors.push(ValidationError {
-                            kind: ValidationErrorKind::UnexpectedText,
-                            path: path.clone(),
-                            location: element.location(),
-                        });
-                    }
-                } else {
-                    pattern = derived;
-                }
-            }
-            Content::Element(child_element) => {
-                let name = child_element.name();
-                match find_element_contents(&pattern, &name, definitions) {
-                    Some(child_content) => {
-                        validate_element_content(
-                            &child_content,
-                            &child_element,
-                            definitions,
-                            registry,
-                            path,
-                            errors,
-                        );
-                        pattern = deriv_element_event(&pattern, &name, definitions);
-                    }
-                    None => errors.push(ValidationError {
-                        kind: ValidationErrorKind::UnexpectedElement(name),
-                        path: path.clone(),
-                        location: child_element.location(),
-                    }),
-                }
-            }
-        }
+    Frame {
+        element: None,
+        pattern,
+        context,
+        children: children.into_iter(),
+        strip_whitespace,
     }
-
-    if !nullable(&pattern, definitions, registry) {
-        errors.push(ValidationError {
-            kind: ValidationErrorKind::MissingContent,
-            path: path.clone(),
-            location: element.location(),
-        });
-    }
-    path.pop();
 }
 
 fn param_pairs(params: &[Param]) -> Vec<(&str, &str)> {
@@ -1970,5 +2021,60 @@ mod tests {
             );
         let errors = validate(&compiled, &registry(), &document).expect("builtin datatypes only");
         assert_eq!(kinds(&errors), Vec::<ValidationErrorKind>::new());
+    }
+
+    /// A chain of `div`s `remaining` levels deep, generated on the fly
+    /// (a boxed test tree would overflow on its own recursive `Drop`),
+    /// ending in a `span`.
+    struct Chain {
+        remaining: usize,
+    }
+
+    impl Element for Chain {
+        type Location = usize;
+        fn name(&self) -> ExpandedName {
+            name(if self.remaining == 0 { "span" } else { "div" })
+        }
+        fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+            std::iter::empty()
+        }
+        fn children(&self) -> impl Iterator<Item = Content<Self>> {
+            (self.remaining > 0)
+                .then(|| {
+                    Content::Element(Chain {
+                        remaining: self.remaining - 1,
+                    })
+                })
+                .into_iter()
+        }
+        fn location(&self) -> Option<Self::Location> {
+            Some(self.remaining)
+        }
+    }
+
+    /// auditmysite#783: validation recursed once per nesting level and
+    /// aborted the process with a stack overflow at a few hundred levels
+    /// on a 2 MiB thread (tokio's worker default). It now keeps open
+    /// elements on a heap stack; depth costs memory, not call frames.
+    #[test]
+    fn arbitrarily_deep_documents_do_not_overflow_the_stack() {
+        const DEPTH: usize = 100_000;
+        let errors = std::thread::Builder::new()
+            .stack_size(2 * 1024 * 1024)
+            .spawn(|| {
+                let compiled = schema("start = d\nd = element div { d? }");
+                validate(&compiled, &registry(), &Chain { remaining: DEPTH }).unwrap()
+            })
+            .unwrap()
+            .join()
+            .expect("validation must not overflow the stack");
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(
+            errors[0].kind(),
+            &ValidationErrorKind::UnexpectedElement(name("span"))
+        );
+        assert_eq!(errors[0].path().len(), DEPTH);
+        assert_eq!(errors[0].location(), Some(&0));
     }
 }
