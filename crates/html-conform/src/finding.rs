@@ -79,6 +79,15 @@ pub enum CheckError {
         /// Description of the failed component initialization.
         message: String,
     },
+    /// The document nests elements deeper than the checker validates, so it
+    /// was not checked at all. Not a conformance verdict: the input may be
+    /// conforming HTML (the HTML syntax has no depth limit).
+    DocumentTooDeep {
+        /// The deepest nesting level found in the parsed tree.
+        depth: usize,
+        /// The deepest nesting level the checker validates.
+        limit: usize,
+    },
 }
 
 impl fmt::Display for CheckError {
@@ -87,6 +96,10 @@ impl fmt::Display for CheckError {
             Self::Initialization { message } => {
                 write!(formatter, "checker initialization failed: {message}")
             }
+            Self::DocumentTooDeep { depth, limit } => write!(
+                formatter,
+                "document not checked: element nesting depth {depth} exceeds the checker's limit of {limit}"
+            ),
         }
     }
 }

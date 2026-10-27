@@ -61,3 +61,14 @@ Kein vollständiger vnu-Ersatz. Die Prüfung ist differentiell gegen vnu
 abgeglichen, nicht deckungsgleich; welche Klassen fehlen, steht in
 `docs/html-conform/`. Und sie sagt nichts über Zugänglichkeit — Konformanz ist
 eine andere Frage als Wahrnehmbarkeit.
+
+Geprüft wird bis zu einer Verschachtelungstiefe von 512 Elementen. Tiefere
+Dokumente liefern `CheckError::DocumentTooDeep` statt eines Berichts — die
+Prüfschichten nach dem Parser laufen rekursiv über den Baum und würden sonst den
+Stack eines 2-MiB-Threads sprengen. Der Parser selbst kennt keine Grenze, weil
+die WHATWG-Tree-Construction keine kennt; Blink hört bei 512 auf zu
+verschachteln und hängt tiefere Elemente als Geschwister an. Diese Abflachung
+übernimmt html-conform bewusst nicht: Befunde gälten dann für einen Baum, den
+die Spezifikation nicht baut. Die Grenze nutzt den Spielraum, den der
+HTML-Standard für implementierungsspezifische Grenzen bei sonst unbeschränkter
+Eingabe lässt, indem sie die Prüfung ablehnt, nicht etwas anderes prüft.
