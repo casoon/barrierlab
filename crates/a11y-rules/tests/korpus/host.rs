@@ -17,7 +17,8 @@
 //!   `--unmeasured` am `<html>` nennt Felder, die der Host an keinem Element
 //!   misst: `layout`, `focus-visible`, `obscured`, `order`, `min-width`,
 //!   `cursor`, `animation`, `pointer-events`, `hides-focus`, `scroll`,
-//!   `visually-hidden`, `style`, `bounds`.
+//!   `visually-hidden`, `style`, `bounds`, `unrendered` (kein Stil für nicht
+//!   Dargestelltes, wie ein Host aus einem Layout-Schnappschuss).
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
@@ -353,6 +354,13 @@ impl Host<'_> {
 impl Rendering for Host<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
         if !self.misst("style") {
+            return None;
+        }
+        // Ein Host aus einem Layout-Schnappschuss kennt für nicht Dargestelltes
+        // keinen Stil.
+        if !self.misst("unrendered")
+            && eigen(node, "display").unwrap_or_else(|| ua_display(node).into()) == "none"
+        {
             return None;
         }
         let deko = eigen(node, "text-decoration-line")

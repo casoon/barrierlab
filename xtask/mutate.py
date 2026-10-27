@@ -50,7 +50,13 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 # Der Test, der die Fälle ausführt; die Gate-Tests derselben Datei laufen nicht mit.
+# Ein Eintrag kann mit `filter` einen anderen Testnamen nennen (etwa einen
+# Regressionstest mit eigenem Host in einem anderen Testziel).
 FILTER = "korpus_faelle"
+
+
+def filt(m):
+    return m.get("filter", FILTER)
 
 
 @contextlib.contextmanager
@@ -159,11 +165,12 @@ def main():
         if rc != 0:
             print(out[-4000:])
             sys.exit(f"--test {test} kompiliert unverändert nicht; Abbruch")
-        for id_ in sorted({m["id"] for m in entries if m.get("test", "korpus") == test}):
-            rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", FILTER],
+        for id_, f in sorted({(m["id"], filt(m)) for m in entries
+                              if m.get("test", "korpus") == test}):
+            rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", f],
                             a.lock, a.timeout, env={"KORPUS_ID": id_})
             if rc != 0:
-                rot.add((test, id_))
+                rot.add((test, f, id_))
                 print(f"!! Ausgangslauf rot: {id_}", flush=True)
     print(f"Ausgangslauf: {len(rot)} Kennungen rot; {len(entries)} Mutationen", flush=True)
 
@@ -173,7 +180,7 @@ def main():
         test = m.get("test", "korpus")
         target = crate / m["file"]
         t0 = time.time()
-        if (test, m["id"]) in rot:
+        if (test, filt(m), m["id"]) in rot:
             status, detail = "invalid", "Ausgangslauf rot"
         else:
             original = target.read_text()
@@ -191,7 +198,7 @@ def main():
                         err = [l for l in out.splitlines() if l.startswith("error")]
                         status, detail = "invalid", (err[0] if err else "Build scheitert")
                     else:
-                        rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", FILTER],
+                        rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", filt(m)],
                                         a.lock, a.timeout, env={"KORPUS_ID": m["id"]})
                         if rc != 0:
                             status = "killed"
