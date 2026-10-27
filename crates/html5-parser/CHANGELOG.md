@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-27
+
 ### Fixed
 
 - **Tree construction:** Cloning a selected `option` into `selectedcontent` and finding that

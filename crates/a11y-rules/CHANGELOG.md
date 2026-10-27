@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-10-27
+
 ### Added
 
 - **Regelkorpus:** `tests/korpus.rs` prüft jede Kennung aus `Meta::ids` direkt mit Treffer, ähnlichem konformem Gegenbeispiel und nicht anwendbarem Dokument, dazu Grenzwerte und Varianten; ein Gate scheitert, sobald einer Kennung eine der drei Fallarten fehlt (casoon/auditmysite#783).
