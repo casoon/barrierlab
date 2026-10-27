@@ -1,8 +1,18 @@
 ---
-import { Button, Facts, Features, Hero, Install } from '@casoon/pages-theme/components';
+import { readFile } from 'node:fs/promises';
+import { Button, Facts, Faq, Features, Hero, Install, ReleaseHighlights } from '@casoon/pages-theme/components';
 import Base from '@casoon/pages-theme/layouts/Base.astro';
+import { parseChangelog } from '@casoon/pages-theme/lib/changelog';
 import { url } from '@casoon/pages-theme/url';
+import config from 'virtual:casoon-pages/config';
 import Diagram from '../components/Diagram.astro';
+
+// Skip "Unreleased": it has no version to show as "New in v…" yet.
+const latestRelease = config.changelog
+  ? parseChangelog(await readFile(config.changelog, 'utf8')).find(
+      (r) => r.version.toLowerCase() !== 'unreleased'
+    )
+  : undefined;
 ---
 
 <Base>
@@ -75,6 +85,29 @@ import Diagram from '../components/Diagram.astro';
       <Button href={url('docs/html-conform/')} variant="quiet">HTML-Konformanz →</Button>
     </div>
   </section>
+
+  {latestRelease && <ReleaseHighlights release={latestRelease} />}
+
+  <Faq
+    items={[
+      {
+        q: 'Ist BarrierLab selbst ein Werkzeug, das eine Seite prüft?',
+        a: 'Nein. Dieses Repository enthält nur Bibliotheken – Rust-Crates für Zugänglichkeit, HTML-Konformanz und Wahrnehmung. Wer eine Seite tatsächlich prüfen will, braucht eines der Werkzeuge, die diese Pakete einbinden, etwa auditmysite oder liveaudit.',
+      },
+      {
+        q: 'Welche Werkzeuge nutzen die Bibliotheken bereits?',
+        a: 'auditmysite, astro-post-audit und liveaudit binden die Crates heute schon über crates.io beziehungsweise npm ein. Weil alle denselben Regelbestand verwenden, bedeutet ein Befund-Code in jedem der drei Werkzeuge dasselbe.',
+      },
+      {
+        q: 'Was heißt es, wenn eine Regel als „nicht gelaufen" markiert ist?',
+        a: 'Manche Regeln brauchen Daten, die nicht jeder Host liefert, etwa Fokus oder berechnete Stile bei reinem statischem HTML. Fehlt diese Voraussetzung, erscheint die Regel mit Grund als nicht gelaufen im Bericht, statt stillschweigend als bestanden zu gelten.',
+      },
+      {
+        q: 'Warum gibt es keinen gemeinsamen Changelog für das ganze Repository?',
+        a: 'BarrierLab ist ein Monorepo ohne gemeinsame Versionsnummer – jedes Crate pflegt sein eigenes Changelog neben seinem Quellcode. Änderungen an einem einzelnen Paket stehen deshalb dort, nicht an einer zentralen Stelle.',
+      },
+    ]}
+  />
 </Base>
 
 <style>
