@@ -29,6 +29,27 @@ use assertions::SchematronEngine;
 
 pub use finding::{CheckError, CheckReport, Finding, Severity, SourceLocation};
 
+/// The deepest element nesting [`check_with_options`] validates; deeper
+/// documents get [`CheckError::DocumentTooDeep`] instead of a report.
+///
+/// The validation layers after parsing (infoset normalisation, the
+/// Schematron/XPath assertions, the script, CSP and table checks) walk the
+/// tree recursively, one call frame per level. Unbounded, a few thousand
+/// nested elements overflow a 2 MiB thread stack (tokio's worker default)
+/// and abort the whole process. 512 is the depth at which Blink's HTML
+/// parser stops nesting and starts appending further elements as siblings
+/// (`kMaximumHTMLParserDOMTreeDepth`), so no page Chrome renders as
+/// authored is refused. `tests/deep_nesting.rs` checks a document at
+/// exactly this depth on a 2 MiB thread in a debug build.
+///
+/// The limit is not applied in the parser: WHATWG tree construction has no
+/// depth limit, and flattening the tree the way Blink does would report
+/// findings against a tree the specification does not build. The HTML
+/// Standard allows implementation-specific limits on otherwise
+/// unconstrained input; this checker uses that latitude by declining to
+/// check, not by checking something else.
+const MAX_NESTING_DEPTH: usize = 512;
+
 /// Options that control which diagnostics are included in a check report.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CheckOptions {
@@ -62,12 +83,26 @@ pub fn check(html: &str) -> Result<CheckReport, CheckError> {
 ///
 /// # Errors
 ///
-/// Only for a genuine setup failure in this checker itself (the embedded
-/// HTML5 schema failed to compile, or the embedded assertion rule set
-/// failed to parse) — never for a document that is merely non-conformant,
-/// which is reported through [`CheckReport::findings`] instead.
+/// [`CheckError::DocumentTooDeep`] when the parsed tree nests deeper than
+/// the checker validates (512 levels). No findings are returned then, not
+/// even the parser's: the document was not checked, and a host must report
+/// it as not run, never as passed.
+///
+/// [`CheckError::Initialization`] for a genuine setup failure in this
+/// checker itself (the embedded HTML5 schema failed to compile, or the
+/// embedded assertion rule set failed to parse).
+///
+/// Never for a document that is merely non-conformant, which is reported
+/// through [`CheckReport::findings`] instead.
 pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckReport, CheckError> {
     let parsed = parse::parse(html);
+    let depth = parse::nesting_depth(parsed.document());
+    if depth > MAX_NESTING_DEPTH {
+        return Err(CheckError::DocumentTooDeep {
+            depth,
+            limit: MAX_NESTING_DEPTH,
+        });
+    }
     let document = infoset::normalize(parsed.document(), parsed.source());
 
     let mut findings = if options.include_parse_errors {

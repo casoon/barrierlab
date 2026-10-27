@@ -3145,15 +3145,19 @@ impl TreeBuilder {
     }
 
     /// Depth-first, tree-order search for the first descendant of
-    /// `node` with HTML tag name `name`.
+    /// `node` with HTML tag name `name`. Iterative, so input nesting depth
+    /// costs heap, not call frames.
     fn first_descendant_matching(&self, node: NodeId, name: &str) -> Option<NodeId> {
-        for child in self.document.children(node) {
+        let mut open = vec![self.document.children(node)];
+        while let Some(children) = open.last_mut() {
+            let Some(child) = children.next() else {
+                open.pop();
+                continue;
+            };
             if self.node_has_html_name(child, name) {
                 return Some(child);
             }
-            if let Some(found) = self.first_descendant_matching(child, name) {
-                return Some(found);
-            }
+            open.push(self.document.children(child));
         }
         None
     }
