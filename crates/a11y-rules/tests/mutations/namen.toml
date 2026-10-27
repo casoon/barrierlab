@@ -1,0 +1,388 @@
+# Mutationen der Gruppe „namen“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "links/name-missing"
+file = "src/semantics.rs"
+kind = "invert"
+find = '''
+        if !named(doc, n) {
+            out.push(
+                Finding::fail(
+                    "links/name-missing",
+'''
+replace = '''
+        if named(doc, n) {
+            out.push(
+                Finding::fail(
+                    "links/name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "buttons/name-missing"
+file = "src/semantics.rs"
+kind = "invert"
+find = '''
+        if !named(doc, n) {
+            out.push(
+                Finding::fail(
+                    "buttons/name-missing",
+'''
+replace = '''
+        if named(doc, n) {
+            out.push(
+                Finding::fail(
+                    "buttons/name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "svg/name-missing"
+file = "src/semantics.rs"
+kind = "invert"
+find = '''
+            let f = if bild {
+'''
+replace = '''
+            let f = if !bild {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/ambiguous-name"
+file = "src/semantics.rs"
+kind = "threshold"
+find = '''
+        if ziele.len() < 2 {
+'''
+replace = '''
+        if ziele.len() < 1 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/generic-name"
+file = "src/semantics.rs"
+kind = "invert"
+find = '''
+        if !NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+            continue;
+        }
+        let kontext = hat_kontext(doc, n);
+'''
+replace = '''
+        if NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+            continue;
+        }
+        let kontext = hat_kontext(doc, n);
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/url-name"
+file = "src/semantics.rs"
+kind = "drop-condition"
+find = '''
+        if !sieht_aus_wie_url(&name) || hat_kontext(doc, n) {
+'''
+replace = '''
+        if !sieht_aus_wie_url(&name) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/single-character-name"
+file = "src/semantics.rs"
+kind = "drop-condition"
+find = '''
+        if c.is_ascii_digit() || NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+'''
+replace = '''
+        if NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/new-window-unannounced"
+file = "src/semantics.rs"
+kind = "drop-condition"
+find = '''
+        if NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+'''
+replace = '''
+        if false && NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/purpose-link-only"
+file = "src/semantics.rs"
+kind = "invert"
+find = '''
+        if !NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+'''
+replace = '''
+        if NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/required-missing"
+file = "src/names.rs"
+kind = "invert"
+find = '''
+        if named(doc, n) {
+            continue;
+        }
+        // auditmysite ordnet '''
+replace = '''
+        if !named(doc, n) {
+            continue;
+        }
+        // auditmysite ordnet '''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/symbol-only"
+file = "src/names.rs"
+kind = "drop-condition"
+find = '''
+        if z.is_alphanumeric() || !name_aus_attribut(doc, n, &name) {
+'''
+replace = '''
+        if !name_aus_attribut(doc, n, &name) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "dialog/name-missing"
+file = "src/names.rs"
+kind = "drop-variant"
+find = '''
+        if !matches!(doc.role(n).as_deref(), Some("dialog" | "alertdialog")) {
+'''
+replace = '''
+        if !matches!(doc.role(n).as_deref(), Some("dialog")) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "dialog/modal-unmarked"
+file = "src/names.rs"
+kind = "invert"
+find = '''
+        if n.attr("aria-modal").is_some_and(|v| v.trim() == "true") {
+'''
+replace = '''
+        if n.attr("aria-modal").is_some_and(|v| v.trim() != "true") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "summary/name-missing"
+file = "src/names.rs"
+kind = "drop-condition"
+find = '''
+                    .is_some_and(|erste| erste == n)
+'''
+replace = '''
+                    .is_some()
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "status/live-overridden"
+file = "src/names.rs"
+kind = "outcome"
+find = '''
+            "off" => Finding::fail(
+'''
+replace = '''
+            "off" => Finding::review(
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "status/live-overridden"
+file = "src/names.rs"
+kind = "drop-condition"
+find = '''
+            "polite" | "assertive" if live != vorgabe && rolle != "log" => Finding::review(
+'''
+replace = '''
+            "polite" | "assertive" if live != vorgabe => Finding::review(
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/names.rs"
+kind = "threshold"
+find = '''
+        let f = if umgestellt || s.chars().count() > m.chars().count() * ZUSAMMENGESETZT {
+'''
+replace = '''
+        let f = if umgestellt || s.chars().count() >= m.chars().count() * ZUSAMMENGESETZT {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/names.rs"
+kind = "drop-condition"
+find = '''
+        if s.is_empty() || m.is_empty() || m.contains(&s) {
+'''
+replace = '''
+        if s.is_empty() || m.is_empty() || m.contains(&s) || s.contains(&m) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/area-alt-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if n.is_element("area") && n.has_attr("href") && !gefuellt(n, "alt") && !aria_benannt(n) {
+'''
+replace = '''
+        if n.is_element("area") && !gefuellt(n, "alt") && !aria_benannt(n) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/input-alt-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if grafik_button && !gefuellt(n, "alt") && !aria_benannt(n) {
+'''
+replace = '''
+        if grafik_button && !aria_benannt(n) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/server-side-map"
+file = "src/media.rs"
+kind = "revert-fix"
+find = '''
+        if n.is_element("img") && n.has_attr("ismap") && im_link {
+'''
+replace = '''
+        if n.is_element("img") && n.has_attr("ismap") || im_link && false {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/server-side-map"
+file = "src/media.rs"
+kind = "invert"
+find = '''
+        if n.is_element("img") && n.has_attr("ismap") && im_link {
+'''
+replace = '''
+        if n.is_element("img") && !n.has_attr("ismap") && im_link {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "objects/alt-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if !ersatztext && !aria_benannt(n) && !gefuellt(n, "title") {
+'''
+replace = '''
+        if !aria_benannt(n) && !gefuellt(n, "title") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if n.is_element("audio") && n.has_attr("autoplay") && !n.has_attr("muted") {
+'''
+replace = '''
+        if n.is_element("audio") && n.has_attr("autoplay") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/structure.rs"
+kind = "revert-fix"
+find = '''
+        // Accessibility-Tree genommen ist (`hidden`, `aria-hidden`).
+        scope: Scope::Markup,
+'''
+replace = '''
+        // Accessibility-Tree genommen ist (`hidden`, `aria-hidden`).
+        scope: Scope::AccessibilityTree,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/name-missing"
+file = "src/media.rs"
+kind = "threshold"
+find = '''
+    let winzig = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1"));
+'''
+replace = '''
+    let winzig = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1" | "2"));
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/name-missing"
+file = "src/media.rs"
+kind = "invert"
+find = '''
+            || named(doc, n)
+        {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "frames/name-missing",
+'''
+replace = '''
+            || !named(doc, n)
+        {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "frames/name-missing",
+'''
+test = "korpus"
+expect = "killed"

@@ -1,0 +1,312 @@
+# Mutationen der Gruppe „landmarken“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "landmarks/main-missing"
+file = "src/structure.rs"
+kind = "drop-finding"
+find = '''
+        0 => out.push(
+'''
+replace = '''
+        0 if false => out.push(
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/main-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''
+        0 if modal_offen(doc) => out.push(
+'''
+replace = '''
+        0 if !modal_offen(doc) => out.push(
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/main-duplicate"
+file = "src/structure.rs"
+kind = "threshold"
+find = '''
+        1 => {}
+'''
+replace = '''
+        1 | 2 => {}
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/navigation-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''
+            "nav",
+            "navigation",
+'''
+replace = '''
+            "main",
+            "navigation",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/banner-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''
+            "header",
+            "banner",
+'''
+replace = '''
+            "main",
+            "banner",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/banner-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''
+            ist_landmark(n, tag, rolle) && (n.attr("role").is_some() || ist_dokumentweit(n))
+'''
+replace = '''
+            ist_landmark(n, tag, rolle)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/contentinfo-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''
+            "footer",
+            "contentinfo",
+'''
+replace = '''
+            "main",
+            "contentinfo",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/not-unique"
+file = "src/landmarks.rs"
+kind = "threshold"
+find = '''
+        if anzahl[&(*rolle, name.as_str())] < 2 {
+'''
+replace = '''
+        if anzahl[&(*rolle, name.as_str())] < 3 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/not-unique"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+find = '''
+                .trim()
+                .to_lowercase();
+'''
+replace = '''
+                .trim()
+                .to_string();
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/not-top-level"
+file = "src/landmarks.rs"
+kind = "early-return"
+find = '''
+        let Some(aussen) = ancestors(*n).find_map(|a| landmark(doc, a)) else {
+'''
+replace = '''
+        let Some(aussen) = ancestors(*n).find_map(|a| landmark(doc, a)).filter(|_| false) else {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/banner-duplicate"
+file = "src/landmarks.rs"
+kind = "drop-finding"
+find = '''
+        ("banner", "landmarks/banner-duplicate"),
+'''
+replace = '''
+        ("xbanner", "landmarks/banner-duplicate"),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/banner-duplicate"
+file = "src/landmarks.rs"
+kind = "threshold"
+find = '''
+        if gleiche.len() < 2 {
+'''
+replace = '''
+        if gleiche.len() < 3 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/contentinfo-duplicate"
+file = "src/landmarks.rs"
+kind = "drop-finding"
+find = '''
+        ("contentinfo", "landmarks/contentinfo-duplicate"),
+'''
+replace = '''
+        ("xcontentinfo", "landmarks/contentinfo-duplicate"),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "drop-finding"
+find = '''
+                    } else if hat_inhalt(doc, k, &sprung) {
+'''
+replace = '''
+                    } else if false && hat_inhalt(doc, k, &sprung) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "invert"
+find = '''
+                .is_some_and(|h| h.starts_with('#') && h.len() > 1)
+'''
+replace = '''
+                .is_some_and(|h| h.starts_with('?') && h.len() > 1)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/focusable-no-role"
+file = "src/landmarks.rs"
+kind = "threshold"
+find = '''
+        if tabindex(n).is_some_and(|t| t >= 0)
+'''
+replace = '''
+        if tabindex(n).is_some_and(|t| t > 0)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/interactive-not-focusable"
+file = "src/landmarks.rs"
+kind = "invert"
+find = '''
+        let Some(r) = rolle.filter(|r| INTERAKTIV.contains(r)) else {
+'''
+replace = '''
+        let Some(r) = rolle.filter(|r| !INTERAKTIV.contains(r)) else {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/interactive-not-focusable"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+find = '''
+        if fokussierbar(n) || deaktiviert(n) || n.is_element("option") || fokus_verwaltet(n) {
+'''
+replace = '''
+        if fokussierbar(n) || deaktiviert(n) || n.is_element("option") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "dialog/focusable-missing"
+file = "src/landmarks.rs"
+kind = "invert"
+find = '''
+        if !matches!(doc.role(n).as_deref(), Some("dialog" | "alertdialog")) {
+'''
+replace = '''
+        if !matches!(doc.role(n).as_deref(), Some("alertdialog")) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "dialog/focusable-missing"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+find = '''
+            .any(|d| d.kind() == NodeKind::Element && fokussierbar(d) && !deaktiviert(d))
+'''
+replace = '''
+            .any(|d| d.kind() == NodeKind::Element && fokussierbar(d))
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "patterns/accordion-controls-missing"
+file = "src/landmarks.rs"
+kind = "drop-finding"
+find = '''
+        if doc.role(n).as_deref() != Some("button") {
+'''
+replace = '''
+        if doc.role(n).as_deref() != Some("xbutton") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "patterns/accordion-controls-missing"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+find = '''
+        if ancestors(n).any(|a| matches!(landmark(doc, a), Some("navigation" | "banner"))) {
+'''
+replace = '''
+        if ancestors(n).any(|a| matches!(landmark(doc, a), Some("banner"))) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/main-missing"
+file = "src/structure.rs"
+kind = "early-return"
+find = '''
+    if !seite_hat_inhalt(doc) {
+        return;
+    }
+'''
+replace = '''
+    if false && !seite_hat_inhalt(doc) {
+        return;
+    }
+'''
+test = "korpus"
+expect = "killed"
