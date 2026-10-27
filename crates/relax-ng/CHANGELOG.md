@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-27
+
 ### Fixed
 
 - **Validator:** `validate` no longer recurses once per element nesting level; open elements are

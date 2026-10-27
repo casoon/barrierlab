@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-27
+
 ### Added
 
 - **structured_data:** `tests/korpus.rs` prüft jedes `SchemaFeature` direkt: Pflichtangaben erfüllt und fehlend (bei Merkmalen ohne Pflichtangaben `RecommendationsOnly` mit und ohne fehlende Empfehlungen), nicht anwendbar, `NotEvaluated` beim kontextabhängigen Merchant Listing; dazu ein Mutationskatalog `tests/mutations/` (casoon/auditmysite#783).
