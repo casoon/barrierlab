@@ -317,6 +317,12 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
         if in_navigation(link) || ist_logo(link) {
             continue;
         }
+        // Ohne Kasten (`display: none`, so meldet ein Host aus einem
+        // Layout-Schnappschuss etwa den Ersatzinhalt eines geladenen
+        // `<object>`) unterscheidet sich der Link von nichts.
+        if anzeige(stil.as_ref()) == "none" {
+            continue;
+        }
         let (stil, eltern_stil) = match (stil, eltern_stil) {
             (Some(s), Some(e)) => (s, e),
             // Ohne eigenen Stil bei einem Host, der Stile liefert, wird der
