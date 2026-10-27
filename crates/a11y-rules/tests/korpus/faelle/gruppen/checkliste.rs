@@ -122,6 +122,13 @@ fn checkliste() -> Vec<Fall> {
         ),
         negativ(
             "manual/visual-structure",
+            r#"<script>var x = "text";</script><noscript>Enable JS</noscript><img src="a.png" alt="">"#,
+            "WCAG 1.3.1: Skript- und noscript-Inhalt wird nicht dargestellt — auch ohne berechnete Stile",
+        )
+        .modus(Modus::Semantik)
+        .variante("ohne Stile"),
+        negativ(
+            "manual/visual-structure",
             r#"<p hidden>Hidden text</p>"#,
             "WCAG 1.3.1: nicht dargestellter Text",
         )
@@ -693,6 +700,12 @@ fn stylesheets() -> Vec<Fall> {
             "WCAG 2.3.3: keine Stylesheets",
         ),
         // --- orientation/content-hidden (1.3.4) -----------------------------
+        negativ(
+            "orientation/content-hidden",
+            r#"<style>@media (orientation: portrait) { li::marker { display: none } }</style><ul><li>Item</li></ul>"#,
+            "WCAG 1.3.4: ein Pseudo-Element (Listenzeichen) ist kein Inhalt, den die Ausrichtung sperrt",
+        )
+        .variante("Pseudo-Element ::marker"),
         review(
             "orientation/content-hidden",
             r#"<style>@media (orientation: landscape) { main { display: none } }</style><main>x</main>"#,
