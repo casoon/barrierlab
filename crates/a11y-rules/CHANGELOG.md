@@ -41,7 +41,7 @@ abweichen, steht je Schritt in
 - **Zielgröße:** `targets/size` und `targets/size-enhanced` messen einen Inline-Link samt der ersetzten Elemente darin (Bild im Link) und behandeln `iframe`, `object` und `embed` nicht als Ziel.
 - **Scrollbereiche:** `keyboard/scrollable-region-not-focusable` meldet auf einer leeren Seite kein „ungemessen" mehr, wenn der Host `html` oder `body` misst.
 - **Landmarks:** `landmarks/content-outside` übergeht einen ausgelassenen Knoten nur, wenn unter ihm nichts Erreichbares liegt oder er eine Landmark ist; Inhalt in einem generischen `div`, das Chrome auslässt, bleibt gemeldet.
-- **Links:** `color/link-indistinct` meldet einen Link ohne eigenen Stil neben einem gestylten Elternelement nicht mehr als ungemessen; er wird nicht dargestellt.
+- **Links:** `color/link-indistinct` meldet einen Link ohne berechneten Stil nicht mehr als ungemessen, wenn der Host Stile liefert (am `<body>`): Er wird nicht dargestellt, etwa als Ersatzinhalt eines geladenen `<object>`.
 - **Objekte:** Der Ersatzinhalt eines `<object>` zählt als Textalternative, auch wenn der Browser ihn nach dem Laden nicht darstellt (H53).
 - **Listen:** `lists/item-outside-list` steht jetzt in `Meta::ids` der Listenregel. Bisher fehlte für die Kennung der `RuleRun`, und sie fehlte in der [Regelreferenz](https://casoon.github.io/barrierlab/docs/a11y/reference/regeln/).
 

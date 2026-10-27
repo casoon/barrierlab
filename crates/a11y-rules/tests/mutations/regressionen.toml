@@ -307,12 +307,25 @@ file = "src/darstellung.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-            (None, Some(_)) => continue,
+            (None, _) if mit_stilen => continue,
 '''
 replace = '''
             (None, Some(_)) => {
                 ungemessen = true;
                 continue;
             }
+'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "narrow-condition"
+test = "korpus"
+find = '''
+            (None, _) if mit_stilen => continue,
+'''
+replace = '''
+            (None, Some(_)) if mit_stilen => continue,
 '''
 expect = "killed"

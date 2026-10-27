@@ -200,8 +200,8 @@ pub fn faelle() -> Vec<Fall> {
         // --- color/link-indistinct: nicht dargestellter Ersatzlink ---
         negativ(
             "color/link-indistinct",
-            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: unrendered"><head><title>T</title></head><body><p>Get the <object data="/catalogue.pdf" type="application/pdf"><a href="/catalogue.pdf" style="display:none">catalogue</a></object> before the visit.</p></body></html>"#,
-            "WCAG 1.4.1 betrifft Dargestelltes; ein Link ohne Stil neben gestyltem Elternelement wird nicht dargestellt und ist nicht ungemessen",
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: unrendered"><head><title>T</title></head><body><p>Get the <object data="/catalogue.pdf" type="application/pdf" style="display:none"><a href="/catalogue.pdf" style="display:none">catalogue</a></object> before the visit.</p></body></html>"#,
+            "WCAG 1.4.1 betrifft Dargestelltes; liefert der Host Stile (body), wird ein Link ohne Stil nicht dargestellt und ist nicht ungemessen — auch wenn das object selbst keinen Stil hat",
         )
         .variante("Regression: Ersatzlink eines geladenen object, Host ohne Stil für Unsichtbares"),
         untested(
