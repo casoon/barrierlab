@@ -280,6 +280,12 @@ fn vergleichswerte(s: &ComputedStyle) -> Option<[String; 5]> {
 /// dann `REVIEW` statt `FAIL`.
 pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut ungemessen = false;
+    // Ob der Host überhaupt Stile liefert, zeigt der `<body>` (ohne ihn die
+    // Wurzel). Liefert er welche, hat ein Link ohne Stil keinen Kasten.
+    let mit_stilen = elements(doc).find(|n| n.is_element("body")).map_or_else(
+        || doc.computed_style(doc.root()).is_some(),
+        |b| doc.computed_style(b).is_some(),
+    );
     let ist_link = |n: &D::N<'_>| match explizite_rolle(*n) {
         Some(r) => r == "link",
         None => n.is_element("a") && n.has_attr("href"),
@@ -313,11 +319,11 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
         }
         let (stil, eltern_stil) = match (stil, eltern_stil) {
             (Some(s), Some(e)) => (s, e),
-            // Ohne eigenen Stil neben einem gestylten Elternelement wird der
+            // Ohne eigenen Stil bei einem Host, der Stile liefert, wird der
             // Link nicht dargestellt (etwa der Ersatzinhalt eines geladenen
-            // `<object>`): Er unterscheidet sich von nichts, ungemessen ist
-            // er nicht.
-            (None, Some(_)) => continue,
+            // `<object>`, dessen Element selbst auch keinen Stil hat): Er
+            // unterscheidet sich von nichts, ungemessen ist er nicht.
+            (None, _) if mit_stilen => continue,
             _ => {
                 ungemessen = true;
                 continue;
