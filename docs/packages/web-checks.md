@@ -86,14 +86,14 @@ Merkmal und trägt den Stand der Tabelle. Die Entscheidungen im Einzelnen:
 | Punkt | astro-post-audit | auditmysite | jetzt |
 |---|---|---|---|
 | Anwesenheit | Schlüssel existiert | nicht leer | nicht leer (`""`, `null`, `[]`, `{}` fehlen) |
-| `@context` | Teilzeichenkette `schema.org` | exakt, Listen, `@vocab`, Vererbung in `@graph` | exakt wie auditmysite; fehlend und fremd getrennt |
+| `@context` | Teilzeichenkette `schema.org` | exakt, Listen, `@vocab`, Vererbung in `@graph` | exakt wie auditmysite; fehlend und fremd getrennt; unter fremdem Kontext zählen nur volle schema.org-IRIs als Typ (JSON-LD 1.1) |
 | Wurzel-Liste, `@type`-Liste | nicht aufgelöst, nur erster Typ | aufgelöst, alle Typen | aufgelöst, alle Typen |
 | Organization, Person, WebSite | `name` (und `url`) Pflicht | nur Empfehlungen | nur Empfehlungen (so dokumentiert Google) |
 | Article | `headline` Pflicht | nur Empfehlungen | nur Empfehlungen |
 | NewsArticle `publisher` | Pflicht | — | empfohlen |
 | WebSite `potentialAction` | niedrig | — | empfohlen; die Sitelinks-Suchbox gibt es seit 2024 nicht mehr, das Gewicht entscheidet der Host |
 | LocalBusiness | `name` Pflicht | `name`, `address` Pflicht | `name`, `address` Pflicht |
-| FAQPage | `acceptedAnswer` je Frage | nur `mainEntity` | beides |
+| FAQPage | `acceptedAnswer` je Frage | nur `mainEntity` | beides, dazu `name` je Frage und `text` je Antwort (Google FAQ) |
 | BreadcrumbList | `name` auch über `item.name` | ≥ 2 Einträge, `item` bis auf den letzten, `name` direkt | ≥ 2 Einträge, `item` bis auf den letzten, `name` auch über `item.name` |
 | Doppelter `@type` über Blöcke | ja | nein | `duplicate_types`, der Host schaltet |
 | Event, Recipe, VideoObject, JobPosting, SoftwareApplication, ProfilePage, CollectionPage, ItemList, Merchant Listing | — | ja | ja |

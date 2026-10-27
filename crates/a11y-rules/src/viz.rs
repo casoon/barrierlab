@@ -44,8 +44,11 @@ fn ist_viz<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("figure") && n.has_attr("data-viz")
 }
 
+/// Die Visualisierungen der Seite, ohne die unter einem `hidden`: Was nicht
+/// dargestellt wird, braucht in diesem Zustand weder Beschriftung noch
+/// Standbild (wie `display/text-hidden`, auditmysite#725).
 fn visualisierungen<D: Document>(doc: &D) -> impl Iterator<Item = D::N<'_>> {
-    elements(doc).filter(|n| ist_viz(*n))
+    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))
 }
 
 /// Die Art der Visualisierung aus `data-viz`, klein geschrieben.

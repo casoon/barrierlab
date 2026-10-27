@@ -271,11 +271,26 @@ fn vergleichswerte(s: &ComputedStyle) -> Option<[String; 5]> {
 ///
 /// Wie axe `link-in-text-block` und auditmysite#710 zählen nur Links im
 /// Fließtext; Navigation, Menüs, Logo-Links und Links, die als Block, Flex-
-/// oder Grid-Element stehen, sind durch ihre Lage unterscheidbar. Ob die
-/// Farbe selbst genug Kontrast zum Text hat (3:1), prüft diese Regel nicht.
+/// oder Grid-Element stehen, sind durch ihre Lage unterscheidbar. Ein Link
+/// ist ein `a[href]` oder ein Element mit der Rolle `link` (F73 gilt für
+/// jeden Link).
+///
+/// Erreicht die Linkfarbe 3:1 zum umgebenden Text, kann G183 erfüllt sein
+/// (dazu ein Hinweis bei Hover und Fokus, den nur die Stylesheets zeigen):
+/// dann `REVIEW` statt `FAIL`.
 pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut ungemessen = false;
-    for link in elements(doc).filter(|n| n.is_element("a") && n.has_attr("href")) {
+    // Ob der Host überhaupt Stile liefert, zeigt der `<body>` (ohne ihn die
+    // Wurzel). Liefert er welche, hat ein Link ohne Stil keinen Kasten.
+    let mit_stilen = elements(doc).find(|n| n.is_element("body")).map_or_else(
+        || doc.computed_style(doc.root()).is_some(),
+        |b| doc.computed_style(b).is_some(),
+    );
+    let ist_link = |n: &D::N<'_>| match explizite_rolle(*n) {
+        Some(r) => r == "link",
+        None => n.is_element("a") && n.has_attr("href"),
+    };
+    for link in elements(doc).filter(ist_link) {
         let Some(eltern) = link.parent().filter(|p| p.kind() == NodeKind::Element) else {
             continue;
         };
@@ -302,9 +317,23 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
         if in_navigation(link) || ist_logo(link) {
             continue;
         }
-        let (Some(stil), Some(eltern_stil)) = (stil, eltern_stil) else {
-            ungemessen = true;
+        // Ohne Kasten (`display: none`, so meldet ein Host aus einem
+        // Layout-Schnappschuss etwa den Ersatzinhalt eines geladenen
+        // `<object>`) unterscheidet sich der Link von nichts.
+        if anzeige(stil.as_ref()) == "none" {
             continue;
+        }
+        let (stil, eltern_stil) = match (stil, eltern_stil) {
+            (Some(s), Some(e)) => (s, e),
+            // Ohne eigenen Stil bei einem Host, der Stile liefert, wird der
+            // Link nicht dargestellt (etwa der Ersatzinhalt eines geladenen
+            // `<object>`, dessen Element selbst auch keinen Stil hat): Er
+            // unterscheidet sich von nichts, ungemessen ist er nicht.
+            (None, _) if mit_stilen => continue,
+            _ => {
+                ungemessen = true;
+                continue;
+            }
         };
         let (Some(unterstreichung), Some(eigene), Some(fremde)) = (
             stil.text_decoration_line.as_deref(),
@@ -323,7 +352,27 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
         if !im_fliesstext(&andere, &widget) {
             continue;
         }
-        out.push(
+        let farbabstand = match (stil.color, eltern_stil.color, eltern_stil.background_color) {
+            (Some(a), Some(b), Some(h)) => Some(crate::rendering::verhaeltnis(
+                crate::rendering::ueber(a, h),
+                crate::rendering::ueber(b, h),
+            )),
+            _ => None,
+        };
+        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {
+            Finding::review(
+                "color/link-indistinct",
+                pick!(
+                    locale,
+                    "This link in running text differs from the surrounding text only by \
+                     colour, with at least 3:1 contrast to it. Check that hover and focus add \
+                     a cue other than colour (G183).",
+                    "Dieser Link im Fließtext unterscheidet sich vom umgebenden Text nur durch \
+                     die Farbe, mit mindestens 3:1 dazu. Prüfen, ob Hover und Fokus einen \
+                     Hinweis außer der Farbe ergänzen (G183).",
+                ),
+            )
+        } else {
             Finding::fail(
                 "color/link-indistinct",
                 pick!(
@@ -335,9 +384,12 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
                      gleiche Schrift, Unterkante und Hintergrund.",
                 ),
             )
-            .with_severity(Severity::Medium)
-            .with_wcag(["1.4.1"])
-            .at(at(link.id())),
+        };
+        out.push(
+            finding
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.4.1"])
+                .at(at(link.id())),
         );
     }
     if ungemessen {
@@ -382,7 +434,11 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
 /// (`html`, `body`) scrollt immer per Tastatur. Ein Bereich ohne Text zählt
 /// nicht: Scrollen würde dort nichts zeigen.
 pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut gemessen = false;
+    // Ob der Host misst, zeigt auch das Dokument selbst: Eine leere Seite hat
+    // keinen Kandidaten, ist deshalb aber nicht ungemessen.
+    let mut gemessen = elements(doc)
+        .filter(|n| matches!(n.local_name(), "html" | "body"))
+        .any(|n| doc.scroll_overflow_px(n).is_some());
     for n in elements(doc).filter(|n| !matches!(n.local_name(), "html" | "body")) {
         let Some(ueberhang) = doc.scroll_overflow_px(n) else {
             continue;

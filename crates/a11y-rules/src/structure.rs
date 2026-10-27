@@ -184,7 +184,10 @@ fn lang<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     if !root.is_element("html") {
         return;
     }
-    match root.attr("lang") {
+    // Ein leeres oder nur aus Leerraum bestehendes `lang` nennt keine Sprache:
+    // ACT b5c3f8 verlangt einen nicht leeren Wert, ACT bf051a (gültiger Wert)
+    // gilt erst für nicht leere. Deshalb `lang-missing`, nicht `lang-invalid`.
+    match root.attr("lang").filter(|l| !l.trim().is_empty()) {
         None => out.push(
             Finding::fail(
                 "document/lang-missing",
@@ -227,11 +230,21 @@ fn is_plausible_lang(l: &str) -> bool {
     if !(2..=3).contains(&primary.len()) || !primary.chars().all(|c| c.is_ascii_alphabetic()) {
         return false;
     }
-    parts.all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_alphanumeric()))
+    // BCP 47 (RFC 5646, 2.1): jedes weitere Untertag hat 1 bis 8 Zeichen.
+    parts.all(|p| (1..=8).contains(&p.len()) && p.chars().all(|c| c.is_ascii_alphanumeric()))
 }
 
 fn title<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    match elements(doc).find(|n| n.is_element("title")) {
+    // Nur ein HTML-Dokument braucht einen `<title>` (ACT 2779a5: „html
+    // element"); ein SVG- oder anderes Fremddokument nicht.
+    if !doc.root().is_element("html") {
+        return;
+    }
+    // Nur der HTML-`<title>` zählt (ACT 2779a5), nicht der eines eingebetteten
+    // SVG: Der benennt die Grafik, nicht die Seite.
+    let html_title = elements(doc)
+        .find(|n| n.is_element("title") && !ancestors(*n).any(|a| a.is_element("svg")));
+    match html_title {
         None => out.push(
             Finding::fail(
                 "document/title-missing",
@@ -293,6 +306,10 @@ fn viewport_value<'c>(content: &'c str, key: &str) -> Option<&'c str> {
 }
 
 fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    // Die Viewport-Angabe ist ein HTML-`<meta>`; ein Fremddokument hat keine.
+    if !doc.root().is_element("html") {
+        return;
+    }
     let mut gefunden = false;
     for n in elements(doc).filter(|n| n.is_element("meta")) {
         if n.attr("name") != Some("viewport") {
@@ -385,7 +402,11 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Regel gilt Tier 1 und nähert ihn deshalb strukturell an: Sie fragt nicht,
 /// *wie* der Name lautet, sondern ob überhaupt einer gestiftet wird.
 fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
-    if has_text(n) || n.has_attr("aria-label") || n.has_attr("aria-labelledby") {
+    // Ein leeres `aria-label` stiftet keinen Namen (accname 1.2, 2D).
+    if has_text(n)
+        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+        || n.has_attr("aria-labelledby")
+    {
         return false;
     }
     !self_and_descendants(n).any(|d| {
@@ -395,13 +416,30 @@ fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
+/// Die Überschriftenebene: `h1`–`h6` nach HTML-AAM, `role="heading"` mit
+/// `aria-level` (WAI-ARIA 1.2: ohne Angabe Ebene 2). Eine andere explizite
+/// Rolle nimmt einem `hN` die Überschrift (`<h2 role="tab">`).
+fn ueberschrift_ebene<'a, N: Node<'a>>(n: N) -> Option<u8> {
+    match explizite_rolle(n) {
+        Some("heading") => Some(
+            n.attr("aria-level")
+                .and_then(|v| v.trim().parse::<u8>().ok())
+                .filter(|l| *l >= 1)
+                .or_else(|| heading_level(n.local_name()))
+                .unwrap_or(2),
+        ),
+        Some(_) => None,
+        None => heading_level(n.local_name()),
+    }
+}
+
 fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut last = 0u8;
     let mut any = false;
     let mut h1s: Vec<NodeId> = Vec::new();
 
     for n in elements(doc) {
-        let Some(level) = heading_level(n.local_name()) else {
+        let Some(level) = ueberschrift_ebene(n) else {
             continue;
         };
         any = true;
@@ -672,7 +710,41 @@ fn modal_offen<D: Document>(doc: &D) -> bool {
     })
 }
 
+/// Ob im `<body>` etwas steht, das in eine Landmark gehören könnte: Text
+/// oder ein ersetztes bzw. Bedienelement. Die Sicht der Regel enthält nur,
+/// was im Accessibility-Tree steht; Verstecktes zählt also nicht.
+fn seite_hat_inhalt<D: Document>(doc: &D) -> bool {
+    elements(doc)
+        .filter(|n| n.is_element("body") || a11y_dom::ancestors(*n).any(|a| a.is_element("body")))
+        .filter(|n| !matches!(n.local_name(), "script" | "style" | "template" | "noscript"))
+        .any(|n| {
+            n.children()
+                .any(|k| k.kind() == a11y_dom::NodeKind::Text && !k.text().trim().is_empty())
+                || matches!(
+                    n.local_name(),
+                    "img"
+                        | "svg"
+                        | "canvas"
+                        | "video"
+                        | "audio"
+                        | "iframe"
+                        | "object"
+                        | "embed"
+                        | "input"
+                        | "button"
+                        | "select"
+                        | "textarea"
+                )
+        })
+}
+
 fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    // Landmarks fassen Inhalt (WAI-ARIA 1.2, „landmark“). Eine Seite ohne
+    // jeden Inhalt — leer oder alles versteckt — erwartet keine; die fünf
+    // Befunde hier wären über nichts.
+    if !seite_hat_inhalt(doc) {
+        return;
+    }
     let wurzel = doc.root().id();
     let mains: Vec<_> = elements(doc)
         .filter(|n| ist_landmark(*n, "main", "main"))
@@ -878,7 +950,17 @@ fn sprunglink_vorhanden<D: Document>(doc: &D) -> bool {
 }
 
 fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !sprunglink_vorhanden(doc) {
+    // 2.4.1 betrifft Blöcke, die sich über Seiten wiederholen — Understanding
+    // nennt Navigationslinks und Kopfbereiche. Eine Seite ohne Link und ohne
+    // Navigations- oder Kopf-Landmark hat nichts, das ein Sprunglink umgehen
+    // könnte; dort ist die Regel nicht anwendbar.
+    let zu_ueberspringen = elements(doc).any(|n| {
+        (n.is_element("a") && n.attr("href").is_some_and(|h| !h.trim().is_empty()))
+            || ist_landmark(n, "nav", "navigation")
+            || (ist_landmark(n, "header", "banner")
+                && (n.attr("role").is_some() || ist_dokumentweit(n)))
+    });
+    if zu_ueberspringen && !sprunglink_vorhanden(doc) {
         out.push(
             Finding::review(
                 "keyboard/skip-link-missing",
@@ -1045,7 +1127,9 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .with_wcag(["1.3.1", "3.3.2", "4.1.2"])
                 .at(at(n.id())),
             );
-        } else if placeholder && !aria_named && !for_labelled && !wrapped {
+        } else if placeholder && !n.has_attr("aria-labelledby") && !for_labelled && !wrapped {
+            // `aria-label` ist nicht sichtbar: Neben ihm bleibt der Platzhalter
+            // die einzige sichtbare Beschriftung (3.3.2).
             // Der Platzhalter ist sichtbar, solange das Feld leer ist, und
             // stiftet den Namen; 3.3.2 ist damit nicht sicher verletzt. Ob er
             // als Beschriftung genügt, ist eine Frage an den Prüfer
@@ -1072,6 +1156,12 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let Some(role) = n.attr("role") else { continue };
+        // Weitere Token sind Rückfallrollen (WAI-ARIA 1.2, „Handling Author
+        // Errors"): Der Browser nimmt das erste, das er kennt. Ungültig ist
+        // die Angabe erst, wenn kein Token eine gültige Rolle ist (ACT 674b10).
+        let hat_gueltige = role
+            .split_whitespace()
+            .any(|r| VALID_ROLES.contains(&r) || MODULE_ROLES.contains(&r));
         for r in role.split_whitespace() {
             if ABSTRACT_ROLES.contains(&r) {
                 out.push(
@@ -1087,7 +1177,7 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     .with_wcag(["4.1.2"])
                     .at(at(n.id())),
                 );
-            } else if !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
+            } else if !hat_gueltige && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
                 out.push(
                     Finding::fail(
                         "aria/role-invalid",
@@ -1351,7 +1441,8 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
 /// berechnete Semantik. Ohne diese Zeile waere `<div role="list">` fuer die
 /// Regel unsichtbar, obwohl es fuer die Assistenztechnik eine Liste ist.
 fn ist_liste<'a, N: Node<'a>>(n: N) -> bool {
-    matches!(n.local_name(), "ul" | "ol") || n.attr("role") == Some("list")
+    // `<menu>` ist nach HTML eine Liste aus `<li>` und nach HTML-AAM `list`.
+    matches!(n.local_name(), "ul" | "ol" | "menu") || n.attr("role") == Some("list")
 }
 
 /// Ob dieser Knoten als Listeneintrag zaehlt.
@@ -1429,7 +1520,9 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         // Struktur an, die es nicht gibt. Verloren geht dabei keine
         // Information, also kein Verstoss gegen 1.3.1: Best Practice
         // (auditmysite#779).
-        if !kinder.iter().any(|c| ist_listeneintrag(*c)) {
+        // Kinder, die keine Einträge sind, meldet schon `lists/invalid-structure`;
+        // „leer" wäre eine zweite, falsche Aussage über denselben Mangel.
+        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {
             out.push(
                 Finding::fail(
                     "lists/empty",
@@ -1511,7 +1604,10 @@ fn ist_definition<'a, N: Node<'a>>(n: N) -> bool {
 ///
 /// Geprüft wird unter demselben Elternknoten, weil HTML seit einiger Zeit auch
 /// `<div>`-Gruppen innerhalb einer `<dl>` erlaubt. Ein `<dt>` in einer solchen
-/// Gruppe braucht sein `<dd>` dort, nicht irgendwo in der Liste.
+/// Gruppe braucht sein `<dd>` dort, nicht irgendwo in der Liste — und nach dem
+/// Inhaltsmodell von `<dl>` *danach*: Auf eine Folge von `<dt>` folgt
+/// mindestens ein `<dd>`. Ein `<dd>` vor dem Begriff gehört zu einer anderen
+/// Gruppe.
 fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         if !ist_begriff(n) {
@@ -1521,7 +1617,10 @@ fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
         let hat_definition = eltern
             .children()
             .filter(|c| c.kind() == a11y_dom::NodeKind::Element)
-            .any(ist_definition);
+            .skip_while(|c| *c != n)
+            .filter(|c| !matches!(c.local_name(), "script" | "template"))
+            .find(|c| !ist_begriff(*c))
+            .is_some_and(ist_definition);
 
         if !hat_definition {
             out.push(
@@ -1575,9 +1674,12 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // sich eine Tabellenliste ausgeben lässt, sieht sonst nur „Tabelle".
         // Heuristisch, weil eine Tabelle ohne Namen nicht zwingend falsch ist
         // — deshalb Review, nicht Fail.
+        // Namensquellen nach HTML-AAM („table Element Accessible Name
+        // Computation"): aria-labelledby, aria-label, caption, title.
         let benannt = n.children().any(|c| c.is_element("caption"))
-            || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-            || n.has_attr("aria-labelledby");
+            || ["aria-label", "aria-labelledby", "title"]
+                .iter()
+                .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()));
         if !benannt {
             out.push(
                 Finding::review(
@@ -2030,7 +2132,9 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["media/audio-autoplay"],
         tier: Tier::Structure,
-        scope: Scope::AccessibilityTree,
+        // Ton spielt auch, wenn das Element versteckt oder aus dem
+        // Accessibility-Tree genommen ist (`hidden`, `aria-hidden`).
+        scope: Scope::Markup,
         wcag: &["1.4.2"],
         severity: Severity::Medium,
         help: "Audio that plays automatically must stop within three seconds or be pausable.",
@@ -2131,7 +2235,10 @@ pub const METAS: &[Meta] = &[
     Meta {
         ids: &["tables/headers-attr-invalid"],
         tier: Tier::Structure,
-        scope: Scope::Markup,
+        // Nur Zellen, die dargestellt und im Accessibility-Tree sind (ACT
+        // a25f45: Tabelle sichtbar und im Baum); eine versteckte Tabelle
+        // vermittelt in diesem Zustand keine Zuordnung.
+        scope: Scope::AccessibilityTree,
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "The headers attribute of a cell must list the ids of header cells in the same \

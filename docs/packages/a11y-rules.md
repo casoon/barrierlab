@@ -98,13 +98,13 @@ ffd0e9); `aria/*` und `popover/*` (4.1.2, ACT 5c01ea, 6a7281, 4e8ab6; Kontext
 und Bestandteile 1.3.1, ACT ff89c9, bc4a75); `keyboard/hidden-focusable` (ACT
 6cfa84); `keyboard/scrollable-region-not-focusable` (2.1.1, ACT 0ssw9k);
 `inert/dialog-inert` (offenes `<dialog>`); `context/on-input` (F37 mit Beleg
-im Handler); `lists/invalid-structure`, `lists/item-outside-list`,
+im Handler; `REVIEW` mit Beschreibung am Feld, G13); `lists/invalid-structure`, `lists/item-outside-list`,
 `lists/term-without-definition`, `tables/header-without-data`,
 `tables/headers-attr-invalid`, `tables/presentational-with-headers` (1.3.1,
 F46, ACT d0f69e, a25f45); `forms/label-missing` ohne jeden Namen (ACT e086e5);
 `forms/autocomplete-invalid` (1.3.5, ACT 73f2c2); `label-in-name/mismatch`
 (2.5.3, ACT 2ee8b8); `contrast/*` (gemessen); `color/link-indistinct` (F73,
-gemessen); `focus/outline-removed` (F78, seitenweit ohne Ersatz);
+gemessen; `REVIEW`, wenn die Linkfarbe 3:1 zum Text erreicht, G183); `focus/outline-removed` (F78, seitenweit ohne Ersatz);
 `status/live-overridden` mit `aria-live="off"` (4.1.3).
 
 Die `viz/*`- und `display/*`-Regeln der Darstellungskonvention tragen
@@ -182,13 +182,37 @@ eine Sicht auf das Dokument, in der die übrigen fehlen:
 | `Scope` | fehlt in der Sicht | Regeln |
 |---|---|---|
 | `AccessibilityTree` | `aria-hidden="true"`, nicht Dargestelltes | der Normalfall |
-| `Rendered` | nicht Dargestelltes | `keyboard/positive-tabindex`, `keyboard/hidden-focusable`, `keyboard/click-handler-not-focusable`, Kontrast |
-| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `tables/headers-attr-invalid`, `patterns/tooltip-unreferenced`, `viz/*` und `display/*` |
+| `Rendered` | nicht Dargestelltes | `keyboard/positive-tabindex`, `keyboard/hidden-focusable`, `keyboard/click-handler-not-focusable`, Kontrast, die Checkliste `manual/*` |
+| `Markup` | nichts | Dokumentweites, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `patterns/tooltip-unreferenced`, `media/audio-autoplay`, `viz/*` und `display/*` (`viz/*` übergeht Figuren unter `hidden`) |
 
 „Nicht dargestellt" heißt mit Tier 3 `display: none` oder `visibility: hidden`,
 ohne das `hidden`-Attribut. Ohne Stile bleibt per CSS Verstecktes in der Sicht
 — die ehrliche Grenze des statischen Falls. `visibility` kann an einem
 Nachfahren wieder `visible` sein; ein solcher Nachfahre fällt mit weg.
+
+## Regelkorpus und Mutationen
+
+Jede Kennung aus `Meta::ids` hat in `tests/korpus/` direkte Fälle: einen
+Treffer mit genau dem erwarteten Ergebnis (ein `FAIL` erfüllt keinen
+`REVIEW`-Fall), ein ähnlich aussehendes konformes Gegenbeispiel und ein
+Dokument, auf das die Regel nicht anwendbar ist; bei den beiden letzten muss
+die Kennung nachweislich gelaufen sein. Dazu Grenzfälle beidseits jeder
+Schwelle und die für die Regel relevanten Varianten (versteckt, nativ/ARIA,
+andere Beschriftungswege, Shadow DOM). Jeder Fall nennt die Norm, aus der
+seine Erwartung stammt. Der Korpus-Host bedient alle Tiers aus dem HTML des
+Falls: Stile aus dem `style`-Attribut, Geometrie über eigene Eigenschaften,
+Stylesheets aus `<style>`.
+
+`tests/mutations/*.toml` nennt je Kennung mindestens eine gezielte Mutation
+(Bedingung umkehren, Schwelle verschieben, Befund unterdrücken), die ein Fall
+töten muss. `xtask/mutate.py crates/a11y-rules` wendet sie nacheinander im
+Arbeitsbaum an, baut, lässt die Fälle der Kennung laufen und stellt die Datei
+wieder her. Zwei Gates in `cargo test` scheitern, sobald einer Kennung eine
+Fallart oder eine tötende Mutation fehlt.
+
+Nicht im Korpus darstellbar: Ansichtsbreiten (`@media` wertet
+`text/justified` und `text/line-height-tight` nicht aus, die Schnittstelle
+kennt keine Breite) und dynamische Zustände; beides misst der Host.
 
 ## Grenzen
 

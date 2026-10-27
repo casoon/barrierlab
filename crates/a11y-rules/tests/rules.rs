@@ -230,7 +230,9 @@ fn minimaldokument_meldet_landmarks_als_review_ausser_main() {
         outcome("landmarks/contentinfo-missing"),
         Some(Outcome::Review)
     );
-    assert_eq!(outcome("keyboard/skip-link-missing"), Some(Outcome::Review));
+    // Ohne Link und ohne Navigation gibt es nichts zu überspringen: die
+    // Sprunglink-Regel ist nicht anwendbar (casoon/auditmysite#783).
+    assert_eq!(outcome("keyboard/skip-link-missing"), None);
     // Der Viewport steht in sauber() -- diese Regel darf hier nicht feuern.
     assert_eq!(outcome("zoom/viewport-missing"), None);
 }
@@ -250,7 +252,9 @@ fn fehlendes_lang_und_title() {
 
 #[test]
 fn unplausibler_sprachcode() {
-    for code in ["", "d", "deutsch-", "1de"] {
+    // Ein leeres `lang` ist fehlend, nicht ungültig (ACT b5c3f8, bf051a);
+    // das prüft der Korpus (casoon/auditmysite#783).
+    for code in ["d", "deutsch-", "1de", "de-abcdefghi"] {
         let doc = Arena::builder()
             .open("html")
             .attr("lang", code)
@@ -1958,7 +1962,19 @@ fn sprunglink_wird_an_ziel_und_stellung_erkannt() {
 /// Der Sprunglink ist heuristisch erkannt — der Befund ist deshalb REVIEW.
 #[test]
 fn fehlender_sprunglink_ist_review_nicht_fail() {
-    let doc = sauber().open("body").close().close().build();
+    // Eine Navigation, die sich wiederholen kann — ohne sie ist die Regel
+    // nicht anwendbar (casoon/auditmysite#783).
+    let doc = sauber()
+        .open("body")
+        .open("nav")
+        .open("a")
+        .attr("href", "/")
+        .text("Start")
+        .close()
+        .close()
+        .close()
+        .close()
+        .build();
     let f = run(&doc)
         .findings
         .into_iter()
@@ -2370,6 +2386,10 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .open("section")
         .attr("role", "dialog")
         .attr("aria-label", "Cookies")
+        // Inhalt, sonst ist die Seite leer und die Regel nicht anwendbar.
+        .open("button")
+        .text("Akzeptieren")
+        .close()
         .close()
         .close()
         .close()
