@@ -18,7 +18,8 @@
 //!   misst: `layout`, `focus-visible`, `obscured`, `order`, `min-width`,
 //!   `cursor`, `animation`, `pointer-events`, `hides-focus`, `scroll`,
 //!   `visually-hidden`, `style`, `bounds`, `unrendered` (kein Stil für nicht
-//!   Dargestelltes, wie ein Host aus einem Layout-Schnappschuss).
+//!   Dargestelltes, wie ein Host aus einem Layout-Schnappschuss),
+//!   `unrendered-fields` (dafür nur `display: none`, sonst nichts).
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
@@ -358,10 +359,18 @@ impl Rendering for Host<'_> {
         }
         // Ein Host aus einem Layout-Schnappschuss kennt für nicht Dargestelltes
         // keinen Stil.
-        if !self.misst("unrendered")
-            && eigen(node, "display").unwrap_or_else(|| ua_display(node).into()) == "none"
-        {
+        let nicht_dargestellt =
+            eigen(node, "display").unwrap_or_else(|| ua_display(node).into()) == "none";
+        if !self.misst("unrendered") && nicht_dargestellt {
             return None;
+        }
+        // Wie auditmysite: für nicht Dargestelltes nur `display: none`, alle
+        // übrigen Felder ungemessen.
+        if !self.misst("unrendered-fields") && nicht_dargestellt {
+            return Some(ComputedStyle {
+                display: Some("none".into()),
+                ..Default::default()
+            });
         }
         let deko = eigen(node, "text-decoration-line")
             .or_else(|| eigen(node, "text-decoration"))

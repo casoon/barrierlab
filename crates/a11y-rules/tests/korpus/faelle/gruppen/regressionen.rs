@@ -211,5 +211,11 @@ pub fn faelle() -> Vec<Fall> {
         )
         .variante("Host ohne jeden Stil")
         .anzahl(1),
+        negativ(
+            "color/link-indistinct",
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: unrendered-fields"><head><title>T</title></head><body><p>Get the <object data="/catalogue.pdf" type="application/pdf"><a href="/catalogue.pdf" style="display:none">catalogue</a></object> before the visit.</p></body></html>"#,
+            "WCAG 1.4.1 betrifft Dargestelltes; ein Link mit display: none und sonst ungemessenen Stilfeldern hat keinen Kasten und ist nicht ungemessen",
+        )
+        .variante("Regression: Ersatzlink mit nur display: none (auditmysite-Host)"),
     ]
 }

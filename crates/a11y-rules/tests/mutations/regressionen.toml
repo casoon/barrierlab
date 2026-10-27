@@ -329,3 +329,16 @@ replace = '''
             (None, Some(_)) if mit_stilen => continue,
 '''
 expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if anzeige(stil.as_ref()) == "none" {
+'''
+replace = '''
+        if false {
+'''
+expect = "killed"
