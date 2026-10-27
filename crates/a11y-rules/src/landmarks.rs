@@ -322,7 +322,6 @@ fn erreichbar<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
             && match d.kind() {
                 NodeKind::Element => true,
                 NodeKind::Text => !d.text().trim().is_empty(),
-                _ => false,
             }
     })
 }
