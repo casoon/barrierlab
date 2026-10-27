@@ -298,7 +298,7 @@ fn ziele() -> Vec<Fall> {
             .variante("Abstandsausnahme"),
         review(id, r#"<div role="button" tabindex="0" style="--w:16px;--h:16px">A</div><button style="--x:16px;--w:16px;--h:16px">B</button>"#, U258)
             .variante("ARIA-Rolle"),
-        negativ(id, r#"<p>Read the <a href="/a" style="--w:30px;--h:16px">terms</a> and the <a href="/b" style="--x:32px;--w:30px;--h:16px">privacy notice</a> now.</p>"#,
+        negativ(id, r#"<p>Read the <a href="/a" style="--w:18px;--h:16px">terms</a> and the <a href="/b" style="--x:20px;--w:18px;--h:16px">privacy notice</a> now.</p>"#,
             "WCAG 2.2 2.5.8 exception 'Inline': target in a sentence")
             .variante("Ausnahme inline"),
         negativ(id, r#"<a href="/cart" style="--w:16px;--h:16px">C</a><button style="--x:16px;--w:100px;--h:30px">Search</button><a href="/cart" style="--y:100px">Cart</a>"#,
