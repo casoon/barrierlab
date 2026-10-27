@@ -74,12 +74,13 @@ const MARKER_EN: &[&str] = &[
 
 const TEXTBLOECKE: &[&str] = &["p", "li", "dd", "td", "figcaption"];
 
-/// Inhalt, dessen Sprache nicht zählt: Code, Adressen, Zitate und was
-/// ausdrücklich nicht übersetzt werden soll.
+/// Inhalt, dessen Sprache nicht zählt: Code, Adressen und was ausdrücklich
+/// nicht übersetzt werden soll. Zitate zählen: 3.1.2 nimmt nur Eigennamen,
+/// Fachbegriffe, Wörter unbestimmter Sprache und Lehnwörter aus, und H58
+/// zeigt gerade ein fremdsprachiges Zitat.
 fn ausgenommen<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n).chain(ancestors(n)).any(|a| {
-        matches!(a.local_name(), "code" | "pre" | "address" | "blockquote")
-            || a.attr("translate") == Some("no")
+        matches!(a.local_name(), "code" | "pre" | "address") || a.attr("translate") == Some("no")
     })
 }
 
@@ -257,8 +258,8 @@ fn wartezeit(content: &str) -> Option<u64> {
     Some(ziffern.parse().unwrap_or(u64::MAX))
 }
 
-/// Ab 20 Stunden gilt eine Frist als ausreichend (2.2.1, „20 Hour
-/// Exception").
+/// Erst *mehr* als 20 Stunden gelten als ausreichend (2.2.1, „20 Hour
+/// Exception": „longer than 20 hours"; ACT bc659a: „greater than 72000").
 const ZWANZIG_STUNDEN: u64 = 20 * 60 * 60;
 
 /// 2.2.1: `<meta http-equiv="refresh">` lädt die Seite nach einer Frist neu
@@ -281,7 +282,7 @@ pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
         let Some(s) = n.attr("content").and_then(wartezeit) else {
             continue;
         };
-        if s == 0 || s >= ZWANZIG_STUNDEN {
+        if s == 0 || s > ZWANZIG_STUNDEN {
             continue;
         }
         out.push(

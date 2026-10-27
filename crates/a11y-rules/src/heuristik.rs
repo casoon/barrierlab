@@ -519,6 +519,12 @@ fn ausserhalb(r: &Rect) -> bool {
 /// werden sie trotzdem (bundesregierung.de, `#slick-slide-control00`,
 /// 10 × 10 px).
 fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
+    // Ein eingebettetes Dokument ist ein Behälter, kein Ziel: Zeigeraktionen
+    // nehmen die Ziele darin an, und die beurteilt der Durchgang durch den
+    // Rahmen (Understanding 2.5.8, „target").
+    if matches!(n.local_name(), "iframe" | "frame" | "object" | "embed") {
+        return false;
+    }
     let nativ = match n.local_name() {
         "a" | "area" => n.has_attr("href"),
         "button" | "select" | "textarea" | "summary" => !n.has_attr("disabled"),
@@ -550,6 +556,43 @@ fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
             )
         })
         || per_tab_erreichbar(n)
+}
+
+/// Der Bereich, der Zeigeraktionen für das Ziel annimmt. Ein Inline-Kasten
+/// (`<a>` um ein Bild) umfasst seine ersetzten Kinder nicht; ein Klick auf
+/// das Bild aktiviert aber den Link (Understanding 2.5.8, „target: region of
+/// the display that will accept a pointer action"). Deshalb die Vereinigung
+/// mit den dargestellten ersetzten Nachfahren.
+fn zielkasten<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Rect> {
+    let mut r = doc.bounds(n).filter(|r| !r.is_empty())?;
+    let inline = doc
+        .computed_style(n)
+        .is_some_and(|s| s.display.as_deref() == Some("inline"));
+    if !inline {
+        return Some(r);
+    }
+    for d in a11y_dom::descendants(n).filter(|d| {
+        matches!(
+            d.local_name(),
+            "img" | "svg" | "video" | "canvas" | "picture" | "object" | "embed"
+        )
+    }) {
+        let sichtbar = doc
+            .computed_style(d)
+            .is_none_or(|s| s.display.as_deref() != Some("none"));
+        if let Some(k) = doc.bounds(d).filter(|k| !k.is_empty() && sichtbar) {
+            let (x0, y0) = (r.x.min(k.x), r.y.min(k.y));
+            let x1 = (r.x + r.width).max(k.x + k.width);
+            let y1 = (r.y + r.height).max(k.y + k.height);
+            r = Rect {
+                x: x0,
+                y: y0,
+                width: x1 - x0,
+                height: y1 - y0,
+            };
+        }
+    }
+    Some(r)
 }
 
 /// Ob ein Element ein Ziel ist, das man sehen und anklicken kann: nicht
@@ -627,7 +670,7 @@ fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let labels = labels_nach_ziel(doc);
     let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
         .filter(|n| ist_zeigerziel(*n))
-        .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
+        .filter_map(|n| zielkasten(doc, n).map(|r| (n, r)))
         .filter(|(n, r)| klickbar(doc, *n, r))
         .collect();
     let zu_klein = |r: &Rect| r.width < ZIEL_PX || r.height < ZIEL_PX;
@@ -683,7 +726,7 @@ fn zielgroesse_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Find
     let labels = labels_nach_ziel(doc);
     let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
         .filter(|n| ist_zeigerziel(*n))
-        .filter_map(|n| doc.bounds(n).filter(|r| !r.is_empty()).map(|r| (n, r)))
+        .filter_map(|n| zielkasten(doc, n).map(|r| (n, r)))
         .filter(|(n, r)| klickbar(doc, *n, r))
         .collect();
     let mut schon = Vec::new();

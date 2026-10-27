@@ -1,0 +1,344 @@
+# Mutationen zu den Regressionen aus dem Browserkorpus (783-shared-bugs) — stellen je den alten Fehler wieder her.
+
+[[mutation]]
+id = "tables/headers-attr-invalid"
+file = "src/structure.rs"
+kind = "scope"
+test = "korpus"
+find = '''
+        // vermittelt in diesem Zustand keine Zuordnung.
+        scope: Scope::AccessibilityTree,'''
+replace = '''
+        // vermittelt in diesem Zustand keine Zuordnung.
+        scope: Scope::Markup,'''
+expect = "killed"
+
+[[mutation]]
+id = "viz/caption-missing"
+file = "src/viz.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))'''
+replace = '''
+    elements(doc).filter(|n| ist_viz(*n))'''
+expect = "killed"
+
+[[mutation]]
+id = "viz/static-missing"
+file = "src/viz.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))'''
+replace = '''
+    elements(doc).filter(|n| ist_viz(*n))'''
+expect = "killed"
+
+[[mutation]]
+id = "language/part-unmarked"
+file = "src/document.rs"
+kind = "widen-exemption"
+test = "korpus"
+find = '''
+"code" | "pre" | "address")'''
+replace = '''
+"code" | "pre" | "address" | "blockquote")'''
+expect = "killed"
+
+[[mutation]]
+id = "text/line-height-tight"
+file = "src/stile.rs"
+kind = "drop-source"
+test = "korpus"
+find = '''
+        let attribut = im_stilattribut(e, eigenschaft);'''
+replace = '''
+        let attribut: Option<(String, bool)> = None;'''
+expect = "killed"
+
+[[mutation]]
+id = "text/justified"
+file = "src/stile.rs"
+kind = "drop-source"
+test = "korpus"
+find = '''
+        let attribut = im_stilattribut(e, eigenschaft);'''
+replace = '''
+        let attribut: Option<(String, bool)> = None;'''
+expect = "killed"
+
+[[mutation]]
+id = "links/generic-name"
+file = "src/semantics.rs"
+kind = "narrow-applicability"
+test = "korpus"
+find = '''
+        .filter(|n| match doc.role(*n) {
+            Some(r) => r == "link",'''
+replace = '''
+        .filter(|n| match doc.role(*n) {
+            Some(r) => r == "link" && n.is_element("a"),'''
+expect = "killed"
+
+[[mutation]]
+id = "links/url-name"
+file = "src/semantics.rs"
+kind = "narrow-applicability"
+test = "korpus"
+find = '''
+        .filter(|n| match doc.role(*n) {
+            Some(r) => r == "link",'''
+replace = '''
+        .filter(|n| match doc.role(*n) {
+            Some(r) => r == "link" && n.is_element("a"),'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {'''
+replace = '''
+        let finding = if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {'''
+replace = '''
+        let finding = if farbabstand.is_some_and(|v| v >= 4.5) {'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "narrow-applicability"
+test = "korpus"
+find = '''
+        Some(r) => r == "link",
+        None => n.is_element("a") && n.has_attr("href"),
+    };
+    for link in elements(doc).filter(ist_link) {'''
+replace = '''
+        Some(_) => false,
+        None => n.is_element("a") && n.has_attr("href"),
+    };
+    for link in elements(doc).filter(ist_link) {'''
+expect = "killed"
+
+[[mutation]]
+id = "context/on-input"
+file = "src/forms.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        let finding = if wechsel && hingewiesen {'''
+replace = '''
+        let finding = if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "names/required-missing"
+file = "src/names.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+    "tree",
+    "treegrid",
+'''
+replace = '''
+'''
+expect = "killed"
+
+[[mutation]]
+id = "lists/empty"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+replace = '''
+        if !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+expect = "killed"
+
+[[mutation]]
+id = "forms/placeholder-as-label"
+file = "src/structure.rs"
+kind = "widen-exemption"
+test = "korpus"
+find = '''
+        } else if placeholder && !n.has_attr("aria-labelledby") && !for_labelled && !wrapped {'''
+replace = '''
+        } else if placeholder && !aria_named && !for_labelled && !wrapped {'''
+expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/names.rs"
+kind = "early-return"
+test = "korpus"
+find = '''
+        if s.is_empty() || m.is_empty() || m.contains(&s) {'''
+replace = '''
+        if s.is_empty() || m.is_empty() || m.contains(&s) || s.contains(&m) {'''
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/interactive-not-focusable"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        let rolle = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {'''
+replace = '''
+        let rolle = if false {'''
+expect = "equivalent"
+note = "accname::role gibt einem a ohne href schon keine Rolle link; der Wächter schützt vor Hosts (Chrome), die es tun — mit dem Korpus-Host nicht unterscheidbar"
+
+[[mutation]]
+id = "targets/size-enhanced"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    if !inline {
+        return Some(r);'''
+replace = '''
+    if true {
+        return Some(r);'''
+expect = "killed"
+
+[[mutation]]
+id = "targets/size-enhanced"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    if matches!(n.local_name(), "iframe" | "frame" | "object" | "embed") {'''
+replace = '''
+    if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "targets/size"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    if matches!(n.local_name(), "iframe" | "frame" | "object" | "embed") {'''
+replace = '''
+    if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/scrollable-region-not-focusable"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        .any(|n| doc.scroll_overflow_px(n).is_some());'''
+replace = '''
+        .any(|_| false);'''
+expect = "killed"
+
+[[mutation]]
+id = "objects/alt-missing"
+file = "src/sicht.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        || n.parent().is_some_and(|p| p.is_element("object"))'''
+replace = '''
+        || false'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) && landmark(doc, k).is_some() => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) && !erreichbar(doc, k) => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "widen-exemption"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            (None, _) if mit_stilen => continue,
+'''
+replace = '''
+            (None, Some(_)) => {
+                ungemessen = true;
+                continue;
+            }
+'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "narrow-condition"
+test = "korpus"
+find = '''
+            (None, _) if mit_stilen => continue,
+'''
+replace = '''
+            (None, Some(_)) if mit_stilen => continue,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if anzeige(stil.as_ref()) == "none" {
+'''
+replace = '''
+        if false {
+'''
+expect = "killed"

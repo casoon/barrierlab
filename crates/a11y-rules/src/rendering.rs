@@ -21,7 +21,9 @@
 //! [`Rendering`]: a11y_dom::Rendering
 //! [`ComputedStyle::background_color`]: a11y_dom::ComputedStyle::background_color
 
-use a11y_dom::{Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, elements};
+use a11y_dom::{
+    Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, ancestors, elements,
+};
 use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::darstellung;
@@ -48,7 +50,7 @@ fn luminanz(c: Color) -> f64 {
 }
 
 /// Kontrastverhältnis nach WCAG 2.x, 1,0 bis 21,0.
-fn verhaeltnis(vorn: Color, hinten: Color) -> f64 {
+pub(crate) fn verhaeltnis(vorn: Color, hinten: Color) -> f64 {
     let (a, b) = (luminanz(vorn), luminanz(hinten));
     let (hell, dunkel) = if a >= b { (a, b) } else { (b, a) };
     (hell + 0.05) / (dunkel + 0.05)
@@ -59,7 +61,7 @@ fn verhaeltnis(vorn: Color, hinten: Color) -> f64 {
 /// Der Host löst die Transparenz des *Hintergrunds* auf, nicht die des
 /// Vordergrunds: `color: rgba(0,0,0,.5)` bleibt als solches stehen und wird
 /// erst hier verrechnet.
-fn ueber(vorn: Color, hinten: Color) -> Color {
+pub(crate) fn ueber(vorn: Color, hinten: Color) -> Color {
     if vorn.a == 255 {
         return vorn;
     }
@@ -96,6 +98,22 @@ fn traegt_text<'a, N: Node<'a>>(n: N) -> bool {
 /// `visibility: hidden` sind kein Kontrastproblem.
 fn wird_dargestellt(stil: &ComputedStyle) -> bool {
     stil.display.as_deref() != Some("none") && stil.visibility.as_deref() != Some("hidden")
+}
+
+/// Teil eines inaktiven Bedienelements: `disabled` an einem Formularelement
+/// oder einem `fieldset` darüber, oder `aria-disabled="true"`. WCAG 1.4.3,
+/// 1.4.6 und 1.4.11 nehmen inaktive Bedienelemente ausdrücklich aus (ACT
+/// afw4f7: „not part of a disabled widget").
+fn inaktiv<'a, N: Node<'a>>(n: N) -> bool {
+    std::iter::once(n).chain(ancestors(n)).any(|a| {
+        a.attr("aria-disabled")
+            .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+            || (a.has_attr("disabled")
+                && matches!(
+                    a.local_name(),
+                    "button" | "input" | "select" | "textarea" | "option" | "optgroup" | "fieldset"
+                ))
+    })
 }
 
 /// Was eine Messung am Element ergibt.
@@ -156,7 +174,7 @@ fn spanne(vorn: Color, stichprobe: &[f64]) -> Option<(f64, f64)> {
 /// Text unter `aria-hidden` wird gemessen: WCAG 1.4.3 gilt für sichtbaren
 /// Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn aus (#395).
 fn messe<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Messung> {
-    if !traegt_text(n) {
+    if !traegt_text(n) || inaktiv(n) {
         return None;
     }
     let stil = doc.computed_style(n)?;
@@ -209,7 +227,9 @@ enum Urteil {
 }
 
 fn urteile(m: &Messung, schwelle_klein: f64, schwelle_gross: f64) -> Option<(Urteil, f64, bool)> {
-    let knapp = |w: f64, s: f64| w + 0.005 < s;
+    // Ohne Toleranz: Understanding 1.4.3 verlangt, das Verhältnis nicht zu
+    // runden — 4,499:1 erreicht 4,5:1 nicht.
+    let knapp = |w: f64, s: f64| w < s;
     match *m {
         Messung::Wert(w, gross) => {
             let s = if gross {
@@ -415,7 +435,7 @@ fn ist_auswahlelement<'a, N: Node<'a>>(n: N) -> bool {
 /// Elternelement heißt `UNTESTED`, nicht ein Vergleich gegen Weiß.
 fn bedienelement_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_auswahlelement(n) || doc.bounds(n).is_some_and(|b| b.is_empty()) {
+        if !ist_auswahlelement(n) || inaktiv(n) || doc.bounds(n).is_some_and(|b| b.is_empty()) {
             continue;
         }
         let Some(stil) = doc.computed_style(n) else {

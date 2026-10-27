@@ -1,0 +1,199 @@
+# Mutationen der Gruppe „aria“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "aria/attribute-unknown"
+file = "src/aria.rs"
+kind = "invert"
+find = 'attribut_index(name).is_some()'
+replace = 'attribut_index(name).is_none()'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-value-invalid"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if v.is_empty() || wert_gueltig(&typ, v) {'
+replace = 'if v.is_empty() || !wert_gueltig(&typ, v) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/owns-conflict"
+file = "src/aria.rs"
+kind = "invert"
+find = 'Some((_, e)) if *e != n.id() && !gemeldet.contains(&schluessel) => {'
+replace = 'Some((_, e)) if *e == n.id() && !gemeldet.contains(&schluessel) => {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/tab-selected-missing"
+file = "src/aria.rs"
+kind = "invert"
+find = '.any(|t| ist_wahr(t.attr("aria-selected")))'
+replace = '.all(|t| ist_wahr(t.attr("aria-selected")))'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/tabpanel-missing"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if !panel {'
+replace = 'if panel {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/combobox-popup-missing"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if !popup {'
+replace = 'if popup {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/combobox-popup-missing"
+file = "src/aria.rs"
+kind = "drop-condition"
+find = '|| nicht_leer(n.attr("aria-controls"))'
+replace = '|| false'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "popover/target-missing"
+file = "src/aria.rs"
+kind = "relabel-finding"
+find = '"popover/target-missing",'
+replace = '"popover/target-invalid",'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "popover/target-invalid"
+file = "src/aria.rs"
+kind = "invert"
+find = 'Some(z) if !z.has_attr("popover") => ('
+replace = 'Some(z) if z.has_attr("popover") => ('
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "inert/dialog-inert"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if !n.has_attr("inert") && !ancestors(n).any(|a| a.has_attr("inert")) {'
+replace = 'if !n.has_attr("inert") {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "inert/dialog-inert"
+file = "src/aria.rs"
+kind = "swap-outcome"
+find = 'let f = if offen {'
+replace = 'let f = if !offen {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-not-allowed"
+file = "src/aria.rs"
+kind = "invert"
+find = '} else if (GLOBAL | JE_ROLLE[ri]) & (1 << ai) == 0 {'
+replace = '} else if (GLOBAL | JE_ROLLE[ri]) & (1 << ai) != 0 {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-not-allowed"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'if nativ_verboten(n, attr, v) {'
+replace = 'if false && nativ_verboten(n, attr, v) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-prohibited"
+file = "src/aria.rs"
+kind = "drop-condition"
+find = '"generic" => name || attr == "aria-roledescription",'
+replace = '"generic" => attr == "aria-roledescription",'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-parent-missing"
+file = "src/aria.rs"
+kind = "invert"
+find = '&& im_kontext(doc, n, erlaubt, &besitzer) == Some(false)'
+replace = '&& im_kontext(doc, n, erlaubt, &besitzer) == Some(true)'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-children-missing"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if besitzt(doc, n, noetig, &besitzer) == Some(false) {'
+replace = 'if besitzt(doc, n, noetig, &besitzer) != Some(true) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-children-missing"
+file = "src/aria.rs"
+kind = "drop-exception"
+find = '.any(|a| ist_wahr(a.attr("aria-busy")))'
+replace = '.any(|a| ist_wahr(a.attr("aria-busy")) && false)'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/role-redundant"
+file = "src/rollen.rs"
+kind = "invert"
+find = 'if implizite_rolle(n) != Some(rolle) {'
+replace = 'if implizite_rolle(n) == Some(rolle) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/title-only"
+file = "src/rollen.rs"
+kind = "invert"
+find = 'if !nicht_leer(n.attr("title")) || !kandidat(n, &label_for) {'
+replace = 'if !nicht_leer(n.attr("title")) || kandidat(n, &label_for) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/title-only"
+file = "src/rollen.rs"
+kind = "drop-condition"
+find = '|| has_text(n)'
+replace = '|| false'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "patterns/tooltip-unreferenced"
+file = "src/rollen.rs"
+kind = "drop-condition"
+find = '["aria-describedby", "aria-labelledby"]'
+replace = '["aria-describedby"]'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "patterns/tooltip-unreferenced"
+file = "src/rollen.rs"
+kind = "invert"
+find = 'if explizite_rolle(n) != Some("tooltip")'
+replace = 'if explizite_rolle(n) == Some("tooltip")'
+test = "korpus"
+expect = "killed"

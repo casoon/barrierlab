@@ -1,0 +1,325 @@
+# Mutationen der Merkmalsprofile (structured_data) — siehe xtask/mutate.py.
+# `id` ist der Schlüssel des SchemaFeature; der Test `korpus_faelle` in tests/korpus.rs.
+
+[[mutation]]
+id = "product_snippet"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+    if !any_present(content, &["review", "aggregateRating", "offers"]) {'''
+replace = '''
+    if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "product_snippet"
+file = "src/structured_data/rules.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        } else if !any_present(offer, &["price", "priceSpecification.price"]) {'''
+replace = '''
+        } else if any_present(offer, &["price", "priceSpecification.price"]) {'''
+expect = "killed"
+
+[[mutation]]
+id = "product_snippet"
+file = "src/structured_data/parse.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    let fremd = context.is_some() && !has_context;'''
+replace = '''
+    let fremd = false;'''
+expect = "killed"
+
+[[mutation]]
+id = "merchant_listing"
+file = "src/structured_data/rules.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    let merchant_listing = if product_context == ProductRuleContext::MerchantProductDetail {'''
+replace = '''
+    let merchant_listing = if product_context != ProductRuleContext::MerchantProductDetail {'''
+expect = "killed"
+
+[[mutation]]
+id = "merchant_listing"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        &["name", "image", "offers"],'''
+replace = '''
+        &["name", "offers"],'''
+expect = "killed"
+
+[[mutation]]
+id = "article"
+file = "src/structured_data/rules.rs"
+kind = "drop-recommendation"
+test = "korpus"
+find = '''
+                "image",
+            ],
+            content,
+            ARTICLE_SOURCE,'''
+replace = '''
+            ],
+            content,
+            ARTICLE_SOURCE,'''
+expect = "killed"
+
+[[mutation]]
+id = "article"
+file = "src/structured_data/rules.rs"
+kind = "status"
+test = "korpus"
+find = '''
+    let requirement_status = if required.is_empty() {
+        SchemaRequirementStatus::RecommendationsOnly'''
+replace = '''
+    let requirement_status = if required.is_empty() {
+        SchemaRequirementStatus::MeetsRequiredProperties'''
+expect = "killed"
+
+[[mutation]]
+id = "breadcrumb"
+file = "src/structured_data/rules.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if !items.is_empty() && items.len() < 2 {'''
+replace = '''
+    if !items.is_empty() && items.len() < 1 {'''
+expect = "killed"
+
+[[mutation]]
+id = "breadcrumb"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if index + 1 < items.len() && !is_present_at(item, "item") {'''
+replace = '''
+        if index + 2 < items.len() && !is_present_at(item, "item") {'''
+expect = "killed"
+
+[[mutation]]
+id = "organization"
+file = "src/structured_data/rules.rs"
+kind = "drop-recommendation"
+test = "korpus"
+find = '''
+            &["name", "url", "logo", "address", "telephone", "sameAs"],
+            content,
+            ORGANIZATION_SOURCE,'''
+replace = '''
+            &["name", "logo", "address", "telephone", "sameAs"],
+            content,
+            ORGANIZATION_SOURCE,'''
+expect = "killed"
+
+[[mutation]]
+id = "local_business"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+            &["name", "address"],'''
+replace = '''
+            &["name"],'''
+expect = "killed"
+
+[[mutation]]
+id = "faq"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if !is_present_at(question, "acceptedAnswer") {'''
+replace = '''
+        if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "faq"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if !is_present_at(question, "name") {'''
+replace = '''
+        if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "faq"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        } else if !is_present_at(question, "acceptedAnswer.text") {'''
+replace = '''
+        } else if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "event"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        &["location", "name", "startDate"],'''
+replace = '''
+        &["location", "name"],'''
+expect = "killed"
+
+[[mutation]]
+id = "event"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        && !is_present_at(content, "previousStartDate")'''
+replace = '''
+        && false'''
+expect = "killed"
+
+[[mutation]]
+id = "recipe"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    if is_present_at(content, "nutrition.calories") && !is_present_at(content, "recipeYield") {'''
+replace = '''
+    if false {'''
+expect = "killed"
+
+[[mutation]]
+id = "recipe"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        &["image", "name"],'''
+replace = '''
+        &["name"],'''
+expect = "killed"
+
+[[mutation]]
+id = "video"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+            &["name", "thumbnailUrl", "uploadDate"],'''
+replace = '''
+            &["name", "thumbnailUrl"],'''
+expect = "killed"
+
+[[mutation]]
+id = "job_posting"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+    let remote = is_value_ending_with(content, "jobLocationType", "TELECOMMUTE");'''
+replace = '''
+    let remote = false;'''
+expect = "killed"
+
+[[mutation]]
+id = "job_posting"
+file = "src/structured_data/rules.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    } else if !is_present_at(content, "jobLocation") {'''
+replace = '''
+    } else if is_present_at(content, "jobLocation") {'''
+expect = "killed"
+
+[[mutation]]
+id = "software_application"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        &["name", "offers.price", "aggregateRating | review"],'''
+replace = '''
+        &["name", "offers.price"],'''
+expect = "killed"
+
+[[mutation]]
+id = "software_application"
+file = "src/structured_data/rules.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if number_at(content, "offers.price").is_some_and(|price| price > 0.0)'''
+replace = '''
+    if number_at(content, "offers.price").is_some_and(|price| price >= 0.0)'''
+expect = "killed"
+
+[[mutation]]
+id = "profile_page"
+file = "src/structured_data/rules.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        && !any_value_ending_with(content, "mainEntity.@type", &["Person", "Organization"])'''
+replace = '''
+        && false'''
+expect = "killed"
+
+[[mutation]]
+id = "item_list"
+file = "src/structured_data/rules.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        for property in ["position", "url"] {'''
+replace = '''
+        for property in ["position"] {'''
+expect = "killed"
+
+[[mutation]]
+id = "web_page"
+file = "src/structured_data/rules.rs"
+kind = "drop-recommendation"
+test = "korpus"
+find = '''
+            &["name", "url", "description", "inLanguage", "isPartOf"],'''
+replace = '''
+            &["name", "description", "inLanguage", "isPartOf"],'''
+expect = "killed"
+
+[[mutation]]
+id = "web_site"
+file = "src/structured_data/rules.rs"
+kind = "drop-recommendation"
+test = "korpus"
+find = '''
+            &["name", "url", "inLanguage", "publisher", "potentialAction"],'''
+replace = '''
+            &["name", "url", "inLanguage", "publisher"],'''
+expect = "killed"
+
+[[mutation]]
+id = "person"
+file = "src/structured_data/rules.rs"
+kind = "drop-recommendation"
+test = "korpus"
+find = '''
+            &["name", "url", "image", "jobTitle", "worksFor", "sameAs"],
+            content,
+            PERSON_SOURCE,'''
+replace = '''
+            &["name", "url", "image", "worksFor", "sameAs"],
+            content,
+            PERSON_SOURCE,'''
+expect = "killed"

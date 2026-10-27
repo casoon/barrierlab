@@ -352,7 +352,11 @@ pub(crate) const META: Meta = Meta {
         "manual/help",
     ],
     tier: Tier::Structure,
-    scope: Scope::AccessibilityTree,
+    // Was dargestellt wird, auch unter `aria-hidden`: Untertitel (1.2.2),
+    // Farbe (1.4.1) und Zeitbegrenzung (2.2.1) betreffen auch Inhalt, den die
+    // Assistenztechnik nicht sieht — ein sichtbares Video unter
+    // `aria-hidden="true"` braucht trotzdem Untertitel.
+    scope: Scope::Rendered,
     wcag: &[
         "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.2.5", "1.3.1", "1.4.1", "2.2.1", "2.2.3", "2.2.4",
         "2.2.5", "2.5.1", "3.1.3", "3.3.1", "3.3.3", "3.3.5", "3.3.8",

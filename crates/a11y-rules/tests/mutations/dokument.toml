@@ -1,0 +1,539 @@
+# Mutationen der Gruppe „dokument“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "document/lang-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    match root.attr("lang").filter(|l| !l.trim().is_empty()) {
+'''
+replace = '''
+    match root.attr("lang") {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "document/lang-invalid"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '    if !(2..=3).contains(&primary.len())'
+replace = '    if !(2..=4).contains(&primary.len())'
+expect = "killed"
+
+[[mutation]]
+id = "document/lang-invalid"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '    parts.all(|p| (1..=8).contains(&p.len())'
+replace = '    parts.all(|p| (1..=9).contains(&p.len())'
+expect = "killed"
+
+[[mutation]]
+id = "document/title-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        .find(|n| n.is_element("title") && !ancestors(*n).any(|a| a.is_element("svg")));
+'''
+replace = '''
+        .find(|n| n.is_element("title"));
+'''
+expect = "killed"
+
+[[mutation]]
+id = "document/title-missing"
+file = "src/structure.rs"
+kind = "early-return"
+test = "korpus"
+find = '''
+    // Nur ein HTML-Dokument braucht einen `<title>` (ACT 2779a5: „html
+    // element"); ein SVG- oder anderes Fremddokument nicht.
+    if !doc.root().is_element("html") {
+'''
+replace = '''
+    if doc.root().is_element("svgx") {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "document/title-empty"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        Some(t) if subtree_text(t).trim().is_empty() => out.push(
+'''
+replace = '''
+        Some(t) if subtree_text(t).is_empty() => out.push(
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-locked"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if gesperrt || max.is_some_and(|v| v < 2.0) {
+'''
+replace = '''
+        if gesperrt || max.is_some_and(|v| v <= 2.0) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-locked"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
+'''
+replace = '''
+        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no"));
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-scale-limited"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if max.is_some_and(|v| v < 5.0) {
+'''
+replace = '''
+        if max.is_some_and(|v| v <= 5.0) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-scale-limited"
+file = "src/structure.rs"
+kind = "drop-finding"
+test = "korpus"
+find = '''
+                .at(at(n.id())),
+            );
+            continue;
+        }
+'''
+replace = '''
+                .at(at(n.id())),
+            );
+        }
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if !gefunden {
+'''
+replace = '''
+    if gefunden {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-missing"
+file = "src/structure.rs"
+kind = "early-return"
+test = "korpus"
+find = '''
+    // Die Viewport-Angabe ist ein HTML-`<meta>`; ein Fremddokument hat keine.
+    if !doc.root().is_element("html") {
+'''
+replace = '''
+    if doc.root().is_element("svgx") {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+        || n.has_attr("aria-labelledby")
+    {
+'''
+replace = '''
+        || n.has_attr("aria-label")
+        || n.has_attr("aria-labelledby")
+    {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        Some(_) => None,
+        None => heading_level(n.local_name()),
+'''
+replace = '''
+        Some(_) => None,
+        None => None,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/skip-level"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if last > 0 && level > last + 1 {
+'''
+replace = '''
+        if last > 0 && level > last + 2 {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/skip-level"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+                .or_else(|| heading_level(n.local_name()))
+                .unwrap_or(2),
+'''
+replace = '''
+                .or_else(|| heading_level(n.local_name()))
+                .unwrap_or(3),
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/h1-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if any && h1s.is_empty() {
+'''
+replace = '''
+    if h1s.is_empty() {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/h1-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        Some("heading") => Some(
+            n.attr("aria-level")
+'''
+replace = '''
+        Some("heading") => Some(
+            n.attr("aria-levelx")
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/h1-multiple"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if h1s.len() > 1 {
+'''
+replace = '''
+    if h1s.len() > 2 {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/none"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        } else if wiederholt {
+'''
+replace = '''
+        } else if !wiederholt {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/none"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if !ueberschrift && !main && !sprunglink_vorhanden(doc) {
+'''
+replace = '''
+    if !ueberschrift && !sprunglink_vorhanden(doc) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        if n.attr("alt").is_none() && alternative_ohne_alt(n) {
+'''
+replace = '''
+        if n.attr("alt").is_none() && !alternative_ohne_alt(n) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()))
+}
+'''
+replace = '''
+        .any(|a| n.attr(a).is_some())
+}
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-suspicious"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if a.chars().count() < 3 {
+'''
+replace = '''
+    if a.chars().count() < 4 {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-suspicious"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if a.is_empty() {
+        // Leeres alt ist die korrekte Auszeichnung für dekorative Bilder.
+        return false;
+'''
+replace = '''
+    if a.is_empty() {
+        // Leeres alt ist die korrekte Auszeichnung für dekorative Bilder.
+        return true;
+'''
+expect = "killed"
+
+[[mutation]]
+id = "forms/label-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        let wrapped = closest(n, "label").is_some();
+'''
+replace = '''
+        let wrapped = closest(n, "label").is_none();
+'''
+expect = "killed"
+
+[[mutation]]
+id = "forms/label-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        let titled = n.attr("title").is_some_and(|v| !v.trim().is_empty());
+'''
+replace = '''
+        let titled = n.attr("title").is_some();
+'''
+expect = "killed"
+
+[[mutation]]
+id = "forms/placeholder-as-label"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        } else if placeholder && !n.has_attr("aria-labelledby") && !for_labelled && !wrapped {
+'''
+replace = '''
+        } else if placeholder && !n.has_attr("aria-labelledby") && !wrapped {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/skip-link-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if zu_ueberspringen && !sprunglink_vorhanden(doc) {
+'''
+replace = '''
+    if !sprunglink_vorhanden(doc) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/skip-link-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            .is_some_and(|ziel| beginnt_hauptinhalt(*ziel))
+'''
+replace = '''
+            .is_some()
+'''
+expect = "killed"
+
+[[mutation]]
+id = "document/lang-mismatch"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if lang.trim().is_empty() || xml.trim().is_empty() || primaer(lang) == primaer(xml) {
+'''
+replace = '''
+    if lang.trim().is_empty() || xml.trim().is_empty() || lang == xml {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "language/part-unmarked"
+file = "src/document.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if text.chars().count() < 100 || woerter.len() < 16 {
+'''
+replace = '''
+        if text.chars().count() < 101 || woerter.len() < 16 {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "language/part-unmarked"
+file = "src/document.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if de >= 5 && en <= 1 {
+'''
+replace = '''
+    if de >= 4 && en <= 1 {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "language/part-unmarked"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        if erklaert.is_some_and(|l| l != seite) {
+'''
+replace = '''
+        if erklaert.is_some_and(|l| l == seite) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "language/part-undetermined"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if !matches!(seite.as_str(), "de" | "en") {
+'''
+replace = '''
+    if !matches!(seite.as_str(), "de" | "en" | "fr") {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "language/abbreviation-unexpanded"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            || n.attr("title").is_some_and(|t| !t.trim().is_empty())
+'''
+replace = '''
+            || n.has_attr("title")
+'''
+expect = "killed"
+
+[[mutation]]
+id = "timing/meta-refresh"
+file = "src/document.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if s == 0 || s > ZWANZIG_STUNDEN {
+'''
+replace = '''
+        if s == 0 || s >= ZWANZIG_STUNDEN {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "timing/meta-refresh"
+file = "src/document.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        if s == 0 || s > ZWANZIG_STUNDEN {
+'''
+replace = '''
+        if s <= 1 || s > ZWANZIG_STUNDEN {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/section-without-heading"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    n.is_element("article")
+        || (n.is_element("section")
+'''
+replace = '''
+    n.is_element("aside")
+        || (n.is_element("section")
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/section-without-heading"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        .filter(|n| ist_abschnitt(*n) && !descendants(*n).any(ist_ueberschrift))
+'''
+replace = '''
+        .filter(|n| ist_abschnitt(*n))
+'''
+expect = "killed"

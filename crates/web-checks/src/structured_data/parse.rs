@@ -22,7 +22,10 @@ pub struct Block {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Node {
     /// Alle Einträge von `@type`, volle IRIs auf den Typnamen gekürzt
-    /// (`https://schema.org/Product` → `Product`).
+    /// (`https://schema.org/Product` → `Product`). Unter einem fremden
+    /// `@context` nur die als volle schema.org-IRI angegebenen: Dort steht
+    /// `Product` für einen Begriff jenes Vokabulars, nicht für
+    /// `https://schema.org/Product` (JSON-LD 1.1, 4.1 und 3.5 `@vocab`).
     pub types: Vec<String>,
     /// Der Knoten, wie er im Block steht.
     pub content: Value,
@@ -119,10 +122,22 @@ fn normalize_root(value: &Value, context_inherited: bool, block: &mut Block) {
         });
     }
 
-    let types = extract_types(value);
+    let fremd = context.is_some() && !has_context;
+    let types = if fremd {
+        schema_org_iri_types(value)
+    } else {
+        extract_types(value)
+    };
     if !types.is_empty() {
         block.nodes.push(Node {
             types,
+            content: value.clone(),
+        });
+    } else if fremd && !extract_types(value).is_empty() {
+        // Typisiert, aber in einem fremden Vokabular: ein Knoten ohne
+        // schema.org-Typ, kein fehlendes `@type`.
+        block.nodes.push(Node {
+            types: Vec::new(),
             content: value.clone(),
         });
     } else if graph.is_none() {
@@ -176,6 +191,28 @@ pub fn extract_types(node: &Value) -> Vec<String> {
         Some(Value::Array(values)) => values
             .iter()
             .filter_map(Value::as_str)
+            .filter_map(normalize_schema_type)
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Nur die `@type`-Einträge, die als volle schema.org-IRI dastehen.
+fn schema_org_iri_types(node: &Value) -> Vec<String> {
+    let iri = |v: &&str| {
+        let v = v.trim();
+        v.starts_with("https://schema.org/") || v.starts_with("http://schema.org/")
+    };
+    match node.get("@type") {
+        Some(Value::String(value)) => Some(value.as_str())
+            .filter(iri)
+            .and_then(normalize_schema_type)
+            .into_iter()
+            .collect(),
+        Some(Value::Array(values)) => values
+            .iter()
+            .filter_map(Value::as_str)
+            .filter(iri)
             .filter_map(normalize_schema_type)
             .collect(),
         _ => Vec::new(),

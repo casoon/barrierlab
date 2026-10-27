@@ -1,0 +1,315 @@
+# Mutationen der Gruppe „darstellung“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "threshold"
+find = '''let Some((urteil, schwelle, gross)) = urteile(&messung, 4.5, 3.0) else {'''
+replace = '''let Some((urteil, schwelle, gross)) = urteile(&messung, 4.49, 3.0) else {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "threshold"
+find = '''    let knapp = |w: f64, s: f64| w < s;'''
+replace = '''    let knapp = |w: f64, s: f64| w + 0.005 < s;'''
+test = "korpus"
+expect = "killed"
+note = "Die frühere Rundungstoleranz; der Grenzfall 4,49995:1 muss sie töten."
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''    if !traegt_text(n) || inaktiv(n) {'''
+replace = '''    if !traegt_text(n) {'''
+test = "korpus"
+expect = "killed"
+note = "Ausnahme für inaktive Bedienelemente entfernt."
+
+[[mutation]]
+id = "contrast/text-undetermined"
+file = "src/rendering.rs"
+kind = "early-return"
+find = '''        return Some(Messung::Unbestimmt(Grund::Verdeckt));'''
+replace = '''        return None;'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/text-undetermined"
+file = "src/rendering.rs"
+kind = "invert"
+find = '''            } else if knapp(p40, s) {'''
+replace = '''            } else if !knapp(p40, s) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/text-enhanced"
+file = "src/rendering.rs"
+kind = "threshold"
+find = '''let Some((urteil, aaa, gross)) = urteile(&messung, 7.0, 4.5) else {'''
+replace = '''let Some((urteil, aaa, gross)) = urteile(&messung, 6.99, 4.5) else {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/text-enhanced"
+file = "src/rendering.rs"
+kind = "threshold"
+find = '''let Some((urteil, aaa, gross)) = urteile(&messung, 7.0, 4.5) else {'''
+replace = '''let Some((urteil, aaa, gross)) = urteile(&messung, 7.0, 4.49) else {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/control-insufficient"
+file = "src/rendering.rs"
+kind = "threshold"
+find = '''        if wert >= 3.0 {'''
+replace = '''        if wert >= 2.99 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/control-insufficient"
+file = "src/rendering.rs"
+kind = "invert"
+find = '''        if !wird_dargestellt(&stil) || stil.appearance.as_deref() != Some("none") {'''
+replace = '''        if !wird_dargestellt(&stil) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "contrast/control-undetermined"
+file = "src/rendering.rs"
+kind = "drop-finding"
+find = '''        let Some(hinten) = hinten else {'''
+replace = '''        let Some(hinten) = hinten.or(Some(Color { r: 255, g: 255, b: 255, a: 255 })) else {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "order/visual-mismatch"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''        let umgekehrt = layout.flex_reversed == Some(true)'''
+replace = '''        let umgekehrt = layout.flex_reversed == Some(false)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "order/visual-mismatch"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''                && doc.layout(k).and_then(|l| l.order).is_some_and(|o| o != 0)'''
+replace = '''                && doc.layout(k).and_then(|l| l.order).is_some()'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "motion/infinite-animation"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''    if hat_pause {
+        return;
+    }'''
+replace = '''    if !hat_pause {
+        return;
+    }'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "reflow/min-width"
+file = "src/heuristik.rs"
+kind = "threshold"
+find = '''                .is_some_and(|px| px > REFLOW_PX)'''
+replace = '''                .is_some_and(|px| px >= REFLOW_PX)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/pointer-only"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''        if klickbar && !geerbt && mit_inhalt {'''
+replace = '''        if klickbar && mit_inhalt {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/pointer-only"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''        if ist_bedienelement(n)
+            || ancestors(n).any(ist_bedienelement)'''
+replace = '''        if ancestors(n).any(ist_bedienelement)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''        } else if layout.obscured == Some(true)
+            && per_tab_erreichbar(n)'''
+replace = '''        } else if layout.obscured == Some(true)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''        let meldung = if layout.hides_focus == Some(true) {'''
+replace = '''        let meldung = if layout.hides_focus == Some(false) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''    let zu_klein = |r: &Rect| r.width < ZIEL_PX || r.height < ZIEL_PX;'''
+replace = '''    let zu_klein = |r: &Rect| r.width < ZIEL_PX && r.height < ZIEL_PX;'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size"
+file = "src/heuristik.rs"
+kind = "threshold"
+find = '''                    ((m.0 - km.0).powi(2) + (m.1 - km.1).powi(2)).sqrt() < 2.0 * radius'''
+replace = '''                    ((m.0 - km.0).powi(2) + (m.1 - km.1).powi(2)).sqrt() <= 2.0 * radius'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''        if !zu_klein(r) || im_fliesstext(*n) || ziel_durch_label(*n, &labels) {'''
+replace = '''        if !zu_klein(r) || ziel_durch_label(*n, &labels) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''            && !aria_versteckt(*k)'''
+replace = '''            && true'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size-enhanced"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''        if (r.width >= ZIEL_ERHOEHT_PX && r.height >= ZIEL_ERHOEHT_PX)'''
+replace = '''        if (r.width >= ZIEL_ERHOEHT_PX || r.height >= ZIEL_ERHOEHT_PX)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "targets/size-enhanced"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''            || gleichwertig(doc, *n, &ziele, ZIEL_ERHOEHT_PX)'''
+replace = '''            || false'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/indicator-missing"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''        if !sichtbar {'''
+replace = '''        if sichtbar {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/indicator-unmeasured"
+file = "src/heuristik.rs"
+kind = "invert"
+find = '''    if ziele > 0 && gemessen == 0 {'''
+replace = '''    if ziele > 0 && gemessen > 0 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/indicator-unmeasured"
+file = "src/heuristik.rs"
+kind = "drop-condition"
+find = '''    if ziele > 0 && gemessen == 0 {'''
+replace = '''    if gemessen == 0 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/role-redundant"
+file = "src/darstellung.rs"
+kind = "invert"
+find = '''            Some(t) if t.trim().eq_ignore_ascii_case("none") => {}'''
+replace = '''            Some(t) if !t.trim().eq_ignore_ascii_case("none") => {}'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/role-redundant"
+file = "src/darstellung.rs"
+kind = "drop-finding"
+find = '''            None => ungemessen = true,'''
+replace = '''            None => {}'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+find = '''        if unterstreichung.to_ascii_lowercase().contains("underline") || eigene != fremde {'''
+replace = '''        if eigene != fremde {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "invert"
+find = '''        if !im_fliesstext(&andere, &widget) {'''
+replace = '''        if im_fliesstext(&andere, &widget) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+find = '''        if in_navigation(link) || ist_logo(link) {'''
+replace = '''        if ist_logo(link) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/scrollable-region-not-focusable"
+file = "src/darstellung.rs"
+kind = "threshold"
+find = '''        if ueberhang <= SCROLL_PUFFER_PX'''
+replace = '''        if ueberhang < 14.0'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/scrollable-region-not-focusable"
+file = "src/darstellung.rs"
+kind = "drop-condition"
+find = '''            || descendants(n).any(|d| per_tab_erreichbar(d) && !inert(d))'''
+replace = '''            || false'''
+test = "korpus"
+expect = "killed"

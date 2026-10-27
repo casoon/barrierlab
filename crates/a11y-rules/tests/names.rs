@@ -162,7 +162,7 @@ const ARIA_NAMING_ROLES: &str = r#"
     <div role="meter" aria-valuenow="5" aria-valuemin="0" aria-valuemax="10" id="meter"></div>
     <div role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" id="progressbar"></div>
     <div role="switch" tabindex="0" aria-checked="false" id="switch"></div>
-    <div role="tree"><div role="treeitem" tabindex="0" id="treeitem"></div></div>
+    <div role="tree" id="tree"><div role="treeitem" tabindex="0" id="treeitem"></div></div>
     <div role="dialog" id="dialog"></div>"#;
 
 #[test]
@@ -176,6 +176,8 @@ fn unbenannte_rollen_korpus_aria_naming_roles() {
                 "progressbar",
                 "slider",
                 "switch",
+                // WAI-ARIA 1.2: tree verlangt einen Namen (auditmysite#783).
+                "tree",
                 "treeitem"
             ]
         );
@@ -403,13 +405,23 @@ fn label_in_name_korpus_forms_and_misc() {
     }
 }
 
+/// Ist der Name nur ein Teil des Sichtbaren, fehlt dem Namen ein Teil der
+/// Beschriftung (2.5.3). Bei sehr viel mehr sichtbarem Text bleibt es ein
+/// Hinweis (casoon/auditmysite#783).
+#[test]
+fn label_in_name_name_als_teil_des_sichtbaren() {
+    let src = r#"<a href="/q" aria-label="Pricing">Read more about pricing</a>"#;
+    for r in beide(src) {
+        assert_eq!(outcomes(&r, "label-in-name/mismatch"), [Outcome::Review]);
+    }
+}
+
 #[test]
 fn label_in_name_ohne_befund() {
     let src = r#"<button aria-label="Close dialog"><span aria-hidden="true">×</span></button>
                  <button aria-label="Close"><span aria-hidden="true">✕</span> Close</button>
                  <a href="/p" aria-label="Read more about pricing">Read more</a>
                  <button aria-label="schließen">Schließen</button>
-                 <a href="/q" aria-label="Pricing">Read more about pricing</a>
                  <button>Senden</button>
                  <div aria-hidden="true"><button aria-label="Weg">Anders</button></div>"#;
     for r in beide(src) {

@@ -233,13 +233,23 @@ fn autocomplete_gueltig(wert: &str) -> bool {
 /// Geprüft wird die ganze Grammatik, nicht nur das letzte Token wie in
 /// auditmysite: `autocomplete="foo email"` ist ungültig, `"work email"`
 /// gültig, `"work name"` nicht (Kontaktangaben nur vor Kontaktfeldern).
+///
+/// Anwendbar wie in ACT 73f2c2: nicht an `input` vom Typ `hidden`, `button`,
+/// `submit` oder `reset` und nicht an deaktivierten Feldern (`disabled`,
+/// `aria-disabled="true"`) — dort nimmt niemand eine Eingabe vor.
 pub(crate) fn autocomplete_invalid<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let feld = match n.local_name() {
             "select" | "textarea" => true,
-            "input" => input_typ(n) != "hidden",
+            "input" => !matches!(
+                input_typ(n).as_str(),
+                "hidden" | "button" | "submit" | "reset"
+            ),
             _ => false,
-        };
+        } && !deaktiviert(n)
+            && !n
+                .attr("aria-disabled")
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"));
         let Some(wert) = n.attr("autocomplete").filter(|_| feld) else {
             continue;
         };
@@ -388,9 +398,12 @@ fn ist_absenden<'a, N: Node<'a>>(n: N) -> bool {
         return false;
     }
     if n.is_element("button") {
-        return n
-            .attr("type")
-            .is_none_or(|t| t.trim().eq_ignore_ascii_case("submit"));
+        // HTML: Fehlt `type` oder ist der Wert ungültig, ist der Button ein
+        // Submit Button (missing und invalid value default).
+        return !n.attr("type").is_some_and(|t| {
+            let t = t.trim();
+            t.eq_ignore_ascii_case("button") || t.eq_ignore_ascii_case("reset")
+        });
     }
     if ist_input(n, &["submit", "image"]) {
         return true;
@@ -682,21 +695,39 @@ const KONTEXTWECHSEL: &[&str] = &[
 /// Nur der statische Teil von auditmysite `on_input`: der Handlertext im
 /// Markup. Ruft er eine Funktion auf, deren Quelltext erst die laufende Seite
 /// kennt, bleibt es `REVIEW`; das Nachschlagen über `window` bleibt im Host.
-/// Anders als auditmysite zählen auch Optionsfelder mit `onchange` (F37).
+/// Anders als auditmysite zählen auch Optionsfelder und Kontrollkästchen mit
+/// `onchange` (F37 nennt Optionsfeld, Kontrollkästchen und Auswahlliste).
 pub(crate) fn on_input<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         let Some(handler) = n.attr("onchange") else {
             continue;
         };
         let auswahl = match explizite_rolle(n) {
-            Some(r) => matches!(r, "combobox" | "listbox" | "radio"),
-            None => n.is_element("select") || ist_input(n, &["radio"]),
+            Some(r) => matches!(r, "combobox" | "listbox" | "radio" | "checkbox"),
+            None => n.is_element("select") || ist_input(n, &["radio", "checkbox"]),
         };
         if !auswahl {
             continue;
         }
         let code: String = handler.chars().filter(|c| !c.is_whitespace()).collect();
-        let finding = if KONTEXTWECHSEL.iter().any(|k| code.contains(k)) {
+        // 3.2.2 lässt den Kontextwechsel zu, wenn vorher darauf hingewiesen
+        // wird (G13). Eine Beschreibung am Feld kann dieser Hinweis sein; ob
+        // sie es ist, entscheidet ein Prüfer.
+        let hingewiesen = n
+            .attr("aria-describedby")
+            .is_some_and(|v| !v.trim().is_empty());
+        let wechsel = KONTEXTWECHSEL.iter().any(|k| code.contains(k));
+        let finding = if wechsel && hingewiesen {
+            Finding::review(
+                "context/on-input",
+                pick!(
+                    locale,
+                    "The onchange handler changes context; the field has a description. Check that it advises of the change before use (G13).",
+                    "Der onchange-Handler wechselt den Kontext; das Feld hat eine Beschreibung. Prüfen, ob sie vor der Bedienung auf den Wechsel hinweist (G13).",
+                ),
+            )
+            .with_severity(Severity::Medium)
+        } else if wechsel {
             Finding::fail(
                 "context/on-input",
                 pick!(
