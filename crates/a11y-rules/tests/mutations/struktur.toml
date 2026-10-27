@@ -1,0 +1,256 @@
+# Mutationen der Gruppe „struktur“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "aria/role-invalid"
+file = "src/structure.rs"
+kind = "invert"
+find = '''} else if !hat_gueltige && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
+replace = '''} else if !hat_gueltige && VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/role-invalid"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''} else if !hat_gueltige && !VALID_ROLES.contains(&r)'''
+replace = '''} else if !VALID_ROLES.contains(&r)'''
+test = "korpus"
+expect = "killed"
+note = "Rückfallrollen (ACT 674b10) wieder ignoriert"
+
+[[mutation]]
+id = "aria/role-abstract"
+file = "src/structure.rs"
+kind = "disable"
+find = '''            if ABSTRACT_ROLES.contains(&r) {'''
+replace = '''            if false && ABSTRACT_ROLES.contains(&r) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/reference-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''            if !fehlend.is_empty() {
+                out.push(
+                    Finding::fail(
+                        "aria/reference-missing",'''
+replace = '''            if fehlend.is_empty() {
+                out.push(
+                    Finding::fail(
+                        "aria/reference-missing",'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/reference-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''            if rel == "aria-errormessage"
+                && n.attr("aria-invalid")'''
+replace = '''            if rel == "aria-errormessage-x"
+                && n.attr("aria-invalid")'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-attribute-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if fehlend.is_empty() {'''
+replace = '''        if !fehlend.is_empty() {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-attribute-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''        if zustand_nativ(n) {'''
+replace = '''        if false && zustand_nativ(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "ids/duplicate"
+file = "src/structure.rs"
+kind = "threshold"
+find = '''        if *count == 2 {'''
+replace = '''        if *count == 3 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/positive-tabindex"
+file = "src/structure.rs"
+kind = "threshold"
+find = '''        if value > 0 {'''
+replace = '''        if value > 1 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/positive-tabindex"
+file = "src/structure.rs"
+kind = "threshold"
+find = '''        if value > 0 {'''
+replace = '''        if value >= 0 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/hidden-focusable"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if per_tab_erreichbar(n) {'''
+replace = '''        if !per_tab_erreichbar(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/hidden-focusable"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''            || mit_vorfahren().any(|a| a.has_attr("inert"))'''
+replace = '''            || mit_vorfahren().any(|a| a.has_attr("inert-x"))'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/invalid-structure"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if fremd {'''
+replace = '''        if !fremd {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/empty"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+replace = '''        if !fremd && kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/item-outside-list"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if !in_liste {'''
+replace = '''        if in_liste {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/item-outside-list"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''    matches!(n.local_name(), "ul" | "ol" | "menu") || n.attr("role") == Some("list")'''
+replace = '''    matches!(n.local_name(), "ul" | "ol") || n.attr("role") == Some("list")'''
+test = "korpus"
+expect = "killed"
+note = "menu wieder keine Liste (HTML-AAM menu → list)"
+
+[[mutation]]
+id = "lists/term-without-definition"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if !hat_definition {'''
+replace = '''        if hat_definition {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "lists/term-without-definition"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''            .skip_while(|c| *c != n)'''
+replace = ''''''
+test = "korpus"
+expect = "killed"
+note = "dd vor dem Begriff zählt wieder (HTML dl-Inhaltsmodell)"
+
+[[mutation]]
+id = "tables/header-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if !hat_kopfzelle(n) {'''
+replace = '''        if hat_kopfzelle(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/name-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''        if !benannt {'''
+replace = '''        if benannt {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/name-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''            || ["aria-label", "aria-labelledby", "title"]'''
+replace = '''            || ["aria-label", "aria-labelledby"]'''
+test = "korpus"
+expect = "killed"
+note = "title wieder keine Namensquelle (HTML-AAM)"
+
+[[mutation]]
+id = "tables/presentational-with-headers"
+file = "src/structure.rs"
+kind = "invert"
+find = '''            if hat_kopfzelle(n) {'''
+replace = '''            if !hat_kopfzelle(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-without-data"
+file = "src/tables.rs"
+kind = "threshold"
+find = '''        if z.kopf.is_empty() || z.daten > 0 {'''
+replace = '''        if z.kopf.is_empty() || z.daten > 1 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-without-data"
+file = "src/tables.rs"
+kind = "drop-finding"
+find = '''        for k in z.kopf {'''
+replace = '''        for k in z.kopf.into_iter().take(0) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/data-undetermined"
+file = "src/tables.rs"
+kind = "disable"
+find = '''        if z.leere_gruppe {'''
+replace = '''        if false && z.leere_gruppe {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/headers-attr-invalid"
+file = "src/tables.rs"
+kind = "invert"
+find = '''            ids.get(&scoped_id(zelle, r)).is_none_or(|k| {'''
+replace = '''            ids.get(&scoped_id(zelle, r)).is_some_and(|k| {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/headers-attr-invalid"
+file = "src/tables.rs"
+kind = "drop-condition"
+find = '''                    || *k == zelle'''
+replace = ''''''
+test = "korpus"
+expect = "killed"

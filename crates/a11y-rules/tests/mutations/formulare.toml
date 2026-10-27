@@ -1,0 +1,400 @@
+# Mutationen der Gruppe „formulare“ — siehe xtask/mutate.py
+
+[[mutation]]
+id = "forms/autocomplete-invalid"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        if autocomplete_gueltig(wert) {
+'''
+replace = '''
+        if !autocomplete_gueltig(wert) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/autocomplete-invalid"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+    if kontaktfeld && rest.last().is_some_and(|k| AUTOFILL_KONTAKT.contains(k)) {
+'''
+replace = '''
+    if rest.last().is_some_and(|k| AUTOFILL_KONTAKT.contains(k)) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/autocomplete-invalid"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        } && !deaktiviert(n)
+'''
+replace = '''
+        } && true
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/error-unidentified"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        if !ungueltig(n)
+'''
+replace = '''
+        if ungueltig(n)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/error-unidentified"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        .is_some_and(|v| !v.is_empty() && !v.eq_ignore_ascii_case("false"))
+'''
+replace = '''
+        .is_some_and(|v| !v.is_empty())
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/group-missing"
+file = "src/forms.rs"
+kind = "threshold"
+find = 'mengen.get(&k).is_some_and(|&z| z > 1)'
+replace = 'mengen.get(&k).is_some_and(|&z| z > 0)'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/group-missing"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        if !gruppiert || in_gruppe(n) {
+'''
+replace = '''
+        if !gruppiert {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/no-submit"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        if b.felder == 0 || b.absenden {
+'''
+replace = '''
+        if b.felder == 0 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/no-submit"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+            t.eq_ignore_ascii_case("button") || t.eq_ignore_ascii_case("reset")
+'''
+replace = '''
+            !t.eq_ignore_ascii_case("submit")
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/redundant-entry"
+file = "src/forms.rs"
+kind = "threshold"
+find = '''
+            if anzahl < 2 {
+'''
+replace = '''
+            if anzahl < 3 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/redundant-entry"
+file = "src/forms.rs"
+kind = "early-return"
+find = '''
+        if UEBERNAHME.iter().any(|u| formtext.contains(u)) {
+'''
+replace = '''
+        if false && UEBERNAHME.iter().any(|u| formtext.contains(u)) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "context/on-input"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        let wechsel = KONTEXTWECHSEL.iter().any(|k| code.contains(k));
+'''
+replace = '''
+        let wechsel = !KONTEXTWECHSEL.iter().any(|k| code.contains(k));
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "context/on-input"
+file = "src/forms.rs"
+kind = "drop-variant"
+find = '''
+            None => n.is_element("select") || ist_input(n, &["radio", "checkbox"]),
+'''
+replace = '''
+            None => n.is_element("select") || ist_input(n, &["radio"]),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "context/on-focus"
+file = "src/forms.rs"
+kind = "drop-finding"
+find = '''
+        if n.has_attr("onfocus")
+'''
+replace = '''
+        if n.has_attr("data-never")
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "context/on-focus"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+            && !rolle.is_some_and(|r| INTERAKTIVE_ROLLEN.contains(&r))
+'''
+replace = '''
+            && true
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "context/autofocus"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+            && !matches!(n.local_name(), "input" | "select" | "textarea")
+'''
+replace = '''
+            && matches!(n.local_name(), "input" | "select" | "textarea")
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/captcha"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        if !descendants(form).any(ist_anmeldefeld) || !descendants(form).any(ist_captcha) {
+'''
+replace = '''
+        if !descendants(form).any(ist_captcha) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/captcha"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+    if (klasse("g-recaptcha") || klasse("h-captcha")) && !unsichtbar {
+'''
+replace = '''
+    if klasse("g-recaptcha") || klasse("h-captcha") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/purpose-missing"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        if !ohne {
+'''
+replace = '''
+        if ohne {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/purpose-missing"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        let person = matches!(input_typ(n).as_str(), "email" | "tel")
+'''
+replace = '''
+        let person = true
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/required-unmarked"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        if ist_pflicht(n)
+'''
+replace = '''
+        if !ist_pflicht(n)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/instructions-missing"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+            || n.attr("placeholder").is_some_and(|p| !p.trim().is_empty());
+'''
+replace = '''
+            ;
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/instructions-missing"
+file = "src/forms.rs"
+kind = "drop-finding"
+find = '''
+            && FORMATBEDARF.iter().any(|b| formatbegriff(&name, b))
+'''
+replace = '''
+            && FORMATBEDARF.iter().any(|b| formatbegriff(&name, b)) && false
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/title-only-label"
+file = "src/forms.rs"
+kind = "invert"
+find = '''
+        if nur_titel {
+'''
+replace = '''
+        if !nur_titel {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "forms/group-name-missing"
+file = "src/forms.rs"
+kind = "drop-condition"
+find = '''
+        if !formulargruppe || crate::semantics::named(doc, n) {
+'''
+replace = '''
+        if !formulargruppe {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/click-handler-not-focusable"
+file = "src/links.rs"
+kind = "invert"
+find = '''
+        let f = if descendants(n).any(per_tab_erreichbar) {
+'''
+replace = '''
+        let f = if !descendants(n).any(per_tab_erreichbar) {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/click-handler-not-focusable"
+file = "src/links.rs"
+kind = "threshold"
+find = '''
+        .is_some_and(|t| t >= 0)
+'''
+replace = '''
+        .is_some_and(|t| t >= -1)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/used-as-button"
+file = "src/links.rs"
+kind = "drop-condition"
+find = '''
+            && fuehrt_nirgendwohin(href)
+'''
+replace = '''
+            && true
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "links/used-as-button"
+file = "src/links.rs"
+kind = "drop-condition"
+find = '''
+            && explizite_rolle(n) != Some("button")
+'''
+replace = '''
+            && true
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "navigation/location-missing"
+file = "src/links.rs"
+kind = "drop-condition"
+find = '''
+    if mit_navigation && !ort_angezeigt {
+'''
+replace = '''
+    if mit_navigation {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "navigation/location-missing"
+file = "src/links.rs"
+kind = "drop-condition"
+find = '''
+            .is_some_and(|v| v.trim().eq_ignore_ascii_case("page"))
+'''
+replace = '''
+            .is_some_and(|v| !v.trim().is_empty())
+'''
+test = "korpus"
+expect = "killed"
