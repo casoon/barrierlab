@@ -772,11 +772,22 @@ fn assess_faq(node_index: usize, content: &Value) -> SchemaRuleAssessment {
         content,
         FAQ_SOURCE,
     );
+    // Google verlangt je `Question` den Fragetext (`name`) und
+    // `acceptedAnswer`, je `Answer` den Antworttext (`text`).
     for (index, question) in values_at(content, "mainEntity").iter().enumerate() {
+        if !is_present_at(question, "name") {
+            result
+                .missing_required
+                .push(format!("mainEntity[{index}].name"));
+        }
         if !is_present_at(question, "acceptedAnswer") {
             result
                 .missing_required
                 .push(format!("mainEntity[{index}].acceptedAnswer"));
+        } else if !is_present_at(question, "acceptedAnswer.text") {
+            result
+                .missing_required
+                .push(format!("mainEntity[{index}].acceptedAnswer.text"));
         }
     }
     finalize_required_status(&mut result);
@@ -1396,7 +1407,7 @@ mod tests {
 
         let complete = assess(
             "FAQPage",
-            serde_json::json!({"mainEntity": {"@type": "Question", "acceptedAnswer": {"text": "Yes"}}}),
+            serde_json::json!({"mainEntity": {"@type": "Question", "name": "A?", "acceptedAnswer": {"text": "Yes"}}}),
         );
         assert_eq!(
             complete[0].requirement_status,
