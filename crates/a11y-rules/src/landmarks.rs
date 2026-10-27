@@ -288,6 +288,10 @@ pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut V
                     melden(n.id(), locale, out);
                     gemeldet = true;
                 }
+                // Was der Baum auslässt (etwa inert hinter einem modalen
+                // Dialog), erreicht niemand über Landmarks — und es verliert
+                // dabei auch seine Landmark-Rolle nicht.
+                NodeKind::Element if doc.is_ignored(k) => {}
                 NodeKind::Element => {
                     if mit_landmark.contains(&k.id()) {
                         // Eine Landmark selbst ist erledigt; ein Container mit
@@ -422,7 +426,13 @@ pub(crate) fn keyboard<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Find
         if doc.is_ignored(n) || inert(n) {
             continue;
         }
-        let rolle = doc.role(n);
+        // Ein `a` ohne `href` ist nach HTML-AAM `generic`, kein Link — auch
+        // wenn ein Host es anders meldet.
+        let rolle = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {
+            None
+        } else {
+            doc.role(n)
+        };
         let rolle = rolle.as_deref();
         if tabindex(n).is_some_and(|t| t >= 0)
             && !nativ_fokussierbar(n)

@@ -10,8 +10,37 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Regelkorpus:** `tests/korpus.rs` prüft jede Kennung aus `Meta::ids` direkt mit Treffer, ähnlichem konformem Gegenbeispiel und nicht anwendbarem Dokument, dazu Grenzwerte und Varianten; ein Gate scheitert, sobald einer Kennung eine der drei Fallarten fehlt (casoon/auditmysite#783).
+- **Mutationskatalog:** `tests/mutations/*.toml` nennt je Kennung gezielte Mutationen, die ein Korpusfall töten muss; `xtask/mutate.py` führt sie nacheinander aus, ein Gate prüft Abdeckung und Eindeutigkeit.
+
+### Changed
+
+- **Geltungsbereich:** `media/audio-autoplay` sieht das ganze Markup (versteckter Ton spielt trotzdem), `tables/headers-attr-invalid` nur noch den Accessibility-Tree (ACT a25f45), die Checkliste `manual/*` das Dargestellte auch unter `aria-hidden`.
+- **Landmarks:** Eine Seite ohne jeden Inhalt meldet keine `landmarks/*-missing` mehr; `landmarks/content-outside` übergeht, was der Baum auslässt (inert hinter einem modalen Dialog).
+- **Sprunglink:** `keyboard/skip-link-missing` meldet nur, wenn es etwas zu überspringen gibt (ein Link, Navigation oder Kopfbereich).
+- **Links:** `color/link-indistinct` ist `REVIEW` statt `FAIL`, wenn die Linkfarbe 3:1 zum Text erreicht (G183); die Linkregeln (`links/*-name`, `purpose-link-only`, `color/link-indistinct`) prüfen auch Elemente mit der Rolle `link`.
+- **Kontextwechsel:** `context/on-input` ist `REVIEW` statt `FAIL`, wenn das Feld eine Beschreibung hat (G13), und prüft auch Kontrollkästchen (F37).
+
 ### Fixed
 
+- **Kontrast:** Ohne Toleranz gegen die Schwelle (4,499:1 erreicht 4,5:1 nicht, Understanding 1.4.3); inaktive Bedienelemente sind ausgenommen.
+- **Dokument:** Ein leeres `lang` ist `document/lang-missing`, nicht `lang-invalid`; Untertags über 8 Zeichen sind ungültig; nur der HTML-`<title>` zählt, nicht der eines SVG.
+- **Überschriften:** `role="heading"` mit `aria-level` zählt für `headings/h1-missing`, `empty` und `skip-level`; ein `hN` mit fremder Rolle nicht; ein leeres `aria-label` benennt keine Überschrift.
+- **Rollen:** `aria/role-invalid` meldet nicht, wenn ein späteres Token eine gültige Rolle ist (ACT 674b10).
+- **Namen:** `names/required-missing` umfasst `tree`, `grid` und `treegrid`; `label-in-name/mismatch` meldet auch einen Namen, der nur ein Teil des sichtbaren Textes ist.
+- **Formulare:** `forms/placeholder-as-label` gilt auch neben einem `aria-label`; `forms/autocomplete-invalid` nicht an Schaltflächen und deaktivierten Feldern; ein `<button>` mit ungültigem `type` ist ein Absende-Button.
+- **Listen:** `lists/empty` nicht zusätzlich zu `lists/invalid-structure`; ein `<dt>` ohne folgendes `<dd>` ist `lists/term-without-definition`; `<menu>` ist eine Liste.
+- **Tabellen:** `title` benennt eine Tabelle (`tables/name-missing`).
+- **Sprache:** Zitate sind für `language/part-unmarked` nicht mehr ausgenommen.
+- **Stylesheets:** `text/justified` und `text/line-height-tight` lesen das `style`-Attribut; `focus/outline-removed` zählt ein `:focus-visible`, das den Rahmen entfernt, als Entfernen und `:focus:not(:focus-visible)` nicht.
+- **Zeit:** `timing/meta-refresh` meldet auch genau 20 Stunden (ausgenommen ist erst „länger als 20 Stunden").
+- **Bilder:** `images/server-side-map` nur an einem `img[ismap]` in einem Link.
+- **Darstellungskonvention:** `viz/*` übergeht Figuren unter `hidden`.
+- **Zielgröße:** `targets/size` und `targets/size-enhanced` messen einen Inline-Link samt der ersetzten Elemente darin (Bild im Link) und behandeln `iframe`, `object` und `embed` nicht als Ziel.
+- **Scrollbereiche:** `keyboard/scrollable-region-not-focusable` meldet auf einer leeren Seite kein „ungemessen" mehr, wenn der Host `html` oder `body` misst.
+- **Objekte:** Der Ersatzinhalt eines `<object>` zählt als Textalternative, auch wenn der Browser ihn nach dem Laden nicht darstellt (H53).
 - **Listen:** `lists/item-outside-list` steht jetzt in `Meta::ids` der Listenregel. Bisher fehlte für die Kennung der `RuleRun`, und sie fehlte in der [Regelreferenz](https://casoon.github.io/barrierlab/docs/a11y/reference/regeln/).
 
 ## [0.26.0] - 2026-10-26

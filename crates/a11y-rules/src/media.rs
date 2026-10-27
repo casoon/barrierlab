@@ -11,7 +11,7 @@
 //! läuft auf Tier 1. Der Rahmenname kann über `aria-labelledby` kommen; dafür
 //! braucht es die Namensberechnung, also Tier 2.
 
-use a11y_dom::{Document, Node, NodeId, NodeKind, Semantics, descendants, elements};
+use a11y_dom::{Document, Node, NodeId, NodeKind, Semantics, ancestors, descendants, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick};
@@ -101,7 +101,10 @@ pub(crate) fn input_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
 /// Beleg: auditmysite-Korpus `forms_and_misc`.
 pub(crate) fn server_side_map<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if n.is_element("img") && n.has_attr("ismap") {
+        // `ismap` wirkt nur an einem Nachfahren eines `a` mit `href` (HTML,
+        // „The img element"); sonst gibt es keine serverseitige Imagemap.
+        let im_link = ancestors(n).any(|a| a.is_element("a") && a.has_attr("href"));
+        if n.is_element("img") && n.has_attr("ismap") && im_link {
             out.push(
                 Finding::review(
                     "images/server-side-map",

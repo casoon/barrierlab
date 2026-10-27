@@ -281,11 +281,29 @@ fn fokus_selektor(s: &str) -> bool {
     s.contains(":focus") && !s.contains(":focus-within") && !s.contains(":focus-visible")
 }
 
+/// `:focus:not(:focus-visible)` trifft nur den Fokus, den der Browser ohnehin
+/// nicht anzeigt (Maus, Berührung); der Hinweis unter `:focus-visible` bleibt.
+fn nur_ohne_tastatur(s: &str) -> bool {
+    s.to_ascii_lowercase()
+        .split_whitespace()
+        .collect::<String>()
+        .contains(":not(:focus-visible)")
+}
+
+/// Ein Selektor, unter dem das Entfernen des Rahmens den Fokushinweis trifft:
+/// `:focus` und auch `:focus-visible` (F78), nicht aber `:focus-within` und
+/// nicht `:focus:not(:focus-visible)`.
+fn entfernt_fokus(s: &str) -> bool {
+    let k = s.to_ascii_lowercase();
+    k.contains(":focus") && !k.contains(":focus-within") && !nur_ohne_tastatur(s)
+}
+
 /// 2.4.7: Ein Stylesheet entfernt den Fokusrahmen unter `:focus`, ohne dass
 /// es irgendwo einen Ersatz gibt.
 ///
-/// Wie auditmysite seitenweit: Ein `:focus-visible` irgendwo, oder ein
-/// Ersatz in irgendeiner `:focus`-Regel, nimmt den Befund zurück — ein
+/// Wie auditmysite seitenweit: Ein `:focus-visible` irgendwo, das den Rahmen
+/// nicht selbst entfernt, oder ein Ersatz in irgendeiner `:focus`-Regel,
+/// nimmt den Befund zurück — ein
 /// globaler Reset mit `outline: none` und ein Hinweis per `box-shadow` in
 /// einer anderen Regel sind das verbreitete Muster.
 pub(crate) fn outline_removed<D: Document>(
@@ -295,10 +313,13 @@ pub(crate) fn outline_removed<D: Document>(
     out: &mut Vec<Finding>,
 ) {
     let regeln: Vec<Scoped<'_>> = sheets.iter().flat_map(|s| s.style_rules()).collect();
+    // Ein `:focus-visible`, das selbst den Rahmen entfernt, ist kein Ersatz,
+    // sondern das Entfernen für die Tastatur (F78).
     let mit_focus_visible = regeln.iter().any(|r| {
-        r.selectors
-            .iter()
-            .any(|s| s.to_ascii_lowercase().contains(":focus-visible"))
+        !entfernt_rahmen(r.declarations)
+            && r.selectors
+                .iter()
+                .any(|s| s.to_ascii_lowercase().contains(":focus-visible") && !nur_ohne_tastatur(s))
     });
     let mit_ersatz = regeln
         .iter()
@@ -309,7 +330,7 @@ pub(crate) fn outline_removed<D: Document>(
     let entfernt: Vec<&str> = regeln
         .iter()
         .filter(|r| entfernt_rahmen(r.declarations))
-        .flat_map(|r| r.selectors.iter().filter(|s| fokus_selektor(s)))
+        .flat_map(|r| r.selectors.iter().filter(|s| entfernt_fokus(s)))
         .map(String::as_str)
         .collect();
     if entfernt.is_empty() {
@@ -636,17 +657,45 @@ pub(crate) fn orientation_content_hidden<D: Document>(
 
 // --- text/justified, text/line-height-tight -----------------------------------
 
+/// Die Angabe einer Eigenschaft im `style`-Attribut, samt `!important`.
+fn im_stilattribut<'a, N: Node<'a>>(n: N, eigenschaft: &str) -> Option<(String, bool)> {
+    n.attr("style")?
+        .split(';')
+        .rev()
+        .filter_map(|d| d.split_once(':'))
+        .filter(|(k, _)| k.trim().eq_ignore_ascii_case(eigenschaft))
+        .map(|(_, v)| {
+            let v = v.trim();
+            match v.to_ascii_lowercase().strip_suffix("!important") {
+                Some(ohne) => (v[..ohne.len()].trim().to_string(), true),
+                None => (v.to_string(), false),
+            }
+        })
+        .next()
+}
+
 /// Der wirksame Wert einer vererbten Eigenschaft an einem Element: die
 /// letzte treffende Angabe am Element selbst, sonst am nächsten Vorfahren.
-/// Spezifität bleibt außen vor; `!important` gewinnt.
-fn wirksam<'a, N: Node<'a>>(n: N, regeln: &[(Selektor, String, bool)]) -> Option<String> {
+/// Spezifität bleibt außen vor; `!important` gewinnt. Das `style`-Attribut
+/// schlägt jede Regel eines Stylesheets ohne `!important` (CSS Cascade 4,
+/// „Cascade Sorting Order": Stilattribut vor Selektoren).
+fn wirksam<'a, N: Node<'a>>(
+    n: N,
+    eigenschaft: &str,
+    regeln: &[(Selektor, String, bool)],
+) -> Option<String> {
     for e in std::iter::once(n).chain(a11y_dom::ancestors(n)) {
         let treffend = regeln
             .iter()
             .filter(|(sel, _, _)| sel.trifft(e) == Treffer::Ja)
             .max_by_key(|(_, _, wichtig)| *wichtig);
-        if let Some((_, v, _)) = treffend {
-            return Some(v.clone());
+        let attribut = im_stilattribut(e, eigenschaft);
+        match (attribut, treffend) {
+            (Some((v, true)), _) => return Some(v),
+            (_, Some((_, v, true))) => return Some(v.clone()),
+            (Some((v, false)), _) => return Some(v),
+            (None, Some((_, v, _))) => return Some(v.clone()),
+            (None, None) => {}
         }
     }
     None
@@ -707,12 +756,13 @@ pub(crate) fn visual_presentation<D: Document>(
     let blocksatz = absaetze
         .iter()
         .filter(|p| {
-            wirksam(**p, &ausrichtung).is_some_and(|v| v.trim().eq_ignore_ascii_case("justify"))
+            wirksam(**p, "text-align", &ausrichtung)
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("justify"))
         })
         .count();
     let eng: Vec<String> = absaetze
         .iter()
-        .filter_map(|p| wirksam(*p, &zeilen))
+        .filter_map(|p| wirksam(*p, "line-height", &zeilen))
         .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z < 1.5))
         .collect();
     if blocksatz > 0 {

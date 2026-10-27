@@ -43,6 +43,7 @@ fn at(id: NodeId) -> Location {
 const NAME_PFLICHT: &[&str] = &[
     "checkbox",
     "combobox",
+    "grid",
     "link",
     "listbox",
     "menuitem",
@@ -59,6 +60,8 @@ const NAME_PFLICHT: &[&str] = &[
     "switch",
     "tab",
     "textbox",
+    "tree",
+    "treegrid",
     "treeitem",
 ];
 
@@ -492,7 +495,10 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
             continue;
         }
         let (s, m) = (normiert(&sichtbar), normiert(&name));
-        if s.is_empty() || m.is_empty() || m.contains(&s) || s.contains(&m) {
+        // Nur wenn der Name das Sichtbare enthält, ist 2.5.3 erfüllt. Ist der
+        // Name bloß ein Teil davon („Pricing" zu „Pricing plans"), fehlt
+        // ein Teil der Beschriftung im Namen (Understanding 2.5.3).
+        if s.is_empty() || m.is_empty() || m.contains(&s) {
             continue;
         }
         // Stehen alle Wörter des Sichtbaren im Namen, nur in anderer
