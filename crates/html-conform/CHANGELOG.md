@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-27
+
 ### Added
 
 - **API:** `CheckError::DocumentTooDeep { depth, limit }`: a document nesting elements deeper
