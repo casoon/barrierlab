@@ -5,6 +5,15 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **structured_data:** `tests/korpus.rs` prüft jedes `SchemaFeature` direkt: Pflichtangaben erfüllt und fehlend (bei Merkmalen ohne Pflichtangaben `RecommendationsOnly` mit und ohne fehlende Empfehlungen), nicht anwendbar, `NotEvaluated` beim kontextabhängigen Merchant Listing; dazu ein Mutationskatalog `tests/mutations/` (casoon/auditmysite#783).
+
+### Fixed
+
+- **structured_data:** Unter einem fremden `@context` trägt ein Knoten nur noch die als volle schema.org-IRI angegebenen Typen; `Product` aus einem anderen Vokabular wird nicht mehr als schema.org-Produkt bewertet (JSON-LD 1.1).
+- **structured_data:** FAQ verlangt je Frage `name` und je Antwort `text` (Google FAQ), nicht nur `acceptedAnswer`.
+
 ## [0.5.0] - 2026-10-03
 
 ### Added
