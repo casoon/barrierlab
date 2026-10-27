@@ -65,8 +65,12 @@ Displays as `line:column`.
 
 ### `CheckError`
 
-`#[non_exhaustive]` enum with one variant, `Initialization { message }`: a checker component
-could not be set up. Implements `std::error::Error`.
+`#[non_exhaustive]` enum; the document was not checked. Implements `std::error::Error`.
+
+| Variant | Meaning |
+| --- | --- |
+| `DocumentTooDeep { depth: usize, limit: usize }` | the parsed tree nests elements `depth` levels deep, more than `limit` (512); no findings are produced |
+| `Initialization { message: String }` | a checker component could not be set up |
 
 ## Serialization
 

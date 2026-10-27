@@ -7,6 +7,12 @@ in the git history only.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Tree construction:** Cloning a selected `option` into `selectedcontent` and finding that
+  `selectedcontent` no longer recurse once per nesting level, so deeply nested option content
+  cannot overflow the stack (auditmysite#783).
+
 ## [0.4.0] - 2026-09-14
 
 ### Added

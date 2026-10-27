@@ -34,6 +34,37 @@ pub(crate) fn parse(html: &str) -> ParsedHtml {
     }
 }
 
+/// The deepest element nesting in the parsed tree: the number of element
+/// nodes on the path from the document node down to the deepest element.
+/// `<html>` is level 1, its `<body>` level 2. A `template`'s contents
+/// fragment counts as a level of its own, as it does for every later walk;
+/// text, comments and other leaves do not.
+///
+/// Iterative, so measuring a tree cannot fail the way walking it
+/// recursively can — this is what [`crate::check_with_options`] consults
+/// before any of the recursive validation layers runs.
+pub(crate) fn nesting_depth(document: &Document) -> usize {
+    let mut deepest = 0;
+    let mut open = vec![document.children(document.root())];
+    while let Some(children) = open.last_mut() {
+        match children.next() {
+            Some(child) => {
+                if matches!(
+                    document.node(child).kind,
+                    NodeKind::Element { .. } | NodeKind::DocumentFragment
+                ) {
+                    deepest = deepest.max(open.len());
+                    open.push(document.children(child));
+                }
+            }
+            None => {
+                open.pop();
+            }
+        }
+    }
+    deepest
+}
+
 /// Maps parser diagnostics onto the crate's public finding model.
 ///
 /// Every diagnostic maps to `Severity::Error`. `html5_parser::ParseError`
