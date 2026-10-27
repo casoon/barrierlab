@@ -720,3 +720,76 @@ fn texte_auf_deutsch() {
     assert!(de.iter().any(|t| t.contains("Landmark")));
     assert!(en.iter().zip(&de).all(|(e, d)| e != d));
 }
+
+// --- landmarks/content-outside mit Chrome-artigem `is_ignored` ---------------
+
+/// Wie Chromes Accessibility-Tree: Ein `div` oder `span` ohne Rolle ist selbst
+/// ausgelassen („generic", rein präsentational), sein Inhalt aber nicht;
+/// unter `inert` fehlt der ganze Teilbaum.
+struct ChromeIgnoriert<'a>(MitSemantik<'a>);
+
+impl Document for ChromeIgnoriert<'_> {
+    type N<'n>
+        = ArenaNode<'n>
+    where
+        Self: 'n;
+
+    fn root(&self) -> Self::N<'_> {
+        self.0.doc.root()
+    }
+}
+
+impl Semantics for ChromeIgnoriert<'_> {
+    fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        self.0.role(node)
+    }
+
+    fn accessible_name<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        self.0.accessible_name(node)
+    }
+
+    fn is_ignored<'n>(&'n self, node: Self::N<'n>) -> bool {
+        // Der offene modale Dialog entkommt der Inertheit um ihn herum.
+        let inert = std::iter::once(node)
+            .chain(a11y_dom::ancestors(node))
+            .take_while(|n| !(n.is_element("dialog") && n.has_attr("open")))
+            .any(|n| n.has_attr("inert") || n.attr("aria-hidden") == Some("true"));
+        let generisch = matches!(node.local_name(), "div" | "span") && !node.has_attr("role");
+        inert || generisch
+    }
+}
+
+fn mit_chrome_ignoriert(src: &str) -> Report {
+    let a = html(src);
+    run_with_semantics_in(
+        &ChromeIgnoriert(MitSemantik {
+            doc: &a,
+            ids: IdIndex::build(a.root()),
+            chrome: true,
+        }),
+        a11y_rules::Locale::En,
+    )
+}
+
+/// Ein generisches `div` lässt Chrome aus, seinen Text nicht: Der Text steht
+/// weiter außerhalb jeder Landmark (casoon/auditmysite#783).
+#[test]
+fn chrome_ignoriert_inhalt_in_generischem_div_bleibt_ausserhalb() {
+    let src = r#"<header><p>Shop</p></header><div class="note" id="note"><p>Outside</p></div><main><h1>Main</h1></main>"#;
+    let r = mit_chrome_ignoriert(src);
+    assert_eq!(an(src, &r, "landmarks/content-outside"), ["note"]);
+}
+
+/// Hinter einem modalen Dialog ist alles außer dem Dialog inert und fehlt im
+/// Baum — samt den Landmarks, die ihre Rolle dabei nicht verlieren.
+#[test]
+fn chrome_ignoriert_inert_hinter_modalem_dialog_ist_nicht_ausserhalb() {
+    let src = r#"<header inert><p>Shop</p></header><div inert class="promo"><p>Sale</p></div><main inert><p>Offers</p><dialog open aria-label="Newsletter"><button>Close</button></dialog></main>"#;
+    let r = mit_chrome_ignoriert(src);
+    assert_eq!(
+        anzahl(&r, "landmarks/content-outside"),
+        0,
+        "{:?}",
+        r.findings
+    );
+}

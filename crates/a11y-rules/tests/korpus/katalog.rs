@@ -71,7 +71,7 @@ fn lies(text: &str) -> Result<Vec<Mutation>, String> {
             "expect" => m.expect = wert,
             "note" => m.note = wert,
             // Nur für Leser und den Läufer; der Test braucht sie nicht.
-            "kind" | "test" => {}
+            "kind" | "test" | "filter" => {}
             k => return Err(format!("unbekannter Schlüssel {k:?}")),
         }
         rest = r;

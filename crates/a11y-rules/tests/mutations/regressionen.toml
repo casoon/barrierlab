@@ -145,18 +145,6 @@ replace = '''
 expect = "killed"
 
 [[mutation]]
-id = "landmarks/content-outside"
-file = "src/landmarks.rs"
-kind = "drop-condition"
-test = "korpus"
-find = '''
-                NodeKind::Element if doc.is_ignored(k) => {}
-'''
-replace = '''
-'''
-expect = "killed"
-
-[[mutation]]
 id = "names/required-missing"
 file = "src/names.rs"
 kind = "drop-requirement"
@@ -269,4 +257,62 @@ find = '''
         || n.parent().is_some_and(|p| p.is_element("object"))'''
 replace = '''
         || false'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) && landmark(doc, k).is_some() => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "drop-condition"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) && !erreichbar(doc, k) => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "landmarks/content-outside"
+file = "src/landmarks.rs"
+kind = "widen-exemption"
+test = "landmarks"
+filter = "chrome_ignoriert_"
+find = '''
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+'''
+replace = '''
+                    if doc.is_ignored(k) => {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "color/link-indistinct"
+file = "src/darstellung.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            (None, Some(_)) => continue,
+'''
+replace = '''
+            (None, Some(_)) => {
+                ungemessen = true;
+                continue;
+            }
+'''
 expect = "killed"

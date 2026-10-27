@@ -288,10 +288,15 @@ pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut V
                     melden(n.id(), locale, out);
                     gemeldet = true;
                 }
-                // Was der Baum auslässt (etwa inert hinter einem modalen
-                // Dialog), erreicht niemand über Landmarks — und es verliert
-                // dabei auch seine Landmark-Rolle nicht.
-                NodeKind::Element if doc.is_ignored(k) => {}
+                // Was der Baum samt Inhalt auslässt (etwa inert hinter einem
+                // modalen Dialog), erreicht niemand über Landmarks. Ein
+                // Knoten, den der Baum nur selbst auslässt (ein generisches
+                // `div` in Chrome), behält erreichbaren Inhalt und zählt
+                // weiter; eine ausgelassene Landmark (das inerte `main` um den
+                // offenen Dialog) verliert ihre Rolle nicht.
+                NodeKind::Element
+                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
+                }
                 NodeKind::Element => {
                     if mit_landmark.contains(&k.id()) {
                         // Eine Landmark selbst ist erledigt; ein Container mit
@@ -307,6 +312,19 @@ pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut V
             }
         }
     }
+}
+
+/// Ob unter `n` etwas liegt, das der Baum nicht auslässt: ein Element oder
+/// nicht leerer Text.
+fn erreichbar<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
+    descendants(n).any(|d| {
+        !doc.is_ignored(d)
+            && match d.kind() {
+                NodeKind::Element => true,
+                NodeKind::Text => !d.text().trim().is_empty(),
+                _ => false,
+            }
+    })
 }
 
 fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {

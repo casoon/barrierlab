@@ -2,7 +2,7 @@
 //! gefunden hat (casoon/auditmysite#783, Sammlung „783-shared-bugs").
 //! Jeder Fall scheitert an der Regel vor der Korrektur.
 
-use super::super::{Fall, fail, na, negativ, review};
+use super::super::{Fall, fail, na, negativ, review, untested};
 
 pub fn faelle() -> Vec<Fall> {
     vec![
@@ -197,5 +197,19 @@ pub fn faelle() -> Vec<Fall> {
             "WCAG 1.1.1, H53: der Inhalt des object ist seine Textalternative, auch wenn der Browser ihn nach dem Laden nicht darstellt",
         )
         .variante("Regression: Ersatzinhalt nicht dargestellt"),
+        // --- color/link-indistinct: nicht dargestellter Ersatzlink ---
+        negativ(
+            "color/link-indistinct",
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: unrendered"><head><title>T</title></head><body><p>Get the <object data="/catalogue.pdf" type="application/pdf"><a href="/catalogue.pdf" style="display:none">catalogue</a></object> before the visit.</p></body></html>"#,
+            "WCAG 1.4.1 betrifft Dargestelltes; ein Link ohne Stil neben gestyltem Elternelement wird nicht dargestellt und ist nicht ungemessen",
+        )
+        .variante("Regression: Ersatzlink eines geladenen object, Host ohne Stil für Unsichtbares"),
+        untested(
+            "color/link-indistinct",
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><p>Read the <a href="/terms">terms</a> before you order.</p></body></html>"#,
+            "docs/conventions.md: liefert der Host keine Stile, ist der Fall ungemessen, nicht bestanden",
+        )
+        .variante("Host ohne jeden Stil")
+        .anzahl(1),
     ]
 }

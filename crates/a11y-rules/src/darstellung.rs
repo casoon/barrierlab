@@ -311,9 +311,17 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
         if in_navigation(link) || ist_logo(link) {
             continue;
         }
-        let (Some(stil), Some(eltern_stil)) = (stil, eltern_stil) else {
-            ungemessen = true;
-            continue;
+        let (stil, eltern_stil) = match (stil, eltern_stil) {
+            (Some(s), Some(e)) => (s, e),
+            // Ohne eigenen Stil neben einem gestylten Elternelement wird der
+            // Link nicht dargestellt (etwa der Ersatzinhalt eines geladenen
+            // `<object>`): Er unterscheidet sich von nichts, ungemessen ist
+            // er nicht.
+            (None, Some(_)) => continue,
+            _ => {
+                ungemessen = true;
+                continue;
+            }
         };
         let (Some(unterstreichung), Some(eigene), Some(fremde)) = (
             stil.text_decoration_line.as_deref(),
