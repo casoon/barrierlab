@@ -12,8 +12,9 @@ bewertet nicht.
 
 Crate 0.14.0 auf crates.io, herausgezogen aus `liveaudit/packages/core`
 (`liveaudit-core`, war `publish = false`). Das WASM-Artefakt erscheint als
-npm-Paket `@casoon/a11y-wasm`; auf npm liegt derzeit 0.3.0, die npm-Veröffentlichung
-läuft der Crate hinterher. Erster Konsument ist liveaudit.
+npm-Paket `@casoon/a11y-wasm`; die npm-Veröffentlichung läuft über einen eigenen Tag
+(`a11y-wasm-npm-vX.Y.Z`, siehe [Releases](../releasing/)) und kann der Crate
+hinterherlaufen. Erster Konsument ist liveaudit.
 
 ## Aufbau
 

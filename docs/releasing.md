@@ -64,8 +64,23 @@ erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
 
 ## npm
 
-Nur für Pakete unter `packages/`. Tag-getrieben, mit `--provenance`. Scope ist
-noch nicht entschieden (`@casoon` wie die übrigen Pakete oder `@barrierlab`).
+Nur für Pakete unter `packages/`. Veröffentlicht wird `@casoon/a11y-wasm` über
+**npm Trusted Publishing** (GitHub OIDC, Provenance, kein Token) aus
+`.github/workflows/release-npm.yml`:
+
+1. Version in `packages/a11y-wasm/package.json` auf die des Crates bringen, Commit
+   auf `main`.
+2. Tag `a11y-wasm-npm-vX.Y.Z` auf diesen Commit setzen und pushen. Der Tag muss
+   zur Version in `package.json` passen. Ein eigenes Präfix, weil release-plz
+   `a11y-wasm-vX.Y.Z` für das Crate mit dem Workflow-Token setzt und ein solcher
+   Tag keinen Workflow startet.
+3. Der Job `build` baut das WASM-Artefakt, packt das Tarball und prüft, dass
+   LICENSE, README und `pkg/` darin liegen. Der Job `publish-npm` wartet auf die
+   Freigabe in der GitHub-Umgebung `npm` und veröffentlicht genau dieses Tarball.
+
+Auf npmjs.com trägt das Paket einmalig einen Trusted Publisher ein
+(*Settings → Trusted Publisher*): Organisation `casoon`, Repository `barrierlab`,
+Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt.
 
 ## WASM
 
