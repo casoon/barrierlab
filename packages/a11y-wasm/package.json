@@ -19,7 +19,9 @@
     "./a11y_wasm_bg.wasm": "./pkg/a11y_wasm_bg.wasm"
   },
   "files": [
-    "pkg/"
+    "pkg/",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node build.mjs",

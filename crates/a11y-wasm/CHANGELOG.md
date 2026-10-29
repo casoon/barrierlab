@@ -4,6 +4,10 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **npm:** `@casoon/a11y-wasm` wird aus einem GitHub-Actions-Workflow mit Trusted Publishing und Provenance veröffentlicht; das Paket enthält jetzt LICENSE und README.
+
 ## [0.14.0] - 2026-10-24
 
 ### Changed
