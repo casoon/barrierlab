@@ -100,9 +100,10 @@ the full writeup:
   modular schema.
 - [`dholroyd/relaxng-rust`](https://github.com/dholroyd/relaxng-rust) is
   technically strong (passes the official 384-test RELAX NG test suite,
-  reads `.rnc` natively, handles multi-file composition) but carries
-  **no license at all** — unusable as a dependency without the author's
-  explicit permission.
+  reads `.rnc` natively, handles multi-file composition) but carried
+  **no license at all** when this crate was started — unusable as a
+  dependency without the author's explicit permission. It has been
+  licensed MIT OR Apache-2.0 since October 2026.
 
 This crate is architecturally *informed by* `relaxng-rust`'s public
 design (the syntax → model → validator split, targeting the official

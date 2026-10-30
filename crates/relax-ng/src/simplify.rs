@@ -14,7 +14,158 @@ use crate::syntax::parse_with_inherited_ns;
 #[derive(Clone, Debug)]
 pub struct CompiledSchema {
     pub(crate) start: Pattern,
-    pub(crate) definitions: BTreeMap<String, Pattern>,
+    pub(crate) definitions: Definitions,
+}
+
+/// The simplified `define`s by name, plus which attribute and element
+/// names each can lead to — so the validator can rule out a `ref` for an
+/// event without walking it again for every attribute and child.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Definitions {
+    entries: BTreeMap<String, Definition>,
+}
+
+#[derive(Clone, Debug)]
+struct Definition {
+    pattern: Pattern,
+    reach: Reach,
+}
+
+/// The `attribute` and `element` patterns reachable from a pattern without
+/// crossing an `element` — exactly the positions the validator's attribute
+/// and element derivatives descend into.
+#[derive(Clone, Debug, Default)]
+struct Reach {
+    attributes: NameSet,
+    elements: NameSet,
+}
+
+/// Local names a set of name classes can match, or any name once one of
+/// them is an `anyName`/`nsName`. Namespaces are left out on purpose: the
+/// set may admit too much, never too little.
+#[derive(Clone, Debug, Default)]
+struct NameSet {
+    any: bool,
+    locals: BTreeSet<String>,
+}
+
+impl NameSet {
+    fn add_class(&mut self, class: &NameClass) {
+        match class {
+            NameClass::Name { lexical, .. } => {
+                self.locals.insert(lexical.clone());
+            }
+            NameClass::Any { .. } | NameClass::Namespace { .. } => self.any = true,
+            NameClass::Choice(options) => {
+                for option in options {
+                    self.add_class(option);
+                }
+            }
+        }
+    }
+
+    fn extend(&mut self, other: &NameSet) {
+        self.any |= other.any;
+        self.locals.extend(other.locals.iter().cloned());
+    }
+
+    fn may_contain(&self, local: &str) -> bool {
+        self.any || self.locals.contains(local)
+    }
+}
+
+impl Definitions {
+    pub(crate) fn new(patterns: BTreeMap<String, Pattern>) -> Self {
+        let mut memo = BTreeMap::new();
+        for name in patterns.keys() {
+            reach_of_ref(name, &patterns, &mut memo);
+        }
+        let entries = patterns
+            .into_iter()
+            .map(|(name, pattern)| {
+                let reach = memo.remove(&name).unwrap_or_default();
+                (name, Definition { pattern, reach })
+            })
+            .collect();
+        Self { entries }
+    }
+
+    pub(crate) fn get(&self, name: &str) -> Option<&Pattern> {
+        self.entries.get(name).map(|entry| &entry.pattern)
+    }
+
+    pub(crate) fn values(&self) -> impl Iterator<Item = &Pattern> {
+        self.entries.values().map(|entry| &entry.pattern)
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Whether the definition `name` can lead to an `attribute` whose name
+    /// class matches `local`. `false` means its attribute derivative for
+    /// that name is `notAllowed`.
+    pub(crate) fn may_reach_attribute(&self, name: &str, local: &str) -> bool {
+        self.entries
+            .get(name)
+            .is_some_and(|entry| entry.reach.attributes.may_contain(local))
+    }
+
+    /// Like [`Self::may_reach_attribute`], for a child `element`.
+    pub(crate) fn may_reach_element(&self, name: &str, local: &str) -> bool {
+        self.entries
+            .get(name)
+            .is_some_and(|entry| entry.reach.elements.may_contain(local))
+    }
+}
+
+fn reach_of_ref(
+    name: &str,
+    patterns: &BTreeMap<String, Pattern>,
+    memo: &mut BTreeMap<String, Reach>,
+) -> Reach {
+    if let Some(known) = memo.get(name) {
+        return known.clone();
+    }
+    // §4.19 is only checked for `define`s reachable from `start`; a `ref`
+    // chain back to `name` can only come from one that isn't, and is cut
+    // here. Its result may then be incomplete, but nothing reachable
+    // depends on it, so validation never asks.
+    memo.insert(name.to_owned(), Reach::default());
+    let mut reach = Reach::default();
+    if let Some(target) = patterns.get(name) {
+        collect_reach(target, patterns, memo, &mut reach);
+    }
+    memo.insert(name.to_owned(), reach.clone());
+    reach
+}
+
+/// Adds what `pattern` can lead to into `reach`, without crossing an
+/// `element` (see [`reach_of_ref`] for `ref` cycles).
+fn collect_reach(
+    pattern: &Pattern,
+    patterns: &BTreeMap<String, Pattern>,
+    memo: &mut BTreeMap<String, Reach>,
+    reach: &mut Reach,
+) {
+    match pattern {
+        Pattern::Attribute { name, .. } => reach.attributes.add_class(name),
+        Pattern::Element { name, .. } => reach.elements.add_class(name),
+        Pattern::Group(values)
+        | Pattern::Interleave(values)
+        | Pattern::Choice(values)
+        | Pattern::OneOrMore(values) => {
+            for value in values {
+                collect_reach(value, patterns, memo, reach);
+            }
+        }
+        Pattern::Ref(name) => {
+            let target = reach_of_ref(name, patterns, memo);
+            reach.attributes.extend(&target.attributes);
+            reach.elements.extend(&target.elements);
+        }
+        _ => {}
+    }
 }
 
 impl CompiledSchema {
@@ -72,7 +223,7 @@ fn simplify_root(
     resolver: &impl SchemaResolver,
     loading: &mut BTreeSet<String>,
 ) -> Result<CompiledSchema, SchemaError> {
-    let compiled = match &document.root {
+    let (start, definitions) = match &document.root {
         Root::Pattern(pattern) => {
             let mut extra = BTreeMap::new();
             let mut next_id = 0usize;
@@ -85,20 +236,17 @@ fn simplify_root(
                 &BTreeSet::new(),
                 None,
             )?;
-            Ok(CompiledSchema {
-                start,
-                definitions: extra,
-            })
+            (start, extra)
         }
-        Root::Grammar(grammar) => simplify_grammar(grammar, resolver, loading),
-    }?;
-    check_illegal_recursion(&compiled.start, &compiled.definitions)?;
+        Root::Grammar(grammar) => simplify_grammar(grammar, resolver, loading)?,
+    };
+    check_illegal_recursion(&start, &definitions)?;
     let mut scope = RestrictionScope {
-        definitions: &compiled.definitions,
+        definitions: &definitions,
         visiting: BTreeSet::new(),
         verified: BTreeSet::new(),
     };
-    check_restrictions(&compiled.start, false, false, false, false, &mut scope)?;
+    check_restrictions(&start, false, false, false, false, &mut scope)?;
     // `ref` is transparent above, so every definition reachable from
     // `start` was already checked under its *actual* ancestor context
     // (which is what §7.1-§7.3 restrict) — a `define` is free to rely on
@@ -106,19 +254,22 @@ fn simplify_root(
     // as real-world schemas do. A definition unreachable from `start` has
     // no such context to inherit, so it's checked standalone instead.
     let mut reachable = BTreeSet::new();
-    collect_reachable_defines(&compiled.start, &compiled.definitions, &mut reachable);
-    for (def_name, pattern) in compiled.definitions.iter() {
+    collect_reachable_defines(&start, &definitions, &mut reachable);
+    for (def_name, pattern) in definitions.iter() {
         if reachable.contains(def_name.as_str()) {
             continue;
         }
         check_restrictions(pattern, false, false, false, false, &mut scope)?;
     }
-    check_group_restrictions(&compiled.start, &compiled.definitions)?;
-    for pattern in compiled.definitions.values() {
-        check_group_restrictions(pattern, &compiled.definitions)?;
+    check_group_restrictions(&start, &definitions)?;
+    for pattern in definitions.values() {
+        check_group_restrictions(pattern, &definitions)?;
     }
-    check_start_restrictions(&compiled.start, &compiled.definitions, &mut BTreeSet::new())?;
-    Ok(compiled)
+    check_start_restrictions(&start, &definitions, &mut BTreeSet::new())?;
+    Ok(CompiledSchema {
+        start,
+        definitions: Definitions::new(definitions),
+    })
 }
 
 /// RELAX NG §4.19: a `define` must not be able to reach itself again
@@ -282,7 +433,7 @@ fn simplify_grammar(
     grammar: &Grammar,
     resolver: &impl SchemaResolver,
     loading: &mut BTreeSet<String>,
-) -> Result<CompiledSchema, SchemaError> {
+) -> Result<(Pattern, BTreeMap<String, Pattern>), SchemaError> {
     let (start, definitions) =
         resolve_grammar_items(&grammar.items, resolver, loading, "grammar has no start")?;
     // §4.19, checked here (pre-`notAllowed`-collapse) as well as again on
@@ -321,10 +472,7 @@ fn simplify_grammar(
         })
         .collect::<Result<_, SchemaError>>()?;
     compiled_definitions.extend(extra);
-    Ok(CompiledSchema {
-        start,
-        definitions: compiled_definitions,
-    })
+    Ok((start, compiled_definitions))
 }
 
 /// One `start`'s or `define`'s worth of same-named fragments, each still
@@ -1741,7 +1889,7 @@ mod tests {
             panic!("expected nested element pattern");
         };
         assert_eq!(nested_body[0], Pattern::Ref("shared".into()));
-        assert!(compiled.definitions.contains_key("shared"));
+        assert!(compiled.definitions.get("shared").is_some());
     }
 
     #[test]

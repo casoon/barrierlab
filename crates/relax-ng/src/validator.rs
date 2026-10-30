@@ -34,15 +34,13 @@
 //! an invalid facet fails fast with a single, clear [`DatatypeError`]
 //! rather than partway through validation.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::CompiledSchema;
 use crate::datatypes::{DatatypeContext, DatatypeError, DatatypeRegistry};
 use crate::grammar::{Context, Param, Pattern};
-use crate::simplify::{choice, group, interleave, name_class_matches};
-
-type Definitions = BTreeMap<String, Pattern>;
+use crate::simplify::{Definitions, choice, group, interleave, name_class_matches};
 
 /// An expanded (namespace-resolved) name: local name plus an optional
 /// namespace URI. `None` means "no namespace" — the caller's document
@@ -837,6 +835,11 @@ fn deriv_attribute(
     registry: &DatatypeRegistry,
     context: &DatatypeContext,
 ) -> Pattern {
+    if let Pattern::Ref(target) = pattern
+        && !definitions.may_reach_attribute(target, &name.local)
+    {
+        return Pattern::NotAllowed;
+    }
     let deriv_one = |v: &Pattern| deriv_attribute(v, name, value, definitions, registry, context);
     if let Some(result) = deriv_structural(pattern, false, definitions, &deriv_one) {
         return result;
@@ -886,6 +889,11 @@ fn deriv_element_event(
     name: &ExpandedName,
     definitions: &Definitions,
 ) -> Pattern {
+    if let Pattern::Ref(target) = pattern
+        && !definitions.may_reach_element(target, &name.local)
+    {
+        return Pattern::NotAllowed;
+    }
     let deriv_one = |v: &Pattern| deriv_element_event(v, name, definitions);
     if let Some(result) = deriv_structural(pattern, true, definitions, &deriv_one) {
         return result;
@@ -1102,7 +1110,8 @@ fn attribute_name_known(pattern: &Pattern, name: &ExpandedName, definitions: &De
             .any(|value| attribute_name_known(value, name, definitions)),
         Pattern::OneOrMore(values) => attribute_name_known(&values[0], name, definitions),
         Pattern::Ref(ref_name) => {
-            attribute_name_known(resolve_ref(ref_name, definitions), name, definitions)
+            definitions.may_reach_attribute(ref_name, &name.local)
+                && attribute_name_known(resolve_ref(ref_name, definitions), name, definitions)
         }
         _ => false,
     }
@@ -1159,7 +1168,7 @@ fn collect_element_contents(
             }
         }
         Pattern::OneOrMore(values) => collect_element_contents(&values[0], name, definitions, out),
-        Pattern::Ref(ref_name) => {
+        Pattern::Ref(ref_name) if definitions.may_reach_element(ref_name, &name.local) => {
             collect_element_contents(resolve_ref(ref_name, definitions), name, definitions, out)
         }
         _ => {}
@@ -1311,7 +1320,7 @@ mod tests {
 
     #[test]
     fn nullable_base_cases() {
-        let definitions = Definitions::new();
+        let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(&Pattern::Empty, &definitions, &registry));
         assert!(!nullable(&Pattern::NotAllowed, &definitions, &registry));
@@ -1320,7 +1329,7 @@ mod tests {
 
     #[test]
     fn nullable_group_requires_every_operand_nullable() {
-        let definitions = Definitions::new();
+        let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
             &Pattern::Group(vec![Pattern::Empty, Pattern::Text]),
@@ -1336,7 +1345,7 @@ mod tests {
 
     #[test]
     fn nullable_choice_requires_any_operand_nullable() {
-        let definitions = Definitions::new();
+        let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
             &Pattern::Choice(vec![Pattern::NotAllowed, Pattern::Empty]),
@@ -1352,7 +1361,7 @@ mod tests {
 
     #[test]
     fn nullable_one_or_more_delegates_to_inner() {
-        let definitions = Definitions::new();
+        let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
             &Pattern::OneOrMore(vec![Pattern::Empty]),
@@ -1368,7 +1377,7 @@ mod tests {
 
     #[test]
     fn nullable_list_delegates_to_inner_same_as_zero_tokens_would() {
-        let definitions = Definitions::new();
+        let definitions = Definitions::default();
         let registry = registry();
         // `list { empty }` accepts having no text at all.
         assert!(nullable(
@@ -1385,7 +1394,10 @@ mod tests {
 
     #[test]
     fn nullable_ref_resolves_through_definitions() {
-        let definitions = Definitions::from([("x".to_owned(), Pattern::Empty)]);
+        let definitions = Definitions::new(std::collections::BTreeMap::from([(
+            "x".to_owned(),
+            Pattern::Empty,
+        )]));
         let registry = registry();
         assert!(nullable(&Pattern::Ref("x".into()), &definitions, &registry));
     }
