@@ -7,6 +7,12 @@ in the git history only.
 
 ## [Unreleased]
 
+### Changed
+
+- **Validator:** attribute and child-element events skip every `ref` whose definition cannot
+  lead to a matching name, instead of walking it each time. On real HTML pages validation does
+  about half the work (astro-post-audit#109); results and their order are unchanged.
+
 ## [0.2.2] - 2026-10-27
 
 ### Fixed

@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Changed
+
+- **Check:** schema validation does about half the work per page, through the faster
+  `relax-ng` validator (astro-post-audit#109). Findings are unchanged.
+
 ## [0.3.3] - 2026-10-27
 
 ### Added

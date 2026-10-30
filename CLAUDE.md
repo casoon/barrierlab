@@ -37,8 +37,9 @@ L3  a11y-wasm (Crate + npm)
   `xtask/vendor-*.sh`-Skripte: `crates/html-conform/{schema,tests/corpus}`,
   `crates/relax-ng/tests/corpus/relaxng`. Herkunft steht in
   `THIRD-PARTY-NOTICES.md` bzw. `UPSTREAM.md`.
-- **Kein Code aus `dholroyd/relaxng-rust`** — unlizenziert. Die öffentlich
-  beschriebene Architektur darf als Anregung dienen, der Quelltext nicht.
+- **`dholroyd/relaxng-rust`** steht seit 21.10.2026 unter MIT OR Apache-2.0
+  (vorher unlizenziert). Code daraus nur unter MIT und mit Herkunft in
+  `THIRD-PARTY-NOTICES.md`; `relax-ng` selbst ist bisher eigenständig.
 
 ## Normative Grundlage je Paket
 
