@@ -8,8 +8,8 @@
 #
 # Kept in .rnc, unconverted: schema.rs (Phase 05) will be an in-house
 # RELAX NG engine (architecturally informed by, but not derived from,
-# dholroyd/relaxng-rust — that project is technically strong but
-# unlicensed, see plan/DECISIONS.md), reading .rnc natively and handling
+# dholroyd/relaxng-rust — that project is technically strong but was
+# unlicensed at the time, see plan/DECISIONS.md), reading .rnc natively and handling
 # <include>/<div>/`combine` per spec. An earlier version of this script
 # ran the schema through Trang + rnginline + a hand-rolled flattener to
 # work around limitations in xmloxide's RelaxNG parser (see the upstream
