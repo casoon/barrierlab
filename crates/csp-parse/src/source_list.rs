@@ -10,7 +10,7 @@
 //! as an unrecognized [`SourceListEntry`] rather than failing the whole
 //! parse.
 
-use crate::hash::{HashExpression, parse_hash_expression};
+use crate::hash::{HashExpression, parse_hash_expression, strip_prefix_ignore_ascii_case};
 
 /// A parsed `serialized-source-list` (CSP3 §2.3.1).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -137,7 +137,7 @@ impl Keyword {
     fn from_unquoted(s: &str) -> Option<Keyword> {
         Self::ALL
             .iter()
-            .find(|(name, _)| *name == s)
+            .find(|(name, _)| name.eq_ignore_ascii_case(s))
             .map(|(_, keyword)| *keyword)
     }
 }
@@ -145,7 +145,9 @@ impl Keyword {
 /// Parses a directive's raw value as a `serialized-source-list`.
 pub fn parse_source_list(raw: &str) -> SourceList {
     let tokens: Vec<&str> = raw.trim_ascii().split_ascii_whitespace().collect();
-    if tokens.as_slice() == ["'none'"] {
+    if let [token] = tokens.as_slice()
+        && token.eq_ignore_ascii_case("'none'")
+    {
         return SourceList::None;
     }
     SourceList::Sources(
@@ -165,7 +167,7 @@ fn classify_source_expression(token: &str) -> Option<SourceExpression> {
         if let Some(keyword) = Keyword::from_unquoted(inner) {
             return Some(SourceExpression::Keyword(keyword));
         }
-        if let Some(value) = inner.strip_prefix("nonce-") {
+        if let Some(value) = strip_prefix_ignore_ascii_case(inner, "nonce-") {
             return is_valid_nonce_value(value).then(|| SourceExpression::Nonce(value.to_string()));
         }
         return parse_hash_expression(inner).map(SourceExpression::Hash);
@@ -300,6 +302,30 @@ mod tests {
     #[test]
     fn none_is_exclusive() {
         assert_eq!(parse_source_list("'none'"), SourceList::None);
+    }
+
+    #[test]
+    fn keywords_nonce_and_hash_prefixes_are_ascii_case_insensitive() {
+        assert_eq!(parse_source_list("'NONE'"), SourceList::None);
+        assert_eq!(
+            sources("'UNSAFE-INLINE' 'Self' 'Unsafe-Eval'"),
+            vec![
+                Some(SourceExpression::Keyword(Keyword::UnsafeInline)),
+                Some(SourceExpression::Keyword(Keyword::SelfKeyword)),
+                Some(SourceExpression::Keyword(Keyword::UnsafeEval)),
+            ]
+        );
+        assert_eq!(
+            sources("'NONCE-abc123'")[0],
+            Some(SourceExpression::Nonce("abc123".to_string()))
+        );
+        assert_eq!(
+            sources("'SHA256-AbC123=='")[0],
+            Some(SourceExpression::Hash(HashExpression {
+                algorithm: crate::hash::HashAlgorithm::Sha256,
+                value: "AbC123==".to_string(),
+            }))
+        );
     }
 
     #[test]

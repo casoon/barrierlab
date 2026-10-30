@@ -50,8 +50,7 @@ pub struct HashExpression {
 /// here; callers parsing an SRI `integrity=""` hash token pass it as-is.
 pub fn parse_hash_expression(input: &str) -> Option<HashExpression> {
     for algorithm in HashAlgorithm::ALL {
-        if let Some(value) = input
-            .strip_prefix(algorithm.as_str())
+        if let Some(value) = strip_prefix_ignore_ascii_case(input, algorithm.as_str())
             .and_then(|rest| rest.strip_prefix('-'))
         {
             return if is_valid_base64_value(value) {
@@ -65,6 +64,14 @@ pub fn parse_hash_expression(input: &str) -> Option<HashExpression> {
         }
     }
     None
+}
+
+/// `s` without `prefix`, matching `prefix` ASCII case-insensitively (ABNF
+/// string literals are case-insensitive, RFC 5234 §2.3).
+pub(crate) fn strip_prefix_ignore_ascii_case<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
+    let head = s.get(..prefix.len())?;
+    head.eq_ignore_ascii_case(prefix)
+        .then(|| &s[prefix.len()..])
 }
 
 /// Whether `s` matches `base64-value = 1*( ALPHA / DIGIT / "+" / "/" /
