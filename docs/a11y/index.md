@@ -11,7 +11,7 @@ Regelbestand bedient drei Oberflächen mit identischen Regelkennungen und identi
 |---|---|---|
 | Build-Zeit | [astro-post-audit](https://github.com/casoon/astro-post-audit) | statisches HTML aus `dist/` |
 | CI / Crawl | [auditmysite](https://github.com/casoon/auditmysite) | Chrome via CDP, nativer Accessibility-Tree |
-| laufende Seite | [liveaudit](https://liveaudit.casoon.de) | DOM der Seite, über WASM |
+| laufende Seite | [liveaudit](https://casoon.github.io/liveaudit/) | DOM der Seite, über WASM |
 
 ## Crates
 
