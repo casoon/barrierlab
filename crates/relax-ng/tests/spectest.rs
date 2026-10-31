@@ -248,9 +248,8 @@ fn spec_test_suite_schema_classification() {
         eprintln!("  {failure}");
     }
 
-    // Every case usable without a vendored multi-file resolver (see
-    // `collect_cases`, which skips `<resource>`/`<dir>` cases) now
-    // classifies correctly. This is a completeness check, not just a
+    // Every case, including the `<resource>`/`<dir>` cases served by
+    // `MultiFileResolver`, classifies correctly. This is a completeness check, not just a
     // ratchet — a regression here means Phase 04's simplification pipeline
     // broke something the official conformance suite already covers.
     assert_eq!(

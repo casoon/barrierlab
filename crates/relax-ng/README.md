@@ -110,9 +110,9 @@ check -- real_world` measures the whole check over the same set.
 Parsing (both `.rnc` and `.rng`), composition/simplification, the
 Brzozowski-derivative validation engine, and the built-in+XSD datatype
 libraries are implemented. The vendored official RELAX NG test suite
-passes at 100% for both schema classification and instance validation
-(the subset not requiring a multi-file resolver — see
-`plan/07-conformance-loop.md`). Not yet published to crates.io; the public
+passes at 100% for both schema classification (385 cases) and instance
+validation (580 instances), including the multi-file cases, which the test
+harness serves through an in-memory resolver. Not yet published to crates.io; the public
 API may still change before `1.0`. See `plan/00-STATUS.md` for the
 authoritative, up-to-date phase-by-phase status (not tracked in git,
 local working document; see `plan/README.md` for why).
