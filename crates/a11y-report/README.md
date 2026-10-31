@@ -1,28 +1,28 @@
 # a11y-report
 
-Gemeinsames Befund- und Berichtsmodell für Accessibility-Werkzeuge. Teil von
+Shared finding and report model for accessibility tools. Part of
 [a11y-core](https://github.com/casoon/a11y-core).
 
-## Zwei Achsen, nicht drei
+## Two axes, not three
 
-`Outcome` sagt, *wie sicher* die Aussage ist — `Fail`, `Review`, `Pass`,
-`Untested`. `Severity` sagt, *wie schwer* das Problem wiegt.
+`Outcome` says *how certain* the statement is — `Fail`, `Review`, `Pass`,
+`Untested`. `Severity` says *how serious* the problem is.
 
-Eine dritte Achse „certainty" gibt es bewusst nicht: Sie wäre weitgehend
-dieselbe Achse doppelt, weil `Fail` ohnehin automatisch festgestellt heißt,
-`Review` heuristisch und `Untested` nur manuell beurteilbar. Eine Regel, die
-ihre Aussage nur vermuten kann, liefert deshalb `Review` — nicht `Fail` mit
-niedriger Gewissheit.
+There is deliberately no third "certainty" axis: it would largely be the same
+axis twice, because `Fail` already means established automatically, `Review`
+means heuristic, and `Untested` means judgeable only by hand. A rule that can
+only suspect its finding therefore returns `Review` — not `Fail` with low
+certainty.
 
-Kein aggregierter Score. Ein einzelner Prozentwert würde genau die
-Unterscheidung einebnen, für die es die vier Zustände gibt.
+No aggregated score. A single percentage would flatten exactly the distinction
+the four states exist for.
 
 ```rust
 use a11y_report::{Finding, Location, Report, Severity};
 
 let mut report = Report::new();
 report.push(
-    Finding::fail("images/alt-missing", "Das Bild besitzt kein alt-Attribut.")
+    Finding::fail("images/alt-missing", "The image has no alt attribute.")
         .with_severity(Severity::High)
         .with_wcag(["1.1.1"])
         .at(Location::file("about/index.html").with_selector("main > img")),
@@ -31,39 +31,38 @@ let report = report.finish();
 assert_eq!(report.summary.fail, 1);
 ```
 
-## Platz fuer das, was nicht in den Vertrag gehoert
+## Room for what does not belong in the contract
 
-Der gemeinsame Vertrag kann nicht jedes Feld jedes Werkzeugs aufnehmen —
-auditmysite haengt etwa einen Element-Screenshot an einen Befund, den es fuer
-seinen PDF-Bericht zuschneidet. Eine Seitentabelle ueber den Index traegt
-nicht: Befunde werden gefiltert, sortiert und aus mehreren Laeufen
-zusammengefuehrt, dabei verschieben sich Indizes.
+The shared contract cannot hold every field of every tool — auditmysite, for
+instance, attaches an element screenshot to a finding, which it crops for its PDF
+report. A side table keyed by index does not hold up: findings are filtered,
+sorted and merged from several runs, and indices shift.
 
-`Extra` ist deshalb ein undurchsichtiger Slot am Befund selbst. Er reist mit,
-wird **nie serialisiert** und zaehlt **nicht zur Identitaet** — zwei inhaltlich
-gleiche Befunde bleiben gleich, auch wenn an einem ein Screenshot haengt.
+`Extra` is therefore an opaque slot on the finding itself. It travels along, is
+**never serialised** and does **not count towards identity** — two findings that
+are equal in content stay equal even if one carries a screenshot.
 
 ```rust
 use a11y_report::Finding;
 
 struct Screenshot(Vec<u8>);
 
-let f = Finding::fail("images/alt-missing", "kein alt")
+let f = Finding::fail("images/alt-missing", "no alt")
     .with_extra(Screenshot(vec![0x89, 0x50]));
 
 assert_eq!(f.extra.get::<Screenshot>().map(|s| s.0.len()), Some(2));
 ```
 
-Rolle und Accessible Name des betroffenen Elements sind dagegen **keine**
-Beigabe, sondern Teil des Vertrags: Wer einen Bericht liest, will wissen, was
-das Element fuer die Assistenztechnik war — ein Selektor allein sagt das nicht.
+The role and accessible name of the affected element are **not** an extra but
+part of the contract: whoever reads a report wants to know what the element was
+to assistive technology — a selector alone does not say that.
 
-## „Lief nicht" ist nicht „bestanden"
+## "Did not run" is not "passed"
 
-`RuleRun` hält fest, ob eine Regel überhaupt laufen konnte. Ohne das liest sich
-eine Kontrastprüfung ohne Rendering-Zugriff wie eine bestandene Prüfung — der
-häufigste Weg, wie ein Bericht mehr verspricht, als er geprüft hat.
+`RuleRun` records whether a rule could run at all. Without it, a contrast check
+without access to rendering reads like a passed check — the most common way a
+report promises more than it checked.
 
-## Lizenz
+## License
 
 MIT.

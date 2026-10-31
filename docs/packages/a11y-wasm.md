@@ -1,55 +1,55 @@
 ---
 title: "a11y-wasm"
-description: "Der Regelbestand als WebAssembly für die laufende Seite."
+description: "The rule set as WebAssembly for the live page."
 order: 6
 ---
 
-Der Regelbestand als WebAssembly: dieselben Regeln, die zur Build-Zeit und in CI
-laufen, laufen damit **in der geöffneten Seite**. Das Paket übersetzt, es
-bewertet nicht.
+The rule set as WebAssembly: the same rules that run at build time and in CI
+run with it **in the opened page**. The package translates, it does not
+evaluate.
 
-## Stand
+## Status
 
-Crate 0.14.0 auf crates.io, herausgezogen aus `liveaudit/packages/core`
-(`liveaudit-core`, war `publish = false`). Das WASM-Artefakt erscheint als
-npm-Paket `@casoon/a11y-wasm`; die npm-Veröffentlichung läuft über einen eigenen Tag
-(`a11y-wasm-npm-vX.Y.Z`, siehe [Releases](../releasing/)) und kann der Crate
-hinterherlaufen. Erster Konsument ist liveaudit.
+Crate 0.14.0 on crates.io, extracted from `liveaudit/packages/core`
+(`liveaudit-core`, was `publish = false`). The WASM artifact is published as
+the npm package `@casoon/a11y-wasm`; the npm release runs under its own tag
+(`a11y-wasm-npm-vX.Y.Z`, see [Releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md)) and may lag behind the crate.
+The first consumer is liveaudit.
 
-## Aufbau
+## Structure
 
 ```mermaid
 flowchart LR
-  coll["Collector in der Seite\n(JavaScript, liveaudit)"] --> tree["Baum als JSON"]
-  tree --> arena["Arena / SemanticArena / RenderArena\n(Adapter auf a11y-dom)"]
+  coll["Collector in the page\n(JavaScript, liveaudit)"] --> tree["Tree as JSON"]
+  tree --> arena["Arena / SemanticArena / RenderArena\n(adapters onto a11y-dom)"]
   arena --> rules["a11y-rules\nrun / run_with_semantics / run_full"]
   rules --> rep["Report (a11y-report)"]
-  rep --> bind["wasm-bindgen-Grenze"]
-  bind --> js["JSON zurück an die Seite"]
+  rep --> bind["wasm-bindgen boundary"]
+  bind --> js["JSON back to the page"]
 ```
 
-Welche Regeln laufen, hängt daran, welche Spalten der Collector mitliefert: nur
-Struktur, zusätzlich Semantik, zusätzlich Darstellung. Fehlt eine Schicht, fällt
-die Regel auf `NotRun` — nicht auf „bestanden".
+Which rules run depends on which columns the collector supplies: structure
+only, additionally semantics, additionally rendering. If a layer is missing,
+the rule falls back to `NotRun` — not to "passed".
 
-## Bauen
+## Building
 
-`wasm-pack` kennt kein `--profile` und würde mit `[profile.release]` bauen
-(opt-level 3). Hier geht Größe vor Geschwindigkeit, deshalb baut
-`packages/a11y-wasm/build.mjs` mit `[profile.wasm-release]` und ruft
-`wasm-bindgen` selbst auf, danach `wasm-opt -Oz`.
+`wasm-pack` has no `--profile` and would build with `[profile.release]`
+(opt-level 3). Here size takes priority over speed, so
+`packages/a11y-wasm/build.mjs` builds with `[profile.wasm-release]` and calls
+`wasm-bindgen` itself, followed by `wasm-opt -Oz`.
 
-Die CLI-Version von `wasm-bindgen` muss zur Crate-Version passen, sonst bricht
-der Schritt mit einem Schema-Fehler ab.
+The CLI version of `wasm-bindgen` must match the crate version, otherwise the
+step aborts with a schema error.
 
-## Öffentliche Fläche
+## Public surface
 
-`Arena`, `SemanticArena`, `RenderArena`, `RenderingColumns` und die
-`wasm-bindgen`-Einsprünge für einen Scan. Rust-Konsumenten können das Crate auch
-ohne WASM als `rlib` benutzen.
+`Arena`, `SemanticArena`, `RenderArena`, `RenderingColumns` and the
+`wasm-bindgen` entry points for a scan. Rust consumers can also use the crate
+without WASM as an `rlib`.
 
-## Grenzen
+## Limits
 
-Keine Erhebung: das Paket öffnet keine Seite und liest kein DOM. Wer den Baum
-falsch einsammelt, bekommt falsche Befunde — die Verantwortung für Shadow DOM,
-iframes und den Zeitpunkt der Aufnahme liegt beim Collector.
+No collection: the package opens no page and reads no DOM. Anyone who collects the tree
+incorrectly gets incorrect findings — responsibility for shadow DOM,
+iframes and the timing of the snapshot lies with the collector.

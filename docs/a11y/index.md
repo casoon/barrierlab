@@ -1,41 +1,40 @@
 ---
-title: "Überblick"
-description: "Was a11y-core ist, welche Crates dazugehören und wie diese Dokumentation aufgebaut ist."
+title: "Overview"
+description: "What a11y-core is, which crates belong to it and how this documentation is organized."
 order: 0
 ---
 
-a11y-core sind die gemeinsamen Bausteine der CASOON-Accessibility-Werkzeuge in Rust. Ein
-Regelbestand bedient drei Oberflächen mit identischen Regelkennungen und identischem JSON:
+a11y-core is the shared set of building blocks of the CASOON accessibility tools in Rust. One
+rule set serves three surfaces with identical rule IDs and identical JSON:
 
-| Oberfläche | Werkzeug | Substrat |
+| Surface | Tool | Substrate |
 |---|---|---|
-| Build-Zeit | [astro-post-audit](https://github.com/casoon/astro-post-audit) | statisches HTML aus `dist/` |
-| CI / Crawl | [auditmysite](https://github.com/casoon/auditmysite) | Chrome via CDP, nativer Accessibility-Tree |
-| laufende Seite | [liveaudit](https://casoon.github.io/liveaudit/) | DOM der Seite, über WASM |
+| Build time | [astro-post-audit](https://github.com/casoon/astro-post-audit) | static HTML from `dist/` |
+| CI / crawl | [auditmysite](https://github.com/casoon/auditmysite) | Chrome via CDP, native accessibility tree |
+| Running page | [liveaudit](https://casoon.github.io/liveaudit/) | the page's DOM, via WASM |
 
 ## Crates
 
-| Crate | Zweck |
+| Crate | Purpose |
 |---|---|
-| [`a11y-report`](https://docs.rs/a11y-report) | Befund- und Berichtsmodell, JSON-Vertrag |
-| [`a11y-dom`](https://docs.rs/a11y-dom) | Dokumentmodell-Abstraktion plus Fähigkeits-Tiers |
-| [`accname`](https://docs.rs/accname) | WAI-ARIA Accessible Name und Role Computation |
-| [`a11y-rules`](https://docs.rs/a11y-rules) | die Regeln, generisch über das Dokumentmodell |
+| [`a11y-report`](https://docs.rs/a11y-report) | Finding and report model, JSON contract |
+| [`a11y-dom`](https://docs.rs/a11y-dom) | Document model abstraction plus capability tiers |
+| [`accname`](https://docs.rs/accname) | WAI-ARIA accessible name and role computation |
+| [`a11y-rules`](https://docs.rs/a11y-rules) | The rules, generic over the document model |
 
-Alle vier stehen auf crates.io in Version 0.26.0 und werden im Gleichschritt versioniert. Geplant,
-aber noch nicht vorhanden, ist `a11y-conformance`: ein geteiltes Fixture-Korpus, das die drei
-Oberflächen gegen Auseinanderlaufen absichert.
+All four are on crates.io at version 0.26.1 and are versioned in lockstep. Planned but not yet
+available is `a11y-conformance`: a shared fixture corpus that keeps the three surfaces from
+drifting apart.
 
-## Wo es aufhört
+## Where it stops
 
-a11y-core liefert keinen HTML-Parser, keinen Crawler und keine Browsersteuerung. Den Baum baut
-der Host: astro-post-audit aus den Build-Dateien, auditmysite aus Chrome, liveaudit aus dem DOM
-der Seite. Die mitgelieferte `Arena` aus `a11y-dom` ist das Testvehikel und die Form, die ein
-WASM-Host braucht.
+a11y-core provides no HTML parser, no crawler and no browser control. The host builds the tree:
+astro-post-audit from the build files, auditmysite from Chrome, liveaudit from the page's DOM. The
+bundled `Arena` from `a11y-dom` is the test vehicle and the form a WASM host needs.
 
-## Aufbau dieser Dokumentation
+## How this documentation is organized
 
-- **Einstieg:** die Crates einbinden und ein erstes Dokument prüfen.
-- **Konzepte:** Fähigkeits-Tiers, das Befundmodell und die Namensberechnung.
-- **Referenz:** alle Regelkennungen und der Überblick über die öffentliche API. Die
-  Einzeldokumentation jedes Typs steht auf [docs.rs](https://docs.rs/a11y-rules).
+- **Getting started:** add the crates and check a first document.
+- **Concepts:** capability tiers, the finding model and name computation.
+- **Reference:** all rule IDs and an overview of the public API. The detailed documentation of
+  each type is on [docs.rs](https://docs.rs/a11y-rules).

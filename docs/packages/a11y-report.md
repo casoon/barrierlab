@@ -1,22 +1,22 @@
 ---
 title: "a11y-report"
-description: "Das gemeinsame Befundmodell: vier Ergebniszustände, Severity, WCAG-Zuordnung, JSON-Vertrag."
+description: "The shared finding model: four outcome states, severity, WCAG mapping, JSON contract."
 order: 1
 ---
 
-Das Befundmodell, das alle Werkzeuge teilen: vier Ergebniszustände, Severity,
-WCAG-Zuordnung und ein stabiler JSON-Vertrag. Es bewertet nichts selbst.
+The finding model all tools share: four outcome states, severity,
+WCAG mapping and a stable JSON contract. It evaluates nothing itself.
 
-## Stand
+## Status
 
-0.26.0 auf crates.io. Benutzt von auditmysite, astro-post-audit und liveaudit —
-das erste Paket, das wirklich überall im Einsatz ist.
+0.26.0 on crates.io. Used by auditmysite, astro-post-audit and liveaudit —
+the first package that is really in use everywhere.
 
-## Aufbau
+## Structure
 
 ```mermaid
 flowchart LR
-  rule["Regel in a11y-rules\noder in einem Host"] --> f[Finding]
+  rule["Rule in a11y-rules\nor in a host"] --> f[Finding]
   f --> ev[Evidence]
   f --> loc[Location]
   f --> ex[Extra]
@@ -24,29 +24,29 @@ flowchart LR
   nr[NotRun] --> rep
   rr[RuleRun] --> rep
   rep --> sum[Summary]
-  rep --> json["JSON\n(stabiler Vertrag)"]
+  rep --> json["JSON\n(stable contract)"]
 ```
 
-## Öffentliche Fläche
+## Public surface
 
-| Typ | Zweck |
+| Type | Purpose |
 |---|---|
-| `Outcome` | die vier Zustände; `NotRun` ist einer davon, nicht ein Sonderfall von „bestanden" |
-| `Severity`, `WcagLevel` | Einordnung eines Befunds |
-| `Finding`, `Evidence`, `Location` | ein Befund und woran er festgemacht ist |
-| `Report`, `RuleRun`, `NotRun`, `Summary` | was ein Lauf ergeben hat, einschließlich der Regeln, die nicht liefen |
-| `Extra` | hostspezifische Zusatzfelder, ohne den Vertrag zu brechen |
-| `FindingId`, `RootCauseId`, `normalize_selector` | stabile Kennung eines Befunds (Regel + Element-Muster) und einer Ursache, seitenübergreifend und über Läufe gleich |
-| `CauseConfidence`, `ImpactArea`, `EvidenceBasis` | wie gut eine gemeinsame Ursache und eine Auswirkung belegt sind |
-| `CriterionState` | Zustand eines Bewertungskriteriums; „nicht erkannt" ist nicht „nicht erfüllt"
+| `Outcome` | the four states; `NotRun` is one of them, not a special case of "passed" |
+| `Severity`, `WcagLevel` | classification of a finding |
+| `Finding`, `Evidence`, `Location` | a finding and what it is anchored to |
+| `Report`, `RuleRun`, `NotRun`, `Summary` | what a run produced, including the rules that did not run |
+| `Extra` | host-specific additional fields, without breaking the contract |
+| `FindingId`, `RootCauseId`, `normalize_selector` | stable identifier of a finding (rule + element pattern) and of a cause, the same across pages and across runs |
+| `CauseConfidence`, `ImpactArea`, `EvidenceBasis` | how well a shared cause and an impact are supported |
+| `CriterionState` | state of an assessment criterion; "not detected" is not "not met"
 
-## Abhängigkeiten
+## Dependencies
 
-Nach unten: nur `serde`. Nach oben: `a11y-rules`, `a11y-perception` (geplant),
-alle Hosts.
+Downward: only `serde`. Upward: `a11y-rules`, `a11y-perception` (planned),
+all hosts.
 
-## Grenzen
+## Limits
 
-Das Modell sagt nichts darüber, wie ein Befund gefunden wurde und ob die
-Messung tauglich war. Wer keine Belege mitliefert, bekommt einen Befund ohne
-Belege — das Modell erzwingt sie nicht.
+The model says nothing about how a finding was found and whether the
+measurement was suitable. Anyone who supplies no evidence gets a finding without
+evidence — the model does not enforce it.

@@ -1,13 +1,13 @@
 ---
 title: "Accessible Name"
-description: "Was das Crate accname berechnet, wogegen es geschrieben ist und wo es ohne Rendering-Daten aufhört."
+description: "What the accname crate computes, what it is written against and where it stops without rendering data."
 order: 3
 ---
 
-`accname` setzt [Accessible Name and Description Computation 1.2](https://w3c.github.io/accname/)
-und die Namensregeln aus [HTML-AAM 1.0](https://www.w3.org/TR/html-aam-1.0/) um, generisch über
-das Dokumentmodell aus `a11y-dom`. Es ist gegen die Spezifikation geschrieben, nicht gegen eine
-vorhandene Implementierung; die Schrittnummern im Quelltext entsprechen denen des Normtexts.
+`accname` implements [Accessible Name and Description Computation 1.2](https://w3c.github.io/accname/)
+and the naming rules from [HTML-AAM 1.0](https://www.w3.org/TR/html-aam-1.0/), generic over
+the document model from `a11y-dom`. It is written against the specification, not against an
+existing implementation; the step numbers in the source match those of the normative text.
 
 ```rust
 use a11y_dom::{elements, Arena, Document, Node};
@@ -15,52 +15,51 @@ use accname::{name, IdIndex};
 
 let doc = Arena::builder()
     .open("form")
-        .open("span").attr("id", "l").text("Vorname").close()
+        .open("span").attr("id", "l").text("First name").close()
         .open("input").attr("id", "v").attr("aria-labelledby", "l").close()
     .close()
     .build();
 
 let ids = IdIndex::build(doc.root());
-let feld = elements(&doc).find(|n| n.local_name() == "input").unwrap();
-assert_eq!(name(feld, &ids).as_deref(), Some("Vorname"));
+let field = elements(&doc).find(|n| n.local_name() == "input").unwrap();
+assert_eq!(name(field, &ids).as_deref(), Some("First name"));
 ```
 
-## Warum das nicht nebenbei geht
+## Why this cannot be done in passing
 
-Eine Näherung aus „Teilbaumtext plus `aria-label`" liegt in genau den Fällen falsch, in denen es
-darauf ankommt:
+An approximation made of "subtree text plus `aria-label`" is wrong in exactly the cases where it
+matters:
 
-- `aria-labelledby` löst Verweisketten auf und darf dabei sonst versteckte Knoten heranziehen.
-- Ein eingebettetes Steuerelement steuert innerhalb einer Rekursion seinen *Wert* bei, nicht seine
-  Beschriftung.
-- Für Rollen wie `generic` oder `paragraph` ist ein Name verboten.
+- `aria-labelledby` resolves reference chains and may draw on nodes that are otherwise hidden.
+- An embedded control contributes its *value* within a recursion, not its label.
+- For roles such as `generic` or `paragraph`, a name is prohibited.
 
-## Was abgedeckt ist
+## What is covered
 
-Die Schritte 2A bis 2I: `aria-labelledby` mit Verweisketten und Zyklenschutz, `aria-label`, die
-HTML-eigenen Textalternativen (`alt`, `label` über `for` und umschließend, `legend`, `caption`,
-`figcaption`, `title` in SVG, die Sonderfälle von `input`), eingebettete Steuerelemente, Name aus
-dem Inhalt, `title` als letzte Rückfallebene.
+Steps 2A to 2I: `aria-labelledby` with reference chains and cycle protection, `aria-label`, the
+native HTML text alternatives (`alt`, `label` via `for` and wrapping, `legend`, `caption`,
+`figcaption`, `title` in SVG, the special cases of `input`), embedded controls, name from
+content, `title` as the last fallback.
 
-Dazu die Rollenberechnung nach HTML-AAM mit den kontextabhängigen Fällen: `header` und `footer`
-sind nur außerhalb sektionierender Elemente Landmarks, `section` ist nur benannt eine `region`,
-ein `img` mit leerem `alt` ist `presentation`.
+Plus role computation per HTML-AAM with the context-dependent cases: `header` and `footer`
+are landmarks only outside sectioning elements, `section` is a `region` only when named,
+an `img` with empty `alt` is `presentation`.
 
-## Die öffentliche API
+## The public API
 
-| Funktion | Zweck |
+| Function | Purpose |
 |---|---|
-| `name`, `description` | Accessible Name und Beschreibung eines Knotens |
-| `role` | die wirksame Rolle, explizit oder implizit |
-| `implicit` | die implizite Rolle nach HTML-AAM |
-| `allows_name_from_content`, `name_is_prohibited` | Eigenschaften einer Rolle |
-| `IdIndex` | ID-Index für Verweise, einmal je Dokument gebaut |
+| `name`, `description` | Accessible name and description of a node |
+| `role` | the effective role, explicit or implicit |
+| `implicit` | the implicit role per HTML-AAM |
+| `allows_name_from_content`, `name_is_prohibited` | properties of a role |
+| `IdIndex` | ID index for references, built once per document |
 
-Die Einzeldokumentation steht auf [docs.rs/accname](https://docs.rs/accname).
+The detailed documentation is on [docs.rs/accname](https://docs.rs/accname).
 
-## Grenze ohne Rendering
+## Limit without rendering
 
-Schritt 2A schließt versteckte Knoten aus. Ohne Rendering-Daten sind nur `aria-hidden="true"` und
-das `hidden`-Attribut erkennbar, `display: none` und `visibility: hidden` nicht. Ein Host mit
-`Rendering` kann hier genauer sein; das Crate bleibt bewusst bei dem, was ohne Layout entscheidbar
-ist.
+Step 2A excludes hidden nodes. Without rendering data, only `aria-hidden="true"` and
+the `hidden` attribute are detectable, `display: none` and `visibility: hidden` are not. A host with
+`Rendering` can be more precise here; the crate deliberately stays with what is decidable without
+layout.

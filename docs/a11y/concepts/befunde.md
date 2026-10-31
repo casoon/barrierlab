@@ -1,51 +1,51 @@
 ---
-title: "Befunde und Berichte"
-description: "Das Befundmodell aus a11y-report – zwei Achsen, vier Zustände, ein Vermerk je Regelkennung und ein schlanker JSON-Vertrag."
+title: "Findings and Reports"
+description: "The finding model from a11y-report: two axes, four states, one record per rule ID and a lean JSON contract."
 order: 2
 ---
 
-## Zwei Achsen, nicht drei
+## Two axes, not three
 
-`Outcome` sagt, *wie sicher* die Aussage ist, `Severity`, *wie schwer* das Problem wiegt.
+`Outcome` says *how certain* the statement is, `Severity` says *how severe* the problem is.
 
-| `Outcome` | Bedeutung |
+| `Outcome` | Meaning |
 |---|---|
-| `fail` | automatisch festgestelltes Problem, eindeutig belegt |
-| `review` | potenzielles Problem, nur heuristisch vermutet, braucht menschliche Bestätigung |
-| `pass` | automatische Prüfung bestanden, wird geführt, aber standardmäßig nicht angezeigt |
-| `untested` | automatisiert nicht beurteilbar, grundsätzlich oder weil dem Host die Daten fehlen |
+| `fail` | automatically detected problem, unambiguously evidenced |
+| `review` | potential problem, only heuristically suspected, needs human confirmation |
+| `pass` | automated check passed, recorded but not shown by default |
+| `untested` | cannot be judged automatically, either in principle or because the host lacks the data |
 
-`Severity` reicht von `low` über `medium` und `high` bis `critical`. Für Werkzeuge, die die
-axe-Vokabel erwarten, liefert `Severity::as_axe_impact` `minor`, `moderate`, `serious` und
+`Severity` ranges from `low` through `medium` and `high` to `critical`. For tools that expect the
+axe vocabulary, `Severity::as_axe_impact` returns `minor`, `moderate`, `serious` and
 `critical`.
 
-Eine dritte Achse „certainty" gibt es bewusst nicht. Sie wäre weitgehend dieselbe Achse doppelt,
-weil `fail` ohnehin automatisch festgestellt heißt, `review` heuristisch und `untested` nur
-manuell beurteilbar. Eine Regel, die ihre Aussage nur vermuten kann, liefert deshalb `review`,
-nicht `fail` mit niedriger Gewissheit.
+There is deliberately no third "certainty" axis. It would largely duplicate the same axis,
+because `fail` already means automatically detected, `review` heuristic and `untested` only
+manually assessable. A rule that can only suspect its statement therefore returns `review`,
+not `fail` with low certainty.
 
-## Kein Score
+## No score
 
-`Summary` zählt Zustände und Schweregrade, mehr nicht. Schweregrade zählen nur über Probleme,
-also `fail` und `review`; `Summary::problems` ist deren Summe. `untested` zählt nicht mit, weil es
-keine Aussage trifft. Ein aggregierter Prozentwert würde genau die Unterscheidung einebnen, für
-die es die vier Zustände gibt.
+`Summary` counts states and severities, nothing more. Severities are counted only across problems,
+that is `fail` and `review`; `Summary::problems` is their sum. `untested` is not counted, because it
+makes no statement. An aggregated percentage would flatten exactly the distinction the four
+states exist for.
 
-## Ein Vermerk je Kennung
+## One record per ID
 
-`Report` hat drei Felder: `findings`, `rule_runs` und `summary`. `RuleRun` beantwortet „lief das
-überhaupt?", `Finding` beantwortet „was kam dabei heraus?". Die Vermerke werden je
-**Befund**-Kennung geführt, nicht je übergeordneter Regel. Damit benutzen `rule_runs` und
-`findings` dieselbe Namensmenge und lassen sich über `rule_id` verbinden.
+`Report` has three fields: `findings`, `rule_runs` and `summary`. `RuleRun` answers "did it run
+at all?", `Finding` answers "what came out of it?". The records are kept per
+**finding** ID, not per parent rule. This way `rule_runs` and
+`findings` use the same set of names and can be joined via `rule_id`.
 
-Wer dieselbe Seite unter mehreren Bedingungen prüft, führt je Durchgang einen Vermerk mit
-`viewport`; der Schlüssel ist dann `(rule_id, viewport)`. Ein nicht gelaufener Vermerk kann mit
-`wcag` nennen, welches Kriterium ungeprüft blieb.
+Anyone checking the same page under several conditions keeps one record per run with
+`viewport`; the key is then `(rule_id, viewport)`. A record for a rule that did not run can name
+via `wcag` which criterion remained unchecked.
 
-## Der JSON-Vertrag
+## The JSON contract
 
-Ein Befund trägt vier Pflichtfelder: `rule_id`, `outcome`, `severity` und `message`. Alles andere
-fällt weg, wenn es nicht gesetzt ist:
+A finding carries four required fields: `rule_id`, `outcome`, `severity` and `message`. Everything
+else is omitted when not set:
 
 ```json
 {
@@ -62,44 +62,44 @@ fällt weg, wenn es nicht gesetzt ist:
 }
 ```
 
-Der Befund stammt aus `examples/teaser.semantik.json`. Die optionalen Felder:
+The finding comes from `examples/teaser.semantik.json`. The optional fields:
 
-| Feld | Inhalt |
+| Field | Content |
 |---|---|
-| `rule_name` | menschenlesbarer Name der Regel |
+| `rule_name` | human-readable name of the rule |
 | `location` | `file`, `url`, `selector`, `node`, `source_hint` |
-| `role`, `name` | berechnete Rolle und Accessible Name des Elements |
-| `wcag`, `wcag_level` | Erfolgskriterien und Stufe `A`, `AA` oder `AAA` |
-| `tags` | freie Schlagworte |
-| `help`, `help_url`, `suggestion`, `suggested_code` | was zu tun ist |
-| `snippet` | das betroffene Markup, soweit der Host es liefern kann |
-| `evidence` | Belege mit `source`, `field`, `value` |
+| `role`, `name` | computed role and accessible name of the element |
+| `wcag`, `wcag_level` | success criteria and level `A`, `AA` or `AAA` |
+| `tags` | free-form keywords |
+| `help`, `help_url`, `suggestion`, `suggested_code` | what to do |
+| `snippet` | the affected markup, as far as the host can provide it |
+| `evidence` | evidence with `source`, `field`, `value` |
 
-## Sprache
+## Language
 
-`message`, der Grund eines nicht gelaufenen Vermerks und der Hinweis der Deklaration gibt es auf
-Englisch und Deutsch. Die Sprache wählt der Host beim Lauf (`run_with_semantics_in(doc,
-Locale::De)`); die Einstiege ohne `_in` liefern Englisch. Alles, woran ein Werkzeug einen Befund
-wiedererkennt — Kennung, Outcome, Schwere, WCAG-Bezug —, ist in jeder Sprache gleich. Der
-Vertrag selbst ändert sich nicht: `message` bleibt ein Text, nur in der gewählten Sprache.
+`message`, the reason of a record for a rule that did not run, and the declaration's hint are available in
+English and German. The host chooses the language at run time (`run_with_semantics_in(doc,
+Locale::De)`); the entry points without `_in` return English. Everything by which a tool
+recognizes a finding — ID, outcome, severity, WCAG reference — is the same in every language. The
+contract itself does not change: `message` remains a text, only in the chosen language.
 
-Die deutschen Texte hängen am Feature `de`, das standardmäßig an ist. Wer nur Englisch ausliefert
-und auf Größe achten muss — wie `a11y-wasm` in der laufenden Seite —, baut mit
-`default-features = false` und spart die deutschen Vorlagen komplett.
+The German texts hang on the `de` feature, which is on by default. Anyone shipping only English
+and having to watch size — like `a11y-wasm` in the running page — builds with
+`default-features = false` and saves the German templates entirely.
 
-## Platz für das, was nicht in den Vertrag gehört
+## Room for what does not belong in the contract
 
-`Finding::extra` ist ein undurchsichtiger Slot für werkzeugspezifische Beigaben, etwa den
-Element-Screenshot, den auditmysite für seinen PDF-Bericht zuschneidet. Er reist mit dem Befund,
-wird **nie serialisiert** und zählt **nicht zur Identität**: Zwei inhaltlich gleiche Befunde
-bleiben gleich, auch wenn an einem ein Screenshot hängt.
+`Finding::extra` is an opaque slot for tool-specific extras, such as the
+element screenshot that auditmysite crops for its PDF report. It travels with the finding,
+is **never serialized** and does **not count toward identity**: two findings that are equal in content
+remain equal even if one has a screenshot attached.
 
 ```rust
 use a11y_report::Finding;
 
 struct Screenshot(Vec<u8>);
 
-let f = Finding::fail("images/alt-missing", "kein alt")
+let f = Finding::fail("images/alt-missing", "no alt")
     .with_extra(Screenshot(vec![0x89, 0x50]));
 
 assert_eq!(f.extra.get::<Screenshot>().map(|s| s.0.len()), Some(2));

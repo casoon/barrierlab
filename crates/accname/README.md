@@ -1,24 +1,23 @@
 # accname
 
-WAI-ARIA Accessible Name and Description Computation in Rust, generisch über das
-Dokumentmodell aus [`a11y-dom`](https://crates.io/crates/a11y-dom). Teil von
+WAI-ARIA Accessible Name and Description Computation in Rust, generic over the
+document model from [`a11y-dom`](https://crates.io/crates/a11y-dom). Part of
 [a11y-core](https://github.com/casoon/a11y-core).
 
-Umsetzung von [accname 1.2](https://w3c.github.io/accname/) und den Namensregeln
-aus [HTML-AAM 1.0](https://www.w3.org/TR/html-aam-1.0/) — gegen die
-Spezifikation geschrieben, nicht gegen eine vorhandene Implementierung. Die
-Schrittnummern im Quelltext entsprechen denen des Normtexts.
+An implementation of [accname 1.2](https://w3c.github.io/accname/) and the naming
+rules of [HTML-AAM 1.0](https://www.w3.org/TR/html-aam-1.0/) — written against
+the specification, not against an existing implementation. The step numbers in
+the source match those of the normative text.
 
-## Warum das nicht nebenbei geht
+## Why this cannot be done in passing
 
-Eine Näherung aus „Teilbaumtext plus `aria-label`" liegt in genau den Fällen
-falsch, in denen es darauf ankommt:
+An approximation of "subtree text plus `aria-label`" is wrong in exactly the
+cases where it matters:
 
-- `aria-labelledby` löst Verweisketten auf und darf dabei Knoten heranziehen,
-  die sonst versteckt sind
-- ein eingebettetes Steuerelement steuert innerhalb einer Rekursion seinen
-  *Wert* bei, nicht seine Beschriftung
-- für Rollen wie `generic` oder `paragraph` ist ein Name schlicht verboten
+- `aria-labelledby` resolves chains of references and may pull in nodes that are
+  otherwise hidden
+- an embedded control contributes its *value* within a recursion, not its label
+- for roles such as `generic` or `paragraph`, a name is simply forbidden
 
 ```rust
 use a11y_dom::{elements, Arena, Document, Node};
@@ -36,19 +35,19 @@ let feld = elements(&doc).find(|n| n.local_name() == "input").unwrap();
 assert_eq!(name(feld, &ids).as_deref(), Some("Vorname"));
 ```
 
-Neben `name` gibt es `description` und `role` — Letzteres als Rollenberechnung
-nach HTML-AAM, inklusive der kontextabhängigen Fälle: `header` und `footer` sind
-nur außerhalb sektionierender Elemente Landmarks, `section` nur benannt eine
-`region`, `img` mit leerem `alt` ist `presentation`.
+Besides `name` there are `description` and `role` — the latter as role
+computation per HTML-AAM, including the context-dependent cases: `header` and
+`footer` are landmarks only outside sectioning elements, `section` is a `region`
+only when named, and `img` with an empty `alt` is `presentation`.
 
-## Grenze ohne Rendering
+## Limit without rendering
 
-Schritt 2A der Spezifikation schließt versteckte Knoten aus. Ohne
-Rendering-Daten sind nur `aria-hidden="true"` und das `hidden`-Attribut
-erkennbar — `display: none` und `visibility: hidden` nicht. Ein Host mit
-`a11y_dom::Rendering` kann hier genauer sein; dieses Crate bleibt bewusst bei
-dem, was ohne Layout entscheidbar ist.
+Step 2A of the specification excludes hidden nodes. Without rendering data only
+`aria-hidden="true"` and the `hidden` attribute are detectable — `display: none`
+and `visibility: hidden` are not. A host with `a11y_dom::Rendering` can be more
+precise here; this crate deliberately stays with what can be decided without
+layout.
 
-## Lizenz
+## License
 
 MIT.

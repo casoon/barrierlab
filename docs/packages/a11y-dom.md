@@ -1,48 +1,48 @@
 ---
 title: "a11y-dom"
-description: "Die Dokumentabstraktion mit Fähigkeits-Tiers, über die alle Regeln laufen."
+description: "The document abstraction with capability tiers that all rules run over."
 order: 2
 ---
 
-Die Abstraktion über das Dokument: ein DOM-förmiger Baum als Trait, plus
-Fähigkeits-Tiers. Damit läuft dieselbe Regel über einen geparsten HTML-Baum,
-über einen Browser-AX-Baum und über die laufende Seite.
+The abstraction over the document: a DOM-shaped tree as a trait, plus
+capability tiers. This lets the same rule run over a parsed HTML tree,
+over a browser AX tree and over the live page.
 
-## Stand
+## Status
 
-0.26.0 auf crates.io. Benutzt von `accname`, `a11y-rules` und allen Hosts;
-auditmysite baut daraus in `dom_document.rs` einen Baum aus CDP-Daten.
+0.26.0 on crates.io. Used by `accname`, `a11y-rules` and all hosts;
+auditmysite builds a tree from CDP data out of it in `dom_document.rs`.
 
-## Aufbau
+## Structure
 
 ```mermaid
 flowchart TB
-  subgraph tiers["Fähigkeits-Tiers"]
-    d["Document\n(Struktur: Elemente, Attribute, Kinder)"]
-    s["Semantics\n(berechnete Rolle, Name, Zustand)"]
-    r["Rendering\n(Layout, Sichtbarkeit, Farben)"]
+  subgraph tiers["Capability tiers"]
+    d["Document\n(structure: elements, attributes, children)"]
+    s["Semantics\n(computed role, name, state)"]
+    r["Rendering\n(layout, visibility, colors)"]
   end
   d --> s --> r
-  arena["Arena / ArenaBuilder\n(eigene Baumhaltung für Tests und Parser)"] -.implementiert.-> d
-  host["Host-Adapter\n(CDP, scraper, laufende Seite)"] -.implementiert.-> d
+  arena["Arena / ArenaBuilder\n(own tree storage for tests and parsers)"] -.implements.-> d
+  host["Host adapter\n(CDP, scraper, live page)"] -.implements.-> d
 ```
 
-## Öffentliche Fläche
+## Public surface
 
-| Typ | Zweck |
+| Type | Purpose |
 |---|---|
-| `Document` | das Minimum: Baum, Elemente, Attribute |
-| `Semantics`, `Rendering` | Tiers, die ein Host nur dann anbietet, wenn er die Daten wirklich hat |
-| `Layout` | Layout-Angaben für heuristische Regeln, über `Rendering::layout()` (Vorgabe `None`) |
-| `Arena`, `ArenaBuilder`, `ArenaNode` | fertige Implementierung für Tests und parserbasierte Hosts |
+| `Document` | the minimum: tree, elements, attributes |
+| `Semantics`, `Rendering` | tiers a host offers only if it really has the data |
+| `Layout` | layout information for heuristic rules, via `Rendering::layout()` (default `None`) |
+| `Arena`, `ArenaBuilder`, `ArenaNode` | ready-made implementation for tests and parser-based hosts |
 
-## Abhängigkeiten
+## Dependencies
 
-Nach unten: nichts außer `serde` (optional). Nach oben: `accname`,
-`a11y-rules`, Host-Adapter.
+Downward: nothing except `serde` (optional). Upward: `accname`,
+`a11y-rules`, host adapters.
 
-## Grenzen
+## Limits
 
-Ein Tier ist eine Zusage über **Verfügbarkeit**, nicht über Qualität. Wer
-`Rendering` anbietet, verspricht Layoutdaten — nicht, dass sie stimmen. Fehlt
-ein Tier, liefern die darauf aufbauenden Regeln `NotRun`, nicht „bestanden".
+A tier is a promise about **availability**, not about quality. A host that
+offers `Rendering` promises layout data — not that it is correct. If a tier
+is missing, the rules built on it return `NotRun`, not "passed".
