@@ -75,6 +75,36 @@ This crate never opens a file or makes a network request on its own.
 from disk, an in-memory map, HTTP, or anything else, with whatever
 security boundary (allowed schemes, path restrictions) fits the caller.
 
+## Performance
+
+Validation time per page for the HTML schema that
+`html-conform` validates against, measured on real pages:
+the schema stage of `html_conform::check` (release build, warm, median of
+7 runs), Apple M4 Pro, 48 GB, macOS 27.2, rustc 1.99.1. Both columns are
+this crate, on the same machine with the same harness; nothing else is
+compared.
+
+| Page | Tags | 0.2.2 | 0.2.3 |
+|---|---:|---:|---:|
+| example.com | 10 | 3.3 ms | 2.2 ms |
+| www.w3.org | 369 | 99 ms | 4.9 ms |
+| www.gnu.org | 399 | 108 ms | 6.7 ms |
+| www.usa.gov | 476 | 127 ms | 6.5 ms |
+| insights.casoon.de | 492 | 291 ms | 7.0 ms |
+| news.ycombinator.com | 814 | 4.0 ms | 2.3 ms |
+| www.python.org | 840 | 248 ms | 7.5 ms |
+| developer.mozilla.org | 851 | 285 ms | 7.5 ms |
+| Insights article (Claude Code) | 854 | 406 ms | 7.8 ms |
+| Insights article (Caching) | 1,390 | 734 ms | 10.4 ms |
+| Insights article (Typst) | 1,659 | 897 ms | 8.6 ms |
+| en.wikipedia.org/wiki/HTML | 8,069 | 2,658 ms | 74 ms |
+| Insights category page | 10,281 | 8,136 ms | 32 ms |
+
+Compiling the schema is a one-time cost per process and not included.
+The pages come from `crates/html-conform/xtask/real-world-sites.txt`
+(fetched with `fetch-real-world.sh`); `cargo bench -p html-conform --bench
+check -- real_world` measures the whole check over the same set.
+
 ## Status
 
 Parsing (both `.rnc` and `.rng`), composition/simplification, the

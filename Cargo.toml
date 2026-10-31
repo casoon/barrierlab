@@ -45,10 +45,10 @@ categories = ["accessibility", "web-programming"]
 html5-parser = { version = "0.4.1", path = "crates/html5-parser" }
 csp-parse = { version = "0.1.0", path = "crates/csp-parse" }
 media-query-parse = { version = "0.1.0", path = "crates/media-query-parse" }
-xpath-eval = { version = "0.2.2", path = "crates/xpath-eval" }
-relax-ng = { version = "0.2.2", path = "crates/relax-ng" }
-schematron-engine = { version = "0.2.0", path = "crates/schematron-engine" }
-html-conform = { version = "0.3.3", path = "crates/html-conform" }
+xpath-eval = { version = "0.2.3", path = "crates/xpath-eval" }
+relax-ng = { version = "0.2.3", path = "crates/relax-ng" }
+schematron-engine = { version = "0.2.1", path = "crates/schematron-engine" }
+html-conform = { version = "0.3.4", path = "crates/html-conform" }
 stylesheet-parse = { version = "0.1.0", path = "crates/stylesheet-parse" }
 a11y-report = { version = "0.26.1", path = "crates/a11y-report" }
 # Ohne Vorgabe-Features: Wer die deutschen Texte braucht, schaltet `de` zu.

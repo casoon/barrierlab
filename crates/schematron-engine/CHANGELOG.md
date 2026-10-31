@@ -7,6 +7,19 @@ version bump.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-31
+
+### Added
+
+- **API:** `evaluate_with_cache` evaluates against a caller-held `xpath_eval::DocumentCache`, so
+  several schemas checked against one document share it (barrierlab#69).
+
+### Changed
+
+- **Evaluation:** each expression is parsed once per document instead of once per context node,
+  `<let>` scopes are no longer copied per node, and `assert`/`report` tests are evaluated as
+  booleans. Reports are unchanged.
+
 ## [0.2.0] - 2026-08-29
 
 ### Breaking
