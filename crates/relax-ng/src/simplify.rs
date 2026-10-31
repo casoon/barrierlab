@@ -35,7 +35,6 @@ pub(crate) struct Definitions {
 struct Definition {
     pattern: Pattern,
     reach: Reach,
-    structurally_nullable: bool,
 }
 
 /// The `attribute` and `element` patterns reachable from a pattern without
@@ -84,22 +83,15 @@ impl NameSet {
 impl Definitions {
     pub(crate) fn new(patterns: BTreeMap<String, Pattern>) -> Self {
         let mut memo = BTreeMap::new();
-        let mut nullable_memo = BTreeMap::new();
         for name in patterns.keys() {
             reach_of_ref(name, &patterns, &mut memo);
-            nullable_of_ref(name, &patterns, &mut nullable_memo);
         }
         let mut entries = Vec::with_capacity(patterns.len());
         let mut index = HashMap::with_capacity(patterns.len());
         for (name, pattern) in patterns {
             let reach = memo.remove(&name).unwrap_or_default();
-            let structurally_nullable = nullable_memo.get(&name).copied().unwrap_or(false);
             index.insert(name, entries.len());
-            entries.push(Definition {
-                pattern,
-                reach,
-                structurally_nullable,
-            });
+            entries.push(Definition { pattern, reach });
         }
         Self { entries, index }
     }
@@ -122,78 +114,27 @@ impl Definitions {
         self.entries.len()
     }
 
-    /// Whether the definition `name` can lead to an `attribute` whose name
-    /// class matches `local`. `false` means its attribute derivative for
-    /// that name is `notAllowed`.
-    pub(crate) fn may_reach_attribute(&self, name: &str, local: &str) -> bool {
-        self.entry(name)
-            .is_some_and(|entry| entry.reach.attributes.may_contain(local))
+    /// The position of the definition `name`, stable for the lifetime of
+    /// these definitions.
+    pub(crate) fn position(&self, name: &str) -> Option<usize> {
+        self.index.get(name).copied()
     }
 
-    /// Like [`Self::may_reach_attribute`], for a child `element`.
-    pub(crate) fn may_reach_element(&self, name: &str, local: &str) -> bool {
-        self.entry(name)
-            .is_some_and(|entry| entry.reach.elements.may_contain(local))
+    pub(crate) fn pattern_at(&self, position: usize) -> &Pattern {
+        &self.entries[position].pattern
     }
 
-    /// Whether the definition `name` is satisfied by zero events, in the
-    /// validator's strict structural sense — computed once here, because
-    /// the validator asks for every position of every group it derives.
-    pub(crate) fn structurally_nullable(&self, name: &str) -> bool {
-        self.entry(name)
-            .is_some_and(|entry| entry.structurally_nullable)
+    /// Whether the definition at `position` can lead to an `attribute`
+    /// whose name class matches `local`. `false` means its attribute
+    /// derivative for that name is `notAllowed`.
+    pub(crate) fn may_reach_attribute_at(&self, position: usize, local: &str) -> bool {
+        self.entries[position].reach.attributes.may_contain(local)
     }
-}
 
-/// Structural nullability (see the validator's `structurally_nullable`)
-/// with each `ref` answered by `ref_nullable`.
-pub(crate) fn structurally_nullable_with(
-    pattern: &Pattern,
-    ref_nullable: &mut dyn FnMut(&str) -> bool,
-) -> bool {
-    match pattern {
-        Pattern::Attribute { .. } | Pattern::Empty | Pattern::Text => true,
-        Pattern::NotAllowed
-        | Pattern::Element { .. }
-        | Pattern::Data { .. }
-        | Pattern::Value { .. } => false,
-        Pattern::List(values) | Pattern::OneOrMore(values) => {
-            structurally_nullable_with(&values[0], ref_nullable)
-        }
-        Pattern::Choice(values) => values
-            .iter()
-            .any(|value| structurally_nullable_with(value, ref_nullable)),
-        Pattern::Group(values) | Pattern::Interleave(values) => values
-            .iter()
-            .all(|value| structurally_nullable_with(value, ref_nullable)),
-        Pattern::Ref(name) => ref_nullable(name),
-        Pattern::Optional(_)
-        | Pattern::ZeroOrMore(_)
-        | Pattern::Mixed(_)
-        | Pattern::ExternalRef { .. }
-        | Pattern::ParentRef(_)
-        | Pattern::Grammar(_) => {
-            unreachable!("resolved into other patterns by simplify_pattern")
-        }
+    /// Like [`Self::may_reach_attribute_at`], for a child `element`.
+    pub(crate) fn may_reach_element_at(&self, position: usize, local: &str) -> bool {
+        self.entries[position].reach.elements.may_contain(local)
     }
-}
-
-/// Like [`reach_of_ref`], for structural nullability; a `ref` chain back
-/// to `name` counts as not nullable, for the same reason it is cut there.
-fn nullable_of_ref(
-    name: &str,
-    patterns: &BTreeMap<String, Pattern>,
-    memo: &mut BTreeMap<String, bool>,
-) -> bool {
-    if let Some(&known) = memo.get(name) {
-        return known;
-    }
-    memo.insert(name.to_owned(), false);
-    let nullable = patterns.get(name).is_some_and(|target| {
-        structurally_nullable_with(target, &mut |inner| nullable_of_ref(inner, patterns, memo))
-    });
-    memo.insert(name.to_owned(), nullable);
-    nullable
 }
 
 fn reach_of_ref(

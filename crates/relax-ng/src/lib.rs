@@ -3,6 +3,7 @@
 #![doc = "A pure-Rust implementation of RELAX NG."]
 
 mod datatypes;
+mod derive;
 mod grammar;
 mod resolver;
 mod schema;

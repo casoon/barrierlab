@@ -12,11 +12,11 @@ in the git history only.
 - **Validator:** attribute and child-element events skip every `ref` whose definition cannot
   lead to a matching name, instead of walking it each time. On real HTML pages validation does
   about half the work (astro-post-audit#109); results and their order are unchanged.
-- **Validator:** derivative steps share sub-patterns instead of copying them, and whether a
-  definition matches zero events is computed once per schema. Real HTML pages validate with
-  50–70 % less work on top of the change above (barrierlab#65); results are unchanged.
-- **Validator:** `ref` targets and reachable names are found by hash instead of by ordered string
-  comparison, another 20–30 % less work on real HTML pages (barrierlab#65).
+- **Validator:** patterns are interned during validation, so equal patterns are shared and
+  compared by number; nullability and element and attribute derivatives are computed once per
+  pattern, and `ref` is resolved by position instead of by name. On top of the change above,
+  schema validation of real HTML pages runs 20–60 times faster (barrierlab#65); results are
+  unchanged.
 
 ## [0.2.2] - 2026-10-27
 
