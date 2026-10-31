@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 
@@ -21,9 +21,14 @@ pub struct CompiledSchema {
 /// The simplified `define`s by name, plus which attribute and element
 /// names each can lead to — so the validator can rule out a `ref` for an
 /// event without walking it again for every attribute and child.
+///
+/// `entries` keeps name order for iteration; `index` finds a name with one
+/// hash instead of a string comparison per tree level, since the validator
+/// looks a `ref` up for nearly every derivative step (barrierlab#65).
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Definitions {
-    entries: BTreeMap<String, Definition>,
+    entries: Vec<Definition>,
+    index: HashMap<String, usize>,
 }
 
 #[derive(Clone, Debug)]
@@ -48,7 +53,7 @@ struct Reach {
 #[derive(Clone, Debug, Default)]
 struct NameSet {
     any: bool,
-    locals: BTreeSet<String>,
+    locals: HashSet<String>,
 }
 
 impl NameSet {
@@ -84,30 +89,33 @@ impl Definitions {
             reach_of_ref(name, &patterns, &mut memo);
             nullable_of_ref(name, &patterns, &mut nullable_memo);
         }
-        let entries = patterns
-            .into_iter()
-            .map(|(name, pattern)| {
-                let reach = memo.remove(&name).unwrap_or_default();
-                let structurally_nullable = nullable_memo.get(&name).copied().unwrap_or(false);
-                (
-                    name,
-                    Definition {
-                        pattern,
-                        reach,
-                        structurally_nullable,
-                    },
-                )
-            })
-            .collect();
-        Self { entries }
+        let mut entries = Vec::with_capacity(patterns.len());
+        let mut index = HashMap::with_capacity(patterns.len());
+        for (name, pattern) in patterns {
+            let reach = memo.remove(&name).unwrap_or_default();
+            let structurally_nullable = nullable_memo.get(&name).copied().unwrap_or(false);
+            index.insert(name, entries.len());
+            entries.push(Definition {
+                pattern,
+                reach,
+                structurally_nullable,
+            });
+        }
+        Self { entries, index }
+    }
+
+    fn entry(&self, name: &str) -> Option<&Definition> {
+        self.index
+            .get(name)
+            .map(|&position| &self.entries[position])
     }
 
     pub(crate) fn get(&self, name: &str) -> Option<&Pattern> {
-        self.entries.get(name).map(|entry| &entry.pattern)
+        self.entry(name).map(|entry| &entry.pattern)
     }
 
     pub(crate) fn values(&self) -> impl Iterator<Item = &Pattern> {
-        self.entries.values().map(|entry| &entry.pattern)
+        self.entries.iter().map(|entry| &entry.pattern)
     }
 
     pub(crate) fn len(&self) -> usize {
@@ -118,15 +126,13 @@ impl Definitions {
     /// class matches `local`. `false` means its attribute derivative for
     /// that name is `notAllowed`.
     pub(crate) fn may_reach_attribute(&self, name: &str, local: &str) -> bool {
-        self.entries
-            .get(name)
+        self.entry(name)
             .is_some_and(|entry| entry.reach.attributes.may_contain(local))
     }
 
     /// Like [`Self::may_reach_attribute`], for a child `element`.
     pub(crate) fn may_reach_element(&self, name: &str, local: &str) -> bool {
-        self.entries
-            .get(name)
+        self.entry(name)
             .is_some_and(|entry| entry.reach.elements.may_contain(local))
     }
 
@@ -134,8 +140,7 @@ impl Definitions {
     /// validator's strict structural sense — computed once here, because
     /// the validator asks for every position of every group it derives.
     pub(crate) fn structurally_nullable(&self, name: &str) -> bool {
-        self.entries
-            .get(name)
+        self.entry(name)
             .is_some_and(|entry| entry.structurally_nullable)
     }
 }

@@ -15,6 +15,8 @@ in the git history only.
 - **Validator:** derivative steps share sub-patterns instead of copying them, and whether a
   definition matches zero events is computed once per schema. Real HTML pages validate with
   50–70 % less work on top of the change above (barrierlab#65); results are unchanged.
+- **Validator:** `ref` targets and reachable names are found by hash instead of by ordered string
+  comparison, another 20–30 % less work on real HTML pages (barrierlab#65).
 
 ## [0.2.2] - 2026-10-27
 
