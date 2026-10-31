@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::sync::Arc;
 
 use crate::SchemaResolver;
 use crate::grammar::{Combine, Grammar, GrammarItem, NameClass, Pattern, Root, SchemaDocument};
@@ -29,6 +30,7 @@ pub(crate) struct Definitions {
 struct Definition {
     pattern: Pattern,
     reach: Reach,
+    structurally_nullable: bool,
 }
 
 /// The `attribute` and `element` patterns reachable from a pattern without
@@ -77,14 +79,24 @@ impl NameSet {
 impl Definitions {
     pub(crate) fn new(patterns: BTreeMap<String, Pattern>) -> Self {
         let mut memo = BTreeMap::new();
+        let mut nullable_memo = BTreeMap::new();
         for name in patterns.keys() {
             reach_of_ref(name, &patterns, &mut memo);
+            nullable_of_ref(name, &patterns, &mut nullable_memo);
         }
         let entries = patterns
             .into_iter()
             .map(|(name, pattern)| {
                 let reach = memo.remove(&name).unwrap_or_default();
-                (name, Definition { pattern, reach })
+                let structurally_nullable = nullable_memo.get(&name).copied().unwrap_or(false);
+                (
+                    name,
+                    Definition {
+                        pattern,
+                        reach,
+                        structurally_nullable,
+                    },
+                )
             })
             .collect();
         Self { entries }
@@ -117,6 +129,66 @@ impl Definitions {
             .get(name)
             .is_some_and(|entry| entry.reach.elements.may_contain(local))
     }
+
+    /// Whether the definition `name` is satisfied by zero events, in the
+    /// validator's strict structural sense — computed once here, because
+    /// the validator asks for every position of every group it derives.
+    pub(crate) fn structurally_nullable(&self, name: &str) -> bool {
+        self.entries
+            .get(name)
+            .is_some_and(|entry| entry.structurally_nullable)
+    }
+}
+
+/// Structural nullability (see the validator's `structurally_nullable`)
+/// with each `ref` answered by `ref_nullable`.
+pub(crate) fn structurally_nullable_with(
+    pattern: &Pattern,
+    ref_nullable: &mut dyn FnMut(&str) -> bool,
+) -> bool {
+    match pattern {
+        Pattern::Attribute { .. } | Pattern::Empty | Pattern::Text => true,
+        Pattern::NotAllowed
+        | Pattern::Element { .. }
+        | Pattern::Data { .. }
+        | Pattern::Value { .. } => false,
+        Pattern::List(values) | Pattern::OneOrMore(values) => {
+            structurally_nullable_with(&values[0], ref_nullable)
+        }
+        Pattern::Choice(values) => values
+            .iter()
+            .any(|value| structurally_nullable_with(value, ref_nullable)),
+        Pattern::Group(values) | Pattern::Interleave(values) => values
+            .iter()
+            .all(|value| structurally_nullable_with(value, ref_nullable)),
+        Pattern::Ref(name) => ref_nullable(name),
+        Pattern::Optional(_)
+        | Pattern::ZeroOrMore(_)
+        | Pattern::Mixed(_)
+        | Pattern::ExternalRef { .. }
+        | Pattern::ParentRef(_)
+        | Pattern::Grammar(_) => {
+            unreachable!("resolved into other patterns by simplify_pattern")
+        }
+    }
+}
+
+/// Like [`reach_of_ref`], for structural nullability; a `ref` chain back
+/// to `name` counts as not nullable, for the same reason it is cut there.
+fn nullable_of_ref(
+    name: &str,
+    patterns: &BTreeMap<String, Pattern>,
+    memo: &mut BTreeMap<String, bool>,
+) -> bool {
+    if let Some(&known) = memo.get(name) {
+        return known;
+    }
+    memo.insert(name.to_owned(), false);
+    let nullable = patterns.get(name).is_some_and(|target| {
+        structurally_nullable_with(target, &mut |inner| nullable_of_ref(inner, patterns, memo))
+    });
+    memo.insert(name.to_owned(), nullable);
+    nullable
 }
 
 fn reach_of_ref(
@@ -155,7 +227,7 @@ fn collect_reach(
         | Pattern::Interleave(values)
         | Pattern::Choice(values)
         | Pattern::OneOrMore(values) => {
-            for value in values {
+            for value in values.iter() {
                 collect_reach(value, patterns, memo, reach);
             }
         }
@@ -320,7 +392,7 @@ fn collect_reachable_defines<'a>(
             }
         }
         Pattern::Element { body, .. } | Pattern::Attribute { body, .. } => {
-            for child in body {
+            for child in body.iter() {
                 collect_reachable_defines(child, definitions, reachable);
             }
         }
@@ -334,12 +406,12 @@ fn collect_reachable_defines<'a>(
         | Pattern::Optional(values)
         | Pattern::ZeroOrMore(values)
         | Pattern::Mixed(values) => {
-            for child in values {
+            for child in values.iter() {
                 collect_reachable_defines(child, definitions, reachable);
             }
         }
         Pattern::Data { except, .. } => {
-            for child in except {
+            for child in except.iter() {
                 collect_reachable_defines(child, definitions, reachable);
             }
         }
@@ -394,7 +466,7 @@ fn collect_ref_edges<'a>(pattern: &'a Pattern, edges: &mut Vec<&'a str>) {
         | Pattern::Optional(values)
         | Pattern::ZeroOrMore(values)
         | Pattern::Mixed(values) => {
-            for child in values {
+            for child in values.iter() {
                 collect_ref_edges(child, edges);
             }
         }
@@ -647,8 +719,8 @@ fn merge(
         return Ok(Some(patterns.pop().expect("one pattern")));
     }
     match combine {
-        Some(Combine::Choice) => Ok(Some(Pattern::Choice(patterns))),
-        Some(Combine::Interleave) => Ok(Some(Pattern::Interleave(patterns))),
+        Some(Combine::Choice) => Ok(Some(Pattern::Choice(patterns.into()))),
+        Some(Combine::Interleave) => Ok(Some(Pattern::Interleave(patterns.into()))),
         None => Err(SchemaError::new(format!(
             "duplicate `{name}` without combine"
         ))),
@@ -723,7 +795,7 @@ fn simplify_pattern(
             check_name_class_constraints(name)?;
             Pattern::Element {
                 name: name.clone(),
-                body: vec![group(children(body)?)],
+                body: vec![group(children(body)?)].into(),
                 context: context.clone(),
             }
         }
@@ -890,7 +962,7 @@ fn rewrite_refs(pattern: &Pattern, rename: &BTreeMap<String, String>) -> Pattern
             context,
         } => Pattern::Element {
             name: name.clone(),
-            body: rewrite_all(body),
+            body: rewrite_all(body).into(),
             context: context.clone(),
         },
         Pattern::Attribute {
@@ -899,17 +971,17 @@ fn rewrite_refs(pattern: &Pattern, rename: &BTreeMap<String, String>) -> Pattern
             context,
         } => Pattern::Attribute {
             name: name.clone(),
-            body: rewrite_all(body),
+            body: rewrite_all(body).into(),
             context: context.clone(),
         },
-        Pattern::Group(values) => Pattern::Group(rewrite_all(values)),
-        Pattern::Interleave(values) => Pattern::Interleave(rewrite_all(values)),
-        Pattern::Choice(values) => Pattern::Choice(rewrite_all(values)),
-        Pattern::Optional(values) => Pattern::Optional(rewrite_all(values)),
-        Pattern::ZeroOrMore(values) => Pattern::ZeroOrMore(rewrite_all(values)),
-        Pattern::OneOrMore(values) => Pattern::OneOrMore(rewrite_all(values)),
-        Pattern::List(values) => Pattern::List(rewrite_all(values)),
-        Pattern::Mixed(values) => Pattern::Mixed(rewrite_all(values)),
+        Pattern::Group(values) => Pattern::Group(rewrite_all(values).into()),
+        Pattern::Interleave(values) => Pattern::Interleave(rewrite_all(values).into()),
+        Pattern::Choice(values) => Pattern::Choice(rewrite_all(values).into()),
+        Pattern::Optional(values) => Pattern::Optional(rewrite_all(values).into()),
+        Pattern::ZeroOrMore(values) => Pattern::ZeroOrMore(rewrite_all(values).into()),
+        Pattern::OneOrMore(values) => Pattern::OneOrMore(rewrite_all(values).into()),
+        Pattern::List(values) => Pattern::List(rewrite_all(values).into()),
+        Pattern::Mixed(values) => Pattern::Mixed(rewrite_all(values).into()),
         Pattern::Data {
             datatype,
             datatype_library,
@@ -920,7 +992,7 @@ fn rewrite_refs(pattern: &Pattern, rename: &BTreeMap<String, String>) -> Pattern
             datatype: datatype.clone(),
             datatype_library: datatype_library.clone(),
             params: params.clone(),
-            except: rewrite_all(except),
+            except: rewrite_all(except).into(),
             context: context.clone(),
         },
         Pattern::Grammar(_) => unreachable!("nested grammars are flattened before rewriting refs"),
@@ -951,7 +1023,7 @@ fn drop_identity_empty(mut values: Vec<Pattern>) -> Vec<Pattern> {
 /// which `Pattern` variant they wrap multiple leftover operands in — also
 /// used by the validator (Phase 05) to keep derivative-produced patterns
 /// canonical/small the same way simplification does.
-fn collapse_sequence(values: Vec<Pattern>, wrap: fn(Vec<Pattern>) -> Pattern) -> Pattern {
+fn collapse_sequence(values: Vec<Pattern>, wrap: fn(Arc<[Pattern]>) -> Pattern) -> Pattern {
     if values
         .iter()
         .any(|value| matches!(value, Pattern::NotAllowed))
@@ -964,7 +1036,7 @@ fn collapse_sequence(values: Vec<Pattern>, wrap: fn(Vec<Pattern>) -> Pattern) ->
     } else if values.len() == 1 {
         values.pop().expect("one")
     } else {
-        wrap(values)
+        wrap(values.into())
     }
 }
 pub(crate) fn group(values: Vec<Pattern>) -> Pattern {
@@ -977,7 +1049,7 @@ pub(crate) fn choice(mut values: Vec<Pattern>) -> Pattern {
     } else if values.len() == 1 {
         values.pop().expect("one")
     } else {
-        Pattern::Choice(values)
+        Pattern::Choice(values.into())
     }
 }
 pub(crate) fn interleave(values: Vec<Pattern>) -> Pattern {
@@ -985,13 +1057,13 @@ pub(crate) fn interleave(values: Vec<Pattern>) -> Pattern {
 }
 /// `notAllowed` absorbs any wrapper built around it (`X(notAllowed) ≡
 /// notAllowed` for every single-body `X`) — otherwise wraps `body` in a
-/// one-element `Vec` via `wrap`. Shared by [`one_or_more`] and
+/// one-element slice via `wrap`. Shared by [`one_or_more`] and
 /// `simplify_pattern`'s `List`/`Attribute` cases.
-fn wrap_unless_not_allowed(body: Pattern, wrap: impl FnOnce(Vec<Pattern>) -> Pattern) -> Pattern {
+fn wrap_unless_not_allowed(body: Pattern, wrap: impl FnOnce(Arc<[Pattern]>) -> Pattern) -> Pattern {
     if matches!(body, Pattern::NotAllowed) {
         Pattern::NotAllowed
     } else {
-        wrap(vec![body])
+        wrap(Arc::from([body]))
     }
 }
 
@@ -1599,7 +1671,7 @@ fn collect_occurrences<'a>(
         | Pattern::ZeroOrMore(values)
         | Pattern::OneOrMore(values)
         | Pattern::Mixed(values) => {
-            for child in values {
+            for child in values.iter() {
                 collect_occurrences(child, definitions, visiting, out);
             }
         }

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 /// A parsed (but not yet composed/simplified) RELAX NG schema, as returned
 /// by [`crate::parse`]. Pass it to [`crate::simplify`] (or use
@@ -47,26 +48,30 @@ pub(crate) enum Combine {
     Interleave,
 }
 
+/// Children, name classes and contexts sit behind `Arc`, so cloning a
+/// pattern — which every derivative step does for the positions it keeps —
+/// copies pointers, not the subtree (barrierlab#65). `Arc` rather than
+/// `Rc` because a compiled schema is shared between threads.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Pattern {
     Element {
-        name: NameClass,
-        body: Vec<Pattern>,
-        context: Context,
+        name: Arc<NameClass>,
+        body: Arc<[Pattern]>,
+        context: Arc<Context>,
     },
     Attribute {
-        name: NameClass,
-        body: Vec<Pattern>,
-        context: Context,
+        name: Arc<NameClass>,
+        body: Arc<[Pattern]>,
+        context: Arc<Context>,
     },
-    Group(Vec<Pattern>),
-    Interleave(Vec<Pattern>),
-    Choice(Vec<Pattern>),
-    Optional(Vec<Pattern>),
-    ZeroOrMore(Vec<Pattern>),
-    OneOrMore(Vec<Pattern>),
-    List(Vec<Pattern>),
-    Mixed(Vec<Pattern>),
+    Group(Arc<[Pattern]>),
+    Interleave(Arc<[Pattern]>),
+    Choice(Arc<[Pattern]>),
+    Optional(Arc<[Pattern]>),
+    ZeroOrMore(Arc<[Pattern]>),
+    OneOrMore(Arc<[Pattern]>),
+    List(Arc<[Pattern]>),
+    Mixed(Arc<[Pattern]>),
     Empty,
     NotAllowed,
     Text,
@@ -74,15 +79,15 @@ pub(crate) enum Pattern {
         datatype: String,
         datatype_library: Option<String>,
         params: Vec<Param>,
-        except: Vec<Pattern>,
-        context: Context,
+        except: Arc<[Pattern]>,
+        context: Arc<Context>,
     },
     Value {
         value: String,
         datatype: Option<String>,
         datatype_library: Option<String>,
         namespace: Option<String>,
-        context: Context,
+        context: Arc<Context>,
     },
     Ref(String),
     ParentRef(String),

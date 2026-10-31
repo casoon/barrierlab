@@ -40,7 +40,9 @@ use std::fmt;
 use crate::CompiledSchema;
 use crate::datatypes::{DatatypeContext, DatatypeError, DatatypeRegistry};
 use crate::grammar::{Context, Param, Pattern};
-use crate::simplify::{Definitions, choice, group, interleave, name_class_matches};
+use crate::simplify::{
+    Definitions, choice, group, interleave, name_class_matches, structurally_nullable_with,
+};
 
 /// An expanded (namespace-resolved) name: local name plus an optional
 /// namespace URI. `None` means "no namespace" — the caller's document
@@ -449,7 +451,7 @@ fn check_datatypes_supported(
             implementation
                 .validate_params(datatype, &param_pairs(params))
                 .map_err(|reason| DatatypeError::type_problem(library, datatype, &reason))?;
-            for child in except {
+            for child in except.iter() {
                 check_datatypes_supported(child, definitions, registry, checked_refs)?;
             }
             Ok(())
@@ -672,30 +674,8 @@ fn deriv_positions(
 /// exception: attributes are orthogonal to child/token sequencing
 /// entirely, matched separately by [`deriv_attribute`]).
 fn structurally_nullable(pattern: &Pattern, definitions: &Definitions) -> bool {
-    match pattern {
-        Pattern::Attribute { .. } | Pattern::Empty | Pattern::Text => true,
-        Pattern::NotAllowed
-        | Pattern::Element { .. }
-        | Pattern::Data { .. }
-        | Pattern::Value { .. } => false,
-        Pattern::List(values) => structurally_nullable(&values[0], definitions),
-        Pattern::Choice(values) => values
-            .iter()
-            .any(|value| structurally_nullable(value, definitions)),
-        Pattern::Group(values) | Pattern::Interleave(values) => values
-            .iter()
-            .all(|value| structurally_nullable(value, definitions)),
-        Pattern::OneOrMore(values) => structurally_nullable(&values[0], definitions),
-        Pattern::Ref(name) => structurally_nullable(resolve_ref(name, definitions), definitions),
-        Pattern::Optional(_)
-        | Pattern::ZeroOrMore(_)
-        | Pattern::Mixed(_)
-        | Pattern::ExternalRef { .. }
-        | Pattern::ParentRef(_)
-        | Pattern::Grammar(_) => {
-            unreachable!("resolved into other patterns by simplify_pattern")
-        }
-    }
+    // A `ref` reads the answer `Definitions` computed once per definition.
+    structurally_nullable_with(pattern, &mut |name| definitions.structurally_nullable(name))
 }
 
 /// Whether some *reachable* position in `pattern` is a text-desiring leaf
@@ -725,7 +705,7 @@ fn wants_text(pattern: &Pattern, definitions: &Definitions) -> bool {
         Pattern::Group(values) => {
             let mut reachable = true;
             let mut found = false;
-            for value in values {
+            for value in values.iter() {
                 if reachable {
                     found = found || wants_text(value, definitions);
                 }
@@ -1153,13 +1133,13 @@ fn collect_element_contents(
             out.push(body[0].clone());
         }
         Pattern::Choice(values) | Pattern::Interleave(values) => {
-            for value in values {
+            for value in values.iter() {
                 collect_element_contents(value, name, definitions, out);
             }
         }
         Pattern::Group(values) => {
             let mut reachable = true;
-            for value in values {
+            for value in values.iter() {
                 if !reachable {
                     break;
                 }
@@ -1332,12 +1312,12 @@ mod tests {
         let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
-            &Pattern::Group(vec![Pattern::Empty, Pattern::Text]),
+            &Pattern::Group(vec![Pattern::Empty, Pattern::Text].into()),
             &definitions,
             &registry
         ));
         assert!(!nullable(
-            &Pattern::Group(vec![Pattern::Empty, Pattern::NotAllowed]),
+            &Pattern::Group(vec![Pattern::Empty, Pattern::NotAllowed].into()),
             &definitions,
             &registry
         ));
@@ -1348,12 +1328,12 @@ mod tests {
         let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
-            &Pattern::Choice(vec![Pattern::NotAllowed, Pattern::Empty]),
+            &Pattern::Choice(vec![Pattern::NotAllowed, Pattern::Empty].into()),
             &definitions,
             &registry
         ));
         assert!(!nullable(
-            &Pattern::Choice(vec![Pattern::NotAllowed, Pattern::NotAllowed]),
+            &Pattern::Choice(vec![Pattern::NotAllowed, Pattern::NotAllowed].into()),
             &definitions,
             &registry
         ));
@@ -1364,12 +1344,12 @@ mod tests {
         let definitions = Definitions::default();
         let registry = registry();
         assert!(nullable(
-            &Pattern::OneOrMore(vec![Pattern::Empty]),
+            &Pattern::OneOrMore(vec![Pattern::Empty].into()),
             &definitions,
             &registry
         ));
         assert!(!nullable(
-            &Pattern::OneOrMore(vec![Pattern::NotAllowed]),
+            &Pattern::OneOrMore(vec![Pattern::NotAllowed].into()),
             &definitions,
             &registry
         ));
@@ -1381,12 +1361,12 @@ mod tests {
         let registry = registry();
         // `list { empty }` accepts having no text at all.
         assert!(nullable(
-            &Pattern::List(vec![Pattern::Empty]),
+            &Pattern::List(vec![Pattern::Empty].into()),
             &definitions,
             &registry
         ));
         assert!(!nullable(
-            &Pattern::List(vec![Pattern::NotAllowed]),
+            &Pattern::List(vec![Pattern::NotAllowed].into()),
             &definitions,
             &registry
         ));
