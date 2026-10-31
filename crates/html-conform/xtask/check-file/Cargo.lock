@@ -60,7 +60,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.3.0"
+version = "0.3.4"
 dependencies = [
  "csp-parse",
  "encoding_rs",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "html5-parser"
-version = "0.4.0"
+version = "0.4.1"
 
 [[package]]
 name = "icu_collections"
@@ -268,7 +268,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "relax-ng"
-version = "0.2.0"
+version = "0.2.3"
 dependencies = [
  "regex",
  "roxmltree",
@@ -286,7 +286,7 @@ dependencies = [
 
 [[package]]
 name = "schematron-engine"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "roxmltree",
  "xpath-eval",
@@ -422,7 +422,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xpath-eval"
-version = "0.2.2"
+version = "0.2.3"
 
 [[package]]
 name = "yoke"

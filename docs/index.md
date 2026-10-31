@@ -1,26 +1,30 @@
 ---
-title: "Überblick"
-description: "Welches Paket wofür da ist und wie diese Dokumentation aufgebaut ist."
+title: "Overview"
+description: "Which package does what, and how this documentation is organised."
 order: 0
 ---
 
-Ein Bereich für alle Pakete dieses Repositorys.
+One home for all packages in this repository.
 
-| Bereich | Inhalt |
+| Section | Contents |
 |---|---|
-| [Pakete](packages/index.mdx) | alle 15 Crates mit ihren Abhängigkeiten, eine Seite je Paket |
-| [Zugänglichkeit im Detail](a11y/index.md) | die a11y-Pakete: Installation, Schnellstart, Konzepte (Befunde, Tiers, accname), Referenz |
-| [Konformanz im Detail](html-conform/index.md) | html-conform: Einstieg, Guides, Referenz |
+| [Packages](packages/index.mdx) | all 15 crates with their dependencies, one page per package |
+| [Accessibility in detail](a11y/index.md) | the a11y packages: installation, quickstart, concepts (findings, tiers, accname), reference |
+| [Conformance in detail](html-conform/index.md) | html-conform: getting started, guides, reference |
 
-Für die Arbeit am Repository selbst liegen im Wurzelverzeichnis von `docs/` die
-lebenden Projektdokumente, die nicht auf der Doku-Seite erscheinen:
-[Architektur](https://github.com/casoon/barrierlab/blob/main/docs/architecture.md),
-[Konventionen](https://github.com/casoon/barrierlab/blob/main/docs/conventions.md),
-[Konsumenten](https://github.com/casoon/barrierlab/blob/main/docs/consumers.md),
-[Releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md) und
-[Stand](https://github.com/casoon/barrierlab/blob/main/docs/project-state.md).
+The working documents for the repository itself sit in the root of `docs/` and do not
+appear on this site:
+[architecture](https://github.com/casoon/barrierlab/blob/main/docs/architecture.md),
+[conventions](https://github.com/casoon/barrierlab/blob/main/docs/conventions.md),
+[consumers](https://github.com/casoon/barrierlab/blob/main/docs/consumers.md),
+[releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md) and
+[project state](https://github.com/casoon/barrierlab/blob/main/docs/project-state.md).
+These are written in German.
 
-Diagramme stehen als Mermaid-Block im Text. GitHub rendert sie direkt; die
-Pages-Seite erzeugt daraus zur Bauzeit ein Inline-SVG. Die Quelle ist immer der
-Block, nie das Bild. Ausnahme sind die Diagramme der Startseite und der
-Paketübersicht: chartlet-Spezifikationen in `site/diagrams/`.
+Diagrams in the text are Mermaid blocks. GitHub renders them directly; this site turns them
+into inline SVG at build time. The source is always the block, never the image. The exception
+is the diagrams on the start page and the package overview: chartlet specifications in
+`site/diagrams/`.
+
+Most pages of the accessibility section are still in German; the html-conform section is in
+English.
