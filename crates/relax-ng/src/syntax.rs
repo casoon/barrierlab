@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::Arc;
 
 use roxmltree::Node;
 
@@ -451,27 +452,27 @@ fn xml_pattern(node: Node<'_, '_>, context: Context) -> Result<Pattern, ParseErr
         "element" => {
             let (name, body) = xml_named_pattern(node, &context, None)?;
             Ok(Pattern::Element {
-                name,
-                body,
-                context,
+                name: name.into(),
+                body: body.into(),
+                context: context.into(),
             })
         }
         "attribute" => {
             let (name, body) = xml_named_pattern(node, &context, Some(Pattern::Text))?;
             Ok(Pattern::Attribute {
-                name,
-                body,
-                context,
+                name: name.into(),
+                body: body.into(),
+                context: context.into(),
             })
         }
-        "group" => Ok(Pattern::Group(container()?)),
-        "interleave" => Ok(Pattern::Interleave(container()?)),
-        "choice" => Ok(Pattern::Choice(container()?)),
-        "optional" => Ok(Pattern::Optional(container()?)),
-        "zeroOrMore" => Ok(Pattern::ZeroOrMore(container()?)),
-        "oneOrMore" => Ok(Pattern::OneOrMore(container()?)),
-        "list" => Ok(Pattern::List(container()?)),
-        "mixed" => Ok(Pattern::Mixed(container()?)),
+        "group" => Ok(Pattern::Group(container()?.into())),
+        "interleave" => Ok(Pattern::Interleave(container()?.into())),
+        "choice" => Ok(Pattern::Choice(container()?.into())),
+        "optional" => Ok(Pattern::Optional(container()?.into())),
+        "zeroOrMore" => Ok(Pattern::ZeroOrMore(container()?.into())),
+        "oneOrMore" => Ok(Pattern::OneOrMore(container()?.into())),
+        "list" => Ok(Pattern::List(container()?.into())),
+        "mixed" => Ok(Pattern::Mixed(container()?.into())),
         "empty" => {
             require_no_children(node, &[])?;
             Ok(Pattern::Empty)
@@ -529,8 +530,8 @@ fn xml_pattern(node: Node<'_, '_>, context: Context) -> Result<Pattern, ParseErr
                 // node's own attribute (if any) against its ancestors'.
                 datatype_library: context.datatype_library.clone(),
                 params,
-                except,
-                context,
+                except: except.into(),
+                context: context.into(),
             })
         }
         "value" => {
@@ -552,7 +553,7 @@ fn xml_pattern(node: Node<'_, '_>, context: Context) -> Result<Pattern, ParseErr
                 datatype,
                 datatype_library,
                 namespace,
-                context,
+                context: context.into(),
             })
         }
         name => Err(ParseError::new(format!(
@@ -756,7 +757,7 @@ fn xml_grammar(node: Node<'_, '_>, context: Context) -> Result<Grammar, ParseErr
 /// merge), this is a single element's own content.
 fn implicit_group(body: Vec<Pattern>) -> Vec<Pattern> {
     if body.len() > 1 {
-        vec![Pattern::Group(body)]
+        vec![Pattern::Group(body.into())]
     } else {
         body
     }
@@ -1022,13 +1023,17 @@ impl CompactParser {
         })
     }
     fn choice(&mut self) -> Result<Pattern, ParseError> {
-        self.left_assoc('|', Self::interleave, Pattern::Choice)
+        self.left_assoc('|', Self::interleave, |values| {
+            Pattern::Choice(values.into())
+        })
     }
     fn interleave(&mut self) -> Result<Pattern, ParseError> {
-        self.left_assoc('&', Self::group, Pattern::Interleave)
+        self.left_assoc('&', Self::group, |values| {
+            Pattern::Interleave(values.into())
+        })
     }
     fn group(&mut self) -> Result<Pattern, ParseError> {
-        self.left_assoc(',', Self::postfix, Pattern::Group)
+        self.left_assoc(',', Self::postfix, |values| Pattern::Group(values.into()))
     }
     fn postfix(&mut self) -> Result<Pattern, ParseError> {
         let mut pattern = self.primary()?;
@@ -1036,15 +1041,15 @@ impl CompactParser {
             pattern = match self.peek() {
                 Token::Symbol('?') => {
                     self.position += 1;
-                    Pattern::Optional(vec![pattern])
+                    Pattern::Optional(vec![pattern].into())
                 }
                 Token::Symbol('*') => {
                     self.position += 1;
-                    Pattern::ZeroOrMore(vec![pattern])
+                    Pattern::ZeroOrMore(vec![pattern].into())
                 }
                 Token::Symbol('+') => {
                     self.position += 1;
-                    Pattern::OneOrMore(vec![pattern])
+                    Pattern::OneOrMore(vec![pattern].into())
                 }
                 _ => break,
             };
@@ -1076,15 +1081,15 @@ impl CompactParser {
             self.symbol('}')?;
             return Ok(if element {
                 Pattern::Element {
-                    name,
-                    body,
-                    context: self.context.clone(),
+                    name: name.into(),
+                    body: body.into(),
+                    context: Arc::new(self.context.clone()),
                 }
             } else {
                 Pattern::Attribute {
-                    name,
-                    body,
-                    context: self.context.clone(),
+                    name: name.into(),
+                    body: body.into(),
+                    context: Arc::new(self.context.clone()),
                 }
             });
         }
@@ -1095,9 +1100,9 @@ impl CompactParser {
             let body = vec![self.pattern()?];
             self.symbol('}')?;
             return Ok(if mixed {
-                Pattern::Mixed(body)
+                Pattern::Mixed(body.into())
             } else {
-                Pattern::List(body)
+                Pattern::List(body.into())
             });
         }
         if self.peek_word("grammar") {
@@ -1133,7 +1138,7 @@ impl CompactParser {
                 datatype: None,
                 datatype_library: None,
                 namespace: None,
-                context: self.context.clone(),
+                context: Arc::new(self.context.clone()),
             });
         }
         let name = self.identifier()?;
@@ -1145,7 +1150,7 @@ impl CompactParser {
                 datatype: Some(datatype),
                 datatype_library,
                 namespace: None,
-                context: self.context.clone(),
+                context: Arc::new(self.context.clone()),
             });
         }
         if self.peek_symbol('{') {
@@ -1172,8 +1177,8 @@ impl CompactParser {
                 datatype,
                 datatype_library,
                 params,
-                except,
-                context: self.context.clone(),
+                except: except.into(),
+                context: Arc::new(self.context.clone()),
             });
         }
         if name.contains(':') {
@@ -1192,8 +1197,8 @@ impl CompactParser {
             datatype,
             datatype_library,
             params: Vec::new(),
-            except: Vec::new(),
-            context: self.context.clone(),
+            except: Arc::from([]),
+            context: Arc::new(self.context.clone()),
         }
     }
     /// `is_attribute` is only relevant to unprefixed plain names (not
@@ -1758,7 +1763,7 @@ mod tests {
         };
         let NameClass::Name {
             lexical, namespace, ..
-        } = &name
+        } = &*name
         else {
             panic!("expected a plain name class");
         };
@@ -1772,7 +1777,7 @@ mod tests {
         };
         let NameClass::Name {
             lexical, namespace, ..
-        } = attr_name
+        } = &**attr_name
         else {
             panic!("expected a plain name class");
         };
@@ -1791,7 +1796,7 @@ mod tests {
         let Root::Pattern(Pattern::Element { name, body, .. }) = document.root else {
             panic!("expected an element pattern");
         };
-        let NameClass::Name { namespace, .. } = &name else {
+        let NameClass::Name { namespace, .. } = &*name else {
             panic!("expected a plain name class");
         };
         // §4.8/the Compact Syntax spec's equivalent: `default namespace`
@@ -1803,7 +1808,7 @@ mod tests {
         else {
             panic!("expected an attribute pattern");
         };
-        let NameClass::Name { namespace, .. } = attr_name else {
+        let NameClass::Name { namespace, .. } = &**attr_name else {
             panic!("expected a plain name class");
         };
         // ...but never to unprefixed *attribute* names, which always get
@@ -1827,7 +1832,7 @@ mod tests {
         let Root::Pattern(Pattern::Element { name, .. }) = document.root else {
             panic!("expected an element pattern");
         };
-        let NameClass::Name { namespace, .. } = &name else {
+        let NameClass::Name { namespace, .. } = &*name else {
             panic!("expected a plain name class");
         };
         assert_eq!(namespace.as_deref(), Some("urn:math"));
@@ -1869,7 +1874,7 @@ mod tests {
         let Root::Pattern(Pattern::Attribute { name, .. }) = document.root else {
             panic!("expected an attribute pattern");
         };
-        let NameClass::Any { except, .. } = &name else {
+        let NameClass::Any { except, .. } = &*name else {
             panic!("expected an Any name class");
         };
         assert_eq!(except.len(), 1);
@@ -1886,6 +1891,6 @@ mod tests {
         let Root::Pattern(Pattern::Element { body, .. }) = document.root else {
             panic!("expected element")
         };
-        assert_eq!(body, vec![Pattern::Empty]);
+        assert_eq!(body, vec![Pattern::Empty].into());
     }
 }
