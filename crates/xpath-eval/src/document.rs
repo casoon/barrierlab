@@ -77,6 +77,24 @@ pub trait Node<'a>: Copy + Eq + 'a {
     /// `children()`/`attributes()`/`namespaces()`.
     fn document_order(self, other: Self) -> Ordering;
 
+    /// Whether the node's expanded name is `namespace_uri` + `local_name`.
+    /// Same answer as comparing against [`Node::expanded_name`]; a caller
+    /// whose names are stored in the tree can override it to compare
+    /// without building an `ExpandedName` per name test (barrierlab#69).
+    fn has_expanded_name(self, namespace_uri: Option<&str>, local_name: &str) -> bool {
+        self.expanded_name().is_some_and(|name| {
+            name.local_name == local_name && name.namespace_uri.as_deref() == namespace_uri
+        })
+    }
+
+    /// Calls `f` with the node's string-value. Same answer as
+    /// [`Node::string_value`]; a caller that stores attribute values or
+    /// text in the tree can override it to lend them out instead of
+    /// copying them for every comparison (barrierlab#69).
+    fn with_string_value<R>(self, f: impl FnOnce(&str) -> R) -> R {
+        f(&self.string_value())
+    }
+
     /// Whether this attribute node is of type `ID` (§5.3, §4.1's `id()`) —
     /// i.e. whether XPath's `id()` function should be able to find this
     /// attribute's owner element by this attribute's string-value. The
@@ -219,6 +237,51 @@ pub(crate) mod fixture {
             let idx = self.push(data);
             self.nodes[parent].children.push(idx);
             idx
+        }
+    }
+
+    /// A deeper tree with repeated ids and roles, for checking that the
+    /// cached and indexed evaluation paths (`cache.rs`) select the same
+    /// nodes as plain evaluation:
+    ///
+    /// ```text
+    /// html
+    ///   body
+    ///     div id=a role=menu
+    ///       p id=b
+    ///         a href=x role=tab
+    ///       p id=a
+    ///     ul role=list
+    ///       li role=tab
+    ///         span
+    ///       li
+    ///     p id=c
+    /// ```
+    pub(crate) fn build_roles() -> TestDoc {
+        let mut b = Builder { nodes: Vec::new() };
+        let root = b.new_root();
+        let html = b.add_element(root, "html");
+        let body = b.add_element(html, "body");
+        let div = b.add_element(body, "div");
+        b.add_attribute(div, "id", "a");
+        b.add_attribute(div, "role", "menu");
+        let p1 = b.add_element(div, "p");
+        b.add_attribute(p1, "id", "b");
+        let a = b.add_element(p1, "a");
+        b.add_attribute(a, "href", "x");
+        b.add_attribute(a, "role", "tab");
+        let p2 = b.add_element(div, "p");
+        b.add_attribute(p2, "id", "a");
+        let ul = b.add_element(body, "ul");
+        b.add_attribute(ul, "role", "list");
+        let li1 = b.add_element(ul, "li");
+        b.add_attribute(li1, "role", "tab");
+        b.add_element(li1, "span");
+        b.add_element(ul, "li");
+        let p3 = b.add_element(body, "p");
+        b.add_attribute(p3, "id", "c");
+        TestDoc {
+            arena: Arena { nodes: b.nodes },
         }
     }
 

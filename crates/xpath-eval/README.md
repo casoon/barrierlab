@@ -12,7 +12,7 @@ the data model view over the caller's tree, and evaluation).
 
 Implemented: the lexer/parser, the full location-path/predicate evaluation
 core (§2), and the complete XPath 1.0 Core Function Library (§4, all 27
-functions, including `id()`). 147 tests pass, `clippy` and `fmt` are clean.
+functions, including `id()`). 152 tests pass, `clippy` and `fmt` are clean.
 
 ## Example
 

@@ -8,10 +8,10 @@
 //! `preceding`, `preceding-sibling`) return their results in *reverse*
 //! document order (nearest node first), per §2.4 proximity position.
 //!
-//! Implementation note: several axes (`following`, `preceding`) are built
-//! on top of a full document-order listing of the tree, which is O(n) per
-//! call — acceptable for this phase (correctness of a test-only reference
-//! implementation), not a performance-tuned production axis evaluator.
+//! `descendant` and `descendant-or-self` are lazy preorder walks;
+//! `following` and `preceding` only visit the siblings along the ancestor
+//! chain and the subtrees they return, never the whole document
+//! (barrierlab#69).
 
 use crate::document::{Node, NodeKind};
 
@@ -21,31 +21,51 @@ fn is_attribute_or_namespace(kind: NodeKind) -> bool {
 
 /// The nearest-first chain of ancestors (`parent()`, `parent().parent()`,
 /// ...), i.e. already in reverse document order.
-fn ancestor_vec<'a, N: Node<'a>>(n: N) -> Vec<N> {
-    let mut out = Vec::new();
-    let mut cur = n.parent();
-    while let Some(p) = cur {
-        out.push(p);
-        cur = p.parent();
+fn ancestors<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
+    std::iter::successors(n.parent(), |p| p.parent())
+}
+
+/// Preorder walk over the descendants of a node, in document order, without
+/// materialising them: one explicit stack instead of a `Vec` per level
+/// (barrierlab#69).
+struct Descendants<N> {
+    stack: Vec<N>,
+}
+
+impl<N> Descendants<N> {
+    fn of<'a>(n: N) -> Self
+    where
+        N: Node<'a>,
+    {
+        let mut walk = Descendants { stack: Vec::new() };
+        walk.push_children(n);
+        walk
     }
-    out
+
+    /// Pushes `n`'s children so that the first child is popped first.
+    fn push_children<'a>(&mut self, n: N)
+    where
+        N: Node<'a>,
+    {
+        let start = self.stack.len();
+        self.stack.extend(n.children());
+        self.stack[start..].reverse();
+    }
+}
+
+impl<'a, N: Node<'a>> Iterator for Descendants<N> {
+    type Item = N;
+
+    fn next(&mut self) -> Option<N> {
+        let n = self.stack.pop()?;
+        self.push_children(n);
+        Some(n)
+    }
 }
 
 /// All descendants of `n`, in document order.
 fn descendant_vec<'a, N: Node<'a>>(n: N) -> Vec<N> {
-    let mut out = Vec::new();
-    for c in n.children() {
-        out.push(c);
-        out.extend(descendant_vec(c));
-    }
-    out
-}
-
-/// `n` followed by all its descendants, in document order.
-fn descendant_or_self_vec<'a, N: Node<'a>>(n: N) -> Vec<N> {
-    let mut out = vec![n];
-    out.extend(descendant_vec(n));
-    out
+    Descendants::of(n).collect()
 }
 
 /// The root of the document `n` belongs to (walks `parent()` to the top).
@@ -65,13 +85,13 @@ pub fn child<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
 /// `descendant` axis: "contains the descendants of the context node; ...
 /// thus the descendant axis never contains attribute or namespace nodes".
 pub fn descendant<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
-    descendant_vec(n).into_iter()
+    Descendants::of(n)
 }
 
 /// `descendant-or-self` axis: "contains the context node and the
 /// descendants of the context node".
 pub fn descendant_or_self<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
-    descendant_or_self_vec(n).into_iter()
+    std::iter::once(n).chain(Descendants::of(n))
 }
 
 /// `parent` axis: "contains the parent of the context node, if there is
@@ -86,16 +106,14 @@ pub fn parent<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
 /// context node is the root node". Results are nearest-ancestor-first
 /// (reverse document order).
 pub fn ancestor<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
-    ancestor_vec(n).into_iter()
+    ancestors(n)
 }
 
 /// `ancestor-or-self` axis (reverse): "contains the context node and the
 /// ancestors of the context node". Results are context-node-first, then
 /// nearest ancestor first (reverse document order).
 pub fn ancestor_or_self<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
-    let mut out = vec![n];
-    out.extend(ancestor_vec(n));
-    out.into_iter()
+    std::iter::once(n).chain(ancestors(n))
 }
 
 /// The parent's children of `n`, or empty if `n` is an attribute/namespace
@@ -143,37 +161,47 @@ pub fn preceding_sibling<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a 
     out.into_iter()
 }
 
-/// The full document-order listing of `n`'s document, plus `n`'s index in
-/// it — the shared setup for `following`/`preceding`.
-fn document_order_listing<'a, N: Node<'a>>(n: N) -> (Vec<N>, usize) {
-    let all = descendant_or_self_vec(root_of(n));
-    let idx = all
-        .iter()
-        .position(|x| *x == n)
-        .expect("n must be reachable from its own document root via children()");
-    (all, idx)
-}
-
-/// All nodes after `n`'s entire subtree, in document order. Never contains
-/// attribute/namespace nodes, since the underlying preorder listing is
-/// built purely from `children()`.
+/// All nodes after `n`'s entire subtree, in document order: for `n` and
+/// each of its ancestors in turn, the following siblings with their
+/// subtrees. Never contains attribute/namespace nodes, since it is built
+/// purely from `children()`.
 fn following_vec<'a, N: Node<'a>>(n: N) -> Vec<N> {
-    let (all, idx) = document_order_listing(n);
-    let subtree_len = 1 + descendant_vec(n).len();
-    all.into_iter().skip(idx + subtree_len).collect()
+    let mut out = Vec::new();
+    let mut cur = n;
+    while let Some(parent) = cur.parent() {
+        let mut found = false;
+        for sibling in parent.children() {
+            if found {
+                out.push(sibling);
+                out.extend(Descendants::of(sibling));
+            } else if sibling == cur {
+                found = true;
+            }
+        }
+        cur = parent;
+    }
+    out
 }
 
 /// All nodes before `n` in document order, excluding `n`'s ancestors, in
-/// reverse document order (nearest-first).
+/// reverse document order (nearest-first): for `n` and each of its
+/// ancestors in turn, the preceding siblings with their subtrees, each
+/// reversed.
 fn preceding_vec<'a, N: Node<'a>>(n: N) -> Vec<N> {
-    let (all, idx) = document_order_listing(n);
-    let ancestors = ancestor_vec(n);
-    let mut out: Vec<N> = all[..idx]
-        .iter()
-        .copied()
-        .filter(|c| !ancestors.contains(c))
-        .collect();
-    out.reverse();
+    let mut out = Vec::new();
+    let mut cur = n;
+    while let Some(parent) = cur.parent() {
+        let level_start = out.len();
+        for sibling in parent.children() {
+            if sibling == cur {
+                break;
+            }
+            out.push(sibling);
+            out.extend(Descendants::of(sibling));
+        }
+        out[level_start..].reverse();
+        cur = parent;
+    }
     out
 }
 
