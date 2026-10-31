@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-31
+
 ### Changed
 
 - **Check:** schema validation does about half the work per page, through the faster

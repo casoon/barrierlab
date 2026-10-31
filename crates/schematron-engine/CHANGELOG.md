@@ -7,6 +7,8 @@ version bump.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-31
+
 ### Added
 
 - **API:** `evaluate_with_cache` evaluates against a caller-held `xpath_eval::DocumentCache`, so
