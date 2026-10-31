@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "type": "bar",
+  "orientation": "horizontal",
+  "title": "152 rule IDs, grouped by what the host must provide",
+  "description": "Rule IDs declared by a11y-rules 0.26. Structure rules run on any host; the others only run when the host supplies semantics, rendering data or parsed stylesheets, and are reported as not run otherwise.",
+  "source": "examples/a11y/rules.json (a11y-rules 0.26)",
+  "width": 720,
+  "height": 300,
+  "showValues": true,
+  "valueAxis": { "title": "Rule IDs" },
+  "data": [
+    { "label": "Structure (Document)", "value": 95 },
+    { "label": "Semantics (role, accessible name)", "value": 35 },
+    { "label": "Rendering (styles, geometry)", "value": 17 },
+    { "label": "Stylesheets", "value": 5 }
+  ]
+}
