@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file. The format 
 
 - **Check:** schema validation does about half the work per page, through the faster
   `relax-ng` validator (astro-post-audit#109). Findings are unchanged.
+- **Check:** the assertion stage runs about 10 to 20 times faster on typical pages and no longer
+  grows quadratically with the number of `id` attributes, with one XPath cache shared by all rule
+  files (barrierlab#69). Findings are unchanged.
 
 ## [0.3.3] - 2026-10-27
 

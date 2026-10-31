@@ -148,9 +148,11 @@ impl SchematronEngine for RuleSetEngine {
     ) -> Result<Vec<AssertionFailure>, EngineError> {
         let schemas = RULE_SCHEMAS.as_ref().map_err(Clone::clone)?;
 
+        // One memo for all rule files: they query the same document.
+        let cache = xpath_eval::DocumentCache::new();
         let mut failures = Vec::new();
         for schema in schemas {
-            let reports = schematron_engine::evaluate(schema, document)
+            let reports = schematron_engine::evaluate_with_cache(schema, document, &cache)
                 .map_err(|error| EngineError(error.to_string()))?;
             for report in reports {
                 let Some(rule_id) = report.check_id else {

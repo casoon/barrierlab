@@ -40,9 +40,11 @@
 //!   message, against the same context node. Unknown ids are skipped, not
 //!   an error (same accepted simplification as `Phase.active`).
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-use xpath_eval::{Document, EvaluationContext, Node, QName, Value};
+use xpath_eval::{Document, DocumentCache, EvaluationContext, Expr, Node, QName, Value};
 
 use crate::schema::{Check, CheckKind, Diagnostic, LetBinding, LetValue, MessagePart, Schema};
 
@@ -164,6 +166,27 @@ pub fn evaluate_with_phase<'a, D: Document>(
     document: &'a D,
     phase_id: Option<&str>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
+    evaluate_in(schema, document, phase_id, &DocumentCache::new())
+}
+
+/// [`evaluate`] with a caller-held [`DocumentCache`] for `document`, so
+/// several schemas checked against the same document share what the XPath
+/// evaluator memoises about it (barrierlab#69). Results are the same as
+/// with [`evaluate`].
+pub fn evaluate_with_cache<'a, D: Document>(
+    schema: &Schema,
+    document: &'a D,
+    cache: &DocumentCache<D::N<'a>>,
+) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
+    evaluate_in(schema, document, schema.default_phase.as_deref(), cache)
+}
+
+fn evaluate_in<'a, D: Document>(
+    schema: &Schema,
+    document: &'a D,
+    phase_id: Option<&str>,
+    cache: &DocumentCache<D::N<'a>>,
+) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
     let ns_lookup = |prefix: &str| {
         schema
             .ns
@@ -184,14 +207,20 @@ pub fn evaluate_with_phase<'a, D: Document>(
         })
         .transpose()?;
 
+    let exprs = ExprCache::default();
+    let env = Env {
+        ns_lookup: &ns_lookup,
+        exprs: &exprs,
+        cache,
+    };
     let mut reports = Vec::new();
 
-    let mut schema_vars: HashMap<String, Value<D::N<'a>>> = HashMap::new();
-    extend_lets(&mut schema_vars, &schema.lets, document.root(), &ns_lookup)?;
+    let mut schema_scope = Scope::new(None);
+    extend_lets(&mut schema_scope, &schema.lets, document.root(), &env)?;
 
-    let mut phase_vars = schema_vars.clone();
+    let mut phase_scope = Scope::new(Some(&schema_scope));
     if let Some(phase) = phase {
-        extend_lets(&mut phase_vars, &phase.lets, document.root(), &ns_lookup)?;
+        extend_lets(&mut phase_scope, &phase.lets, document.root(), &env)?;
     }
 
     for pattern in &schema.patterns {
@@ -205,14 +234,12 @@ pub fn evaluate_with_phase<'a, D: Document>(
             }
         }
 
-        let mut pattern_vars = phase_vars.clone();
-        extend_lets(
-            &mut pattern_vars,
-            &pattern.lets,
-            document.root(),
-            &ns_lookup,
-        )?;
+        let mut pattern_scope = Scope::new(Some(&phase_scope));
+        extend_lets(&mut pattern_scope, &pattern.lets, document.root(), &env)?;
 
+        // Context nodes already claimed by an earlier rule of this
+        // pattern, kept in document order so membership is a binary
+        // search rather than a scan (barrierlab#69).
         let mut claimed: Vec<D::N<'a>> = Vec::new();
 
         for rule in &pattern.rules {
@@ -241,6 +268,7 @@ pub fn evaluate_with_phase<'a, D: Document>(
 
             let mut ctx = EvaluationContext::new(document.root());
             ctx.namespaces = Some(&ns_lookup);
+            ctx.cache = Some(cache);
             let value = xpath_eval::evaluate(&expr, &ctx).map_err(SchematronEvalError::Eval)?;
 
             let mut matches = match value {
@@ -253,81 +281,199 @@ pub fn evaluate_with_phase<'a, D: Document>(
             };
             matches.sort_by(|a, b| a.document_order(*b));
 
+            let mut newly_claimed = Vec::new();
             for node in matches {
-                if claimed.contains(&node) {
+                if claimed
+                    .binary_search_by(|probe| probe.document_order(node))
+                    .is_ok()
+                {
                     continue;
                 }
-                claimed.push(node);
+                newly_claimed.push(node);
 
-                let mut node_vars = pattern_vars.clone();
-                extend_lets(&mut node_vars, &rule.lets, node, &ns_lookup)?;
+                let mut node_scope = Scope::new(Some(&pattern_scope));
+                extend_lets(&mut node_scope, &rule.lets, node, &env)?;
 
                 for check in &rule.checks {
                     if let Some(report) = evaluate_check(
                         check,
                         node,
                         pattern.id.clone(),
-                        &ns_lookup,
-                        &node_vars,
+                        &node_scope,
+                        &env,
                         &schema.diagnostics,
                     )? {
                         reports.push(report);
                     }
                 }
             }
+            claimed = merge_in_document_order(claimed, newly_claimed);
         }
     }
 
     Ok(reports)
 }
 
-/// Parses and evaluates the raw XPath expression `raw` against `node`,
-/// with `ns_lookup`/`vars` wired up as the namespace/variable hooks — the
-/// one place every `context`/`test`/`value-of/@select` expression
-/// evaluation goes through (a `<let>` binding's `value`, a check's
-/// `test`, and a message's `<value-of>` all share this exact shape:
-/// parse, build an unprefixed-name variable lookup over `vars`, evaluate).
+/// Merges two node lists that are each in document order and disjoint.
+fn merge_in_document_order<'n, N: Node<'n>>(a: Vec<N>, b: Vec<N>) -> Vec<N> {
+    if b.is_empty() {
+        return a;
+    }
+    let mut merged = Vec::with_capacity(a.len() + b.len());
+    let (mut a, mut b) = (a.into_iter().peekable(), b.into_iter().peekable());
+    while let (Some(&x), Some(&y)) = (a.peek(), b.peek()) {
+        if x.document_order(y).is_lt() {
+            merged.push(x);
+            a.next();
+        } else {
+            merged.push(y);
+            b.next();
+        }
+    }
+    merged.extend(a);
+    merged.extend(b);
+    merged
+}
+
+/// What every expression of one evaluation shares: the schema's namespace
+/// bindings, the parsed expressions and the per-document XPath memo.
+struct Env<'e, N> {
+    ns_lookup: &'e dyn Fn(&str) -> Option<String>,
+    exprs: &'e ExprCache,
+    cache: &'e DocumentCache<N>,
+}
+
+/// Parsed XPath expressions of one evaluation, keyed by the address of the
+/// schema string they come from: every `test`, `<let>` value and
+/// `value-of` is parsed once per document rather than once per context
+/// node (barrierlab#69). Still parsed on first use, so an expression that
+/// is never evaluated cannot fail the run, exactly as before.
+#[derive(Default)]
+struct ExprCache {
+    parsed: RefCell<HashMap<(*const u8, usize), Rc<Expr>>>,
+}
+
+impl ExprCache {
+    fn get(&self, raw: &str) -> Result<Rc<Expr>, SchematronEvalError> {
+        let key = (raw.as_ptr(), raw.len());
+        if let Some(expr) = self.parsed.borrow().get(&key) {
+            return Ok(Rc::clone(expr));
+        }
+        let expr = Rc::new(xpath_eval::parse(raw).map_err(SchematronEvalError::Parse)?);
+        self.parsed.borrow_mut().insert(key, Rc::clone(&expr));
+        Ok(expr)
+    }
+}
+
+/// One level of `<let>` bindings (schema, phase, pattern or rule), looked
+/// up innermost first. Replaces copying every enclosing binding into a
+/// fresh map for each context node (barrierlab#69); a later binding of the
+/// same name still wins over an earlier one.
+struct Scope<'p, N> {
+    bindings: Vec<(String, Value<N>)>,
+    parent: Option<&'p Scope<'p, N>>,
+}
+
+impl<'p, N: Clone> Scope<'p, N> {
+    fn new(parent: Option<&'p Scope<'p, N>>) -> Self {
+        Scope {
+            bindings: Vec::new(),
+            parent,
+        }
+    }
+
+    fn get(&self, name: &str) -> Option<Value<N>> {
+        let mut scope = Some(self);
+        while let Some(current) = scope {
+            if let Some((_, value)) = current.bindings.iter().rev().find(|(n, _)| n == name) {
+                return Some(value.clone());
+            }
+            scope = current.parent;
+        }
+        None
+    }
+}
+
+/// Evaluates the XPath expression `raw` against `node`, with
+/// `ns_lookup`/`vars` wired up as the namespace/variable hooks — the one
+/// place every `test`/`<let>`/`value-of/@select` expression evaluation
+/// goes through.
 fn evaluate_xpath<'n, N: Node<'n>>(
     raw: &str,
     node: N,
-    ns_lookup: &dyn Fn(&str) -> Option<String>,
-    vars: &HashMap<String, Value<N>>,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
 ) -> Result<Value<N>, SchematronEvalError> {
-    let expr = xpath_eval::parse(raw).map_err(SchematronEvalError::Parse)?;
+    let expr = env.exprs.get(raw)?;
+    evaluate_parsed(&expr, node, vars, env)
+}
+
+/// Evaluates an `assert`/`report` test straight to a boolean (see
+/// `xpath_eval::evaluate_boolean`).
+fn evaluate_test<'n, N: Node<'n>>(
+    raw: &str,
+    node: N,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
+) -> Result<bool, SchematronEvalError> {
+    let expr = env.exprs.get(raw)?;
+    with_context(node, vars, env, |ctx| {
+        xpath_eval::evaluate_boolean(&expr, ctx)
+    })
+}
+
+fn evaluate_parsed<'n, N: Node<'n>>(
+    expr: &Expr,
+    node: N,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
+) -> Result<Value<N>, SchematronEvalError> {
+    with_context(node, vars, env, |ctx| xpath_eval::evaluate(expr, ctx))
+}
+
+/// Runs `f` against `node` with `vars` and `env` wired up as the variable,
+/// namespace and cache hooks.
+fn with_context<'n, N: Node<'n>, T>(
+    node: N,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
+    f: impl FnOnce(&EvaluationContext<'n, '_, N>) -> Result<T, xpath_eval::EvalError>,
+) -> Result<T, SchematronEvalError> {
     let lookup = |name: &QName| {
         if name.prefix.is_some() {
             None
         } else {
-            vars.get(&name.local).cloned()
+            vars.get(&name.local)
         }
     };
     let mut ctx = EvaluationContext::new(node);
-    ctx.namespaces = Some(ns_lookup);
+    ctx.namespaces = Some(env.ns_lookup);
     ctx.variables = Some(&lookup);
-    xpath_eval::evaluate(&expr, &ctx).map_err(SchematronEvalError::Eval)
+    ctx.cache = Some(env.cache);
+    f(&ctx).map_err(SchematronEvalError::Eval)
 }
 
-/// Evaluates `lets` in document order against `context_node`, inserting
-/// each binding's value into `vars` as it goes — so a binding's `value`
-/// expression can reference earlier bindings already in `vars` (both from
-/// an enclosing scope and from earlier in `lets` itself), but not later
-/// ones in `lets`. See `plan/04-let-bindings.md` for the scoping rationale
-/// (schema/pattern-level `<let>` evaluate against the document root,
-/// rule-level against the matched context node).
+/// Evaluates `lets` in document order against `context_node`, adding each
+/// binding to `scope` as it goes — so a binding's `value` expression can
+/// reference earlier bindings (both from an enclosing scope and from
+/// earlier in `lets` itself), but not later ones in `lets`. See
+/// `plan/04-let-bindings.md` for the scoping rationale (schema/pattern-level
+/// `<let>` evaluate against the document root, rule-level against the
+/// matched context node).
 fn extend_lets<'n, N: Node<'n>>(
-    vars: &mut HashMap<String, Value<N>>,
+    scope: &mut Scope<'_, N>,
     lets: &[LetBinding],
     context_node: N,
-    ns_lookup: &dyn Fn(&str) -> Option<String>,
+    env: &Env<'_, N>,
 ) -> Result<(), SchematronEvalError> {
     for binding in lets {
         let value = match &binding.value {
-            LetValue::Expr(expr) => evaluate_xpath(expr, context_node, ns_lookup, vars)?,
+            LetValue::Expr(expr) => evaluate_xpath(expr, context_node, scope, env)?,
             // issue #3: literal-XML content binds as its pre-computed
             // string-value — see `LetValue::Literal`'s doc comment.
             LetValue::Literal(text) => Value::String(text.clone()),
         };
-        vars.insert(binding.name.clone(), value);
+        scope.bindings.push((binding.name.clone(), value));
     }
     Ok(())
 }
@@ -339,12 +485,11 @@ fn evaluate_check<'n, N: Node<'n>>(
     check: &Check,
     node: N,
     pattern_id: Option<String>,
-    ns_lookup: &dyn Fn(&str) -> Option<String>,
-    vars: &HashMap<String, Value<N>>,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
     diagnostics: &[Diagnostic],
 ) -> Result<Option<Report<N>>, SchematronEvalError> {
-    let value = evaluate_xpath(&check.test, node, ns_lookup, vars)?;
-    let boolean = value.to_boolean();
+    let boolean = evaluate_test(&check.test, node, vars, env)?;
 
     let fires = match check.kind {
         CheckKind::Assert => !boolean,
@@ -355,13 +500,13 @@ fn evaluate_check<'n, N: Node<'n>>(
         return Ok(None);
     }
 
-    let message = render_message(&check.message, node, ns_lookup, vars)?;
+    let message = render_message(&check.message, node, vars, env)?;
 
     let rendered_diagnostics = check
         .diagnostics
         .iter()
         .filter_map(|id| diagnostics.iter().find(|d| &d.id == id))
-        .map(|d| render_message(&d.message, node, ns_lookup, vars))
+        .map(|d| render_message(&d.message, node, vars, env))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Some(Report {
@@ -391,15 +536,15 @@ fn evaluate_check<'n, N: Node<'n>>(
 fn render_message<'n, N: Node<'n>>(
     parts: &[MessagePart],
     node: N,
-    ns_lookup: &dyn Fn(&str) -> Option<String>,
-    vars: &HashMap<String, Value<N>>,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
 ) -> Result<String, SchematronEvalError> {
     let mut message = String::new();
     for part in parts {
         match part {
             MessagePart::Text(text) => message.push_str(text),
             MessagePart::ValueOf(select) => {
-                let value = evaluate_xpath(select, node, ns_lookup, vars)?;
+                let value = evaluate_xpath(select, node, vars, env)?;
                 message.push_str(&value.to_xpath_string());
             }
             MessagePart::Name(path) => {
@@ -407,7 +552,8 @@ fn render_message<'n, N: Node<'n>>(
                     Some(path) => format!("name({path})"),
                     None => "name()".to_owned(),
                 };
-                let value = evaluate_xpath(&select, node, ns_lookup, vars)?;
+                let expr = xpath_eval::parse(&select).map_err(SchematronEvalError::Parse)?;
+                let value = evaluate_parsed(&expr, node, vars, env)?;
                 message.push_str(&value.to_xpath_string());
             }
         }
@@ -673,6 +819,48 @@ mod tests {
         );
         let reports = evaluate(&second_alternative, &doc).unwrap();
         assert_eq!(reports.len(), 1, "item as the second union alternative");
+    }
+
+    #[test]
+    fn evaluate_with_cache_matches_evaluate_across_schemas() {
+        let doc = doc_with_nested_item();
+        let schemas = [
+            schema(
+                r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron">
+                    <pattern>
+                        <rule context="item">
+                            <assert test="count(//item) = 2">two items</assert>
+                            <report test="ancestor::*">nested item</report>
+                        </rule>
+                        <rule context="*">
+                            <report test="true()">other element</report>
+                        </rule>
+                    </pattern>
+                </schema>"#,
+            ),
+            schema(
+                r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron">
+                    <pattern>
+                        <rule context="*[not(self::item)]">
+                            <report test="//item">has an item</report>
+                        </rule>
+                    </pattern>
+                </schema>"#,
+            ),
+        ];
+        let cache = DocumentCache::new();
+        for schema in &schemas {
+            let fresh = evaluate(schema, &doc).unwrap();
+            let shared = evaluate_with_cache(schema, &doc, &cache).unwrap();
+            let summary = |reports: &[Report<_>]| {
+                reports
+                    .iter()
+                    .map(|r| (r.message.clone(), r.node))
+                    .collect::<Vec<_>>()
+            };
+            assert!(!fresh.is_empty());
+            assert_eq!(summary(&shared), summary(&fresh));
+        }
     }
 
     #[test]

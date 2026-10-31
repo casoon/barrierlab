@@ -828,6 +828,23 @@ impl<'a> xpath_eval::Node<'a> for NormalizedNode<'a> {
         }
     }
 
+    fn has_expanded_name(self, namespace_uri: Option<&str>, local_name: &str) -> bool {
+        match &self.data().kind {
+            Kind::Element { name, .. } | Kind::Attribute { name, .. } => {
+                name.local_name == local_name && name.namespace.as_deref() == namespace_uri
+            }
+            Kind::Root | Kind::Text { .. } | Kind::Comment { .. } => false,
+        }
+    }
+
+    fn with_string_value<R>(self, f: impl FnOnce(&str) -> R) -> R {
+        match &self.data().kind {
+            Kind::Attribute { value, .. } => f(value),
+            Kind::Text { content } | Kind::Comment { content } => f(content),
+            Kind::Root | Kind::Element { .. } => f(&self.string_value()),
+        }
+    }
+
     fn document_order(self, other: Self) -> std::cmp::Ordering {
         // The arena is built in a single top-down, depth-first pass in
         // exactly document order (an element's own id precedes its

@@ -10,7 +10,7 @@
 
 use crate::ast::{Expr, FunctionCall};
 use crate::document::Node;
-use crate::eval::{EvalError, EvaluationContext, check_arity, evaluate};
+use crate::eval::{EvalError, EvaluationContext, check_arity, evaluate, evaluate_truth};
 use crate::value::{Value, first_in_document_order};
 
 fn arity_error(function: &'static str, expected: usize, got: usize) -> EvalError {
@@ -434,11 +434,11 @@ pub(crate) fn dispatch<'ctx, 'hook, N: Node<'ctx>>(
         // ---- §4.3 boolean functions ---------------------------------------
         "boolean" => {
             check_arity("boolean", args, 1)?;
-            Ok(Value::Boolean(evaluate(&args[0], ctx)?.to_boolean()))
+            Ok(Value::Boolean(evaluate_truth(&args[0], ctx)?))
         }
         "not" => {
             check_arity("not", args, 1)?;
-            Ok(Value::Boolean(!evaluate(&args[0], ctx)?.to_boolean()))
+            Ok(Value::Boolean(!evaluate_truth(&args[0], ctx)?))
         }
         "true" => {
             check_arity("true", args, 0)?;
