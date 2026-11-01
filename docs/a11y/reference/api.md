@@ -1,54 +1,54 @@
 ---
-title: "API-Überblick"
-description: "Die wichtigsten Typen und Funktionen je Crate. Die Einzeldokumentation jedes Elements steht auf docs.rs."
+title: "API Overview"
+description: "The most important types and functions per crate. The detailed documentation of each item is on docs.rs."
 order: 2
 ---
 
 ## a11y-rules
 
-| Element | Zweck |
+| Item | Purpose |
 |---|---|
-| `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | ein Dokument prüfen, je nachdem, was der Host liefert |
-| `run_in`, `run_with_semantics_in`, `run_with_rendering_in`, `run_full_in` | dasselbe, mit Befundtexten in der gewählten `Locale` (`En`, `De`) |
-| `structure_rules`, `semantics_rules`, `rendering_rules` | die Regeln eines Tiers, gebunden an einen Host |
-| `structure_metas`, `semantics_metas`, `rendering_metas` | die Deklarationen ohne Host, zum Auflisten und Benennen |
-| `Meta` | Kennungen, Tier, WCAG-Kriterien, Vorgabeschwere und Hinweis einer Regel |
-| `StructureRule`, `SemanticsRule`, `RenderingRule` | eine Regel als Funktionszeiger plus `Meta` |
+| `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | check a document, depending on what the host provides |
+| `run_in`, `run_with_semantics_in`, `run_with_rendering_in`, `run_full_in` | the same, with finding texts in the chosen `Locale` (`En`, `De`) |
+| `structure_rules`, `semantics_rules`, `rendering_rules` | the rules of a tier, bound to a host |
+| `structure_metas`, `semantics_metas`, `rendering_metas` | the declarations without a host, for listing and naming |
+| `Meta` | IDs, tier, WCAG criteria, default severity and hint of a rule |
+| `StructureRule`, `SemanticsRule`, `RenderingRule` | a rule as a function pointer plus `Meta` |
 
 [docs.rs/a11y-rules](https://docs.rs/a11y-rules)
 
 ## a11y-dom
 
-| Element | Zweck |
+| Item | Purpose |
 |---|---|
-| `Document`, `Node` | der DOM-förmige Basisbaum |
-| `Semantics`, `Rendering`, `Interaction` | die Fähigkeiten über der Struktur |
-| `Tier`, `Caps` | welche Datenschicht eine Regel braucht, was ein Host liefert |
-| `ComputedStyle`, `Color`, `Rect`, `NameSource` | Daten der Fähigkeiten |
-| `Arena`, `ArenaBuilder`, `ArenaNode` | mitgelieferter Baum, Testvehikel und Form für WASM-Hosts |
-| `elements`, `descendants`, `ancestors`, `closest`, `subtree_text`, `has_text` | Traversierung |
+| `Document`, `Node` | the DOM-shaped base tree |
+| `Semantics`, `Rendering`, `Interaction` | the capabilities on top of the structure |
+| `Tier`, `Caps` | which data layer a rule needs, what a host provides |
+| `ComputedStyle`, `Color`, `Rect`, `NameSource` | data of the capabilities |
+| `Arena`, `ArenaBuilder`, `ArenaNode` | bundled tree, test vehicle and form for WASM hosts |
+| `elements`, `descendants`, `ancestors`, `closest`, `subtree_text`, `has_text` | traversal |
 
 [docs.rs/a11y-dom](https://docs.rs/a11y-dom)
 
 ## a11y-report
 
-| Element | Zweck |
+| Item | Purpose |
 |---|---|
-| `Finding`, `Location`, `Evidence` | ein Prüfergebnis mit Verortung und Belegen |
-| `Outcome`, `Severity`, `WcagLevel` | die zwei Achsen und die WCAG-Stufe |
-| `Report`, `Summary` | Befunde, Vermerke und Zählwerk |
-| `RuleRun`, `NotRun` | ob eine Regel lief, und wenn nicht, warum |
-| `Extra` | undurchsichtige, nicht serialisierte Beigabe am Befund |
+| `Finding`, `Location`, `Evidence` | a check result with location and evidence |
+| `Outcome`, `Severity`, `WcagLevel` | the two axes and the WCAG level |
+| `Report`, `Summary` | findings, records and counts |
+| `RuleRun`, `NotRun` | whether a rule ran, and if not, why |
+| `Extra` | opaque, non-serialized extra attached to a finding |
 
 [docs.rs/a11y-report](https://docs.rs/a11y-report)
 
 ## accname
 
-| Element | Zweck |
+| Item | Purpose |
 |---|---|
-| `name`, `description` | Accessible Name und Beschreibung |
-| `role`, `implicit` | wirksame und implizite Rolle |
-| `allows_name_from_content`, `name_is_prohibited` | Eigenschaften einer Rolle |
-| `IdIndex` | ID-Index für Verweise |
+| `name`, `description` | accessible name and description |
+| `role`, `implicit` | effective and implicit role |
+| `allows_name_from_content`, `name_is_prohibited` | properties of a role |
+| `IdIndex` | ID index for references |
 
 [docs.rs/accname](https://docs.rs/accname)

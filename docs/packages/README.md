@@ -1,37 +1,37 @@
 ---
-title: "Vorlage"
-description: "Der Aufbau, den jede Paketseite hat."
+title: "Template"
+description: "The structure every package page follows."
 order: 99
 ---
 
-Jedes Paket bekommt `docs/packages/<name>.md` mit diesem Aufbau. Kurz halten;
-die API-Referenz steht auf docs.rs, nicht hier.
+Every package gets `docs/packages/<name>.md` with this structure. Keep it short;
+the API reference lives on docs.rs, not here.
 
 ```markdown
 # <name>
 
-Ein Satz: was das Paket berechnet und was nicht.
+One sentence: what the package computes and what it does not.
 
-## Stand
+## Status
 
-Version, Registry, wer es benutzt. Ehrlich über halb Gebautes.
+Version, registry, who uses it. Honest about anything half-built.
 
-## Aufbau
+## Structure
 
-Ein Mermaid-Diagramm: Datenfluss oder Module. Keine Wiederholung des Graphen
-aus architecture.md, sondern das Innere dieses Pakets.
+One Mermaid diagram: data flow or modules. Do not repeat the graph from
+architecture.md; show the inside of this package.
 
-## Öffentliche Fläche
+## Public surface
 
-Die wenigen Typen und Funktionen, die ein Konsument braucht, mit einem Satz je
-Eintrag. Link auf docs.rs für den Rest.
+The few types and functions a consumer needs, with one sentence each. Link to
+docs.rs for the rest.
 
-## Abhängigkeiten
+## Dependencies
 
-Nach unten: welche Pakete dieses hier braucht. Nach oben: wer es benutzt.
+Downward: which packages this one needs. Upward: who uses it.
 
-## Grenzen
+## Limits
 
-Was das Paket nicht entscheidet, nicht beweist, nicht sieht. Dieser Abschnitt
-ist Pflicht — er verhindert Behauptungen, die die Daten nicht tragen.
+What the package does not decide, does not prove, does not see. This section
+is mandatory — it prevents claims the data cannot support.
 ```

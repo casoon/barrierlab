@@ -1,13 +1,13 @@
 ---
-title: "Schnellstart"
-description: "Ein Dokument aufbauen, mit und ohne Semantik prüfen und den Bericht lesen."
+title: "Quick Start"
+description: "Build a document, check it with and without semantics, and read the report."
 order: 2
 ---
 
-## Nur Struktur
+## Structure only
 
-Der einfachste Host ist die `Arena` aus `a11y-dom`. `run` prüft alles, was ohne Rolle, Name und
-Darstellung entscheidbar ist:
+The simplest host is the `Arena` from `a11y-dom`. `run` checks everything that is decidable without role, name and
+rendering:
 
 ```rust
 use a11y_dom::Arena;
@@ -23,22 +23,22 @@ let doc = Arena::builder()
 
 let report = run(&doc);
 
-// Gefunden: kein lang, kein title, kein alt.
+// Found: no lang, no title, no alt.
 assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 assert!(report.findings.iter().any(|f| f.rule_id == "document/lang-missing"));
 
-// Nicht beurteilt: die Tier-2- und Tier-3-Regeln. Sie fehlen nicht im Bericht,
-// sie stehen mit `NotRun::CapabilityMissing` darin.
+// Not assessed: the tier 2 and tier 3 rules. They are not missing from the report,
+// they appear in it with `NotRun::CapabilityMissing`.
 assert_eq!(report.summary.rules_not_run, 7);
 ```
 
-Das Beispiel ist der Doctest aus `a11y-rules` und läuft mit `cargo test`.
+The example is the doctest from `a11y-rules` and runs with `cargo test`.
 
-## Mit Semantik
+## With semantics
 
-Regeln für Links, Buttons und SVG brauchen einen echten Accessible Name. Ein Host bekommt ihn,
-indem er `Semantics` implementiert, hier mit `accname`. Der Index der IDs wird einmal gebaut und
-gehalten, nicht je Aufruf:
+Rules for links, buttons and SVG need a real accessible name. A host gets it
+by implementing `Semantics`, here with `accname`. The ID index is built once and
+kept, not built per call:
 
 ```rust
 use a11y_dom::{Arena, ArenaNode, Document, Node, Semantics};
@@ -72,26 +72,26 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
-// `doc` wie im ersten Beispiel.
+// `doc` as in the first example.
 let host = MitSemantik { ids: IdIndex::build(doc.root()), doc: &doc };
 let report = run_with_semantics(&host);
 ```
 
-Derselbe Host steckt im Regeltest (`crates/a11y-rules/tests/rules.rs`) und im Generator der
-Beispiele dieser Seite (`examples/src/main.rs`).
+The same host is used in the rule test (`crates/a11y-rules/tests/rules.rs`) and in the generator of
+this page's examples (`examples/src/main.rs`).
 
-## Welcher Einstieg
+## Which entry point
 
-| Host liefert | Einstieg |
+| Host provides | Entry point |
 |---|---|
-| nur Struktur | `run` |
-| + Semantik | `run_with_semantics` |
-| + Darstellung | `run_with_rendering` |
-| beides | `run_full` |
+| structure only | `run` |
+| + semantics | `run_with_semantics` |
+| + rendering | `run_with_rendering` |
+| both | `run_full` |
 
-## Den Bericht lesen
+## Reading the report
 
-`Report` ist mit `serde` serialisierbar. Wie das JSON aussieht, zeigt der
-die Beispiele in [`examples/a11y/`](https://github.com/casoon/barrierlab/tree/main/examples/a11y): ein Teaser-Dokument einmal nur mit Struktur und einmal mit
-Semantik geprüft. Was die Felder bedeuten, steht unter
-[Befunde und Berichte](../../concepts/befunde/).
+`Report` is serializable with `serde`. What the JSON looks like is shown by
+the examples in [`examples/a11y/`](https://github.com/casoon/barrierlab/tree/main/examples/a11y): a teaser document checked once with structure only and once with
+semantics. What the fields mean is described under
+[Findings and Reports](../../concepts/befunde/).

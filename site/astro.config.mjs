@@ -9,10 +9,8 @@ export default defineConfig({
   site: 'https://casoon.github.io/barrierlab',
   base: '/barrierlab/',
   markdown: {
-    // Mermaid-Blöcke werden zur Bauzeit zu Inline-SVG. Shiki darf sie deshalb
-    // nicht vorher anfassen, sonst steht dort nur eingefärbter Quelltext.
-    // Kein Laufzeit-JavaScript, keine externe Ressource — dieselbe Quelle
-    // rendert GitHub direkt.
+    // Mermaid blocks become inline SVG at build time, so Shiki must not touch them first.
+    // No runtime JavaScript, no external resource — GitHub renders the same source directly.
     syntaxHighlight: { type: 'shiki', excludeLangs: ['mermaid'] },
     rehypePlugins: [[rehypeMermaid, { strategy: 'inline-svg', dark: true }], rehypeMdLinks],
   },
@@ -20,13 +18,12 @@ export default defineConfig({
     casoonPages({
       name: 'BarrierLab',
       description:
-        'Gemeinsame Bibliotheken für Web-Audits: Zugänglichkeit, HTML-Konformanz, Wahrnehmung.',
-      tagline: 'Bibliotheken für Web-Audits',
+        'One rule set for web audits: WCAG 2.2 accessibility rules, HTML conformance, perception and web checks as pure-Rust libraries, with WebAssembly for the browser.',
+      tagline: 'Rust libraries for web audits',
       repo: 'casoon/barrierlab',
-      lang: 'de',
+      lang: 'en',
       license: 'MIT',
-      // Ein Monorepo hat keine gemeinsame Version und keinen gemeinsamen
-      // Changelog: beides steht je Paket.
+      // A monorepo has no shared version and no shared changelog: both live per package.
       changelog: false,
       showcase: false,
       mdxComponents: './src/mdx-components.ts',
@@ -42,10 +39,10 @@ export default defineConfig({
         { label: '@casoon/a11y-wasm', href: 'https://www.npmjs.com/package/@casoon/a11y-wasm' },
       ],
       docsGroups: {
-        '': 'Einstieg',
-        packages: 'Pakete',
-        a11y: 'Zugänglichkeit im Detail',
-        'html-conform': 'Konformanz im Detail',
+        '': 'Start',
+        packages: 'Packages',
+        a11y: 'Accessibility in detail',
+        'html-conform': 'Conformance in detail',
       },
     }),
   ],

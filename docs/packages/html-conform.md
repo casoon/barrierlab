@@ -1,74 +1,73 @@
 ---
 title: "html-conform"
-description: "HTML5-Konformanzprüfung ohne JVM, samt der sechs Parser darunter."
+description: "HTML5 conformance checking without a JVM, including the six parsers underneath."
 order: 7
 ---
 
-HTML5-Konformanzprüfung als Rust-Abhängigkeit, ohne JVM. Differentiell gegen
-den Nu Html Checker (vnu) geprüft. Dazu gehören sechs eigenständige Pakete, die
-die Syntax lesen, die die Prüfung braucht.
+HTML5 conformance checking as a Rust dependency, without a JVM. Checked
+differentially against the Nu Html Checker (vnu). It includes six standalone packages that
+read the syntax the check needs.
 
-## Stand
+## Status
 
-0.2.1 auf crates.io, benutzt von auditmysite (`src/html_conform/`) und
-astro-post-audit (`checks/html_validation.rs`). Auf `main` liegen Änderungen
-nach 0.2.1: MSRV auf 1.88, zusätzliche Befunde (`img` ohne `alt`, interaktiver
-Inhalt in `a`).
+0.2.1 on crates.io, used by auditmysite (`src/html_conform/`) and
+astro-post-audit (`checks/html_validation.rs`). `main` contains changes
+after 0.2.1: MSRV raised to 1.88, additional findings (`img` without `alt`, interactive
+content in `a`).
 
-**Mit dem Umzug sind die `=`-Pins gefallen.** Vorher hing html-conform auf genaue
-Versionen von vier seiner sechs Abhängigkeiten, weil jede Änderung eine
-Release-Kaskade über sieben Repositories brauchte. Jetzt stehen sie als
-Workspace-Abhängigkeiten mit `path` und `version` — eine Änderung, ein Release.
+**With the move, the `=` pins are gone.** Previously html-conform depended on exact
+versions of four of its six dependencies, because every change needed a
+release cascade across seven repositories. Now they are workspace
+dependencies with `path` and `version` — one change, one release.
 
-## Aufbau
+## Structure
 
 ```mermaid
 flowchart TB
-  html["HTML-Quelltext"] --> h5[html5-parser]
-  h5 --> info["infoset: normalisierter Baum"]
-  info --> cm["Inhaltsmodell, Attribute,\nTabellenintegrität"]
-  info --> rng["relax-ng\n(Schema-Validierung)"]
-  info --> sch["schematron-engine\n(Regeln über XPath)"]
+  html["HTML source"] --> h5[html5-parser]
+  h5 --> info["infoset: normalized tree"]
+  info --> cm["Content model, attributes,\ntable integrity"]
+  info --> rng["relax-ng\n(schema validation)"]
+  info --> sch["schematron-engine\n(rules over XPath)"]
   sch --> xp[xpath-eval]
-  attr["Attributwerte"] --> csp[csp-parse]
+  attr["Attribute values"] --> csp[csp-parse]
   attr --> mq[media-query-parse]
-  cm & rng & sch & csp & mq --> f["Befunde (Severity::Error)"]
+  cm & rng & sch & csp & mq --> f["Findings (Severity::Error)"]
 ```
 
-| Paket | Rolle |
+| Package | Role |
 |---|---|
-| `html5-parser` | WHATWG-Tokenizer und Tree-Construction, meldet Parse-Fehler mit Position |
-| `csp-parse` | Content-Security-Policy nach CSP3-Grammatik |
+| `html5-parser` | WHATWG tokenizer and tree construction, reports parse errors with position |
+| `csp-parse` | Content Security Policy per the CSP3 grammar |
 | `media-query-parse` | Media Queries Level 4 |
-| `xpath-eval` | XPath-Auswertung |
-| `relax-ng` | RELAX NG, für die Schema-Seite der Prüfung |
-| `schematron-engine` | Schematron-Regeln über `xpath-eval` |
+| `xpath-eval` | XPath evaluation |
+| `relax-ng` | RELAX NG, for the schema side of the check |
+| `schematron-engine` | Schematron rules over `xpath-eval` |
 
-## Öffentliche Fläche
+## Public surface
 
-`html_conform::check(html)` liefert die Befunde. Die sechs Pakete darunter haben
-jeweils eine eigene, kleine API und lassen sich einzeln benutzen — `xpath-eval`
-und `schematron-engine` zum Beispiel auch außerhalb von HTML.
+`html_conform::check(html)` returns the findings. The six packages underneath each
+have their own small API and can be used individually — `xpath-eval`
+and `schematron-engine`, for example, also outside of HTML.
 
-## Abhängigkeiten
+## Dependencies
 
-Nach unten: die sechs oben. Nach oben: auditmysite, astro-post-audit, künftig
+Downward: the six above. Upward: auditmysite, astro-post-audit, in future
 `web-checks`.
 
-## Grenzen
+## Limits
 
-Kein vollständiger vnu-Ersatz. Die Prüfung ist differentiell gegen vnu
-abgeglichen, nicht deckungsgleich; welche Klassen fehlen, steht in
-`docs/html-conform/`. Und sie sagt nichts über Zugänglichkeit — Konformanz ist
-eine andere Frage als Wahrnehmbarkeit.
+Not a complete vnu replacement. The check is calibrated differentially against vnu,
+not identical to it; which classes are missing is documented in
+`docs/html-conform/`. And it says nothing about accessibility — conformance is
+a different question from perceivability.
 
-Geprüft wird bis zu einer Verschachtelungstiefe von 512 Elementen. Tiefere
-Dokumente liefern `CheckError::DocumentTooDeep` statt eines Berichts — die
-Prüfschichten nach dem Parser laufen rekursiv über den Baum und würden sonst den
-Stack eines 2-MiB-Threads sprengen. Der Parser selbst kennt keine Grenze, weil
-die WHATWG-Tree-Construction keine kennt; Blink hört bei 512 auf zu
-verschachteln und hängt tiefere Elemente als Geschwister an. Diese Abflachung
-übernimmt html-conform bewusst nicht: Befunde gälten dann für einen Baum, den
-die Spezifikation nicht baut. Die Grenze nutzt den Spielraum, den der
-HTML-Standard für implementierungsspezifische Grenzen bei sonst unbeschränkter
-Eingabe lässt, indem sie die Prüfung ablehnt, nicht etwas anderes prüft.
+Checking goes up to a nesting depth of 512 elements. Deeper
+documents yield `CheckError::DocumentTooDeep` instead of a report — the
+check layers after the parser recurse over the tree and would otherwise blow the
+stack of a 2 MiB thread. The parser itself knows no limit, because
+WHATWG tree construction has none; Blink stops nesting at 512 and attaches deeper elements as siblings. html-conform deliberately does not adopt this
+flattening: findings would then apply to a tree that
+the specification does not build. The limit uses the latitude that the
+HTML standard leaves for implementation-specific limits on otherwise unbounded
+input, by rejecting the check rather than checking something different.

@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
   "type": "flow",
-  "title": "Von den Bibliotheken zu den Werkzeugen",
-  "description": "Parser und ein gemeinsames Dokument- und Befundmodell tragen die Zugänglichkeitsregeln und die HTML-Konformanz; Wahrnehmung und Web-Checks rechnen eigenständig. Alles erscheint als Rust-Crates auf crates.io, die Regeln zusätzlich als WebAssembly-Paket auf npm. auditmysite, astro-post-audit und Relief binden die Crates ein, liveaudit das npm-Paket.",
-  "source": "Cargo.toml (Workspace), docs/consumers.md; Cargo.toml bzw. package.json der Werkzeuge, Stand 2026-10-14",
+  "title": "From libraries to tools",
+  "description": "Parsers and a shared document and finding model carry the accessibility rules and HTML conformance; perception and web checks compute on their own. Everything ships as Rust crates on crates.io, the rules additionally as a WebAssembly package on npm. auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.",
+  "source": "Cargo.toml (workspace), docs/consumers.md; Cargo.toml / package.json of the tools, as of 2026-10-14",
   "width": 380,
   "height": 560,
   "flow": {
     "nodes": [
       {
         "id": "parser",
-        "label": "Parser",
+        "label": "Parsers",
         "sublabel": "HTML, CSS, CSP, XPath"
       },
       {
         "id": "model",
-        "label": "Modelle",
+        "label": "Models",
         "sublabel": "a11y-dom, a11y-report"
       },
       {
@@ -26,17 +26,17 @@
       {
         "id": "conform",
         "label": "html-conform",
-        "sublabel": "Konformanz"
+        "sublabel": "Conformance"
       },
       {
         "id": "more",
-        "label": "Wahrnehmung",
+        "label": "Perception",
         "sublabel": "a11y-perception, web-checks"
       },
       {
         "id": "reg",
         "label": "crates.io, npm",
-        "sublabel": "15 Crates, a11y-wasm",
+        "sublabel": "15 crates, a11y-wasm",
         "kind": "io"
       },
       {

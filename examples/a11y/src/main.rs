@@ -1,13 +1,13 @@
-//! Erzeugt die Beispielausgaben der Projektseite.
+//! Generates the example outputs for the project site.
 //!
-//! Jedes Dokument wird als HTML-Ansicht geschrieben (aus dem Baum selbst
-//! serialisiert) und dann zweimal geprüft: einmal nur mit Struktur, wie ein
-//! Host ohne Semantik, und einmal mit Rolle und Accessible Name aus `accname`.
-//! Dazu kommt `rules.json`, der deklarierte Regelbestand, und aus demselben
-//! Bestand die Tabellen der Regelreferenz (`docs/a11y/reference/regeln.mdx`,
-//! zwischen den Markierungen `generiert:anfang` und `generiert:ende`).
+//! Each document is written as an HTML view (serialized from the tree itself)
+//! and then checked twice: once with structure only, like a host without
+//! semantics, and once with role and accessible name from `accname`.
+//! In addition there is `rules.json`, the declared rule set, and, from the same
+//! set, the tables of the rule reference (`docs/a11y/reference/regeln.mdx`,
+//! between the markers `generiert:anfang` and `generiert:ende`).
 //!
-//! Aufruf aus der Wurzel des Repositorys:
+//! Run from the repository root:
 //! `cargo run --manifest-path examples/a11y/Cargo.toml`
 
 use std::fs;
@@ -21,8 +21,8 @@ use a11y_rules::{
 use accname::IdIndex;
 use serde_json::{json, Value};
 
-/// Ein Host mit Semantik: die Arena plus Namensberechnung aus `accname`.
-/// Derselbe Aufbau wie im Regeltest (`crates/a11y-rules/tests/rules.rs`).
+/// A host with semantics: the arena plus name computation from `accname`.
+/// Same setup as in the rule test (`crates/a11y-rules/tests/rules.rs`).
 struct MitSemantik<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
@@ -62,7 +62,7 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
-/// Eine Teaser-Seite mit typischen Fehlern.
+/// A teaser page with typical errors.
 fn teaser() -> Arena {
     Arena::builder()
         .open("html")
@@ -129,7 +129,7 @@ fn teaser() -> Arena {
         .build()
 }
 
-/// Eine vollständige Seite, wie sie der Regeltest als fehlerfrei führt.
+/// A complete page, as the rule test treats it as error-free.
 fn vollstaendig() -> Arena {
     Arena::builder()
         .open("html")
@@ -173,7 +173,7 @@ fn vollstaendig() -> Arena {
 
 const VOID: &[&str] = &["meta", "img", "input", "br", "hr", "link"];
 
-/// Schreibt den Baum als eingerücktes HTML — die Ansicht dessen, was geprüft wird.
+/// Writes the tree as indented HTML: the view of what is being checked.
 fn html<'a>(n: ArenaNode<'a>, depth: usize, out: &mut String) {
     let pad = "  ".repeat(depth);
     if n.kind() == NodeKind::Text {
@@ -219,8 +219,8 @@ fn metas_json(metas: &[Meta]) -> Vec<Value> {
         .collect()
 }
 
-/// Macht einen Regelhinweis tabellenfest für MDX: `<tag>` wird Code, Zeichen
-/// mit Bedeutung in Markdown, MDX oder einer Tabellenzeile werden maskiert.
+/// Makes a rule hint table-safe for MDX: `<tag>` becomes code, characters
+/// with meaning in Markdown, MDX or a table row are escaped.
 fn mdx_text(help: &str) -> String {
     let mut out = String::new();
     let mut in_tag = false;
@@ -245,11 +245,11 @@ fn mdx_text(help: &str) -> String {
     out
 }
 
-/// Ein Abschnitt der Regelreferenz: Überschrift, Zahl der Kennungen, Tabelle.
+/// A section of the rule reference: heading, number of IDs, table.
 fn mdx_tier(out: &mut String, heading: &str, needs: &str, metas: &[Meta]) {
     let ids: usize = metas.iter().map(|m| m.ids.len()).sum();
-    out.push_str(&format!("## {heading}\n\n{ids} Kennungen, {needs}\n\n"));
-    out.push_str("| Kennung | WCAG | Schwere | Hinweis der Regel |\n|---|---|---|---|\n");
+    out.push_str(&format!("## {heading}\n\n{ids} IDs, {needs}\n\n"));
+    out.push_str("| ID | WCAG | Severity | Rule hint |\n|---|---|---|---|\n");
     for m in metas {
         for id in m.ids {
             out.push_str(&format!(
@@ -267,10 +267,10 @@ fn mdx_tier(out: &mut String, heading: &str, needs: &str, metas: &[Meta]) {
     out.push('\n');
 }
 
-/// Die Version von a11y-rules aus seinem Manifest, gegen das hier gebaut wird.
+/// The version of a11y-rules from its manifest, which this is built against.
 fn rules_version() -> String {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../crates/a11y-rules/Cargo.toml");
-    let toml = fs::read_to_string(manifest).expect("Manifest von a11y-rules lesen");
+    let toml = fs::read_to_string(manifest).expect("read the manifest of a11y-rules");
     let zeile = toml
         .lines()
         .find(|l| l.starts_with("version = "))
@@ -281,13 +281,13 @@ fn rules_version() -> String {
         .to_string()
 }
 
-/// Ersetzt in der Regelreferenz alles zwischen den beiden Markierungen.
+/// Replaces everything between the two markers in the rule reference.
 fn regelreferenz(path: &Path) {
     const ANFANG: &str = "{/* generiert:anfang */}\n";
     const ENDE: &str = "{/* generiert:ende */}";
-    let alt = fs::read_to_string(path).expect("Regelreferenz lesen");
-    let a = alt.find(ANFANG).expect("Markierung generiert:anfang") + ANFANG.len();
-    let e = alt.find(ENDE).expect("Markierung generiert:ende");
+    let alt = fs::read_to_string(path).expect("read the rule reference");
+    let a = alt.find(ANFANG).expect("marker generiert:anfang") + ANFANG.len();
+    let e = alt.find(ENDE).expect("marker generiert:ende");
 
     let alle = [
         structure_metas(),
@@ -301,39 +301,39 @@ fn regelreferenz(path: &Path) {
         .map(|m| m.ids.len())
         .sum();
     let mut neu = format!(
-        "a11y-rules {} deklariert {gesamt} Kennungen.\n\n",
+        "a11y-rules {} declares {gesamt} IDs.\n\n",
         rules_version()
     );
     mdx_tier(
         &mut neu,
-        "Tier 1: Struktur",
-        "`Document`, läuft auf jedem Host.",
+        "Tier 1: Structure",
+        "`Document`, runs on every host.",
         alle[0],
     );
     mdx_tier(
         &mut neu,
-        "Tier 2: Semantik",
-        "braucht `Semantics`, also Rolle und Accessible Name.",
+        "Tier 2: Semantics",
+        "needs `Semantics`, i.e. role and accessible name.",
         alle[1],
     );
     mdx_tier(
         &mut neu,
-        "Tier 3: Darstellung",
-        "braucht `Rendering`, also berechnete Stile und Geometrie.",
+        "Tier 3: Rendering",
+        "needs `Rendering`, i.e. computed styles and geometry.",
         alle[2],
     );
     mdx_tier(
         &mut neu,
         "Stylesheets",
-        "braucht die geparsten Stylesheets der Seite und läuft über `run_stylesheets`.",
+        "needs the page's parsed stylesheets and runs via `run_stylesheets`.",
         alle[3],
     );
 
-    fs::write(path, format!("{}{neu}{}", &alt[..a], &alt[e..])).expect("Regelreferenz schreiben");
+    fs::write(path, format!("{}{neu}{}", &alt[..a], &alt[e..])).expect("write the rule reference");
 }
 
 fn write(dir: &Path, name: &str, content: String) {
-    fs::write(dir.join(name), content).expect("Beispieldatei schreiben");
+    fs::write(dir.join(name), content).expect("write the example file");
 }
 
 fn main() {

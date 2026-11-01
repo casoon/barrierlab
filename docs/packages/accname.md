@@ -1,72 +1,72 @@
 ---
 title: "accname"
-description: "Accessible Name Computation nach WAI-ARIA, differentiell gegen Chrome geprüft."
+description: "Accessible name computation per WAI-ARIA, checked differentially against Chrome."
 order: 3
 ---
 
-Accessible Name and Description Computation nach WAI-ARIA (accname 1.2) und
-HTML-AAM, generisch über `a11y-dom`. Der Eingang für alles, was einen Namen
-braucht.
+Accessible Name and Description Computation per WAI-ARIA (accname 1.2) and
+HTML-AAM, generic over `a11y-dom`. The entry point for everything that needs a
+name.
 
-## Stand
+## Status
 
-0.26.0 auf crates.io. Gegen Chrome differentiell geprüft: auditmysite hat dafür
-`accname-diff`; am ersten Korpus stimmten 381 von 395 Namen überein, die
-Abweichungen kamen sämtlich aus `contents` — dominante Ursache ist CSS
-`text-transform`, das Chrome auf den Namen anwendet und `accname` nicht.
+0.26.0 on crates.io. Checked differentially against Chrome: auditmysite has
+`accname-diff` for this; on the first corpus 381 of 395 names matched, and
+the deviations all came from `contents` — the dominant cause is CSS
+`text-transform`, which Chrome applies to the name and `accname` does not.
 
-## Aufbau
+## Structure
 
 ```mermaid
 flowchart LR
-  doc["Dokument\n(a11y-dom)"] --> idx[IdIndex]
+  doc["Document\n(a11y-dom)"] --> idx[IdIndex]
   idx --> nm["name()"]
   doc --> nm
-  nm --> steps["Schrittfolge nach accname 1.2:\naria-labelledby → aria-label →\nHTML-Beschriftung → contents → title"]
+  nm --> steps["Step sequence per accname 1.2:\naria-labelledby → aria-label →\nHTML label → contents → title"]
   doc --> rl["role(), implicit()"]
   rl --> nm
-  nm --> out["Name als String"]
+  nm --> out["Name as String"]
   doc --> ds["description()"]
 ```
 
-## Öffentliche Fläche
+## Public surface
 
-| Eintrag | Zweck |
+| Entry | Purpose |
 |---|---|
-| `name`, `description` | die beiden Berechnungen |
-| `role`, `implicit`, `allows_name_from_content`, `name_is_prohibited` | Rollenwissen, das die Schrittfolge braucht |
-| `IdIndex` | Auflösung von `aria-labelledby`/`aria-describedby` ohne wiederholte Baumsuche |
+| `name`, `description` | the two computations |
+| `role`, `implicit`, `allows_name_from_content`, `name_is_prohibited` | role knowledge the step sequence needs |
+| `IdIndex` | resolution of `aria-labelledby`/`aria-describedby` without repeated tree searches |
 
-## Abhängigkeiten
+## Dependencies
 
-Nach unten: `a11y-dom`. Nach oben: `a11y-rules`, Hosts mit dokumentbasierter
-Erhebung.
+Downward: `a11y-dom`. Upward: `a11y-rules`, hosts with document-based
+collection.
 
-## Grenzen
+## Limits
 
-`name()` sieht kein CSS: `text-transform`, `::before`/`::after` und
-Sichtbarkeitsregeln des Browsers sind nicht abgebildet. Zwischen den Teilen
-eines Namens steht deshalb immer ein Leerzeichen, auch bei Inline-Elementen:
-`<abbr>EU</abbr>-Arktis` ergibt „EU -Arktis", Chrome „EU-Arktis". Versteckt ist
-nur, was `hidden` oder `aria-hidden="true"` trägt. Eine Entscheidung nach dem
-Tag wurde in 0.11.1 versucht und in 0.11.2 zurückgenommen — auf echten Seiten
-sind `<span>` oft per CSS Block-Elemente (auditmysite-Korpus: 450 neue
-Abweichungen gegen 5 behobene).
+`name()` sees no CSS: `text-transform`, `::before`/`::after` and the
+browser's visibility rules are not modeled. A space therefore always separates the parts
+of a name, even for inline elements:
+`<abbr>EU</abbr>-Arktis` yields "EU -Arktis", Chrome "EU-Arktis". Only
+what carries `hidden` or `aria-hidden="true"` counts as hidden. A decision based on the
+tag was tried in 0.11.1 and reverted in 0.11.2 — on real pages
+`<span>` is often a block element via CSS (auditmysite corpus: 450 new
+deviations against 5 fixed).
 
-Hosts mit berechneten Stilen ([`Rendering`](a11y-dom.md), Tier 3) rufen
-`name_rendered(doc, node, ids)`. Dort schließen Kinder mit `display: inline`
-oder `contents` direkt an, alle anderen und ersetzte Elemente (`img`, `svg`, …)
-werden abgesetzt, `<br>` trennt immer; `display: none` (auch an einem
-Vorfahren) und `visibility: hidden` blenden aus — auch ein so verstecktes
-`<label>` benennt sein Feld nicht mehr —, außer bei ausdrücklichem
-Verweis über `aria-labelledby`. Der Host muss die Leerraum-Textknoten mitliefern
-— CDP `DOM.getDocument` lässt sie aus, `DOMSnapshot` nicht. Im
-auditmysite-Korpus (35 Seiten) bleibt damit ein echtes Abweichungsmuster statt
-sechs. `text-transform` und `::before`/`::after` bleiben auch dort außen vor.
+Hosts with computed styles ([`Rendering`](a11y-dom.md), tier 3) call
+`name_rendered(doc, node, ids)`. There, children with `display: inline`
+or `contents` attach directly, all others and replaced elements (`img`, `svg`, …)
+are set apart, `<br>` always separates; `display: none` (also on an
+ancestor) and `visibility: hidden` hide content — a `<label>` hidden this way
+also no longer names its field — except for an explicit
+reference via `aria-labelledby`. The host must supply the whitespace text nodes
+— CDP `DOM.getDocument` omits them, `DOMSnapshot` does not. In the
+auditmysite corpus (35 pages) this leaves one real deviation pattern instead of
+six. `text-transform` and `::before`/`::after` remain out of scope there as well.
 
-`<dt>` (Rolle `term`) bekommt keinen Namen aus dem Inhalt: `term` steht weder
-in ARIA 1.2 noch im ARIA-1.3-Entwurf unter „name from content", im Entwurf
-ausdrücklich unter „name prohibited". Chrome benennt `<dt>` trotzdem aus dem
-Inhalt — eine erwartete Abweichung. Wo ein Host native Werte hat (Chrome über CDP),
-sind diese getrennt zu kennzeichnen — nicht stillschweigend gegen die eigene
-Berechnung zu tauschen.
+`<dt>` (role `term`) gets no name from content: `term` is listed neither in
+ARIA 1.2 nor in the ARIA 1.3 draft under "name from content", and in the draft
+explicitly under "name prohibited". Chrome nevertheless names `<dt>` from its
+content — an expected deviation. Where a host has native values (Chrome via CDP),
+these are to be marked separately — not silently swapped for this package's own
+computation.

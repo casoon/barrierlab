@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "type": "bar",
+  "orientation": "horizontal",
+  "title": "html-conform against 4,655 vnu fixtures",
+  "description": "Per fixture: does the document produce findings or not. 3,745 documents vnu rejects are rejected, 909 clean ones stay clean; there are no false positives and one false negative.",
+  "source": "crates/html-conform differential test, vnu 26.8.20",
+  "width": 720,
+  "height": 300,
+  "showValues": true,
+  "valueAxis": { "title": "Fixtures" },
+  "data": [
+    { "label": "True positives", "value": 3745 },
+    { "label": "True negatives", "value": 909 },
+    { "label": "False negatives", "value": 1 },
+    { "label": "False positives", "value": 0 }
+  ]
+}
