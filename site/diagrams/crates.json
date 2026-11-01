@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "type": "flow",
-  "title": "Die 15 Crates und ihre Abhängigkeiten",
-  "description": "Ein Pfeil führt von einem Crate zu dem, das es benutzt. Abhängigkeiten zeigen nur nach unten, von L0 zu L3: html-conform baut auf sechs Parsern und Engines auf, a11y-rules auf a11y-dom, a11y-report und stylesheet-parse, a11y-wasm bündelt a11y-rules und accname für den Browser. a11y-perception und web-checks stehen für sich.",
-  "source": "[dependencies] der Crate-Manifeste in crates/*/Cargo.toml",
+  "title": "The 15 crates and their dependencies",
+  "description": "An arrow leads from a crate to the one that uses it. Dependencies only point down, from L0 to L3: html-conform builds on six parsers and engines, a11y-rules on a11y-dom, a11y-report and stylesheet-parse, and a11y-wasm bundles a11y-rules and accname for the browser. a11y-perception and web-checks stand alone.",
+  "source": "[dependencies] of the crate manifests in crates/*/Cargo.toml",
   "width": 1100,
   "height": 940,
   "flow": {
@@ -11,7 +11,7 @@
       {
         "id": "html5_parser",
         "label": "html5-parser",
-        "sublabel": "HTML-Parser",
+        "sublabel": "HTML parser",
         "lane": "l0"
       },
       {
@@ -47,25 +47,25 @@
       {
         "id": "a11y_dom",
         "label": "a11y-dom",
-        "sublabel": "Dokumentmodell",
+        "sublabel": "Document model",
         "lane": "l1"
       },
       {
         "id": "a11y_report",
         "label": "a11y-report",
-        "sublabel": "Befundmodell",
+        "sublabel": "Finding model",
         "lane": "l1"
       },
       {
         "id": "stylesheet_parse",
         "label": "stylesheet-parse",
-        "sublabel": "CSS-Stylesheets",
+        "sublabel": "CSS stylesheets",
         "lane": "l1"
       },
       {
         "id": "html_conform",
         "label": "html-conform",
-        "sublabel": "HTML-Konformanz",
+        "sublabel": "HTML conformance",
         "lane": "l1"
       },
       {
@@ -77,19 +77,19 @@
       {
         "id": "a11y_rules",
         "label": "a11y-rules",
-        "sublabel": "Regelbestand",
+        "sublabel": "Rule set",
         "lane": "l2"
       },
       {
         "id": "a11y_perception",
         "label": "a11y-perception",
-        "sublabel": "Wahrnehmung",
+        "sublabel": "Perception",
         "lane": "l2"
       },
       {
         "id": "web_checks",
         "label": "web-checks",
-        "sublabel": "robots, Meta, JSON-LD",
+        "sublabel": "robots, meta, JSON-LD",
         "lane": "l2"
       },
       {
@@ -169,19 +169,19 @@
     "lanes": [
       {
         "id": "l0",
-        "label": "L0 · Parser und Engines"
+        "label": "L0 · Parsers and engines"
       },
       {
         "id": "l1",
-        "label": "L1 · Modell"
+        "label": "L1 · Model"
       },
       {
         "id": "l2",
-        "label": "L2 · Berechnung"
+        "label": "L2 · Computation"
       },
       {
         "id": "l3",
-        "label": "L3 · Auslieferung"
+        "label": "L3 · Delivery"
       }
     ]
   }

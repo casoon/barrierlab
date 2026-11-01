@@ -1,17 +1,17 @@
 # a11y-rules
 
-Accessibility-Regeln, generisch über das Dokumentmodell aus
-[`a11y-dom`](https://crates.io/crates/a11y-dom). Teil von
+Accessibility rules, generic over the document model from
+[`a11y-dom`](https://crates.io/crates/a11y-dom). Part of
 [a11y-core](https://github.com/casoon/a11y-core).
 
-Ein Regelbestand, mehrere Oberflächen: Build-Zeit, CI/Crawl und die laufende
-Seite — mit identischen Regelkennungen und identischem JSON.
+One rule set, several surfaces: build time, CI/crawl and the live page — with
+identical rule IDs and identical JSON.
 
-## Nicht gelaufen ist nicht bestanden
+## "Did not run" is not "passed"
 
-`run` läuft mit dem, was der Host liefert, und hält für jede Regel fest, ob sie
-laufen konnte. Eine Tier-2-Regel auf einem Host ohne `Semantics` erzeugt keinen
-stillen Nicht-Befund, sondern einen Vermerk mit `NotRun::CapabilityMissing`.
+`run` runs with what the host provides and records for every rule whether it
+could run. A tier 2 rule on a host without `Semantics` does not produce a silent
+non-finding but a note with `NotRun::CapabilityMissing`.
 
 ```rust
 use a11y_dom::Arena;
@@ -26,90 +26,67 @@ let doc = Arena::builder()
 let report = run(&doc);
 assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 
-// Nicht beurteilt: die Tier-2- und Tier-3-Regeln, weil dieser Host weder
-// Semantik noch Darstellung liefert.
+// Not judged: the tier 2 and tier 3 rules, because this host provides neither
+// semantics nor rendering.
 assert_eq!(report.summary.rules_not_run, 7);
 ```
 
-Mit einem Host, der `Semantics` erfüllt, laufen die über `run_with_semantics`
-mit; ein Host mit `Semantics` **und** `Rendering` nimmt `run_full`. Die Trennung
-ist keine Formalie: Regeln, die einen echten Accessible Name brauchen — Links,
-Buttons, SVG —, dürfen ohne ihn nicht raten, und Kontrast lässt sich aus
-statischem Markup überhaupt nicht bestimmen.
+With a host that implements `Semantics`, those rules run via `run_with_semantics`;
+a host with `Semantics` **and** `Rendering` uses `run_full`. The separation is not
+a formality: rules that need a real accessible name — links, buttons, SVG — must
+not guess without one, and contrast cannot be determined from static markup at
+all.
 
-| Host liefert | Einstieg |
+| Host provides | Entry point |
 |---|---|
-| nur Struktur | `run` |
-| + Semantik | `run_with_semantics` |
-| + Darstellung | `run_with_rendering` |
-| beides | `run_full` |
+| structure only | `run` |
+| + semantics | `run_with_semantics` |
+| + rendering | `run_with_rendering` |
+| both | `run_full` |
 
-Jeder Einstieg hat eine Variante mit `_in` und einer `Locale` (`En`, `De`) für
-die Befundtexte, etwa `run_full_in(&doc, Locale::De)`. Ohne `_in` ist es
-Englisch. Kennungen, Outcomes und Schweregrade sind in jeder Sprache gleich.
-Die deutschen Texte hängen am Feature `de` (Vorgabe: an); mit
-`default-features = false` kommen sie gar nicht erst in den Binärcode, und
-`Locale::De` gibt es dann nicht.
+Every entry point has a variant with `_in` and a `Locale` (`En`, `De`) for the
+finding texts, e.g. `run_full_in(&doc, Locale::De)`. Without `_in` the texts are
+English. Rule IDs, outcomes and severities are the same in every language. The
+German texts sit behind the `de` feature (default: on); with
+`default-features = false` they are not compiled into the binary at all, and
+`Locale::De` does not exist.
 
-## Eine Namensmenge für Befunde und Vermerke
+## One set of names for findings and notes
 
-`Meta::ids` deklariert **alle** Befund-Kennungen, die eine Regel erzeugen kann,
-und `RuleRun` wird je Kennung geführt. Damit benutzen `rule_runs` und `findings`
-dieselbe Namensmenge und lassen sich über `rule_id` verbinden.
+`Meta::ids` declares **all** finding IDs a rule can produce, and `RuleRun` is kept
+per ID. `rule_runs` and `findings` therefore use the same set of names and can be
+joined via `rule_id`.
 
-In 0.1.0 war das getrennt: Vermerke trugen eine übergeordnete Regelkennung
-(`images/alt`), Befunde die spezifische (`images/alt-missing`). Ein Join lieferte
-stillschweigend nichts. Zwei Tests sichern die Zusicherung jetzt ab — jede
-erzeugte Kennung muss deklariert sein, und jeder Befund muss einen passenden
-Vermerk haben.
+In 0.1.0 these were separate: notes carried a parent rule ID (`images/alt`),
+findings the specific one (`images/alt-missing`). A join silently returned
+nothing. Two tests now guard the guarantee — every produced ID must be declared,
+and every finding must have a matching note.
 
-## Regeln
+## Rules
 
-**Tier 1** (Struktur), 34 Kennungen: `document/lang-missing`,
-`document/lang-invalid`, `document/title-missing`, `document/title-empty`,
-`zoom/viewport-locked`, `zoom/viewport-scale-limited`, `zoom/viewport-missing`,
-`headings/empty`, `headings/skip-level`, `headings/h1-missing`,
-`headings/h1-multiple`, `images/alt-missing`,
-`images/alt-suspicious`, `forms/label-missing`, `forms/placeholder-as-label`,
-`aria/role-invalid`, `aria/role-abstract`, `aria/reference-missing`,
-`aria/required-attribute-missing`,
-`ids/duplicate`, `keyboard/positive-tabindex`, `keyboard/hidden-focusable`,
-`keyboard/skip-link-missing`,
-`landmarks/main-missing`, `landmarks/main-duplicate`,
-`landmarks/navigation-missing`, `landmarks/banner-missing`,
-`landmarks/contentinfo-missing`,
-`lists/invalid-structure`, `lists/empty`, `lists/term-without-definition`,
-`lists/item-outside-list`,
-`tables/header-missing`, `tables/name-missing`,
-`tables/presentational-with-headers`.
+The full list of rule IDs, with tier, WCAG criterion and default severity, is on
+the [rules reference page](https://casoon.github.io/barrierlab/docs/a11y/reference/regeln/);
+`examples/a11y/rules.json` is its machine-readable source. At the time of writing
+there are 152: 95 in tier 1 (structure), 35 in tier 2 (semantics), 17 in tier 3
+(rendering) and 5 for stylesheets.
 
-Nicht jede fehlende Landmark ist ein Verstoß: `main` muss da sein, aber eine
-Seite darf ohne Navigation auskommen. `landmarks/navigation-missing`,
-`landmarks/banner-missing`, `landmarks/contentinfo-missing`,
-`headings/h1-multiple` und `keyboard/skip-link-missing` liefern deshalb
-`REVIEW`, nicht `FAIL` — der Sprunglink lässt sich ohnehin nur heuristisch
-über Linktext und Klassennamen erkennen.
+Not every missing landmark is a violation: `main` must be present, but a page may
+do without navigation. `landmarks/navigation-missing`, `landmarks/banner-missing`,
+`landmarks/contentinfo-missing`, `headings/h1-multiple` and
+`keyboard/skip-link-missing` therefore return `REVIEW`, not `FAIL` — the skip link
+can only be recognised heuristically anyway, via link text and class names.
 
+Tier 2 includes `links/ambiguous-name` and `links/generic-name`, which are two
+different rules: one says "two links have the same name but go elsewhere", the
+other "this text says nothing about the target on its own". Both return `REVIEW`.
 
-**Tier 2** (Semantik), 5 Kennungen: `links/name-missing`,
-`buttons/name-missing`, `svg/name-missing`, `links/ambiguous-name`,
-`links/generic-name`.
+Tier 3 comes with a requirement on the host: `ComputedStyle::background_color` is
+the **effective** background colour, resolved through the ancestors. If the host
+cannot determine it — background image, gradient, `background-blend-mode` — it
+returns `None`, and the rule reports `contrast/text-undetermined` with
+`UNTESTED`. A check against a guessed white would be worse than no statement: it
+produces a `PASS` that someone relies on.
 
-`links/ambiguous-name` und `links/generic-name` sind zwei verschiedene Regeln:
-Die eine sagt „zwei Links heißen gleich, führen aber woandershin", die andere
-„dieser Text sagt für sich genommen nichts über das Ziel". Beide liefern
-`REVIEW`.
-
-**Tier 3** (Darstellung), 2 Kennungen: `contrast/text-insufficient`,
-`contrast/text-undetermined`.
-
-Zu Tier 3 gehört eine Auflage an den Host: `ComputedStyle::background_color` ist
-die **effektive** Hintergrundfarbe, über die Vorfahren aufgelöst. Kann der Host
-sie nicht bestimmen — Hintergrundbild, Verlauf, `background-blend-mode` —,
-liefert er `None`, und die Regel meldet `contrast/text-undetermined` mit
-`UNTESTED`. Eine Prüfung gegen geratenes Weiß wäre schlimmer als keine Aussage:
-Sie erzeugt ein `PASS`, auf das sich jemand verlässt.
-
-## Lizenz
+## License
 
 MIT.

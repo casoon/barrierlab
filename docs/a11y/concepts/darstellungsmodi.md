@@ -1,81 +1,81 @@
 ---
-title: "Darstellungsmodi"
-description: "Die Konvention für Visualisierungen und Darstellungsmodi (Entwurf v0): drei Schichten je Grafik, ein seitenweiter Modus, und die Regeln, die sie prüfen."
+title: "Display Modes"
+description: "The convention for visualizations and display modes (draft v0): three layers per graphic, one page-wide mode, and the rules that check them."
 order: 4
 ---
 
-Eine Seite mit Diagrammen, Karten und 3D-Szenen soll niemanden ausschließen, ohne auf die
-Grafiken zu verzichten. Die Konvention löst das mit **einer Einstellung für die ganze Seite** —
-so selbstverständlich wie Hell und Dunkel — und mit **drei Schichten je Visualisierung**, aus
-denen der Modus auswählt. Sie stammt aus der Referenzumsetzung
-[Geographia](https://geographia.eu) und gilt seit dem 28.09.2026 BarrierLab-weit. Der Stand hier
-ist **Entwurf v0**: Namen und Pflichtangaben können sich noch ändern.
+A page with charts, maps and 3D scenes should exclude no one, without giving up the
+graphics. The convention solves this with **one setting for the whole page** —
+as natural as light and dark — and with **three layers per visualization**, from
+which the mode selects. It comes from the reference implementation
+[Geographia](https://geographia.eu) and has applied BarrierLab-wide since 28.09.2026. The status here
+is **draft v0**: names and required fields may still change.
 
-Die Konvention ist keine WCAG-Anforderung. Sie ist ein Weg, mehrere Kriterien auf einmal
-verlässlich zu erfüllen — 1.1.1 (Textalternative), 1.3.1 (Werte als Tabelle), 2.2.2 (Bewegung
-abschalten) —, und macht diesen Weg maschinell prüfbar.
+The convention is not a WCAG requirement. It is a way to reliably satisfy several criteria at
+once — 1.1.1 (text alternative), 1.3.1 (values as a table), 2.2.2 (turning off motion) —
+and makes that way machine-checkable.
 
-## Drei Modi
+## Three modes
 
-| Modus | zeigt | gedacht für |
+| Mode | shows | intended for |
 |---|---|---|
-| `visual` | alles, auch 3D, Animation, Interaktion | die Vorgabe |
-| `calm` | Standbilder statt Bewegung | Bewegungsempfindliche, kein WebGL, `Save-Data` |
-| `text` | keine Grafik; Kernaussage, Werte, Quelle | Screenreader-Nutzer, die die Seite linear lesen; Vorlesen; Druck |
+| `visual` | everything, including 3D, animation, interaction | the default |
+| `calm` | still images instead of motion | motion-sensitive users, no WebGL, `Save-Data` |
+| `text` | no graphics; key message, values, source | screen reader users who read the page linearly; read-aloud; print |
 
-Der Modus steht als `<html data-display="visual|calm|text">` am Dokument. Ein kleines,
-blockierendes Skript in `<head>` setzt ihn **vor dem ersten Zeichnen**: aus `localStorage`
-(Schlüssel `display`), ersatzweise `calm` bei `prefers-reduced-motion`. Ein Umschalter, markiert
-mit `[data-display-toggle]`, ändert ihn. Es gibt **eine URL je Seite** — kein getrenntes
-Text-Portal, das doppelt gepflegt wird und veraltet.
+The mode is set on the document as `<html data-display="visual|calm|text">`. A small,
+blocking script in `<head>` sets it **before first paint**: from `localStorage`
+(key `display`), falling back to `calm` under `prefers-reduced-motion`. A toggle, marked
+with `[data-display-toggle]`, changes it. There is **one URL per page** — no separate
+text portal that has to be maintained twice and goes stale.
 
-## Drei Schichten je Visualisierung
+## Three layers per visualization
 
-Jede Visualisierung ist eine `<figure data-viz="…">`. Der Wert sagt, was sie ist: `chart`,
-`diagram`, `image`, `3d` oder `interactive`.
+Every visualization is a `<figure data-viz="…">`. The value says what it is: `chart`,
+`diagram`, `image`, `3d` or `interactive`.
 
-| Schicht | Inhalt | Pflicht |
+| Layer | Content | Required |
 |---|---|---|
-| `[data-viz-text]` | die Kernaussage in einem Satz, die Werte (bei `chart` als `<table>`), Quelle | immer, und immer im HTML |
-| `[data-viz-static]` | Standbild derselben Aussage: SVG oder Bild | bei `3d` und `interactive` |
-| `[data-viz-live]` | 3D, Animation, Interaktion; wird nur in `visual` geladen | nein |
-| `<figcaption>` | benennt die Visualisierung | immer |
+| `[data-viz-text]` | the key message in one sentence, the values (for `chart` as a `<table>`), source | always, and always in the HTML |
+| `[data-viz-static]` | still image of the same message: SVG or image | for `3d` and `interactive` |
+| `[data-viz-live]` | 3D, animation, interaction; loaded only in `visual` | no |
+| `<figcaption>` | names the visualization | always |
 
-Die Textschicht ist **nie** per `hidden`, `aria-hidden` oder `inert` verborgen. Außerhalb des
-Textmodus wird sie nur visuell ausgeblendet (eine `visually-hidden`-Klasse); Screenreader lesen
-sie dann im Seitenfluss, mit ihrer Struktur. Ein Verweis per `aria-describedby` ist nicht nötig
-und liest die Aussage sonst doppelt vor.
+The text layer is **never** hidden via `hidden`, `aria-hidden` or `inert`. Outside text
+mode it is hidden only visually (a `visually-hidden` class); screen readers then read
+it in the page flow, with its structure. A reference via `aria-describedby` is not necessary
+and would otherwise read the message out twice.
 
 ```html
-<html lang="de" data-display="visual">
+<html lang="en" data-display="visual">
 <head>
-  <script src="/display-init.js"></script>  <!-- klassisch, ohne defer -->
+  <script src="/display-init.js"></script>  <!-- classic, without defer -->
 </head>
 <body>
   <header>
     <div data-display-toggle>
-      <button type="button" aria-pressed="true">Visuell</button>
-      <button type="button" aria-pressed="false">Ruhig</button>
+      <button type="button" aria-pressed="true">Visual</button>
+      <button type="button" aria-pressed="false">Calm</button>
       <button type="button" aria-pressed="false">Text</button>
     </div>
   </header>
   <main>
     <figure data-viz="interactive">
-      <div data-viz-live><!-- three.js, nur in "visual" --></div>
-      <svg data-viz-static role="img" aria-label="Erwärmung je Region" viewBox="0 0 640 360">…</svg>
+      <div data-viz-live><!-- three.js, only in "visual" --></div>
+      <svg data-viz-static role="img" aria-label="Warming by region" viewBox="0 0 640 360">…</svg>
       <div class="viz-text" data-viz-text>
-        <p>Die Kernaussage in einem Satz.</p>
+        <p>The key message in one sentence.</p>
         <table>…</table>
-        <p>Quelle: …</p>
+        <p>Source: …</p>
       </div>
-      <figcaption>Erwärmung je Region</figcaption>
+      <figcaption>Warming by region</figcaption>
     </figure>
   </main>
 </body>
 </html>
 ```
 
-Eine Skizze der Stile dazu:
+A sketch of the matching styles:
 
 ```css
 html:not([data-display="text"]) [data-viz-text] { /* visually hidden */ }
@@ -84,47 +84,47 @@ html[data-display="text"] [data-viz-static] { display: none; }
 html[data-display="calm"] [data-viz-live] { display: none; }
 ```
 
-## Warum so
+## Why this way
 
-- **Seitenweit statt je Grafik.** Gängig ist ein Umschalter „Tabelle zeigen" an jedem Diagramm.
-  Wer keine Grafiken sehen kann oder will, muss ihn dann überall finden und betätigen. Ein Modus
-  für die ganze Seite trifft die Entscheidung einmal.
-- **Im Inhalt, nicht im Overlay.** Die Schichten schreibt der Autor, kein nachgeladenes Werkzeug
-  rät sie. Was fehlt, fehlt im HTML — und ist damit prüfbar.
-- **Text ist gestaltet, nicht abgerüstet.** Der Textmodus ist eine eigene, gute Leseansicht mit
-  Kernaussage und Tabellen, keine Restseite.
-- **Vor dem ersten Zeichnen.** Setzt erst ein spätes Skript den Modus, läuft die Animation an,
-  bevor sie verschwindet — genau das, was `calm` verhindern soll.
+- **Page-wide instead of per graphic.** The common approach is a "show table" toggle on every chart.
+  Anyone who cannot or does not want to see graphics then has to find and operate it everywhere. A mode
+  for the whole page makes the decision once.
+- **In the content, not in an overlay.** The author writes the layers; no tool loaded later
+  guesses them. What is missing is missing in the HTML — and is therefore checkable.
+- **Text is designed, not stripped down.** Text mode is a reading view of its own and a good one, with
+  key message and tables, not a leftover page.
+- **Before first paint.** If a late script sets the mode, the animation starts
+  before it disappears — exactly what `calm` is meant to prevent.
 
-## Prüfung
+## Checks
 
-`a11y-rules` prüft die statische Hälfte; jede Regel meldet nur auf Seiten, die die Konvention
-benutzen, trägt das Schlagwort `best-practice` und hängt am nächsten WCAG-Kriterium. Was erst
-die laufende Seite zeigt — berechnete Sichtbarkeit, der Zeitpunkt von `data-display`, ob im
-Textmodus noch Grafik sichtbar ist —, misst [auditmysite](https://github.com/casoon/auditmysite)
-(`display/text-not-visible`, `display/text-media-visible` und die gerenderten Teile der übrigen).
+`a11y-rules` checks the static half; each rule reports only on pages that use the convention,
+carries the `best-practice` tag and attaches to the nearest WCAG criterion. What only
+the running page shows — computed visibility, the timing of `data-display`, whether graphics are
+still visible in text mode — is measured by [auditmysite](https://github.com/casoon/auditmysite)
+(`display/text-not-visible`, `display/text-media-visible` and the rendered parts of the others).
 
-| Kennung | prüft | Urteil, Schwere | WCAG |
+| ID | checks | Verdict, severity | WCAG |
 |---|---|---|---|
-| `viz/text-missing` | `figure[data-viz]` ohne nicht leeres `[data-viz-text]` | `FAIL`, hoch | 1.1.1 |
-| `display/text-hidden` | `[data-viz-text]` mit `hidden`, `aria-hidden="true"` oder `inert` (an ihm oder einem Vorfahren) | `FAIL`, hoch; `REVIEW`, niedrig, wenn ein Element der Grafik per `aria-describedby`/`aria-details` darauf verweist | 1.1.1 |
-| `viz/caption-missing` | `figure[data-viz]` ohne `<figcaption>` als Kind | `FAIL`, niedrig | 1.1.1 |
-| `viz/static-missing` | `3d` oder `interactive` ohne `[data-viz-static]` | `FAIL`, mittel | 2.2.2 |
-| `viz/table-missing` | `chart` ohne `<table>` | `REVIEW`, niedrig | 1.3.1 |
-| `display/toggle-missing` | Visualisierungen, aber kein `[data-display-toggle]` | `FAIL`, mittel | 2.2.2 |
-| `display/init-missing` | weder `html[data-display]` im Markup noch ein blockierendes Skript in `<head>` | `REVIEW`, niedrig | 2.2.2 |
+| `viz/text-missing` | `figure[data-viz]` without a non-empty `[data-viz-text]` | `FAIL`, high | 1.1.1 |
+| `display/text-hidden` | `[data-viz-text]` with `hidden`, `aria-hidden="true"` or `inert` (on it or an ancestor) | `FAIL`, high; `REVIEW`, low, if an element of the graphic references it via `aria-describedby`/`aria-details` | 1.1.1 |
+| `viz/caption-missing` | `figure[data-viz]` without a `<figcaption>` child | `FAIL`, low | 1.1.1 |
+| `viz/static-missing` | `3d` or `interactive` without `[data-viz-static]` | `FAIL`, medium | 2.2.2 |
+| `viz/table-missing` | `chart` without `<table>` | `REVIEW`, low | 1.3.1 |
+| `display/toggle-missing` | visualizations, but no `[data-display-toggle]` | `FAIL`, medium | 2.2.2 |
+| `display/init-missing` | neither `html[data-display]` in the markup nor a blocking script in `<head>` | `REVIEW`, low | 2.2.2 |
 
-`display/text-hidden` heißt im ersten Entwurf `viz/text-hidden`; die Kennung folgt auditmysite,
-damit statische und gemessene Befunde zusammenfallen.
+`display/text-hidden` was called `viz/text-hidden` in the first draft; the ID follows auditmysite
+so that static and measured findings coincide.
 
-### Grenzen
+### Limits
 
-- **Die Kernaussage wird nicht bewertet.** `viz/text-missing` prüft, dass Text da ist, nicht ob
-  er die Aussage der Grafik trifft. Das kann keine Maschine entscheiden.
-- **Medien außerhalb der Konvention** (`canvas`, `video`, `svg[role=img]` ohne `figure[data-viz]`)
-  prüft keine Regel. Der Entwurf sah `viz/orphan-media` vor; dafür fehlt bisher ein echter
-  Fall.
-- **Ob ein Skript den Modus setzt,** zeigt erst die laufende Seite. Statisch steht nur fest, dass
-  ohne blockierendes Skript in `<head>` niemand ihn rechtzeitig setzen kann.
-- **Nur `figure` trägt die Prüfungen.** Ein `data-viz` an einem anderen Element wird nicht auf
-  Text, Beschriftung und Standbild geprüft.
+- **The key message is not evaluated.** `viz/text-missing` checks that text is present, not whether
+  it matches the message of the graphic. No machine can decide that.
+- **Media outside the convention** (`canvas`, `video`, `svg[role=img]` without `figure[data-viz]`)
+  are checked by no rule. The draft provided for `viz/orphan-media`; so far there is no real
+  case for it.
+- **Whether a script sets the mode** is shown only by the running page. Statically, all that is certain is that
+  without a blocking script in `<head>` nobody can set it in time.
+- **Only `figure` carries the checks.** A `data-viz` on another element is not checked for
+  text, caption and still image.

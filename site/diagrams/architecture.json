@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
   "type": "flow",
-  "title": "Von den Bibliotheken zu den Werkzeugen",
-  "description": "Parser und ein gemeinsames Dokument- und Befundmodell tragen die Zugänglichkeitsregeln und die HTML-Konformanz; Wahrnehmung und Web-Checks rechnen eigenständig. Alles erscheint als Rust-Crates auf crates.io, die Regeln zusätzlich als WebAssembly-Paket auf npm. auditmysite, astro-post-audit und Relief binden die Crates ein, liveaudit das npm-Paket.",
-  "source": "Cargo.toml (Workspace), docs/consumers.md; Cargo.toml bzw. package.json der Werkzeuge, Stand 2026-10-14",
+  "title": "From libraries to tools",
+  "description": "Parsers and a shared document and finding model carry the accessibility rules and HTML conformance; perception and web checks compute on their own. Everything ships as Rust crates on crates.io, the rules additionally as a WebAssembly package on npm. auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.",
+  "source": "Cargo.toml (workspace), docs/consumers.md; Cargo.toml / package.json of the tools, as of 2026-10-14",
   "width": 1100,
   "height": 480,
   "flow": {
     "nodes": [
       {
         "id": "parser",
-        "label": "Parser",
+        "label": "Parsers",
         "sublabel": "HTML, CSS, CSP, XPath"
       },
       {
         "id": "model",
-        "label": "Gemeinsame Modelle",
+        "label": "Shared models",
         "sublabel": "a11y-dom, a11y-report"
       },
       {
@@ -26,22 +26,22 @@
       {
         "id": "conform",
         "label": "html-conform",
-        "sublabel": "Konformanz"
+        "sublabel": "Conformance"
       },
       {
         "id": "perception",
         "label": "a11y-perception",
-        "sublabel": "Wahrnehmung"
+        "sublabel": "Perception"
       },
       {
         "id": "checks",
         "label": "web-checks",
-        "sublabel": "robots, Meta, JSON-LD"
+        "sublabel": "robots, meta, JSON-LD"
       },
       {
         "id": "crates",
         "label": "crates.io",
-        "sublabel": "15 Rust-Crates",
+        "sublabel": "15 Rust crates",
         "kind": "io"
       },
       {
@@ -53,13 +53,13 @@
       {
         "id": "auditmysite",
         "label": "auditmysite",
-        "sublabel": "Audit im Terminal",
+        "sublabel": "Terminal audit",
         "kind": "external"
       },
       {
         "id": "apa",
         "label": "astro-post-audit",
-        "sublabel": "nach dem Astro-Build",
+        "sublabel": "after the Astro build",
         "kind": "external"
       },
       {
@@ -71,7 +71,7 @@
       {
         "id": "liveaudit",
         "label": "liveaudit",
-        "sublabel": "in der laufenden Seite",
+        "sublabel": "inside the live page",
         "kind": "external"
       }
     ],

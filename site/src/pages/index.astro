@@ -1,6 +1,6 @@
 ---
 import { readFile } from 'node:fs/promises';
-import { Button, Facts, Faq, Features, Hero, Install, ReleaseHighlights } from '@casoon/pages-theme/components';
+import { Button, CodeBlock, Facts, Faq, Features, Hero, Install, ReleaseHighlights } from '@casoon/pages-theme/components';
 import Base from '@casoon/pages-theme/layouts/Base.astro';
 import { parseChangelog } from '@casoon/pages-theme/lib/changelog';
 import { url } from '@casoon/pages-theme/url';
@@ -18,8 +18,8 @@ const latestRelease = config.changelog
 <Base>
   <Hero
     layout="editorial"
-    title="Eine Antwort statt vier."
-    lead="BarrierLab ist die gemeinsame Prüf-Engine hinter den CASOON-Audit-Werkzeugen: Zugänglichkeitsregeln nach WCAG 2.2, HTML-Konformanz, Wahrnehmung und Web-Checks als Rust-Bibliotheken. Ob eine Seite beim Astro-Build, im Terminal-Audit oder live im Browser geprüft wird — der Befund heißt überall gleich und bedeutet dasselbe."
+    title="One rule set for web audits."
+    lead="BarrierLab is the shared engine behind the CASOON audit tools: WCAG 2.2 accessibility rules, HTML conformance, perception and web checks as pure-Rust libraries, with the accessibility rules also compiled to WebAssembly. Whether a page is checked during the Astro build, in a terminal audit or live in the browser, a finding has the same ID and means the same thing."
   >
     <Install
       commands={[
@@ -29,61 +29,166 @@ const latestRelease = config.changelog
     />
     <div slot="output">
       <Diagram
-        name="architektur"
+        name="architecture"
         format="svg"
-        narrow={{ width: 380, height: 560, spec: 'architektur-schmal' }}
+        narrow={{ width: 380, height: 560, spec: 'architecture-narrow' }}
       />
     </div>
   </Hero>
 
   <Features
-    heading="Für wen das ist"
+    heading="Why it exists"
     items={[
       {
-        title: 'Wer Prüfwerkzeuge baut',
-        body: 'Ein Werkzeug, das Webseiten auf Barrieren oder HTML-Fehler prüft, muss die Regeln nicht selbst schreiben. Es liefert das Dokument, BarrierLab rechnet — in Rust oder als WebAssembly im Browser.',
+        title: 'Write a check once',
+        body: 'A tool that audits web pages should not have to reimplement the rules. It supplies the document; BarrierLab computes, in Rust or as WebAssembly in the page. Three tools already do exactly that.',
       },
       {
-        title: 'Wer die Ergebnisse liest',
-        body: 'Ein Bericht aus der Build-Pipeline und einer aus dem Browser lassen sich nebeneinanderlegen, ohne zu übersetzen: gleiche Regelkennung, gleicher Schweregrad, gleiches JSON aus a11y-report. Früher steckte dieselbe Prüfung als zwei Kopien in zwei Werkzeugen, die sich an derselben Seite widersprachen; mit einer gemeinsamen Implementierung fällt so ein Fall auf.',
+        title: 'Read results without translating',
+        body: 'A report from a build pipeline and one from a browser can be laid side by side: same rule ID, same severity, same JSON from a11y-report. When two tools used to carry their own copy of a check, they disagreed about the same page; with one implementation, such a case shows up as a bug in one place.',
       },
       {
-        title: '„Lief nicht“ ist nicht „bestanden“',
-        body: 'Fehlt einer Prüfung ihre Voraussetzung — kein Accessibility-Tree, kein Fokus, keine Darstellung —, steht sie mit Grund im Bericht. Ein stilles Bestanden gibt es nicht.',
+        title: '“Did not run” is not “passed”',
+        body: 'If a rule’s prerequisite is missing (no accessible names, no computed styles, no focus), it is listed in the report with the reason. There is no silent pass. The boundary is in the type system: a rule that needs rendering cannot be called on a host that has none.',
       },
     ]}
   />
+
+  <section class="code-section" aria-labelledby="code-heading">
+    <h2 id="code-heading">Two calls, two answers</h2>
+    <p class="intro">
+      The accessibility rules are generic over a document model, so the host decides what it can
+      supply. The simplest host is the <code>Arena</code> from <code>a11y-dom</code>, which holds
+      structure only. Rules that need more are not skipped quietly — they come back as{' '}
+      <code>NotRun</code>.
+    </p>
+    <div class="pair">
+      <CodeBlock
+        title="Accessibility"
+        label="Rust"
+        lang="rust"
+        code={`use a11y_dom::Arena;
+use a11y_rules::run;
+
+let doc = Arena::builder()
+    .open("html")
+        .open("body")
+            .open("img").attr("src", "logo.png").close()
+        .close()
+    .close()
+    .build();
+
+let report = run(&doc);
+
+// Found: no lang, no title, no alt.
+assert!(report.findings.iter()
+    .any(|f| f.rule_id == "images/alt-missing"));
+
+// Not judged: rules that need semantics or rendering.
+assert_eq!(report.summary.rules_not_run, 7);`}
+      />
+      <CodeBlock
+        title="HTML conformance"
+        label="Rust"
+        lang="rust"
+        code={`let html = std::fs::read_to_string("index.html")?;
+let report = html_conform::check(&html)?;
+
+for f in &report.findings {
+    let at = f.location.map(|l| l.to_string())
+        .unwrap_or_default();
+    println!("{:?} {at} {} {}",
+        f.severity, f.rule_id, f.message);
+}
+
+// Error 8:17 parser.html5 an unknown named character reference
+// Error 9:25 parser.html5 a duplicate attribute on a tag`}
+      />
+    </div>
+    <p class="intro" style="margin-top: 20px">
+      Findings are plain data with a stable JSON form:
+    </p>
+    <CodeBlock
+      title="a11y-report"
+      label="JSON"
+      lang="json"
+      code={`{
+  "rule_id": "images/alt-missing",
+  "outcome": "fail",
+  "severity": "high",
+  "message": "The image has no alt attribute.",
+  "location": { "node": "15" },
+  "wcag": ["1.1.1"]
+}`}
+    />
+  </section>
 
   <Facts
     items={[
-      { value: '15', label: 'Rust-Crates, alle auf crates.io' },
-      { value: '4', label: 'Werkzeuge, die sie heute einbinden' },
-      { value: '3', label: 'Regelstufen: Struktur, Semantik, Darstellung' },
-      { value: '1', label: 'Befundmodell für alle Pakete' },
+      { value: '15', label: 'Rust crates, all on crates.io' },
+      { value: '152', label: 'accessibility rule IDs in a11y-rules' },
+      { value: '4,655', label: 'vnu fixtures html-conform is measured against' },
+      { value: '1', label: 'finding model for every package' },
     ]}
   />
 
+  <section class="code-section" aria-labelledby="numbers-heading">
+    <h2 id="numbers-heading">What the numbers look like</h2>
+    <p class="intro">
+      Both charts are generated from the repository: the rule IDs are the output of{' '}
+      <code>examples/a11y</code>, the fixture counts come from the differential test against the
+      Nu Html Checker. Rules are grouped by what the host has to provide; structure rules run
+      anywhere, the rest declare their tier.
+    </p>
+    <div class="pair">
+      <Diagram name="rules-by-tier" format="svg" />
+      <Diagram name="vnu-agreement" format="svg" />
+    </div>
+    <p class="intro">
+      The vnu comparison is per fixture: does the document produce findings or not. It does not
+      compare message text or positions, and html-conform is not a port of vnu. CI fails if the
+      false-positive or false-negative count rises.
+    </p>
+  </section>
+
   <section class="how" aria-labelledby="how-heading">
-    <h2 id="how-heading">So hängt es zusammen</h2>
+    <h2 id="how-heading">How it fits together</h2>
     <div class="text">
       <p>
-        Hier liegen nur Bibliotheken. Keine davon öffnet eine Seite oder spricht ein
-        Browserprotokoll: Das Werkzeug beschafft die Daten, BarrierLab rechnet. Deshalb läuft
-        derselbe Regelbestand im Terminal, nach dem Build und als WebAssembly in der geöffneten
-        Seite.
+        Only libraries live here. None of them opens a page or speaks a browser protocol: the
+        tool obtains the data, BarrierLab computes. That is why the same rule set runs in a
+        terminal, after a build and as WebAssembly inside an open page.
       </p>
       <p>
-        Die Werkzeuge leben in eigenen Repositories und binden die Pakete über crates.io und npm
-        ein: auditmysite prüft gerenderte Seiten im Terminal, astro-post-audit das fertige
-        Astro-Build, liveaudit die laufende Seite, und Relief nutzt Regeln und Wahrnehmung im
-        eigenen Browser.
+        Dependencies point down through four layers: parsers, models, computation, delivery. No
+        package imports one from its own or a higher layer, and each package names the
+        specification it implements, from WHATWG HTML to XPath 1.0 to WCAG 2.2.
       </p>
     </div>
+    <Diagram name="crates" format="svg" />
     <div class="links">
-      <Button href={url('docs/a11y/getting-started/schnellstart/')}>Schnellstart in Rust</Button>
-      <Button href={url('docs/packages/')} variant="secondary">Alle Pakete im Überblick</Button>
-      <Button href={url('docs/html-conform/')} variant="quiet">HTML-Konformanz →</Button>
+      <Button href={url('docs/a11y/getting-started/schnellstart/')}>Quickstart in Rust</Button>
+      <Button href={url('docs/packages/')} variant="secondary">All packages</Button>
+      <Button href={url('docs/html-conform/')} variant="quiet">HTML conformance →</Button>
     </div>
+  </section>
+
+  <section class="tools" aria-labelledby="tools-heading">
+    <h2 id="tools-heading">Tools built on it</h2>
+    <ul>
+      <li>
+        <strong><a href="https://github.com/casoon/auditmysite">auditmysite</a></strong>
+        Audits rendered pages in the terminal, using the rules, accessible names and html-conform.
+      </li>
+      <li>
+        <strong><a href="https://github.com/casoon/astro-post-audit">astro-post-audit</a></strong>
+        Audits a finished Astro build, using the same rules plus web-checks.
+      </li>
+      <li>
+        <strong><a href="https://github.com/casoon/liveaudit">liveaudit</a></strong>
+        Audits the running page inside the browser, via the WebAssembly package.
+      </li>
+    </ul>
   </section>
 
   {latestRelease && <ReleaseHighlights release={latestRelease} />}
@@ -91,20 +196,24 @@ const latestRelease = config.changelog
   <Faq
     items={[
       {
-        q: 'Ist BarrierLab selbst ein Werkzeug, das eine Seite prüft?',
-        a: 'Nein. Dieses Repository enthält nur Bibliotheken – Rust-Crates für Zugänglichkeit, HTML-Konformanz und Wahrnehmung. Wer eine Seite tatsächlich prüfen will, braucht eines der Werkzeuge, die diese Pakete einbinden, etwa auditmysite oder liveaudit.',
+        q: 'Is BarrierLab itself a tool that checks a page?',
+        a: 'No. This repository contains libraries only: Rust crates for accessibility, HTML conformance, perception and web checks. To audit a page you need one of the tools that embed them, such as auditmysite or liveaudit.',
       },
       {
-        q: 'Welche Werkzeuge nutzen die Bibliotheken bereits?',
-        a: 'auditmysite, astro-post-audit und liveaudit binden die Crates heute schon über crates.io beziehungsweise npm ein. Weil alle denselben Regelbestand verwenden, bedeutet ein Befund-Code in jedem der drei Werkzeuge dasselbe.',
+        q: 'Which tools use the libraries today?',
+        a: 'auditmysite, astro-post-audit and liveaudit use the crates from crates.io and npm. Because they share the rule set, a finding ID means the same thing in all three.',
       },
       {
-        q: 'Was heißt es, wenn eine Regel als „nicht gelaufen" markiert ist?',
-        a: 'Manche Regeln brauchen Daten, die nicht jeder Host liefert, etwa Fokus oder berechnete Stile bei reinem statischem HTML. Fehlt diese Voraussetzung, erscheint die Regel mit Grund als nicht gelaufen im Bericht, statt stillschweigend als bestanden zu gelten.',
+        q: 'What does it mean when a rule is marked “not run”?',
+        a: 'Some rules need data not every host can supply, such as focus or computed styles for static HTML. When the prerequisite is missing, the rule is listed in the report with the reason instead of counting as passed.',
       },
       {
-        q: 'Warum gibt es keinen gemeinsamen Changelog für das ganze Repository?',
-        a: 'BarrierLab ist ein Monorepo ohne gemeinsame Versionsnummer – jedes Crate pflegt sein eigenes Changelog neben seinem Quellcode. Änderungen an einem einzelnen Paket stehen deshalb dort, nicht an einer zentralen Stelle.',
+        q: 'Can I use a single parser without the audit code?',
+        a: 'Yes. The L0 crates (html5-parser, csp-parse, media-query-parse, xpath-eval, relax-ng, schematron-engine) are independent of the audit code. xpath-eval and schematron-engine are generic over the document model and also work outside HTML.',
+      },
+      {
+        q: 'Why is there no shared changelog?',
+        a: 'BarrierLab is a monorepo without a common version number. Each crate keeps its own changelog next to its source, so changes to one package are recorded there.',
       },
     ]}
   />
@@ -131,6 +240,46 @@ const latestRelease = config.changelog
   .text p {
     margin: 0 0 16px;
     font-size: 15.5px;
+  }
+  .code-section {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px 72px;
+  }
+  .code-section .intro {
+    max-width: 68ch;
+    margin: 0 0 20px;
+    font-size: 15.5px;
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  .tools {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px 72px;
+  }
+  .tools ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tools li {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14.5px;
+  }
+  .tools strong {
+    display: block;
+    color: var(--heading);
+    font-size: 16px;
   }
   .links {
     display: flex;
