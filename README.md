@@ -10,10 +10,7 @@ build time, in a terminal audit or live in the browser.
 [![npm](https://img.shields.io/npm/v/@casoon/a11y-wasm.svg?label=%40casoon%2Fa11y-wasm)](https://www.npmjs.com/package/@casoon/a11y-wasm)
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/img/architecture.dark.svg">
-    <img src="docs/img/architecture.light.svg" width="900" alt="Flow chart: parsers and shared models feed a11y-rules and html-conform; those and a11y-perception and web-checks ship as 15 Rust crates on crates.io, a11y-rules additionally as WebAssembly on npm; auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.">
-  </picture>
+  <img src="docs/img/architecture.svg" width="900" alt="Flow chart: parsers and shared models feed a11y-rules and html-conform; those and a11y-perception and web-checks ship as 15 Rust crates on crates.io, a11y-rules additionally as WebAssembly on npm; auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.">
 </p>
 
 **This repository contains libraries only.** The tools that use them live in their own
@@ -106,10 +103,7 @@ Four outcomes exist: `fail`, `review` (needs a human decision), `pass` and `unte
 (manual checks the machine cannot make). The rule IDs are stable across every surface.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/img/rules-by-tier.dark.svg">
-    <img src="docs/img/rules-by-tier.light.svg" width="720" alt="Bar chart: 95 structure rules, 35 semantics rules, 17 rendering rules and 5 stylesheet rules, 152 rule IDs in total.">
-  </picture>
+  <img src="docs/img/rules-by-tier.svg" width="720" alt="Bar chart: 95 structure rules, 35 semantics rules, 17 rendering rules and 5 stylesheet rules, 152 rule IDs in total.">
 </p>
 
 Each rule declares what it needs. A rule that needs rendering cannot even be called with a
@@ -140,10 +134,7 @@ microsyntaxes, Schematron co-constraints, `importmap` / `speculationrules` / CSP
 and a table-grid check. It is measured against the Nu Html Checker's own test suite:
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/img/vnu-agreement.dark.svg">
-    <img src="docs/img/vnu-agreement.light.svg" width="720" alt="Bar chart of html-conform against 4,655 vnu fixtures: 3,745 true positives, 909 true negatives, 1 false negative, 0 false positives.">
-  </picture>
+  <img src="docs/img/vnu-agreement.svg" width="720" alt="Bar chart of html-conform against 4,655 vnu fixtures: 3,745 true positives, 909 true negatives, 1 false negative, 0 false positives.">
 </p>
 
 CI fails if either error count rises. What the comparison measures, and what it does not,
@@ -202,6 +193,13 @@ Architecture and conventions: [`docs/`](docs/). Releases: one tag per package
 
 **<https://casoon.github.io/barrierlab/>**: overview, package pages, the accessibility
 guide and the html-conform guide.
+
+## BarrierLab.eu
+
+These libraries are part of the wider BarrierLab project: an independent European
+laboratory for digital accessibility that makes barriers visible, explains how they
+arise and shows how they go away. Articles, tools and background live at
+**<https://barrierlab.eu>**.
 
 ## License
 
