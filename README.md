@@ -203,6 +203,13 @@ Architecture and conventions: [`docs/`](docs/). Releases: one tag per package
 **<https://casoon.github.io/barrierlab/>**: overview, package pages, the accessibility
 guide and the html-conform guide.
 
+## BarrierLab.eu
+
+These libraries are part of the wider BarrierLab project: an independent European
+laboratory for digital accessibility that makes barriers visible, explains how they
+arise and shows how they go away. Articles, tools and background live at
+**<https://barrierlab.eu>**.
+
 ## License
 
 MIT
