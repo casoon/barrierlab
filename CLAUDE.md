@@ -5,7 +5,7 @@ Werkzeuge (auditmysite, astro-post-audit, liveaudit) haben eigene Repositories
 und binden die Pakete über crates.io und npm ein.
 
 Architektur, Konventionen und je Paket eine Seite: [`docs/`](docs/).
-Lokaler Stand und offene Punkte: `plan/status.md` (gitignored).
+Offene Punkte und Stand stehen in den GitHub-Issues (Tracking-Issues mit Unter-Issues); `plan/` wird nicht mehr genutzt.
 
 ## Schichten
 
