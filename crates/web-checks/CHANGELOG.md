@@ -5,6 +5,7 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
 ### Added
 
 - **third_party:** Familie `third_party` (casoon/barrierlab#91): `classify_host`, `classify_url` und `classify_storage_name` ordnen Host, URL und Cookie-/Storage-Name einem Anbieter mit Kategorie (Analytics, Werbung, Social, Tag-Manager, Schriften, CDN, Video, Karten, Consent-Plattform) und Sitz zu. 23 Anbieter, jeder mit Quelle; Pfadregeln trennen etwa Like-Plugin und Werbe-Pixel auf `facebook.net`. Host-Abgleich an der Punktgrenze, Zugangsdaten-Trick (`https://google-analytics.com@evil.example/`) geht an den echten Host. Daten, kein Urteil; unbekannt ist `None`.
