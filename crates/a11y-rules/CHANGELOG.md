@@ -10,6 +10,14 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Empfehlungen:** `BEST_PRACTICE_RULES`, `BestPracticeRule` und `best_practice_rule(id)` führen die Kennungen, die Empfehlungen sind, mit normativer Begründung (`reason`, `reason_in(locale)`) (casoon/barrierlab#81).
+
+### Changed
+
+- **Empfehlungen:** Die Befunde `headings/h1-missing`, `headings/skip-level`, `landmarks/*` (`main-missing`, `main-duplicate`, `not-top-level`, `banner-duplicate`, `contentinfo-duplicate`, `content-outside`), `lists/empty`, `lists/role-redundant`, `aria/role-redundant`, `patterns/tooltip-unreferenced` und `zoom/viewport-*` sind `REVIEW` mit `Basis::BestPractice` statt `FAIL` mit Schlagwort; Hosts müssen sie nicht mehr herabstufen. Die Darstellungskonvention (`viz/*`, `display/*`) bleibt unverändert.
+
 ## [0.26.1] - 2026-10-27
 
 ### Added

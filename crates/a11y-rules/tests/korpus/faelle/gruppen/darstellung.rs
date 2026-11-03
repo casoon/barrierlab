@@ -378,8 +378,8 @@ fn listen() -> Vec<Fall> {
     let id = "lists/role-redundant";
     let q = "ARIA in HTML: role=list on ul/ol is redundant (best practice, no SC; docs/packages/a11y-rules.md, auditmysite#779)";
     vec![
-        fail(id, r#"<ul role="list"><li>One</li><li>Two</li></ul>"#, q).anzahl(1),
-        fail(id, r#"<ol role="list"><li>One</li></ol>"#, q).variante("ol"),
+        review(id, r#"<ul role="list"><li>One</li><li>Two</li></ul>"#, q).anzahl(1),
+        review(id, r#"<ol role="list"><li>One</li></ol>"#, q).variante("ol"),
         negativ(id, r#"<ul role="list" style="list-style-type:none"><li>One</li></ul>"#,
             "auditmysite#644: WebKit drops list semantics with list-style-type:none; the explicit role restores them, so it is not redundant")
             .variante("list-style-type: none"),
