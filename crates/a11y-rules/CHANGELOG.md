@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-03
+
 ### Added
 
 - **Empfehlungen:** `BEST_PRACTICE_RULES`, `BestPracticeRule` und `best_practice_rule(id)` führen die Kennungen, die Empfehlungen sind, mit normativer Begründung (`reason`, `reason_in(locale)`) (casoon/barrierlab#81).
