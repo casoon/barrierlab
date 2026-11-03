@@ -28,6 +28,9 @@ Two rules keep it small:
   ruleset version), and `@type` values duplicated across blocks.
 - `hreflang` — language codes (Google's subset of BCP 47, case-insensitive),
   `x-default`, and whether a page lists itself (`x-default` does not count).
+- `third_party` — classify third parties: host or URL, and cookie/storage name →
+  provider, category, seat (EU / US / other / unknown), each entry with a
+  documented source. Data, no verdict; an unknown host is `None`, not a finding.
 
 More families follow one at a time, each checked first for whether it really
 asks the same question. "Security" looked like duplication by name; in fact one

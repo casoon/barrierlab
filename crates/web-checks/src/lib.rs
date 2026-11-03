@@ -32,6 +32,9 @@
 //! Google dokumentierten Pflicht- und Empfehlungsangaben bewerten, doppelte
 //! Typen über Blöcke hinweg finden.
 //!
+//! [`third_party`] — Drittanbieter einordnen: Host oder URL und Cookie-/Storage-Name
+//! → Anbieter, Kategorie, Sitz, jeweils mit Quelle. Daten, kein Urteil.
+//!
 //! Weitere Familien folgen einzeln. Jede wird vorher darauf geprüft, ob sie
 //! wirklich dieselbe Frage stellt: bei „Security" etwa sah die Namensgleichheit
 //! nach Doppelung aus, tatsächlich prüft ein Werkzeug HTTP-Header und das
@@ -44,3 +47,4 @@ pub mod meta;
 pub mod robots;
 pub mod social;
 pub mod structured_data;
+pub mod third_party;
