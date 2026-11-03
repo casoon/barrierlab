@@ -87,7 +87,7 @@ fn korpus_redundant_role_list_style_issue_644() {
     assert_eq!(an(&doc, &r, "aria/role-redundant"), ["send-button"]);
     assert_eq!(
         urteile(&r, "aria/role-redundant"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
 }
 
@@ -204,7 +204,7 @@ fn korpus_forms_and_misc() {
     );
     assert_eq!(
         urteile(&r, "patterns/tooltip-unreferenced"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
 }
 

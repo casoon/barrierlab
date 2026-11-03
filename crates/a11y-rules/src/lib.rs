@@ -42,6 +42,7 @@
 #![forbid(unsafe_code)]
 
 mod aria;
+mod best_practice;
 mod checkliste;
 mod darstellung;
 mod document;
@@ -63,6 +64,7 @@ mod structure;
 mod tables;
 mod viz;
 
+pub use best_practice::{BEST_PRACTICE_RULES, BestPracticeRule, best_practice_rule};
 pub use locale::Locale;
 use locale::pick;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule, StylesheetRule};

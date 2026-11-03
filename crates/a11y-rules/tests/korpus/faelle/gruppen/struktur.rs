@@ -380,12 +380,12 @@ fn listen() -> Vec<Fall> {
         )
         .variante("hidden"),
         na(INV, r#"<p>Keine Liste</p>"#, UL),
-        fail(
+        review(
             LEER,
             r#"<ul></ul>"#,
             "Normative Zuordnung (auditmysite#779): Best Practice, Befund ohne Kriterium",
         ),
-        fail(
+        review(
             LEER,
             r#"<div role="list"></div>"#,
             "Normative Zuordnung (auditmysite#779): Best Practice",

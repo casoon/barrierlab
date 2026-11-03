@@ -227,13 +227,13 @@ fn viewport() -> Vec<Fall> {
             "ACT b4f0c3: anwendbar nur auf meta name=viewport",
         ),
         // --- zoom/viewport-scale-limited (Best Practice, auditmysite#779)
-        fail(
+        review(
             "zoom/viewport-scale-limited",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="width=device-width, maximum-scale=2"></head><body><p>x</p></body></html>"#,
             "Best Practice (docs/packages/a11y-rules.md): 1.4.4 erfüllt, aber unter 500 % begrenzt",
         )
         .variante("Grenze: 2"),
-        fail(
+        review(
             "zoom/viewport-scale-limited",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="width=device-width, maximum-scale=4.99"></head><body><p>x</p></body></html>"#,
             "Best Practice: unter 500 %",
@@ -257,7 +257,7 @@ fn viewport() -> Vec<Fall> {
             "Ohne maximum-scale keine Begrenzung",
         ),
         // --- zoom/viewport-missing (Best Practice, auditmysite#779)
-        fail(
+        review(
             "zoom/viewport-missing",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title></head><body><p>x</p></body></html>"#,
             "Best Practice ohne Kriterium (docs/packages/a11y-rules.md, auditmysite#779)",
@@ -337,19 +337,19 @@ fn ueberschriften() -> Vec<Fall> {
             "ACT ffd0e9: anwendbar nur auf Überschriften",
         ),
         // --- headings/skip-level (Best Practice, auditmysite#779)
-        fail(
+        review(
             "headings/skip-level",
             r#"<h1>A</h1><h3>B</h3>"#,
             "Best Practice (G141, axe heading-order; docs/packages/a11y-rules.md)",
         )
         .variante("Grenze: zwei Ebenen"),
-        fail(
+        review(
             "headings/skip-level",
             r#"<h1>A</h1><h2 hidden>B</h2><h3>C</h3>"#,
             "Die Gliederung im Accessibility-Tree springt von h1 auf h3",
         )
         .variante("Zwischenebene versteckt"),
-        fail(
+        review(
             "headings/skip-level",
             r#"<h1>A</h1><div role="heading" aria-level="3">B</div>"#,
             "WAI-ARIA 1.2: role=heading mit aria-level gehört zur Gliederung",
@@ -373,12 +373,12 @@ fn ueberschriften() -> Vec<Fall> {
             "Eine einzige Überschrift hat keine Folge",
         ),
         // --- headings/h1-missing (Best Practice, auditmysite#779)
-        fail(
+        review(
             "headings/h1-missing",
             r#"<h2>A</h2><h3>B</h3>"#,
             "Best Practice (axe page-has-heading-one; docs/packages/a11y-rules.md)",
         ),
-        fail(
+        review(
             "headings/h1-missing",
             r#"<h1 hidden>A</h1><h2>B</h2>"#,
             "Eine versteckte h1 steht nicht im Accessibility-Tree",
