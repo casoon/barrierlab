@@ -97,7 +97,7 @@ fn path_rule_changes_category_only_for_urls() {
     let pixel = classify_url("https://connect.facebook.net/en_US/fbevents.js").unwrap();
     assert_eq!(
         (pixel.provider.id, pixel.category),
-        ("meta", Category::Advertising)
+        ("meta-pixel", Category::Advertising)
     );
     let beacon = classify_url("https://www.facebook.com/tr?id=1&ev=PageView").unwrap();
     assert_eq!(beacon.category, Category::Advertising);
@@ -123,6 +123,18 @@ fn shared_host_is_only_claimed_by_its_path_rule() {
             .category,
         Category::Maps
     );
+}
+
+#[test]
+fn meta_pixel_cookies_are_advertising_not_social() {
+    for name in ["_fbp", "_fbc"] {
+        let m = classify_storage_name(name).unwrap();
+        assert_eq!(
+            (m.provider.id, m.category),
+            ("meta-pixel", Category::Advertising),
+            "{name}"
+        );
+    }
 }
 
 #[test]

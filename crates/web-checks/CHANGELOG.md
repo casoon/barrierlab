@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-03
+
+### Fixed
+
+- **third_party:** Die Meta-Cookies `_fbp` und `_fbc` gelten als Werbung, nicht als Social: Der Werbe-Pixel ist ein eigener Anbieter `meta-pixel` (Pfadregeln `fbevents.js`, `/tr`), das Plugin bleibt `meta`. Entdeckt am Korpus von auditmysite (casoon/auditmysite#873).
+
 ## [0.6.0] - 2026-11-03
 ### Added
 
