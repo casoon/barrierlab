@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Changed
+
+- **Selektoren:** Der Selektor-Abgleich der Stylesheet-Regeln kommt aus `style-cascade` und liest jetzt CSS-Escapes im Bezeichner (`.sm\:hidden`); Selektoren damit sind nicht mehr „unbekannt".
+
 ## [0.26.1] - 2026-10-27
 
 ### Added
