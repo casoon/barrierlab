@@ -50,7 +50,7 @@ pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
             None => ungemessen = true,
             Some(t) if t.trim().eq_ignore_ascii_case("none") => {}
             Some(_) => out.push(
-                Finding::fail(
+                Finding::best_practice(
                     "lists/role-redundant",
                     pick!(
                         locale,
@@ -61,7 +61,6 @@ pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_tags(["best-practice"])
                 .at(at(n.id())),
             ),
         }

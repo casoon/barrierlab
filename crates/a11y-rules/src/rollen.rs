@@ -91,7 +91,7 @@ pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
         }
         let tag = n.local_name();
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "aria/role-redundant",
                 tr!(
                     locale,
@@ -101,7 +101,6 @@ pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
                 ),
             )
             .with_severity(Severity::Low)
-            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }
@@ -213,7 +212,7 @@ pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
             continue;
         }
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "patterns/tooltip-unreferenced",
                 pick!(
                     locale,
@@ -224,7 +223,6 @@ pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
                 ),
             )
             .with_severity(Severity::Low)
-            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }

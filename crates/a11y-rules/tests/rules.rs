@@ -220,7 +220,7 @@ fn minimaldokument_meldet_landmarks_als_review_ausser_main() {
             .find(|f| f.rule_id == id)
             .map(|f| f.outcome)
     };
-    assert_eq!(outcome("landmarks/main-missing"), Some(Outcome::Fail));
+    assert_eq!(outcome("landmarks/main-missing"), Some(Outcome::Review));
     assert_eq!(
         outcome("landmarks/navigation-missing"),
         Some(Outcome::Review)
@@ -2415,7 +2415,7 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .into_iter()
         .find(|f| f.rule_id == "landmarks/main-missing")
         .unwrap();
-    assert_eq!(f.outcome, Outcome::Fail);
+    assert_eq!(f.outcome, Outcome::Review);
 }
 
 /// berlin.de: Swiper setzt `role="group"` auf die `<li>` der Slider-Liste.

@@ -160,7 +160,7 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
             continue;
         };
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "landmarks/not-top-level",
                 tr!(
                     locale,
@@ -169,7 +169,6 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
                 ),
             )
             .with_severity(Severity::Medium)
-            .with_tags(["best-practice"])
             .at(at(n.id())),
         );
     }
@@ -183,7 +182,7 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
         }
         let zahl = gleiche.len();
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 kennung,
                 tr!(
                     locale,
@@ -192,7 +191,6 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
                 ),
             )
             .with_severity(Severity::Medium)
-            .with_tags(["best-practice"])
             .at(at(gleiche[1].0.id())),
         );
     }
@@ -328,7 +326,7 @@ fn erreichbar<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
 
 fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
     out.push(
-        Finding::fail(
+        Finding::best_practice(
             "landmarks/content-outside",
             pick!(
                 locale,
@@ -337,7 +335,6 @@ fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
             ),
         )
         .with_severity(Severity::Medium)
-        .with_tags(["best-practice"])
         .at(at(id)),
     );
 }

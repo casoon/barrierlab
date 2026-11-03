@@ -59,6 +59,40 @@ impl Outcome {
     }
 }
 
+/// Worauf stützt sich die Aussage: ein Erfolgskriterium oder eine Empfehlung?
+///
+/// Dritte, von [`Outcome`] und [`Severity`] unabhängige Angabe. Eine Empfehlung
+/// („Best Practice") belegt nicht, dass ein Erfolgskriterium verfehlt ist: eine h2 ohne h1
+/// ist unter 1.3.1 als Überschrift bestimmbar, WCAG verlangt keine Ebene. Ein
+/// Host muss das deshalb nicht aus einem Schlagwort ableiten und nicht selbst
+/// herabstufen — [`Finding::best_practice`] liefert zugleich [`Outcome::Review`].
+///
+/// [`Finding::best_practice`]: crate::Finding::best_practice
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Default,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum Basis {
+    /// Die Aussage hängt an einem Erfolgskriterium (oder ist eine manuelle Frage dazu).
+    #[default]
+    Criterion,
+    /// Empfehlung ohne Erfolgskriterium. Kein Verstoß, kein Punktabzug nötig.
+    BestPractice,
+}
+
+impl Basis {
+    pub fn is_criterion(&self) -> bool {
+        *self == Basis::Criterion
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Basis::Criterion => "criterion",
+            Basis::BestPractice => "best_practice",
+        }
+    }
+}
+
 /// Wie schwer wiegt das Problem — unabhängig davon, wie sicher es ist.
 ///
 /// `Critical` + [`Outcome::Untested`] ist fachlich etwas anderes als `Medium` +
