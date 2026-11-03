@@ -119,9 +119,18 @@ pub static PROVIDERS: &[Provider] = &[
         name: "Meta (Facebook)",
         category: C::Social,
         jurisdiction: J::Us,
+        domains: &[d("facebook.com"), d("facebook.net")],
+        storage: &[],
+        source: "https://www.facebook.com/privacy/policies/cookies/",
+    },
+    // Der Werbe-Pixel hat dieselben Hosts wie das Plugin, aber einen anderen
+    // Zweck. Pfadregeln trennen die Requests, die Cookie-Namen gehören hierher.
+    Provider {
+        id: "meta-pixel",
+        name: "Meta Pixel",
+        category: C::Advertising,
+        jurisdiction: J::Us,
         domains: &[
-            d("facebook.com"),
-            d("facebook.net"),
             dp("facebook.net", "fbevents.js", C::Advertising),
             dp("facebook.com", "/tr?", C::Advertising),
             dp("facebook.com", "/tr/", C::Advertising),
