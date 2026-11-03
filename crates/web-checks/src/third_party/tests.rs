@@ -161,6 +161,68 @@ fn storage_names() {
 }
 
 #[test]
+fn fathom_and_carbon_ads_by_host() {
+    let f = classify_url("https://cdn.usefathom.com/script.js").unwrap();
+    assert_eq!((f.provider.id, f.category), ("fathom", Category::Analytics));
+    let c = classify_host("srv.carbonads.net").unwrap();
+    assert_eq!(
+        (c.provider.id, c.category),
+        ("carbon-ads", Category::Advertising)
+    );
+    assert_eq!(id(classify_host("syndicateads.net")), Some("carbon-ads"));
+    // Fathom ist cookielos: kein Name gehört ihm.
+    assert!(
+        PROVIDERS
+            .iter()
+            .find(|p| p.id == "fathom")
+            .unwrap()
+            .storage
+            .is_empty()
+    );
+    assert!(classify_host("notusefathom.com").is_none());
+    assert!(classify_host("carbonads.com").is_none());
+}
+
+#[test]
+fn mapp_intelligence_by_host_and_cookie() {
+    assert_eq!(
+        id(classify_url("https://analytics01.wt-eu02.net/123456789/wt")),
+        Some("mapp-intelligence")
+    );
+    assert_eq!(
+        id(classify_host("analytics01.webtrekk.net")),
+        Some("mapp-intelligence")
+    );
+    for name in [
+        "wt3_eid",
+        "wt3_sid",
+        "wt_rla",
+        "wteid_123456789",
+        "wtsid_123456789",
+        "wtstp_eid",
+    ] {
+        let m = classify_storage_name(name).unwrap();
+        assert_eq!(
+            (m.provider.id, m.category),
+            ("mapp-intelligence", Category::Analytics),
+            "{name}"
+        );
+    }
+    // Kein Teiltreffer auf ähnliche Namen.
+    for name in ["wt_", "wt3", "xwt3_eid", "wtfoo"] {
+        assert!(classify_storage_name(name).is_none(), "{name}");
+    }
+}
+
+#[test]
+fn zaraz_is_not_detected() {
+    // Zaraz lädt Tools serverseitig; im Browser bleiben nur der First-Party-Pfad
+    // /cdn-cgi/zaraz/i.js und Tool-Cookies. Der Host der Seite gehört nicht der Liste.
+    assert!(classify_url("https://example.com/cdn-cgi/zaraz/i.js").is_none());
+    assert!(classify_url("https://example.com/cdn-cgi/zaraz/t").is_none());
+}
+
+#[test]
 fn consent_platforms_are_recognisable() {
     assert_eq!(
         classify_host("consent.cookiebot.com").unwrap().category,
