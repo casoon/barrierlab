@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **third_party:** Anbieter `fathom` (cookielos, Host `usefathom.com`), `carbon-ads` (`carbonads.net`, `syndicateads.net`, Werbung) und `mapp-intelligence` (Track-Domains `wt-eu02.net`/`webtrekk.net`, Cookies `wt3_eid`, `wt3_sid`, `wt_rla`, `wteid_*`, `wtsid_*`, `wtstp_*` u. a.), je mit Quelle der Anbieter-Doku. Vorgeschlagen: 0.7.0 (Anbieterliste, `RULESET_VERSION` 2026-11-04). Nicht aufgenommen: Google Analytics über Cloudflare Zaraz — Zaraz sendet serverseitig, der Browser sieht nur den First-Party-Pfad `/cdn-cgi/zaraz/i.js`, die Cookie-Namen sind nicht dokumentiert (casoon/auditmysite#873).
+
 ## [0.6.1] - 2026-11-03
 
 ### Fixed

@@ -8,7 +8,7 @@
 use super::{Category as C, Domain, Jurisdiction as J, Provider, StorageName as S};
 
 /// Stand der Liste (Datum der letzten Änderung). Hosts nennen ihn im Bericht.
-pub const RULESET_VERSION: &str = "2026-11-03";
+pub const RULESET_VERSION: &str = "2026-11-04";
 
 const fn d(host: &'static str) -> Domain {
     Domain {
@@ -197,6 +197,55 @@ pub static PROVIDERS: &[Provider] = &[
         domains: &[],
         storage: &[S::Prefix("_pk_")],
         source: "https://matomo.org/faq/general/faq_146/",
+    },
+    // Cookielos laut Anbieter; erkennbar nur am Host (Skript und Beacon über
+    // cdn.usefathom.com). Eine eigene Domain des Betreibers (Custom Domain)
+    // ist von außen nicht zu erkennen.
+    Provider {
+        id: "fathom",
+        name: "Fathom Analytics",
+        category: C::Analytics,
+        jurisdiction: J::Other,
+        domains: &[d("usefathom.com")],
+        storage: &[],
+        source: "https://usefathom.com/",
+    },
+    // Hosts laut Datenschutzerklärung des Anbieters; Cookie-Namen nennt er nicht.
+    Provider {
+        id: "carbon-ads",
+        name: "Carbon Ads",
+        category: C::Advertising,
+        jurisdiction: J::Us,
+        domains: &[d("carbonads.net"), d("syndicateads.net")],
+        storage: &[],
+        source: "https://www.carbonads.net/privacy",
+    },
+    // Die Track-Domain vergibt Mapp je Kunde (Beispiele der Doku: wt-eu02.net,
+    // webtrekk.net). Eine per CNAME eingerichtete Domain des Betreibers bleibt
+    // über den Host unerkannt; die Cookie-Namen (First-Party-Tracking) greifen dann.
+    // Sitz nennt die Doku nicht.
+    Provider {
+        id: "mapp-intelligence",
+        name: "Mapp Intelligence (Webtrekk)",
+        category: C::Analytics,
+        jurisdiction: J::Unknown,
+        domains: &[d("wt-eu02.net"), d("webtrekk.net")],
+        storage: &[
+            S::Exact("wt3_eid"),
+            S::Exact("wt3_sid"),
+            S::Exact("wt3_sample"),
+            S::Exact("wt_eid"),
+            S::Exact("wt_sid"),
+            S::Exact("wt_rla"),
+            S::Exact("wt_geid"),
+            S::Exact("wt_feid"),
+            S::Exact("wt_fweid"),
+            S::Exact("wt_cdbeid"),
+            S::Prefix("wteid_"),
+            S::Prefix("wtsid_"),
+            S::Prefix("wtstp_"),
+        ],
+        source: "https://docs.mapp.com/docs/which-cookies-are-set-by-mapp-intelligence",
     },
     Provider {
         id: "jsdelivr",
