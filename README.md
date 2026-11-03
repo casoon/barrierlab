@@ -39,7 +39,7 @@ things about the same `robots.txt`. BarrierLab is where those checks live once.
 |---|---|---|
 | **L0** parsers | `html5-parser` · `csp-parse` · `media-query-parse` · `xpath-eval` · `relax-ng` · `schematron-engine` | WHATWG HTML tree construction, CSP3 and Media Queries grammars, XPath 1.0, RELAX NG, ISO Schematron |
 | **L1** models | `a11y-dom` · `a11y-report` · `stylesheet-parse` · `html-conform` | document model as a trait, the shared finding model, CSS with `@media` context, HTML5 conformance without a JVM |
-| **L2** computation | `accname` · `a11y-rules` · `a11y-perception` · `web-checks` | accessible name and description, 152 rule IDs, reading order and snapshot diffs, robots / meta / OpenGraph / JSON-LD / hreflang |
+| **L2** computation | `accname` · `style-cascade` · `a11y-rules` · `a11y-perception` · `web-checks` | accessible name and description, the CSS cascade without a browser, 152 rule IDs, reading order and snapshot diffs, robots / meta / OpenGraph / JSON-LD / hreflang |
 | **L3** delivery | `a11y-wasm` (crate + npm `@casoon/a11y-wasm`) | the rule set inside a live page |
 
 All 15 crates are on crates.io. One page per package, with dependencies and limits:

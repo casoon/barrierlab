@@ -11,7 +11,7 @@ cascade, no selector matching, no evaluation of media queries.
 
 ## Status
 
-0.1.0, not yet published. Intended for `a11y-rules`, which
+0.1.0 on crates.io. Used by `a11y-rules` and `style-cascade`; `a11y-rules`
 checks stylesheet rules (`outline: none` on `:focus`,
 `prefers-reduced-motion`, media queries on orientation,
 `text-align`/`line-height`). The hosts pass the text in: auditmysite

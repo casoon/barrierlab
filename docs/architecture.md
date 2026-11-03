@@ -31,6 +31,7 @@ flowchart BT
   end
   subgraph L2["L2 · Berechnung"]
     acc[accname]
+    cas[style-cascade]
     rules[a11y-rules]
     perc[a11y-perception]
     wc[web-checks]
@@ -49,7 +50,8 @@ flowchart BT
   hc --> h5 & csp & mq & rng & sch
   cssp --> mq
   acc --> dom
-  rules --> dom & rep & acc
+  cas --> dom & cssp & mq
+  rules --> dom & rep & acc & cas
   perc --> rep
   wc --> rep
   wasm --> rules

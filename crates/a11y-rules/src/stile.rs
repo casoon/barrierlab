@@ -20,7 +20,7 @@ use a11y_dom::{Document, Node};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, tr};
-use crate::selektor::{Selektor, Treffer, trifft};
+use style_cascade::selector::{Match, Mode, Selector, any_match};
 
 fn seite<D: Document>(doc: &D) -> Location {
     Location::node(doc.root().id().to_string())
@@ -290,7 +290,7 @@ fn nur_ohne_tastatur(s: &str) -> bool {
         .contains(":not(:focus-visible)")
 }
 
-/// Ein Selektor, unter dem das Entfernen des Rahmens den Fokushinweis trifft:
+/// Ein Selector, unter dem das Entfernen des Rahmens den Fokushinweis trifft:
 /// `:focus` und auch `:focus-visible` (F78), nicht aber `:focus-within` und
 /// nicht `:focus:not(:focus-visible)`.
 fn entfernt_fokus(s: &str) -> bool {
@@ -425,8 +425,8 @@ fn selektor_teile(s: &str) -> String {
 /// `prefers-reduced-motion: reduce` nicht abgeschaltet wird.
 ///
 /// Wie auditmysite (#712): Beleg ist nur Bewegung, die auf dieser Seite
-/// laufen kann — der Selektor muss ein Element im Dokument treffen
-/// ([`crate::selektor`]). `transition: all` zählt nur, wenn eine
+/// laufen kann — der Selector muss ein Element im Dokument treffen
+/// ([`style_cascade::selector`]). `transition: all` zählt nur, wenn eine
 /// Zustandsregel eine Bewegungs-Eigenschaft setzt.
 pub(crate) fn reduced_motion_ignored<D: Document>(
     doc: &D,
@@ -530,7 +530,7 @@ pub(crate) fn reduced_motion_ignored<D: Document>(
                 }
             }
             if let Some(b) = beleg
-                && trifft(doc, selektor) != Treffer::Nein
+                && any_match(doc, selektor, Mode::Possible) != Match::No
             {
                 belege.push(b);
             }
@@ -616,7 +616,7 @@ pub(crate) fn orientation_content_hidden<D: Document>(
             if sel.contains("::")
                 || sel.to_ascii_lowercase().contains(":before")
                 || sel.to_ascii_lowercase().contains(":after")
-                || trifft(doc, sel) == Treffer::Nein
+                || any_match(doc, sel, Mode::Possible) == Match::No
             {
                 continue;
             }
@@ -682,12 +682,12 @@ fn im_stilattribut<'a, N: Node<'a>>(n: N, eigenschaft: &str) -> Option<(String, 
 fn wirksam<'a, N: Node<'a>>(
     n: N,
     eigenschaft: &str,
-    regeln: &[(Selektor, String, bool)],
+    regeln: &[(Selector, String, bool)],
 ) -> Option<String> {
     for e in std::iter::once(n).chain(a11y_dom::ancestors(n)) {
         let treffend = regeln
             .iter()
-            .filter(|(sel, _, _)| sel.trifft(e) == Treffer::Ja)
+            .filter(|(sel, _, _)| sel.matches(e, Mode::Possible) == Match::Yes)
             .max_by_key(|(_, _, wichtig)| *wichtig);
         let attribut = im_stilattribut(e, eigenschaft);
         match (attribut, treffend) {
@@ -701,7 +701,7 @@ fn wirksam<'a, N: Node<'a>>(
     None
 }
 
-fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selektor, String, bool)> {
+fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selector, String, bool)> {
     sheets
         .iter()
         .flat_map(|s| s.style_rules())
@@ -712,7 +712,7 @@ fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selektor, Strin
                 .filter(|d| d.name == eigenschaft)
                 .map(|d| {
                     (
-                        Selektor::lies(&r.selectors.join(", ")),
+                        Selector::parse(&r.selectors.join(", ")),
                         d.value.clone(),
                         d.important,
                     )
@@ -733,7 +733,7 @@ fn zeilenfaktor(v: &str) -> Option<f64> {
 
 /// 1.4.8 (AAA): Absätze im Blocksatz oder mit Zeilenhöhe unter 1,5.
 ///
-/// Anders als auditmysite, das jede Regel mit einem Selektor ab `body`, `p`,
+/// Anders als auditmysite, das jede Regel mit einem Selector ab `body`, `p`,
 /// `div`, `section` … las, zählt hier der Wert, der an den `<p>` der Seite
 /// tatsächlich ankommt — sonst meldete der Standardwert
 /// `html { line-height: 1.15 }` aus normalize.css auf jeder Seite, auch wenn

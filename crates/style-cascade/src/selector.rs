@@ -9,8 +9,8 @@
 //! steht dieselbe Frage ohne Browser.
 //!
 //! Drei Antworten, nicht zwei: Was dieser Abgleich nicht versteht (`:has()`,
-//! `:nth-child()`, Namensräume, Escapes), ist [`Treffer::Unbekannt`]. Eine
-//! Regel behandelt das wie einen Treffer — lieber ein Hinweis zu viel als
+//! `:nth-child()`, Namensräume, Escapes), ist [`Match::Unknown`]. Eine
+//! Regel behandelt das wie einen Match — lieber ein Hinweis zu viel als
 //! eine stille Lücke.
 //!
 //! Zustände (`:hover`, `:focus`, …) und Pseudo-Elemente (`::before`, …)
@@ -21,34 +21,45 @@ use a11y_dom::{Document, Node, NodeKind};
 
 /// Ergebnis eines Abgleichs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Treffer {
-    Ja,
-    Nein,
-    Unbekannt,
+pub enum Match {
+    Yes,
+    No,
+    Unknown,
 }
 
-impl Treffer {
-    fn und(self, other: Treffer) -> Treffer {
+/// Der Zustand, in dem abgeglichen wird.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    /// „Kann diese Regel hier je greifen?": Zustände (`:hover`, `:focus` …)
+    /// und Pseudo-Elemente gelten als erfüllt.
+    Possible,
+    /// Das Element im Ruhezustand, wie die Kaskade es braucht: Bedienzustände
+    /// und Pseudo-Elemente treffen nicht.
+    Resting,
+}
+
+impl Match {
+    pub(crate) fn und(self, other: Match) -> Match {
         match (self, other) {
-            (Treffer::Nein, _) | (_, Treffer::Nein) => Treffer::Nein,
-            (Treffer::Ja, Treffer::Ja) => Treffer::Ja,
-            _ => Treffer::Unbekannt,
+            (Match::No, _) | (_, Match::No) => Match::No,
+            (Match::Yes, Match::Yes) => Match::Yes,
+            _ => Match::Unknown,
         }
     }
 
-    fn oder(self, other: Treffer) -> Treffer {
+    pub(crate) fn oder(self, other: Match) -> Match {
         match (self, other) {
-            (Treffer::Ja, _) | (_, Treffer::Ja) => Treffer::Ja,
-            (Treffer::Nein, Treffer::Nein) => Treffer::Nein,
-            _ => Treffer::Unbekannt,
+            (Match::Yes, _) | (_, Match::Yes) => Match::Yes,
+            (Match::No, Match::No) => Match::No,
+            _ => Match::Unknown,
         }
     }
 
-    fn nicht(self) -> Treffer {
+    pub(crate) fn nicht(self) -> Match {
         match self {
-            Treffer::Ja => Treffer::Nein,
-            Treffer::Nein => Treffer::Ja,
-            Treffer::Unbekannt => Treffer::Unbekannt,
+            Match::Yes => Match::No,
+            Match::No => Match::Yes,
+            Match::Unknown => Match::Unknown,
         }
     }
 }
@@ -123,6 +134,12 @@ enum Einfach {
     },
     Nicht(Vec<Komplex>),
     Eines(Vec<Komplex>),
+    /// `:where()`: trifft wie `:is()`, zählt aber nichts zur Spezifität.
+    Wo(Vec<Komplex>),
+    /// Pseudoklasse eines Bedienzustands (`:hover`, `:link` …).
+    Zustand(String),
+    /// Pseudo-Element (`::before`, `:after` …).
+    PseudoElement,
     Wurzel,
     ErstesKind,
     LetztesKind,
@@ -170,15 +187,45 @@ impl Leser {
         self.i > start
     }
 
+    /// Ein Bezeichner, mit CSS-Escapes (`\\[`, `\\31 0`; CSS Syntax §4.3.7).
     fn name(&mut self) -> Option<String> {
-        let start = self.i;
-        while self
-            .sieh()
-            .is_some_and(|c| c.is_alphanumeric() || c == '-' || c == '_' || !c.is_ascii())
-        {
-            self.i += 1;
+        let mut out = String::new();
+        loop {
+            match self.sieh() {
+                Some('\\') => {
+                    self.i += 1;
+                    let c = self.sieh()?;
+                    if c.is_ascii_hexdigit() {
+                        let start = self.i;
+                        while self.i - start < 6
+                            && self.sieh().is_some_and(|h| h.is_ascii_hexdigit())
+                        {
+                            self.i += 1;
+                        }
+                        let hex: String = self.z[start..self.i].iter().collect();
+                        let cp = u32::from_str_radix(&hex, 16).ok()?;
+                        // Ein Leerzeichen beendet die Escape-Folge.
+                        if self.sieh().is_some_and(char::is_whitespace) {
+                            self.i += 1;
+                        }
+                        out.push(
+                            char::from_u32(cp)
+                                .filter(|&c| c != '\0')
+                                .unwrap_or('\u{FFFD}'),
+                        );
+                    } else {
+                        out.push(c);
+                        self.i += 1;
+                    }
+                }
+                Some(c) if c.is_alphanumeric() || c == '-' || c == '_' || !c.is_ascii() => {
+                    out.push(c);
+                    self.i += 1;
+                }
+                _ => break,
+            }
         }
-        (self.i > start).then(|| self.z[start..self.i].iter().collect())
+        (!out.is_empty()).then_some(out)
     }
 
     fn liste(&mut self) -> Option<Vec<Komplex>> {
@@ -356,11 +403,12 @@ impl Leser {
             None
         };
         if element || ALTE_PSEUDO_ELEMENTE.contains(&name.as_str()) {
-            return Some(Einfach::Erfuellt);
+            return Some(Einfach::PseudoElement);
         }
         Some(match (name.as_str(), argument) {
             ("not", Some(a)) => liste(&a).map_or(Einfach::Unbekannt, Einfach::Nicht),
-            ("is" | "where" | "matches" | "-webkit-any" | "-moz-any", Some(a)) => {
+            ("where", Some(a)) => liste(&a).map_or(Einfach::Unbekannt, Einfach::Wo),
+            ("is" | "matches" | "-webkit-any" | "-moz-any", Some(a)) => {
                 liste(&a).map_or(Einfach::Unbekannt, Einfach::Eines)
             }
             ("root", None) => Einfach::Wurzel,
@@ -368,7 +416,7 @@ impl Leser {
             ("last-child", None) => Einfach::LetztesKind,
             ("only-child", None) => Einfach::EinzigesKind,
             ("empty", None) => Einfach::Leer,
-            (n, None) if ZUSTAENDE.contains(&n) => Einfach::Erfuellt,
+            (n, None) if ZUSTAENDE.contains(&n) => Einfach::Zustand(n.to_string()),
             ("lang" | "dir", Some(_)) => Einfach::Unbekannt,
             _ => Einfach::Unbekannt,
         })
@@ -395,8 +443,8 @@ fn geschwister_davor<'a, N: Node<'a>>(n: N) -> Vec<N> {
     davor
 }
 
-fn einfach<'a, N: Node<'a>>(n: N, e: &Einfach) -> Treffer {
-    let ja = |b: bool| if b { Treffer::Ja } else { Treffer::Nein };
+fn einfach<'a, N: Node<'a>>(n: N, e: &Einfach, m: Mode) -> Match {
+    let ja = |b: bool| if b { Match::Yes } else { Match::No };
     match e {
         Einfach::Typ(t) => ja(n.local_name().eq_ignore_ascii_case(t)),
         Einfach::Id(id) => ja(n.attr("id") == Some(id.as_str())),
@@ -410,7 +458,7 @@ fn einfach<'a, N: Node<'a>>(n: N, e: &Einfach) -> Treffer {
             gross_klein_egal,
         } => {
             let Some(ist) = n.attr(name) else {
-                return Treffer::Nein;
+                return Match::No;
             };
             let (ist, wert) = if *gross_klein_egal {
                 (ist.to_lowercase(), wert.to_lowercase())
@@ -427,8 +475,8 @@ fn einfach<'a, N: Node<'a>>(n: N, e: &Einfach) -> Treffer {
                 AttrOp::Teil => !wert.is_empty() && ist.contains(&wert),
             })
         }
-        Einfach::Nicht(l) => komplex_liste(n, l).nicht(),
-        Einfach::Eines(l) => komplex_liste(n, l),
+        Einfach::Nicht(l) => komplex_liste(n, l, m).nicht(),
+        Einfach::Eines(l) | Einfach::Wo(l) => komplex_liste(n, l, m),
         Einfach::Wurzel => ja(n.parent().is_none_or(|p| p.kind() != NodeKind::Element)),
         Einfach::ErstesKind => ja(geschwister_davor(n).is_empty()),
         Einfach::LetztesKind => ja(n
@@ -439,20 +487,63 @@ fn einfach<'a, N: Node<'a>>(n: N, e: &Einfach) -> Treffer {
         Einfach::Leer => ja(n.children().all(|k| {
             k.kind() != NodeKind::Element && (k.kind() != NodeKind::Text || k.text().is_empty())
         })),
-        Einfach::Erfuellt => Treffer::Ja,
-        Einfach::Unbekannt => Treffer::Unbekannt,
+        Einfach::Erfuellt => Match::Yes,
+        Einfach::PseudoElement => ja(m == Mode::Possible),
+        Einfach::Zustand(z) => zustand(n, z, m),
+        Einfach::Unbekannt => Match::Unknown,
     }
 }
 
-fn zusammen<'a, N: Node<'a>>(n: N, z: &Zusammengesetzt) -> Treffer {
-    z.iter().fold(Treffer::Ja, |t, e| t.und(einfach(n, e)))
+/// Bedienzustände, die im Ruhezustand nicht gelten.
+const INTERAKTIV: &[&str] = &[
+    "hover",
+    "focus",
+    "focus-visible",
+    "focus-within",
+    "active",
+    "target",
+    "visited",
+    "fullscreen",
+    "modal",
+    "popover-open",
+    "user-invalid",
+    "user-valid",
+    "autofill",
+    "-webkit-autofill",
+    "playing",
+    "paused",
+];
+
+fn zustand<'a, N: Node<'a>>(n: N, z: &str, m: Mode) -> Match {
+    if m == Mode::Possible {
+        return Match::Yes;
+    }
+    if INTERAKTIV.contains(&z) {
+        return Match::No;
+    }
+    match z {
+        "link" | "any-link" => {
+            if (n.is_element("a") || n.is_element("area")) && n.has_attr("href") {
+                Match::Yes
+            } else {
+                Match::No
+            }
+        }
+        // Was vom Inhalt des Formulars oder vom Benutzer abhängt, weiß der
+        // Abgleich nicht.
+        _ => Match::Unknown,
+    }
+}
+
+fn zusammen<'a, N: Node<'a>>(n: N, z: &Zusammengesetzt, m: Mode) -> Match {
+    z.iter().fold(Match::Yes, |t, e| t.und(einfach(n, e, m)))
 }
 
 /// Gleicht `rest` (von rechts nach links) ab, ausgehend von `n`, das schon
 /// zum zusammengesetzten Selektor rechts davon passt.
-fn kette<'a, N: Node<'a>>(n: N, rest: &[(Kombinator, Zusammengesetzt)]) -> Treffer {
+fn kette<'a, N: Node<'a>>(n: N, rest: &[(Kombinator, Zusammengesetzt)], m: Mode) -> Match {
     let Some(((k, z), weiter)) = rest.split_first() else {
-        return Treffer::Ja;
+        return Match::Yes;
     };
     let kandidaten: Vec<N> = match k {
         Kombinator::Kind => n
@@ -468,53 +559,141 @@ fn kette<'a, N: Node<'a>>(n: N, rest: &[(Kombinator, Zusammengesetzt)]) -> Treff
     };
     kandidaten
         .into_iter()
-        .map(|c| zusammen(c, z).und(kette(c, weiter)))
-        .fold(Treffer::Nein, Treffer::oder)
+        .map(|c| zusammen(c, z, m).und(kette(c, weiter, m)))
+        .fold(Match::No, Match::oder)
 }
 
-fn komplex<'a, N: Node<'a>>(n: N, k: &Komplex) -> Treffer {
-    let t = zusammen(n, &k.subjekt);
-    if t == Treffer::Nein {
+fn komplex<'a, N: Node<'a>>(n: N, k: &Komplex, m: Mode) -> Match {
+    let t = zusammen(n, &k.subjekt, m);
+    if t == Match::No {
         return t;
     }
-    t.und(kette(n, &k.davor))
+    t.und(kette(n, &k.davor, m))
 }
 
-fn komplex_liste<'a, N: Node<'a>>(n: N, l: &[Komplex]) -> Treffer {
+fn komplex_liste<'a, N: Node<'a>>(n: N, l: &[Komplex], m: Mode) -> Match {
     l.iter()
-        .map(|k| komplex(n, k))
-        .fold(Treffer::Nein, Treffer::oder)
+        .map(|k| komplex(n, k, m))
+        .fold(Match::No, Match::oder)
+}
+
+/// Spezifität nach Selectors Level 4 §17: (Ids, Klassen/Attribute/Pseudoklassen,
+/// Typen/Pseudo-Elemente). Die Ordnung ist die der Kaskade.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct Specificity(pub u32, pub u32, pub u32);
+
+impl Specificity {
+    fn plus(self, o: Specificity) -> Specificity {
+        Specificity(self.0 + o.0, self.1 + o.1, self.2 + o.2)
+    }
+}
+
+fn spez_liste(l: &[Komplex]) -> Specificity {
+    l.iter().map(spez_komplex).max().unwrap_or_default()
+}
+
+fn spez_komplex(k: &Komplex) -> Specificity {
+    std::iter::once(&k.subjekt)
+        .chain(k.davor.iter().map(|(_, z)| z))
+        .flatten()
+        .map(spez_einfach)
+        .fold(Specificity::default(), Specificity::plus)
+}
+
+fn spez_einfach(e: &Einfach) -> Specificity {
+    match e {
+        Einfach::Id(_) => Specificity(1, 0, 0),
+        Einfach::Klasse(_)
+        | Einfach::Attr { .. }
+        | Einfach::Zustand(_)
+        | Einfach::Wurzel
+        | Einfach::ErstesKind
+        | Einfach::LetztesKind
+        | Einfach::EinzigesKind
+        | Einfach::Leer
+        | Einfach::Unbekannt => Specificity(0, 1, 0),
+        Einfach::Typ(_) | Einfach::PseudoElement => Specificity(0, 0, 1),
+        Einfach::Nicht(l) | Einfach::Eines(l) => spez_liste(l),
+        Einfach::Wo(_) | Einfach::Erfuellt => Specificity::default(),
+    }
+}
+
+/// Wonach sich ein Selektor indizieren lässt: das Auffälligste am Subjekt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Key {
+    Id(String),
+    Class(String),
+    Type(String),
 }
 
 /// Eine einmal gelesene Selektorliste, für viele Abgleiche.
 #[derive(Debug, Clone)]
-pub(crate) struct Selektor(Option<Vec<Komplex>>);
+pub struct Selector(Option<Vec<Komplex>>);
 
-impl Selektor {
-    pub(crate) fn lies(text: &str) -> Self {
-        Selektor(liste(text.trim()))
+impl Selector {
+    /// Liest die Liste. Was sich nicht lesen lässt, gleicht als
+    /// [`Match::Unknown`] ab.
+    pub fn parse(text: &str) -> Self {
+        Selector(liste(text.trim()))
+    }
+
+    /// Ließ sich der Text lesen?
+    pub fn is_valid(&self) -> bool {
+        self.0.is_some()
     }
 
     /// Trifft die Liste dieses Element?
-    pub(crate) fn trifft<'a, N: Node<'a>>(&self, n: N) -> Treffer {
+    pub fn matches<'a, N: Node<'a>>(&self, n: N, mode: Mode) -> Match {
         match &self.0 {
-            Some(l) => komplex_liste(n, l),
-            None => Treffer::Unbekannt,
+            Some(l) => komplex_liste(n, l, mode),
+            None => Match::Unknown,
         }
+    }
+
+    /// Die Spezifität; bei einer Liste die größte.
+    pub fn specificity(&self) -> Specificity {
+        self.0.as_deref().map(spez_liste).unwrap_or_default()
+    }
+
+    /// Der Index-Schlüssel eines einzelnen Selektors; `None` bei einer Liste
+    /// oder wenn das Subjekt nichts Unterscheidendes hat.
+    pub fn key(&self) -> Option<Key> {
+        let [k] = self.0.as_deref()? else {
+            return None;
+        };
+        k.subjekt
+            .iter()
+            .find_map(|e| match e {
+                Einfach::Id(i) => Some(Key::Id(i.clone())),
+                _ => None,
+            })
+            .or_else(|| {
+                k.subjekt.iter().find_map(|e| match e {
+                    Einfach::Klasse(c) => Some(Key::Class(c.clone())),
+                    _ => None,
+                })
+            })
+            .or_else(|| {
+                k.subjekt.iter().find_map(|e| match e {
+                    Einfach::Typ(t) => Some(Key::Type(t.clone())),
+                    _ => None,
+                })
+            })
     }
 }
 
-/// Trifft der Selektor ein Element im Dokument (in der Sicht der Regel)?
+/// Trifft der Selektor irgendein Element im Dokument?
 ///
-/// Ein Selektor, der sich nicht lesen lässt, ist [`Treffer::Unbekannt`].
-pub(crate) fn trifft<D: Document>(doc: &D, selektor: &str) -> Treffer {
-    let Some(l) = liste(selektor.trim()) else {
-        return Treffer::Unbekannt;
+/// Ein Selektor, der sich nicht lesen lässt, ist [`Match::Unknown`].
+pub fn any_match<D: Document>(doc: &D, selector: &str, mode: Mode) -> Match {
+    let sel = Selector::parse(selector);
+    let Some(l) = sel.0.as_deref() else {
+        return Match::Unknown;
     };
-    let mut ergebnis = Treffer::Nein;
+    let mut ergebnis = Match::No;
     for n in a11y_dom::elements(doc) {
-        ergebnis = ergebnis.oder(komplex_liste(n, &l));
-        if ergebnis == Treffer::Ja {
+        ergebnis = ergebnis.oder(komplex_liste(n, l, mode));
+        if ergebnis == Match::Yes {
             break;
         }
     }
@@ -558,73 +737,105 @@ mod tests {
             .build()
     }
 
-    fn t(sel: &str) -> Treffer {
-        trifft(&seite(), sel)
+    fn t(sel: &str) -> Match {
+        any_match(&seite(), sel, Mode::Possible)
     }
 
     #[test]
     fn einfache_selektoren() {
-        assert_eq!(t("article"), Treffer::Ja);
-        assert_eq!(t("ARTICLE.card"), Treffer::Ja);
-        assert_eq!(t("#inhalt"), Treffer::Ja);
-        assert_eq!(t(".spinner"), Treffer::Nein);
-        assert_eq!(t("*"), Treffer::Ja);
-        assert_eq!(t("video"), Treffer::Nein);
+        assert_eq!(t("article"), Match::Yes);
+        assert_eq!(t("ARTICLE.card"), Match::Yes);
+        assert_eq!(t("#inhalt"), Match::Yes);
+        assert_eq!(t(".spinner"), Match::No);
+        assert_eq!(t("*"), Match::Yes);
+        assert_eq!(t("video"), Match::No);
+    }
+
+    #[test]
+    fn escapes_im_bezeichner() {
+        let d = Arena::builder()
+            .open("div")
+            .attr("class", "bg-error/20 a:b 10x")
+            .close()
+            .build();
+        let t = |s: &str| any_match(&d, s, Mode::Resting);
+        assert_eq!(t(r".bg-error\/20"), Match::Yes);
+        assert_eq!(t(r".a\:b"), Match::Yes);
+        assert_eq!(t(r".\31 0x"), Match::Yes);
+        assert_eq!(t(r".bg-error\/30"), Match::No);
+    }
+
+    #[test]
+    fn ruhezustand_und_spezifitaet() {
+        let d = seite();
+        let r = |s: &str| any_match(&d, s, Mode::Resting);
+        assert_eq!(r("a:hover"), Match::No);
+        assert_eq!(r("a:link"), Match::Yes);
+        assert_eq!(r("a::before"), Match::No);
+        assert_eq!(r("li:checked"), Match::Unknown);
+        assert_eq!(any_match(&d, "a:hover", Mode::Possible), Match::Yes);
+        let s = |t: &str| Selector::parse(t).specificity();
+        assert_eq!(s("#a .b c"), Specificity(1, 1, 1));
+        assert_eq!(s("a:hover::before"), Specificity(0, 1, 2));
+        assert_eq!(s(":where(#a) b"), Specificity(0, 0, 1));
+        assert_eq!(s(":is(#a, .b)"), Specificity(1, 0, 0));
+        assert_eq!(s(":not(.x)"), Specificity(0, 1, 0));
+        assert!(Specificity(0, 2, 0) > Specificity(0, 1, 9));
     }
 
     #[test]
     fn kombinatoren() {
-        assert_eq!(t("main article > a"), Treffer::Ja);
-        assert_eq!(t("main > a"), Treffer::Nein);
-        assert_eq!(t("h2 + a"), Treffer::Ja);
-        assert_eq!(t("a + h2"), Treffer::Nein);
-        assert_eq!(t("li ~ li.aktiv"), Treffer::Ja);
-        assert_eq!(t("body .card a"), Treffer::Ja);
+        assert_eq!(t("main article > a"), Match::Yes);
+        assert_eq!(t("main > a"), Match::No);
+        assert_eq!(t("h2 + a"), Match::Yes);
+        assert_eq!(t("a + h2"), Match::No);
+        assert_eq!(t("li ~ li.aktiv"), Match::Yes);
+        assert_eq!(t("body .card a"), Match::Yes);
     }
 
     #[test]
     fn attribute() {
-        assert_eq!(t("a[href]"), Treffer::Ja);
-        assert_eq!(t("[data-track^=teaser]"), Treffer::Ja);
-        assert_eq!(t("[data-track$=\"link\"]"), Treffer::Ja);
-        assert_eq!(t("[data-track*=x]"), Treffer::Nein);
-        assert_eq!(t("[class~=teaser]"), Treffer::Ja);
-        assert_eq!(t("[data-track='TEASER-LINK' i]"), Treffer::Ja);
-        assert_eq!(t("[data-track='TEASER-LINK']"), Treffer::Nein);
+        assert_eq!(t("a[href]"), Match::Yes);
+        assert_eq!(t("[data-track^=teaser]"), Match::Yes);
+        assert_eq!(t("[data-track$=\"link\"]"), Match::Yes);
+        assert_eq!(t("[data-track*=x]"), Match::No);
+        assert_eq!(t("[class~=teaser]"), Match::Yes);
+        assert_eq!(t("[data-track='TEASER-LINK' i]"), Match::Yes);
+        assert_eq!(t("[data-track='TEASER-LINK']"), Match::No);
     }
 
     #[test]
     fn zustaende_und_pseudo_elemente_gelten_als_erfuellt() {
-        assert_eq!(t(".card:hover"), Treffer::Ja);
-        assert_eq!(t("a:focus-visible::after"), Treffer::Ja);
-        assert_eq!(t(".spinner:hover"), Treffer::Nein);
-        assert_eq!(t("li:before"), Treffer::Ja);
+        assert_eq!(t(".card:hover"), Match::Yes);
+        assert_eq!(t("a:focus-visible::after"), Match::Yes);
+        assert_eq!(t(".spinner:hover"), Match::No);
+        assert_eq!(t("li:before"), Match::Yes);
     }
 
     #[test]
     fn logische_pseudoklassen() {
-        assert_eq!(t("li:not(.aktiv)"), Treffer::Ja);
-        assert_eq!(t("a:not([href])"), Treffer::Nein);
-        assert_eq!(t(":is(video, .card)"), Treffer::Ja);
-        assert_eq!(t(":where(.x, .y)"), Treffer::Nein);
-        assert_eq!(t("li:first-child"), Treffer::Ja);
-        assert_eq!(t("h2:last-child"), Treffer::Nein);
-        assert_eq!(t("html:root"), Treffer::Ja);
+        assert_eq!(t("li:not(.aktiv)"), Match::Yes);
+        assert_eq!(t("a:not([href])"), Match::No);
+        assert_eq!(t(":is(video, .card)"), Match::Yes);
+        assert_eq!(t(":where(.x, .y)"), Match::No);
+        assert_eq!(t("li:first-child"), Match::Yes);
+        assert_eq!(t("h2:last-child"), Match::No);
+        assert_eq!(t("html:root"), Match::Yes);
     }
 
     #[test]
     fn unbekanntes_ist_unbekannt() {
-        assert_eq!(t("article:has(a)"), Treffer::Unbekannt);
-        assert_eq!(t("li:nth-child(2n)"), Treffer::Unbekannt);
-        assert_eq!(t("svg|rect"), Treffer::Unbekannt);
-        assert_eq!(t("a[href"), Treffer::Unbekannt);
+        assert_eq!(t("article:has(a)"), Match::Unknown);
+        assert_eq!(t("li:nth-child(2n)"), Match::Unknown);
+        assert_eq!(t("svg|rect"), Match::Unknown);
+        assert_eq!(t("a[href"), Match::Unknown);
         // Ein sicheres Nein bleibt Nein, auch neben Unbekanntem.
-        assert_eq!(t("video:nth-child(2)"), Treffer::Nein);
+        assert_eq!(t("video:nth-child(2)"), Match::No);
     }
 
     #[test]
     fn liste_trifft_wenn_ein_teil_trifft() {
-        assert_eq!(t(".spinner, .card"), Treffer::Ja);
-        assert_eq!(t(".spinner, .loader"), Treffer::Nein);
+        assert_eq!(t(".spinner, .card"), Match::Yes);
+        assert_eq!(t(".spinner, .loader"), Match::No);
     }
 }

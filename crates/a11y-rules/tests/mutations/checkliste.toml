@@ -685,7 +685,7 @@ file = "src/stile.rs"
 kind = "drop-condition"
 find = '''
             if let Some(b) = beleg
-                && trifft(doc, selektor) != Treffer::Nein
+                && any_match(doc, selektor, Mode::Possible) != Match::No
             {
 '''
 replace = '''
