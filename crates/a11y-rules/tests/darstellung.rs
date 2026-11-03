@@ -201,7 +201,7 @@ fn korpus_redundant_role_list_style_auditmysite_644() {
     assert_eq!(an(&doc, &r, "lists/role-redundant"), ["numbered-list"]);
     assert_eq!(
         urteile(&r, "lists/role-redundant"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
     // Die Rolle stimmt, sie ist nur überflüssig: Best Practice ohne 4.1.2
     // (auditmysite#779).

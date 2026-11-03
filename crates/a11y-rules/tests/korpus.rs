@@ -217,3 +217,69 @@ fn gate_mutationskatalog_deckt_jede_kennung() {
         fehler.join("\n")
     );
 }
+
+/// Empfehlungen sind eine eigene Klasse am Befund: `Review` mit
+/// `Basis::BestPractice`, nie `Fail` mit Schlagwort. Die Darstellungskonvention
+/// (`viz/*`, `display/*`) ist ausgenommen — sie hängt am Kriterium.
+#[test]
+fn empfehlungen_tragen_die_basis_und_stehen_in_der_liste() {
+    use a11y_report::Basis;
+
+    let mut gesehen = BTreeSet::new();
+    for fall in alle() {
+        for f in bericht(&fall).findings {
+            let konvention = f.rule_id.starts_with("viz/") || f.rule_id.starts_with("display/");
+            let getaggt = f.tags.iter().any(|t| t == "best-practice");
+            let gelistet = a11y_rules::best_practice_rule(&f.rule_id).is_some();
+            if konvention {
+                assert_ne!(f.basis, Basis::BestPractice, "{}", f.rule_id);
+                continue;
+            }
+            if f.basis == Basis::BestPractice {
+                assert_eq!(f.outcome, Outcome::Review, "{}", f.rule_id);
+                assert!(getaggt, "{}: Schlagwort fehlt", f.rule_id);
+                assert!(gelistet, "{}: nicht in BEST_PRACTICE_RULES", f.rule_id);
+                gesehen.insert(f.rule_id);
+            } else {
+                assert!(
+                    !getaggt,
+                    "{}: Schlagwort ohne Basis (Fail+Tag-Altlast)",
+                    f.rule_id
+                );
+            }
+        }
+    }
+    for r in a11y_rules::BEST_PRACTICE_RULES {
+        assert!(kennungen().contains(r.id), "{}: unbekannte Kennung", r.id);
+        assert!(!r.reason.is_empty(), "{}", r.id);
+        assert!(
+            gesehen.contains(r.id),
+            "{}: im Korpus nie als Empfehlung gemeldet",
+            r.id
+        );
+    }
+}
+
+/// auditmysite#779 / barrierlab#81: eine h2 ohne h1 ist Empfehlung, kein Verstoß.
+#[test]
+fn h2_ohne_h1_ist_eine_empfehlung_kein_verstoss() {
+    let fall = korpus::faelle::review(
+        "headings/h1-missing",
+        "<main><h2>Titel</h2></main>",
+        "WCAG 1.3.1: Überschrift bestimmbar, keine Ebene verlangt",
+    );
+    let r = bericht(&fall);
+    let f: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "headings/h1-missing")
+        .collect();
+    assert_eq!(f.len(), 1);
+    assert!(f[0].is_best_practice());
+    assert_eq!(f[0].outcome, Outcome::Review);
+    assert!(
+        r.findings
+            .iter()
+            .all(|f| f.rule_id != "headings/h1-missing" || f.outcome != Outcome::Fail)
+    );
+}

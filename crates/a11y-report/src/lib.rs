@@ -69,7 +69,7 @@ pub use identity::{
     CauseConfidence, CriterionState, EvidenceBasis, FindingId, ImpactArea, PAGEWIDE_SELECTOR,
     RootCauseId, normalize_selector,
 };
-pub use outcome::{Outcome, Severity, WcagLevel};
+pub use outcome::{Basis, Outcome, Severity, WcagLevel};
 pub use report::{NotRun, Report, RuleRun, Summary};
 
 #[cfg(test)]
@@ -119,6 +119,34 @@ mod tests {
         assert!(Outcome::Review.is_problem());
         assert!(!Outcome::Pass.is_problem());
         assert!(!Outcome::Untested.is_problem());
+    }
+
+    #[test]
+    fn empfehlung_ist_review_mit_eigener_basis() {
+        let f = Finding::best_practice("headings/h1-missing", "keine h1");
+        assert_eq!(f.outcome, Outcome::Review);
+        assert_eq!(f.basis, Basis::BestPractice);
+        assert!(f.is_best_practice());
+        assert!(f.tags.iter().any(|t| t == "best-practice"));
+        // `with_tags` nimmt das Schlagwort nicht zurück.
+        let f = f.with_tags(["x"]);
+        assert!(f.tags.iter().any(|t| t == "best-practice"));
+        assert!(!Finding::fail("a/b", "m").is_best_practice());
+    }
+
+    #[test]
+    fn basis_im_json_nur_bei_empfehlung() {
+        let j = serde_json::to_value(Finding::best_practice("a/b", "m")).unwrap();
+        assert_eq!(j["basis"], "best_practice");
+        assert_eq!(j["outcome"], "review");
+        let j = serde_json::to_value(Finding::fail("a/b", "m")).unwrap();
+        assert!(j.get("basis").is_none());
+        // Älteres JSON ohne `basis` bleibt lesbar.
+        let f: Finding = serde_json::from_str(
+            r#"{"rule_id":"a/b","outcome":"fail","severity":"low","message":"m"}"#,
+        )
+        .unwrap();
+        assert_eq!(f.basis, Basis::Criterion);
     }
 
     #[test]
