@@ -11,8 +11,7 @@ use html5_parser::{Document, NodeId, NodeKind};
 
 // This crate's own namespace URI constants (`src/tree_builder.rs`) are
 // `pub(crate)` — deliberately not part of the public API this
-// integration test consumes (see plan/DECISIONS.md's "minimal pub API"
-// entry) — so these are duplicated here. They're the WHATWG/Infra
+// integration test consumes — so these are duplicated here. They're the WHATWG/Infra
 // standard's namespace URIs, effectively immutable.
 const SVG_NAMESPACE: &str = "http://www.w3.org/2000/svg";
 const MATHML_NAMESPACE: &str = "http://www.w3.org/1998/Math/MathML";

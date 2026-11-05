@@ -264,7 +264,7 @@ fn spec_test_suite_schema_classification() {
 /// A `roxmltree` element, wrapped to implement [`Element`] — the adapter
 /// this harness uses to feed the suite's `<valid>`/`<invalid>` instance
 /// documents into [`validate`]. Not part of this crate's public API (no
-/// XML parser dependency in the core, see `plan/DECISIONS.md`); this is
+/// XML parser dependency in the core); this is
 /// test-only glue, analogous to what a real caller (e.g. `html-conform`,
 /// over its own `xmloxide`-derived tree) would write for its own tree
 /// type.
@@ -399,9 +399,8 @@ fn spec_test_suite_instance_validation() {
         eprintln!("  {failure}");
     }
 
-    // Same completeness-check convention as schema classification (see
-    // `plan/DECISIONS.md`'s Phase 07 entry for the 100%-of-usable-cases
-    // target this asserts).
+    // Same completeness-check convention as schema classification
+    // (100% of the usable cases).
     assert_eq!(
         failures,
         Vec::<String>::new(),

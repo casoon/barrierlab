@@ -1,7 +1,6 @@
 //! The 13 XPath 1.0 axes (§2.2), derived generically from `Node`'s minimal
 //! navigation primitives (`parent()`/`children()`/`attributes()`/
-//! `namespaces()`) — see `plan/03-document-trait.md` for the verbatim spec
-//! quotes each function below is checked against.
+//! `namespaces()`).
 //!
 //! Axes are free functions, not `Node` trait methods (see the plan's
 //! module-split rationale). Reverse axes (`ancestor`, `ancestor-or-self`,

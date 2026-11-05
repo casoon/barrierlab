@@ -81,8 +81,8 @@ const HTML5_ROOT_MODULE: (&str, &str) =
 /// vnu's real default schema entry point
 /// (`http://s.validator.nu/html5-all.rnc`, confirmed via
 /// `TestRunner.java`'s `DEFAULT_SCHEMA` constant and
-/// `schema/.drivers/html5-all.rnc`'s own `include` graph — see
-/// `plan/DECISIONS.md`) patches `<svg>`/`<math>` into `html5.rnc`'s
+/// `schema/.drivers/html5-all.rnc`'s own `include` graph)
+/// patches `<svg>`/`<math>` into `html5.rnc`'s
 /// patterns from a *separate* driver file, not from `html5.rnc` itself —
 /// confirmed by full-text search, `html5.rnc`'s own `include` list never
 /// mentions either. Vendored via `xtask/vendor-svg-mathml.sh` (same

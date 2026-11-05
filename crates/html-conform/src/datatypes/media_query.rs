@@ -8,8 +8,7 @@
 //!
 //! Unlike `w:content-security-policy` (`src/datatypes/csp.rs`), this type
 //! is **not** a from-source-verified reimplementation of vnu's actual
-//! behavior. `plan/05c-research-group-b.md` item 24 already flagged this as
-//! an open question when it was first researched: vnu's `MediaQuery.java`
+//! behavior. This was already an open question when first researched: vnu's `MediaQuery.java`
 //! has no grammar of its own — it wraps the literal in a synthetic
 //! `@media <literal> {}` rule and hands it to an embedded, vendored **W3C
 //! CSS Validator** (`org.w3c.css.css.StyleSheetParser`, profile
@@ -26,7 +25,7 @@
 //! Level 4 specification directly** (via `media-query-parse`, whose own
 //! normative basis is the same spec), not vnu's specific, uncertain
 //! runtime behavior. This is a deliberate, documented deviation from the
-//! "vnu-Parität als Default" principle (`plan/05c-datatype-library.md`) —
+//! "vnu-Parität als Default" principle —
 //! justified here because the default itself isn't knowably achievable,
 //! not because a shortcut was preferred over research.
 //!

@@ -1,6 +1,5 @@
 //! The XPath 1.0 value model (§3.1: the four object types) and the value
-//! conversion functions (§4.2-§4.4), implemented against the verbatim spec
-//! quotes in `plan/04-evaluation-core.md`.
+//! conversion functions (§4.2-§4.4), implemented against the spec text.
 
 use crate::document::Node;
 

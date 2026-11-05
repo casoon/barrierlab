@@ -1,7 +1,7 @@
 //! Generic top-level splitting: policy-list -> policy -> directive.
 //!
-//! Phase 02 scope (see `plan/02-directive-splitting.md`). Infallible by
-//! design (see `plan/DECISIONS.md`, 2026-08-22): CSP's own imperative
+//! Phase 02 scope. Infallible by
+//! design: CSP's own imperative
 //! parsing algorithm never rejects a whole policy (list) for syntax
 //! reasons at this level, it only ever drops or ignores individual
 //! empty/malformed pieces.
@@ -182,7 +182,7 @@ mod tests {
         // A control byte (0x01) in the value is outside directive-value's
         // allowed byte classes -- still parsed structurally, but flagged
         // as invalid via `value_is_valid`, not dropped or turned into a
-        // parse error (see plan/DECISIONS.md, 2026-08-22).
+        // parse error.
         let result = parse_policy_list("default-src 'self'; script-src 'self' \u{1}bad");
         let directives = &result.policies[0].directives;
         assert_eq!(directives.len(), 2);
@@ -202,8 +202,7 @@ mod tests {
 
     #[test]
     fn duplicate_directive_names_are_both_kept() {
-        // Deduplication is deliberately out of scope for this phase --
-        // see plan/DECISIONS.md, 2026-08-22.
+        // Deduplication is deliberately out of scope for this phase.
         let result = parse_policy_list("default-src 'self'; default-src 'none'");
         assert_eq!(
             result.policies[0].directives,

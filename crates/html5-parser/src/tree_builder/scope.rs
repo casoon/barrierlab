@@ -229,7 +229,7 @@ impl TreeBuilder {
     /// Two branches are deliberately omitted, both per this crate's
     /// scope decisions: the "node is a template element" case (no
     /// template insertion modes stack exists — `<template>` is a plain
-    /// element, see plan/03-tree-construction.md — so this just falls
+    /// element — so this just falls
     /// through and keeps walking past it, same as any other
     /// unrecognized element) and the "node is a frameset element" case
     /// (this crate never creates a frameset element at all, so it can

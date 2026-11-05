@@ -13,14 +13,13 @@ impl TreeBuilder {
     /// A few pieces are genuinely out of this crate's scope or deferred
     /// to a separate step, each noted at its arm:
     /// - `<frameset>` never creates a frameset element (frameset
-    ///   documents are excluded entirely, see
-    ///   plan/03-tree-construction.md's scope decision).
+    ///   documents are excluded entirely).
     /// - An end-of-file token's "stop parsing" is a driver-loop concern
     ///   (not yet built).
     /// - `<math>`/`<svg>` insert the foreign-namespaced root element,
     ///   but skip the MathML/SVG/foreign attribute-adjustment tables —
     ///   that's §13.2.6.5's job (Foreign-Content-Dispatch, a separate
-    ///   plan/03-tree-construction.md step), as is actually dispatching
+    ///   step), as is actually dispatching
     ///   *content inside* a foreign element through different rules.
     /// - `<noscript>` is absent from the raw-text group here (unlike
     ///   "in head"): it only belongs there "if scripting mode is not

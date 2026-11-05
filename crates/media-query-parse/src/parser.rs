@@ -3,8 +3,7 @@
 //!
 //! One function per grammar production (see the doc comment on each
 //! function below for the production it implements), mirroring the
-//! structure of the grammar in `plan/03-grammar.md` §"Grammatik-
-//! Produktionen".
+//! structure of the grammar.
 //!
 //! **Parsing approach — no tokenizer backtracking.** `<media-in-parens>`
 //! has three alternatives behind the same opening `(` (or function
@@ -107,12 +106,11 @@ fn is_ident_ci(token: Option<&Token>, keyword: &str) -> bool {
 /// *directly adjacent* `Delim` tokens with no space between — after
 /// whitespace tokens are stripped, `<=` and `< =` would otherwise both
 /// tokenize to the same `Delim('<'), Delim('=')` pair and become
-/// indistinguishable. See [`mf_comparison`] and `plan/DECISIONS.md`.
+/// indistinguishable. See [`mf_comparison`].
 type PositionedToken = (Token, bool);
 
 /// Cursor over a token slice for the recursive-descent parser. Plays
-/// the role of the `Peekable<Tokenizer>` wrapper from `plan/03-
-/// grammar.md`, specialized to a slice so that `<media-in-parens>`
+/// the role of the `Peekable<Tokenizer>` wrapper, specialized to a slice so that `<media-in-parens>`
 /// content (already isolated via [`Parser::consume_block`]) can be
 /// parsed the same way as a top-level `<media-query>`.
 struct Parser<'a> {
@@ -426,7 +424,7 @@ fn mf_comparison(parser: &mut Parser) -> Result<MfComparison, ParseError> {
 
 /// `<media-feature> = [ <mf-plain> | <mf-boolean> | <mf-range> ]`
 ///
-/// Lookahead (see `plan/04-range-syntax.md` §"Parser-Änderungen"):
+/// Lookahead:
 /// starting with `<mf-name>` (an `<ident>`) is ambiguous with starting
 /// with `<mf-value>` when the value is itself an `<ident>`, so the
 /// *following* token decides which grammar alternative applies:
@@ -1011,8 +1009,7 @@ mod tests {
 
     #[test]
     fn mf_comparison_lt_then_eq_with_whitespace_is_not_le() {
-        // Verifies the tokenizer/parser boundary from `plan/04-range-
-        // syntax.md`: `<` and `=` tokenize as two independent `Delim`
+        // Verifies the tokenizer/parser boundary: `<` and `=` tokenize as two independent `Delim`
         // tokens with no combined `<=` token (CSS Syntax Level 3 has
         // none). `mf_comparison` must only fold them into `Le` when
         // they're directly adjacent — with whitespace between, `<`

@@ -953,7 +953,7 @@ fn rewrite_refs(pattern: &Pattern, rename: &BTreeMap<String, String>) -> Pattern
 /// (§4.12) and the `oneOrMore//group//attribute` family of §7.1
 /// restrictions no longer depend on a `group`/`interleave` node
 /// surviving purely because an `empty` sibling kept its child count above
-/// one — see plan/00-STATUS.md for the case that used to make this unsafe.
+/// one.
 fn drop_identity_empty(mut values: Vec<Pattern>) -> Vec<Pattern> {
     if values.len() > 1 {
         values.retain(|value| !matches!(value, Pattern::Empty));

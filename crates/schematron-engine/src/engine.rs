@@ -1,8 +1,7 @@
 //! Phase 03: evaluates a parsed [`Schema`] against a caller-provided
 //! document, producing structured [`Report`]s for fired checks.
 //!
-//! Execution model (see `plan/03-evaluation.md` for the full rationale,
-//! including why this is based on general knowledge of the Schematron
+//! Execution model (based on general knowledge of the Schematron
 //! reference implementation rather than a verbatim ISO 19757-3 quote):
 //!
 //! - Patterns are independent: the same node may be claimed by rules in
@@ -12,8 +11,7 @@
 //!   in the same pattern is not re-evaluated by later rules in that
 //!   pattern ("first matching rule wins" — this is not a Stage-1
 //!   simplification but the actual ISO Schematron conflict-resolution
-//!   rule; `rule` has no `priority` attribute, see `plan/04-let-bindings.md`
-//!   for the grammar check that ruled this out).
+//!   rule; `rule` has no `priority` attribute in the grammar).
 //! - `rule context="X"` is evaluated as the path
 //!   `descendant-or-self::node()/X` from the document root — the usual
 //!   pragmatic reduction of an XSLT-style match pattern to a regular
@@ -27,15 +25,15 @@
 //!   document", matching only a direct root child of that name.
 //! - `assert test="X"` fires (produces a `Report`) when `X` evaluates to
 //!   `false`; `report test="X"` fires when `X` evaluates to `true`.
-//! - `<let name="..." value="...">` (Stage 2, `plan/04-let-bindings.md`)
+//! - `<let name="..." value="...">` (Stage 2)
 //!   binds XPath variables visible to `context`/`test` expressions in its
 //!   scope (schema/pattern/rule), evaluated via `extend_lets`.
-//! - `phase` selection (Stage 2, `plan/05-phase-selection.md`) restricts
+//! - `phase` selection (Stage 2) restricts
 //!   evaluation to a subset of patterns via [`evaluate_with_phase`].
 //!   `evaluate` is `evaluate_with_phase` with `schema.default_phase`
 //!   (ISO's `#DEFAULT`); `phase_id: None` in `evaluate_with_phase` means
 //!   "all patterns" (ISO's `#ALL`).
-//! - `diagnostics` (Stage 2, `plan/08-diagnostics.md`): a fired check's
+//! - `diagnostics` (Stage 2): a fired check's
 //!   `diagnostics="id1 id2"` IDREFS are rendered the same way as its own
 //!   message, against the same context node. Unknown ids are skipped, not
 //!   an error (same accepted simplification as `Phase.active`).
@@ -64,7 +62,7 @@ pub struct Report<N> {
     pub kind: CheckKind,
     pub message: String,
     /// Rendered messages of this check's `diagnostics` IDREFS, in
-    /// reference order (see `plan/08-diagnostics.md`).
+    /// reference order.
     pub diagnostics: Vec<String>,
     pub node: N,
 }
@@ -116,7 +114,7 @@ impl std::error::Error for SchematronEvalError {}
 
 /// Evaluates `schema` against `document` under ISO's `#DEFAULT` phase
 /// resolution: `schema.default_phase` if set, otherwise `#ALL` (every
-/// pattern) — see [`evaluate_with_phase`] and `plan/05-phase-selection.md`.
+/// pattern) — see [`evaluate_with_phase`].
 /// Returns one [`Report`] per fired check, in the order patterns/rules/
 /// checks appear in the schema and nodes are visited (document order
 /// within a rule's matches).
@@ -131,7 +129,6 @@ pub fn evaluate<'a, D: Document>(
 /// activated by the phase named `phase_id` — `None` means `#ALL` (every
 /// pattern, ignoring `Schema.phases` entirely). `Some(id)` with no
 /// matching `Schema.phases[_].id` is [`SchematronEvalError::UnknownPhase`].
-/// See `plan/05-phase-selection.md`.
 pub fn evaluate_with_phase<'a, D: Document>(
     schema: &Schema,
     document: &'a D,
@@ -567,8 +564,8 @@ fn with_context<'n, N: Node<'n>, T>(
 /// Evaluates `lets` in document order against `context_node`, adding each
 /// binding to `scope` as it goes — so a binding's `value` expression can
 /// reference earlier bindings (both from an enclosing scope and from
-/// earlier in `lets` itself), but not later ones in `lets`. See
-/// `plan/04-let-bindings.md` for the scoping rationale (schema/pattern-level
+/// earlier in `lets` itself), but not later ones in `lets`. Scoping:
+/// (schema/pattern-level
 /// `<let>` evaluate against the document root, rule-level against the
 /// matched context node).
 fn extend_lets<'n, N: Node<'n>>(
@@ -640,8 +637,7 @@ fn evaluate_check<'n, N: Node<'n>>(
 /// (issue #4 — reuses `xpath-eval`'s existing `name()`/`qname_string`
 /// implementation rather than reimplementing qualified-name formatting
 /// here) — then the whole concatenated result is trimmed (leading/trailing
-/// whitespace only, see `plan/06-value-of-interpolation.md` for why
-/// trimming moved here from parse time). Only called for checks that
+/// whitespace only; trimming happens here, not at parse time). Only called for checks that
 /// actually fire (see call site) — a broken `value-of`/`name` in a message
 /// that never fires must not surface as an error.
 fn render_message<'n, N: Node<'n>>(

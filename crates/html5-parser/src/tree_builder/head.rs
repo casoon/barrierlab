@@ -196,9 +196,7 @@ impl TreeBuilder {
     /// The "in head" insertion mode (§13.2.6.4.4). `<template>`'s
     /// classic content-fragment model is implemented (marker on the
     /// active formatting elements list, the stack of template insertion
-    /// modes, `NodeKind::DocumentFragment` template contents — see
-    /// plan/04-frameset.md's "Normative Grundlage" for where this was
-    /// researched and plan/05-template.md for this piece specifically);
+    /// modes, `NodeKind::DocumentFragment` template contents);
     /// declarative shadow DOM (`shadowrootmode`) and content patching
     /// (`for`) are not — see README's Known limitations, both require
     /// modeling shadow roots/custom element registries this crate has
@@ -408,8 +406,7 @@ impl TreeBuilder {
 
     /// The "after head" insertion mode (§13.2.6.4.6). The `frameset`
     /// start tag case is intentionally absent: frameset documents are
-    /// out of this crate's scope entirely (see the scope decision in
-    /// plan/03-tree-construction.md) — falls through to "anything
+    /// out of this crate's scope entirely — falls through to "anything
     /// else" instead of the (unimplemented) "in frameset" mode.
     pub(super) fn process_token_after_head(
         &mut self,

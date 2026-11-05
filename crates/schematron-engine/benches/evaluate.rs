@@ -1,6 +1,6 @@
 //! Benchmark baseline for schema parsing + evaluation. Run with
 //! `cargo bench`. Deliberately not a `criterion`-based micro-benchmark
-//! suite (no new dependency just for this, see `plan/todo.md`'s P2 item)
+//! suite (no new dependency just for this)
 //! — prints wall-clock time for `evaluate()` over documents of increasing
 //! size, so a regression is visible by inspection across runs.
 //!
@@ -11,9 +11,8 @@
 //! typical hardware. If this baseline regresses by an order of magnitude,
 //! that's the trigger to revisit `src/engine.rs` re-parsing every
 //! `context`/`test`/`value-of` XPath expression on every single
-//! `evaluate()` call, with a compiled/cached form — not before, per
-//! `plan/todo.md`'s "nur bei belegtem Bedarf" (only once an actual need is
-//! measured, not speculatively).
+//! `evaluate()` call, with a compiled/cached form — not before, and only once an actual need is
+//! measured, not speculatively.
 
 use std::cmp::Ordering;
 use std::time::Instant;

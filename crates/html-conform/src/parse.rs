@@ -99,8 +99,8 @@ pub(crate) fn findings(parsed: &ParsedHtml) -> Vec<Finding> {
 /// The "initial" insertion mode's DOCTYPE handling (§13.2.6.4.1) is a
 /// **tree-construction**-level parse error, not a tokenizer one — out of
 /// scope for `html5_parser::ParseErrorKind` (Phase 07 there, "Slice 1",
-/// deliberately scoped to the 52 named *tokenizer* errors only; see
-/// `../html5-parser/plan/DECISIONS.md`). Detectable entirely from the
+/// deliberately scoped to the 52 named *tokenizer* errors only).
+/// Detectable entirely from the
 /// already-parsed [`Document`] here instead, with no `html5-parser`
 /// change needed: a conforming document has exactly one `Doctype` child
 /// of the document root, with name `"html"` and no public/system
@@ -251,9 +251,8 @@ fn charset_after_1024_findings(document: &Document) -> Vec<Finding> {
 
 #[cfg(test)]
 mod tests {
-    // Phase 02 dependency spike (now html5-parser, see plan/DECISIONS.md's
-    // Phase 08 migration entry): confirm the parser parses minimal HTML
-    // into a tree. See plan/02-dependency-spike.md.
+    // Phase 02 dependency spike (now html5-parser): confirm the parser
+    // parses minimal HTML into a tree.
     use html5_parser::NodeKind;
 
     use super::{findings, parse};

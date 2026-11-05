@@ -5,8 +5,7 @@
 //! as sketched by the architecture diagram in `CLAUDE.md`.
 //!
 //! **Registry completeness is a snapshot, not a permanent guarantee** —
-//! see `plan/04-directive-registry.md`'s risks section and the README's
-//! status/scope notes (Phase 06). `webrtc` is deliberately left
+//! see the README's status/scope notes (Phase 06). `webrtc` is deliberately left
 //! unregistered pending verification against the then-current spec text
 //! (its standardization status was in flux); `referrer` (CSP1, removed
 //! before CSP3) is intentionally out of scope entirely -- this crate's
@@ -198,10 +197,10 @@ const REGISTRY: &[(&str, ValueGrammar, DirectiveStatus)] = &[
 ];
 
 /// Looks up a directive name in the CSP3 directive registry.
-/// ASCII-case-insensitive, per CSP3's directive-name matching rule (see
-/// `plan/02-directive-splitting.md`). Returns `None` for unregistered
+/// ASCII-case-insensitive, per CSP3's directive-name matching rule.
+/// Returns `None` for unregistered
 /// names -- per CSP3's forward-compatibility design, that is not itself
-/// a syntax error (see `plan/DECISIONS.md`, 2026-08-22).
+/// a syntax error.
 pub fn registry_lookup(name: &str) -> Option<(ValueGrammar, DirectiveStatus)> {
     REGISTRY
         .iter()
@@ -238,8 +237,7 @@ impl Directive {
     /// Interprets [`Directive::raw_value`] via the CSP3 directive
     /// registry for [`Directive::name`]. Computed on demand rather than
     /// stored on `Directive` itself, so [`crate::parse_policy_list`]
-    /// (Phase 02) stays a pure, registry-independent split -- see
-    /// `plan/DECISIONS.md`, 2026-08-22.
+    /// (Phase 02) stays a pure, registry-independent split.
     pub fn value(&self) -> DirectiveValue {
         let Some((grammar, _status)) = registry_lookup(&self.name) else {
             return DirectiveValue::Unknown;

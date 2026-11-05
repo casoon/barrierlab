@@ -4,7 +4,7 @@
 //!
 //! [`DatatypeRegistry::new`] always has the RELAX NG built-in (empty-string)
 //! library and the XSD library (`http://www.w3.org/2001/XMLSchema-datatypes`)
-//! registered — see `plan/DECISIONS.md`'s Phase 06 entry for why both are
+//! registered: both are
 //! treated as "this crate natively supports them" rather than something a
 //! caller must supply. Anything else (e.g. vnu's own
 //! `http://whattf.org/datatype-draft`) is the caller's responsibility to
@@ -17,7 +17,7 @@ use std::fmt;
 use super::{builtin, xsd};
 
 /// The namespace URI identifying the XSD datatype library, as used in
-/// `datatypeLibrary="..."` — see `plan/DECISIONS.md`.
+/// `datatypeLibrary="..."`.
 pub const XSD_DATATYPE_LIBRARY: &str = "http://www.w3.org/2001/XMLSchema-datatypes";
 
 /// The in-scope XML namespace prefix bindings at the point a value occurs

@@ -2,8 +2,7 @@
 //!
 //! Phase 02 scope: the generic, directive-independent top-level split
 //! only. A [`Directive`]'s value is kept as a raw string -- interpreting
-//! it further (source lists, sandbox tokens, etc.) is later phases' job
-//! (see `plan/03-source-list-grammar.md`, `plan/04-directive-registry.md`).
+//! it further (source lists, sandbox tokens, etc.) is later phases' job.
 
 /// A parsed list of CSP policies, as found in a `Content-Security-Policy`
 /// HTTP header (a comma-separated list of `serialized-policy`, CSP3 §2.2).
@@ -46,8 +45,7 @@ impl Directive {
     /// production (`1*( ALPHA / DIGIT / "-" )`, CSP3 §2.3).
     ///
     /// A `false` result does not mean this directive was dropped --
-    /// `csp-parse` parses leniently (see `plan/DECISIONS.md`,
-    /// 2026-08-22) and still reports it; callers that need strict
+    /// `csp-parse` parses leniently and still reports it; callers that need strict
     /// conformance checking should check this explicitly.
     pub fn name_is_valid(&self) -> bool {
         !self.name.is_empty()

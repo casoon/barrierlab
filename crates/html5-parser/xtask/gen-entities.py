@@ -57,7 +57,7 @@ def main():
     print("// spec requires one; legacy (pre-HTML5) names appear twice, once")
     print("// with and once without `;`, both mapping to the same")
     print("// replacement text — matching upstream `entities.json` exactly.")
-    print("#![allow(dead_code)] // not yet consumed; see plan/02-tokenizer.md")
+    print("#![allow(dead_code)] // not yet consumed")
     print()
     print(f"pub(crate) static NAMED_CHARACTER_REFERENCES: [(&str, &str); {len(rows)}] = [")
     for name, entry in rows:

@@ -3,8 +3,7 @@
 //! by the vendored vnu HTML5 schema.
 //!
 //! Source of truth: `validator/validator`, Java package
-//! `src/nu/validator/datatype/` (see `plan/05c-research-group-a.md`, items
-//! 1-3, 6-15). Per `plan/05c-datatype-library.md`'s "vnu-Parität als
+//! `src/nu/validator/datatype/`. Per the "vnu-Parität als
 //! Default" principle, these functions replicate vnu's actual runtime
 //! behavior — including documented vnu-specific quirks/bugs — rather than a
 //! "corrected" reading of the informal spec prose.
@@ -110,9 +109,8 @@ pub(crate) fn check_zero(value: &str) -> Result<(), String> {
 /// loop is non-empty anyway (either there was no sign, so the whole
 /// non-empty string is scanned, or there was a sign followed by at least one
 /// more character), so this only manifests for the single-character string
-/// `"-"`. Per `plan/05c-datatype-library.md`'s vnu-parity principle, this is
-/// intentionally reproduced, not "fixed". Source:
-/// `plan/05c-research-group-a.md` item 10, citing `Int.java`/
+/// `"-"`. Per the vnu-parity principle, this is
+/// intentionally reproduced, not "fixed". Source: `Int.java`/
 /// `AbstractInt.checkInt`.
 pub(crate) fn check_integer(value: &str) -> Result<(), String> {
     if value.is_empty() {
@@ -167,8 +165,7 @@ enum FloatVariant {
 }
 
 /// Shared state-machine implementation of vnu's hand-rolled
-/// `FloatingPointExponent*` parsers (per `plan/05c-research-group-a.md`
-/// items 13-15). Grammar common to all three variants:
+/// `FloatingPointExponent*` parsers. Grammar common to all three variants:
 ///
 /// ```text
 /// sign?  mantissa  exponent?

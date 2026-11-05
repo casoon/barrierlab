@@ -3,8 +3,8 @@
 // including foreign-content (SVG/MathML) dispatch and attribute/tag-name
 // adjustment.
 //
-// All insertion modes (§13.2.6.4.1-.20, minus the frameset-related ones —
-// see plan/03-tree-construction.md's scope decision) and the foreign-
+// All insertion modes (§13.2.6.4.1-.20, minus the frameset-related ones,
+// which are out of scope) and the foreign-
 // content dispatcher (§13.2.6.5) are implemented; `TreeBuilder::process_token`
 // is the real entry point, driven end to end by `lib.rs::parse()`.
 
@@ -43,7 +43,7 @@ pub(crate) const MATHML_NAMESPACE: &str = "http://www.w3.org/1998/Math/MathML";
 
 /// The insertion mode (§13.2.4.1): determines how the tree-construction
 /// dispatcher processes each token. Only the modes this crate's scope
-/// decision actually needs are listed (see plan/03-tree-construction.md)
+/// decision actually needs are listed
 /// — no `InFrameset`/`AfterFrameset`/`AfterAfterFrameset` (frameset
 /// documents can never validate against `html-conform`'s schema, so
 /// there's nothing to build them for) and no `InTemplate` (`<template>`
@@ -125,8 +125,7 @@ fn is_whitespace(c: char) -> bool {
 /// before `before` — or, if `before` is `None`, as the last child.
 /// §13.2.6.1's "adjusted insertion location", minus the "inside a
 /// `template` element" adjustment (this crate treats `<template>` as a
-/// plain element, not a separate inert content fragment — see
-/// plan/03-tree-construction.md's Template scope decision) and the
+/// plain element, not a separate inert content fragment) and the
 /// fragment-parsing "root insertion target" step (this crate doesn't
 /// implement the HTML fragment parsing algorithm).
 struct InsertionLocation {
@@ -136,8 +135,7 @@ struct InsertionLocation {
 
 /// Drives tree construction: owns the [`Document`] being built and the
 /// [`OpenElementsStack`], and implements the shared insertion algorithms
-/// (§13.2.6.1) that every insertion mode (not yet implemented — see
-/// plan/03-tree-construction.md) is built on.
+/// (§13.2.6.1) that every insertion mode (not yet implemented) is built on.
 pub(crate) struct TreeBuilder {
     document: Document,
     open_elements: OpenElementsStack,
@@ -148,8 +146,7 @@ pub(crate) struct TreeBuilder {
     foster_parenting: bool,
     /// The current insertion mode (§13.2.4.1). Defaults to `Initial`,
     /// though nothing switches away from it yet — the "initial" mode's
-    /// own token-processing rules aren't implemented (see
-    /// plan/03-tree-construction.md).
+    /// own token-processing rules aren't implemented.
     insertion_mode: InsertionMode,
     /// The insertion mode saved by algorithms (like this one, §13.2.6.2)
     /// that temporarily switch to another mode and need to restore it
@@ -172,8 +169,8 @@ pub(crate) struct TreeBuilder {
     form_element_pointer: Option<NodeId>,
     /// The "frameset-ok flag" (§13.2.4.1). Defaults to "ok" (`true`);
     /// most of "in body"'s content-inserting rules set it to "not ok".
-    /// Read by "in body"'s `<frameset>` start-tag rule (§13.2.6.4.7,
-    /// plan/04-frameset.md) to decide whether a misplaced `<frameset>`
+    /// Read by "in body"'s `<frameset>` start-tag rule (§13.2.6.4.7)
+    /// to decide whether a misplaced `<frameset>`
     /// may still replace `<body>`.
     frameset_ok: bool,
     /// Sentinel for "if the next token is a U+000A LINE FEED (LF)
@@ -203,9 +200,8 @@ pub(crate) struct TreeBuilder {
     stack_of_template_insertion_modes: Vec<InsertionMode>,
     /// Tree-construction-stage parse errors (§13.2.6), collected exactly
     /// the way [`crate::tokenizer::Tokenizer`] collects its own
-    /// (`plan/07-parse-errors.md`) and merged with them by
-    /// `lib.rs::parse`. See `plan/08-tree-construction-errors.md` for
-    /// which conditions are covered and which are deliberately left out.
+    /// and merged with them by `lib.rs::parse`. Only some conditions are
+    /// covered; the rest are deliberately left out.
     errors: Vec<ParseError>,
     /// "Acknowledge the token's self-closing flag" (§13.2.5): a start tag
     /// token emitted with its self-closing flag set is a

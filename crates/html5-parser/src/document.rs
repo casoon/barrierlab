@@ -7,7 +7,7 @@
 // `html-conform`'s existing `src/infoset.rs::normalize()` already adapts
 // (currently written against its current HTML5-parsing dependency's tree
 // shape) that switching `normalize()` over to this crate should need only
-// modest changes. See plan/03-tree-construction.md, "Zieldatenmodell".
+// modest changes.
 
 use std::num::NonZeroU32;
 
@@ -42,8 +42,7 @@ impl NodeId {
 }
 
 /// An HTML attribute, resolved to its (possibly foreign-content-adjusted)
-/// namespace during tree construction — see plan/03-tree-construction.md's
-/// Foreign-Content-Dispatch step.
+/// namespace during tree construction (Foreign-Content-Dispatch).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attribute {
     pub name: String,
@@ -157,9 +156,7 @@ impl Node {
 /// Mutation (`new_node`/`append_child`/...) stays crate-internal — it's
 /// `tree_builder`'s job to build the tree in the first place, following
 /// the spec-level insertion algorithms ("insert a comment", "insert an
-/// HTML element", table foster parenting, ...), see
-/// plan/03-tree-construction.md's "gemeinsame
-/// Tree-Construction-Infrastruktur" step.
+/// HTML element", table foster parenting, ...).
 #[derive(Debug)]
 pub struct Document {
     nodes: Vec<Node>,

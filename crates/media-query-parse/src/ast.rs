@@ -6,8 +6,7 @@
 //!
 //! Grammar reference: [Media Queries Level 4][spec] §3, which already
 //! defines the `<mf-range>` alternative (comparison operators, one- and
-//! two-sided ranges) normatively alongside `<mf-plain>`/`<mf-boolean>`
-//! — see `plan/DECISIONS.md` for why this is Level 4, not Level 5.
+//! two-sided ranges) normatively alongside `<mf-plain>`/`<mf-boolean>`.
 //! [`MediaFeature`] covers all three.
 //!
 //! [spec]: https://www.w3.org/TR/mediaqueries-4/
@@ -19,7 +18,7 @@ use css_tokenize::Token;
 /// Holds a list of *successfully parsed* queries. The public parsing
 /// entry point ([`crate::parser::parse_media_query_list`]) returns a
 /// `Result` per list entry instead of this type, since one invalid
-/// entry must not fail the whole list (see `plan/DECISIONS.md` for why)
+/// entry must not fail the whole list
 /// — `MediaQueryList` is here for callers that already have a fully
 /// valid list in hand (e.g. after filtering out the `Err`s themselves).
 #[derive(Debug, Clone, PartialEq)]

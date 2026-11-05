@@ -25,8 +25,7 @@
   <ns prefix="h" uri="http://www.w3.org/1999/xhtml"/>
   <!--
     The vendored schema's own comment on `common.attrs.lang`
-    (rules/aria-html-restrictions.sch's sibling entry in
-    plan/DECISIONS.md's `lang`/`xml:lang` bugfix has the full context)
+    (see also rules/aria-html-restrictions.sch)
     says this "sameness check" is deliberately left to Schematron, not
     the RELAX NG schema. Uses `@*[local-name()='xml:lang' and
     namespace-uri()='']` rather than `@xml:lang`: an unprefixed XPath
@@ -35,8 +34,7 @@
     always-bound `xml` prefix — but this crate's infoset deliberately
     keeps a literal `xml:lang` attribute on ordinary HTML elements as a
     single unsplit local name with no namespace (HTML5-parsing-spec
-    behavior, see rules/aria-html-restrictions.sch and
-    plan/DECISIONS.md), so it has to be matched that way here too.
+    behavior, see rules/aria-html-restrictions.sch), so it has to be matched that way here too.
   -->
   <pattern id="lang-xml-lang-sameness">
     <rule context="*[@*[local-name() = 'xml:lang' and namespace-uri() = '']]">

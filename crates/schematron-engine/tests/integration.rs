@@ -5,8 +5,7 @@
 //! attributes/namespaces/text at all — see its doc comment).
 //!
 //! Self-authored fixture, not a vendored third-party corpus — this
-//! sidesteps any corpus-licensing question entirely (see
-//! `plan/DECISIONS.md`) while still exercising, together, against one real
+//! sidesteps any corpus-licensing question entirely while still exercising, together, against one real
 //! document tree: attributes, element/attribute namespaces, text and mixed
 //! content, the `parent`/`child`/`attribute` axes, `<let>` (schema- and
 //! rule-level), `phase` selection (including `#ALL`), `<value-of>` message
@@ -179,7 +178,7 @@ fn evaluate_with_phase_pricing_only_fires_the_price_check() {
 
 /// A schema referencing an attribute/element namespace prefix that has no
 /// matching `<ns>` binding does not silently match the wrong nodes — the
-/// prefix stays unresolved (`plan/03-evaluation.md`'s namespace-hook
+/// prefix stays unresolved (the namespace-hook
 /// wiring, exercised here through a real parsed document/schema pair
 /// rather than the minimal engine-test fixture).
 #[test]

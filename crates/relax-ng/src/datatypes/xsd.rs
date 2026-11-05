@@ -4,8 +4,7 @@
 //! using W3C XML Schema Datatypes with RELAX NG". Independently implemented
 //! from the XSD Part 2 spec — not ported from any existing datatype engine.
 //!
-//! Known, deliberate simplifications (see `plan/DECISIONS.md`'s Phase 06
-//! entry for the full rationale): `decimal`/the integer family use a
+//! Known, deliberate simplifications: `decimal`/the integer family use a
 //! digit-string based representation (arbitrary lexical precision, no
 //! external bignum dependency) rather than a fully general arbitrary-
 //! precision arithmetic library; `dateTime`/`date`/`time` ordering
@@ -1034,8 +1033,7 @@ fn compare_ordered(
 /// rejected any `pattern` facet that doesn't compile, so this always
 /// succeeds in practice; a per-schema pattern cache would save repeated
 /// compilation across many `matches` calls, but that's a performance
-/// concern deliberately deferred (see `plan/05-validation-engine.md`'s
-/// "not prematurely optimizing" note, which applies here too) rather than
+/// concern deliberately deferred rather than
 /// something to build speculatively now.
 fn compiled_pattern(pattern: &str) -> Regex {
     Regex::new(&format!("^(?:{pattern})$")).expect("validated by validate_params")

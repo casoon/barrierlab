@@ -113,9 +113,7 @@ replace its previous HTML5-parsing dependency, prove that against real
 usage, and only then decide on a public API and whether to publish
 standalone. In practice, full spec coverage and a first `crates.io`
 publish happened ahead of that cross-repo validation step, on direct
-request — see `plan/DECISIONS.md` for the decision log and `plan/`
-generally for the phase-by-phase implementation history (not tracked in
-git, see `CLAUDE.md`).
+request.
 
 ## License
 
