@@ -38,6 +38,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "a11y-static"
+version = "0.1.0"
+dependencies = [
+ "a11y-dom",
+ "a11y-report",
+ "a11y-rules",
+ "accname",
+ "html5-parser",
+ "style-cascade",
+ "stylesheet-parse",
+]
+
+[[package]]
 name = "a11y-wasm"
 version = "0.14.0"
 dependencies = [
@@ -331,6 +344,7 @@ dependencies = [
 name = "html-conform"
 version = "0.3.4"
 dependencies = [
+ "a11y-report",
  "criterion",
  "csp-parse",
  "encoding_rs",
