@@ -16,7 +16,7 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ### Changed
 
-- **Selektoren:** Im Ruhezustand sind `:disabled`, `:enabled`, `:checked`, `:required` und `:optional` aus den Attributen entschieden (inkl. `fieldset`-Vererbung und `legend`-Ausnahme) statt `Unknown`; `:nth-child()`, `:nth-last-child()` (mit `of S`), `:nth-of-type()`, `:nth-last-of-type()`, `:first-of-type`, `:last-of-type` und `:only-of-type` werden ausgewertet.
+- **Selektoren:** Im Ruhezustand sind `:disabled`, `:enabled`, `:checked`, `:required`, `:optional`, `:read-only` und `:read-write` (HTML §4.16.3, `contenteditable` inklusive) aus den Attributen entschieden (inkl. `fieldset`-Vererbung und `legend`-Ausnahme) statt `Unknown`; `:nth-child()`, `:nth-last-child()` (mit `of S`), `:nth-of-type()`, `:nth-last-of-type()`, `:first-of-type`, `:last-of-type` und `:only-of-type` werden ausgewertet.
 - **Medien:** `hover`, `pointer`, `prefers-contrast` und `forced-colors` sind `Unknown`, solange `Environment` sie nicht festlegt. `Environment` hat dafür die Felder `hover`, `fine_pointer`, `contrast_more` und `forced_colors` (je `Option<bool>`); wer `Environment` ohne `..Default::default()` als Literal baut, muss sie ergänzen.
 
 ### Fixed

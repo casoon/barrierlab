@@ -9,7 +9,7 @@ use stylesheet_parse::{Context, Rule as CssRule, Stylesheet, parse_stylesheet};
 
 use crate::media::{Environment, eval};
 use crate::selector::{Key, Match, Mode, Selector, Specificity};
-use crate::shorthand::{PENDING, UNKNOWN, expand};
+use crate::shorthand::{Expanded, expand};
 use crate::ua;
 
 /// Der angegebene Wert einer Eigenschaft an einem Element, nach Kaskade,
@@ -28,7 +28,7 @@ pub enum Specified {
 #[derive(Debug, Clone)]
 struct Decl {
     prop: String,
-    value: String,
+    value: Expanded,
     important: bool,
     order: u32,
 }
@@ -86,6 +86,11 @@ fn weight(
 
 enum Declared {
     Value(String),
+    /// Kurzschreibweise mit `var()`, erst am Element zerlegbar.
+    Pending {
+        shorthand: String,
+        raw: String,
+    },
     Nothing,
     Unknown,
 }
@@ -315,7 +320,7 @@ impl Cascade {
     }
 
     fn declared<'a, N: Node<'a>>(&self, n: N, prop: &str) -> Declared {
-        let mut best: Option<(Weight, &str)> = None;
+        let mut best: Option<(Weight, &Expanded)> = None;
         let mut unsicher: Option<Weight> = None;
         let treffer = self.matched(n);
         for (idx, m) in treffer.iter() {
@@ -349,15 +354,15 @@ impl Cascade {
                 )
             })
             .max_by_key(|(w, _)| *w);
-        let (best_w, best_v): (Option<Weight>, Option<String>) = match (best, inline_best) {
+        let (best_w, best_v): (Option<Weight>, Option<Expanded>) = match (best, inline_best) {
             (Some((w, v)), Some((iw, iv))) => {
                 if iw > w {
                     (Some(iw), Some(iv))
                 } else {
-                    (Some(w), Some(v.to_string()))
+                    (Some(w), Some(v.clone()))
                 }
             }
-            (Some((w, v)), None) => (Some(w), Some(v.to_string())),
+            (Some((w, v)), None) => (Some(w), Some(v.clone())),
             (None, Some((iw, iv))) => (Some(iw), Some(iv)),
             (None, None) => (None, None),
         };
@@ -384,8 +389,9 @@ impl Cascade {
             return Declared::Unknown;
         }
         match best_v {
-            Some(v) if v == UNKNOWN => Declared::Unknown,
-            Some(v) => Declared::Value(v),
+            Some(Expanded::Unknown) => Declared::Unknown,
+            Some(Expanded::Set(v)) => Declared::Value(v),
+            Some(Expanded::Pending { shorthand, raw }) => Declared::Pending { shorthand, raw },
             None => match ua::declared(n, prop) {
                 Some(v) => Declared::Value(v),
                 None => Declared::Nothing,
@@ -431,24 +437,23 @@ impl Cascade {
                     Specified::Unset
                 }
             }
-            Declared::Value(v) if v.starts_with(PENDING) => {
-                let rest = &v[PENDING.len_utf8()..];
-                let (kurz, roh) = rest.split_once(PENDING).unwrap_or(("", rest));
-                match self.loese_var(n, roh, 0) {
-                    Err(Fehler::Unbekannt) => Specified::Unknown,
-                    Err(Fehler::Ungueltig) => {
-                        if erbt {
-                            self.vom_eltern(n, prop)
-                        } else {
-                            Specified::Unset
-                        }
+            Declared::Pending {
+                shorthand: kurz,
+                raw: roh,
+            } => match self.loese_var(n, &roh, 0) {
+                Err(Fehler::Unbekannt) => Specified::Unknown,
+                Err(Fehler::Ungueltig) => {
+                    if erbt {
+                        self.vom_eltern(n, prop)
+                    } else {
+                        Specified::Unset
                     }
-                    Ok(w) => match expand(kurz, &w).into_iter().find(|(p, _)| p == prop) {
-                        Some((_, x)) if x != UNKNOWN => Specified::Set(x),
-                        _ => Specified::Unknown,
-                    },
                 }
-            }
+                Ok(w) => match expand(&kurz, &w).into_iter().find(|(p, _)| p == prop) {
+                    Some((_, Expanded::Set(x))) => Specified::Set(x),
+                    _ => Specified::Unknown,
+                },
+            },
             Declared::Value(v) => {
                 let t = v.trim();
                 match t.to_ascii_lowercase().as_str() {
