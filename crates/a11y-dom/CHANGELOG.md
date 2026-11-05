@@ -7,6 +7,12 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added
+
+- **Feature `html5-parser`:** `impl Document for html5_parser::Document` mit dem Handle
+  `Html5Node`, damit ein Host den Parsebaum nicht in eine `Arena` kopieren muss. Standardmäßig
+  aus; ohne das Feature bleibt die Abhängigkeitsliste leer.
+
 ## [0.26.1] - 2026-10-27
 
 ### Changed

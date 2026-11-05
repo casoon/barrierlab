@@ -30,6 +30,15 @@ impl NodeId {
     fn index(self) -> usize {
         self.0.get() as usize
     }
+
+    /// The node's arena index as a plain number, unique within its
+    /// [`Document`] and stable for that document's lifetime. Ids are
+    /// handed out in allocation order, which is *not* document order
+    /// (foster parenting and the adoption agency move nodes after the
+    /// fact).
+    pub fn as_u32(self) -> u32 {
+        self.0.get()
+    }
 }
 
 /// An HTML attribute, resolved to its (possibly foreign-content-adjusted)
@@ -177,6 +186,13 @@ impl Document {
 
     /// Returns the node identified by `id`: its kind, source position, and
     /// tree-navigation links (via [`Document::parent`]/[`Document::children`]).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` is out of range for this document, which is what
+    /// happens with a [`NodeId`] taken from a different `Document`. A
+    /// foreign id that happens to be in range is not detected: it silently
+    /// names an unrelated node. Only pass ids obtained from this document.
     pub fn node(&self, id: NodeId) -> &Node {
         &self.nodes[id.index()]
     }

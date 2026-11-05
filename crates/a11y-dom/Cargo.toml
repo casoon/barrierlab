@@ -11,3 +11,4 @@ authors.workspace = true
 categories.workspace = true
 
 [dependencies]
+html5-parser = { workspace = true, optional = true }
