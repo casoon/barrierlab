@@ -30,6 +30,11 @@ impl fmt::Display for SourceLocation {
 }
 
 /// The severity of a conformance finding.
+///
+/// Deprecated in favour of `a11y_report`: see [`CheckReport::to_report`].
+#[deprecated(
+    note = "html-conform now reports through the shared model: use `CheckReport::to_report()` and the `a11y_report` types"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Severity {
     /// The document violates a required conformance rule.
@@ -41,6 +46,11 @@ pub enum Severity {
 }
 
 /// A single conformance or parser finding.
+///
+/// Deprecated in favour of `a11y_report`: see [`CheckReport::to_report`].
+#[deprecated(
+    note = "html-conform now reports through the shared model: use `CheckReport::to_report()` and the `a11y_report` types"
+)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Finding {
     /// Stable identifier for the rule that emitted this finding.
@@ -117,6 +127,13 @@ impl CheckReport {
     /// `InputKind::DocumentIncomplete` note, so unchecked content stays
     /// visible. No `RuleRun` entries are recorded: html-conform has no rule
     /// registry to say which rules could have run.
+    ///
+    /// ```
+    /// let report = html_conform::check("<!DOCTYPE html><title>t</title>")
+    ///     .unwrap()
+    ///     .to_report();
+    /// assert!(report.findings.iter().all(|f| !f.rule_id.is_empty()));
+    /// ```
     #[must_use]
     pub fn to_report(&self) -> a11y_report::Report {
         let mut report = a11y_report::Report::new();
