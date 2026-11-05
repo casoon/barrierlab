@@ -26,3 +26,10 @@ SPDX-License-Identifier = "MIT"
 path = ["crates/accname/tests/corpus/wpt/**/*.html", "crates/accname/tests/corpus/wpt/LICENSE.md"]
 SPDX-FileCopyrightText = "web-platform-tests contributors"
 SPDX-License-Identifier = "BSD-3-Clause"
+
+# Vendorte css-parsing-tests (SimonSapin, CC0-1.0); Herkunft in
+# crates/css-tokenize/tests/corpus/css-parsing-tests/UPSTREAM.md.
+[[annotations]]
+path = ["crates/css-tokenize/tests/corpus/css-parsing-tests/**"]
+SPDX-FileCopyrightText = "2013 Simon Sapin"
+SPDX-License-Identifier = "CC0-1.0"

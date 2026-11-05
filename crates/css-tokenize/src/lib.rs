@@ -1,11 +1,22 @@
-//! CSS tokenizer, implementing [CSS Syntax Module Level 3][spec] §3
-//! (Tokenizing and Parsing CSS) and §4 (Tokenization).
+//! A CSS tokenizer, implementing [CSS Syntax Module Level 3][spec] §3
+//! (Tokenizing and Parsing CSS) and §4 (Tokenization), written in 100% safe
+//! Rust and without dependencies.
 //!
-//! This module only turns a `&str` into a stream of tokens. It has no
-//! knowledge of the Media Queries grammar (feature names, `and`/`or`/
-//! `not`, range syntax, ...) — that belongs to the parser (phase 03).
+//! This crate only turns a `&str` into a stream of tokens. It knows nothing
+//! about grammars built on top of CSS tokens (media queries, selectors,
+//! stylesheets).
+//!
+//! ```
+//! use css_tokenize::{Token, tokenize};
+//!
+//! let tokens = tokenize("a:hover");
+//! assert!(matches!(tokens[0], Token::Ident(_)));
+//! ```
 //!
 //! [spec]: https://www.w3.org/TR/css-syntax-3/
+
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 /// Numeric type flag, as used by [`Token::Number`] and
 /// [`Token::Dimension`] (spec §4.3.12, "Consume a number").
@@ -177,10 +188,7 @@ fn is_surrogate(value: u32) -> bool {
 /// A tokenizer over a preprocessed input stream, per spec §4.3.
 ///
 /// Implements [`Iterator`], yielding tokens in order and ending with a
-/// single [`Token::Eof`], after which it yields `None`. See
-/// `plan/DECISIONS.md` for why this shape (iterator + terminal EOF
-/// token, plus the [`tokenize`] convenience function) was chosen over
-/// alternatives.
+/// single [`Token::Eof`], after which it yields `None`.
 pub struct Tokenizer {
     input: Vec<char>,
     pos: usize,

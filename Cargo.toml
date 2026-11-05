@@ -2,6 +2,7 @@
 members = [
     # L0 — Parser und Engines
     "crates/html5-parser",
+    "crates/css-tokenize",
     "crates/csp-parse",
     "crates/media-query-parse",
     "crates/xpath-eval",
@@ -44,6 +45,7 @@ categories = ["accessibility", "web-programming"]
 [workspace.dependencies]
 # Intern: path fuer den lokalen Bau, version fuer die Veroeffentlichung.
 html5-parser = { version = "0.4.1", path = "crates/html5-parser" }
+css-tokenize = { version = "0.1.0", path = "crates/css-tokenize" }
 csp-parse = { version = "0.1.0", path = "crates/csp-parse" }
 media-query-parse = { version = "0.1.0", path = "crates/media-query-parse" }
 xpath-eval = { version = "0.2.3", path = "crates/xpath-eval" }

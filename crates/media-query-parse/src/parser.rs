@@ -1,5 +1,5 @@
 //! Recursive-descent parser for the Media Queries Level 4 grammar,
-//! built on top of the [`crate::tokenizer::Tokenizer`] from phase 02.
+//! built on top of the [`css_tokenize::Tokenizer`] from phase 02.
 //!
 //! One function per grammar production (see the doc comment on each
 //! function below for the production it implements), mirroring the
@@ -35,7 +35,7 @@ use crate::ast::{
     GeneralEnclosed, MediaCondition, MediaConditionWithoutOr, MediaFeature, MediaInParens,
     MediaModifier, MediaQuery, MediaType, MfComparison, MfName, MfRange, MfRangeDirection, MfValue,
 };
-use crate::tokenizer::{NumericType, Token, tokenize};
+use css_tokenize::{Token, tokenize};
 
 /// A real syntax error, distinct from a `<media-query>` that is
 /// syntactically well-formed but doesn't match the grammar (see the
@@ -361,24 +361,16 @@ fn mf_name(parser: &mut Parser) -> Result<MfName, ParseError> {
 /// `<mf-value> = <number> | <dimension> | <ident> | <ratio>`
 fn mf_value(parser: &mut Parser) -> Result<MfValue, ParseError> {
     match parser.advance() {
-        Some(Token::Number { value, type_flag }) => {
+        Some(Token::Number { value, .. }) => {
             if matches!(parser.peek(), Some(Token::Delim('/'))) {
                 parser.advance();
                 match parser.advance() {
                     Some(Token::Number {
-                        value: denominator,
-                        type_flag: NumericType::Integer,
-                    }) if type_flag == NumericType::Integer
-                        && value >= 0.0
-                        && denominator >= 0.0
-                        && value <= u32::MAX as f64
-                        && denominator <= u32::MAX as f64 =>
-                    {
-                        Ok(MfValue::Ratio {
-                            numerator: value as u32,
-                            denominator: denominator as u32,
-                        })
-                    }
+                        value: denominator, ..
+                    }) if value >= 0.0 && denominator >= 0.0 => Ok(MfValue::Ratio {
+                        numerator: value,
+                        denominator,
+                    }),
                     _ => Err(ParseError::InvalidRatio),
                 }
             } else {
@@ -905,20 +897,42 @@ mod tests {
             Ok(MediaQuery::Condition(And(vec![feature_plain(
                 "aspect-ratio",
                 MfValue::Ratio {
-                    numerator: 16,
-                    denominator: 9
+                    numerator: 16.0,
+                    denominator: 9.0
                 }
             )])))
         );
     }
 
     #[test]
-    fn mf_plain_ratio_out_of_u32_range_is_invalid() {
-        let tokens = prepare_tokens("aspect-ratio: 99999999999999/1");
+    fn mf_plain_ratio_accepts_decimals_and_zero_denominator() {
         assert_eq!(
-            parse_fully(&tokens, media_feature),
-            Err(ParseError::InvalidRatio)
+            parse_media_query("(aspect-ratio: 1.5 / 1)"),
+            Ok(MediaQuery::Condition(And(vec![feature_plain(
+                "aspect-ratio",
+                MfValue::Ratio {
+                    numerator: 1.5,
+                    denominator: 1.0
+                }
+            )])))
         );
+        assert!(parse_media_query("(aspect-ratio: 16/0)").is_ok());
+    }
+
+    #[test]
+    fn mf_plain_ratio_rejects_negative_and_non_number() {
+        for input in [
+            "aspect-ratio: -1/2",
+            "aspect-ratio: 1/-2",
+            "aspect-ratio: 1/x",
+        ] {
+            let tokens = prepare_tokens(input);
+            assert_eq!(
+                parse_fully(&tokens, media_feature),
+                Err(ParseError::InvalidRatio),
+                "{input}"
+            );
+        }
     }
 
     #[test]
@@ -1113,8 +1127,8 @@ mod tests {
                     name: MfName("aspect-ratio".into()),
                     operator: MfComparison::Ge,
                     value: MfValue::Ratio {
-                        numerator: 16,
-                        denominator: 9,
+                        numerator: 16.0,
+                        denominator: 9.0,
                     },
                 }
             )])))
@@ -1156,8 +1170,8 @@ mod tests {
             Ok(MediaQuery::Condition(And(vec![feature_range(
                 MfRange::ValueFirst {
                     value: MfValue::Ratio {
-                        numerator: 16,
-                        denominator: 9,
+                        numerator: 16.0,
+                        denominator: 9.0,
                     },
                     operator: MfComparison::Le,
                     name: MfName("aspect-ratio".into()),

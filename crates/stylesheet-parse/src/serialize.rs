@@ -16,7 +16,7 @@
 //! - `<bad-string-token>` wird `""`, `<bad-url-token>` wird `url()`.
 //! - Zeichenketten erscheinen immer mit `"`.
 
-use media_query_parse::tokenizer::Token;
+use css_tokenize::Token;
 
 /// Schließendes Token eines Blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -376,7 +376,7 @@ fn write_url(out: &mut String, s: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use media_query_parse::tokenizer::{NumericType, tokenize};
+    use css_tokenize::{NumericType, tokenize};
 
     /// Token zum Vergleich: Leerraum gefaltet, Typkennung von Zahlen und
     /// Hashes weggelassen (die erste geht bei `1.0` absichtlich verloren).

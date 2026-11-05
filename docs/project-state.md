@@ -20,7 +20,7 @@ Repositories und binden die Pakete aus den Registries ein
 
 | Schicht | Pakete |
 |---|---|
-| L0 | `html5-parser`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng`, `schematron-engine` |
+| L0 | `html5-parser`, `css-tokenize`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng`, `schematron-engine` |
 | L1 | `a11y-dom`, `a11y-report`, `html-conform`, `stylesheet-parse` |
 | L2 | `accname`, `style-cascade`, `a11y-rules`, `a11y-perception`, `web-checks` |
 | L3 | `a11y-wasm` (Crate und npm-Paket `@casoon/a11y-wasm`, gebaut über `packages/a11y-wasm/build.mjs`) |
