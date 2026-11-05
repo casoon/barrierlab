@@ -56,10 +56,14 @@
 #![forbid(unsafe_code)]
 
 mod arena;
+#[cfg(feature = "html5-parser")]
+mod html5;
 mod tiers;
 mod tree;
 
 pub use arena::{Arena, ArenaBuilder, ArenaNode};
+#[cfg(feature = "html5-parser")]
+pub use html5::Html5Node;
 pub use tiers::{
     Backdrop, Caps, Color, ComputedStyle, Interaction, Layout, NameSource, Rect, Rendering,
     Semantics, Tier,
