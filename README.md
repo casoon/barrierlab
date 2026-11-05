@@ -31,7 +31,7 @@ things about the same `robots.txt`. BarrierLab is where those checks live once.
 - **"Did not run" is not "passed".** If a rule's prerequisite is missing (no accessible
   names, no computed styles, no focus), it appears in the report as `NotRun` with a
   reason. There is no silent success.
-- **Dependencies point down.** Four layers, no cycles, no host code in the repository.
+- **Dependencies point down.** Four layers, no cycles (within a layer only acyclic, with `a11y-rules` on top of L2), no host code in the repository.
 
 ## What is in here
 
@@ -176,7 +176,7 @@ Who uses what, and why a package lives here at all:
 
 ## Ground rules
 
-- Dependencies only point down; no package imports one of its own or a higher layer.
+- Dependencies only point down; no package imports a higher layer, and within a layer the graph stays acyclic (`a11y-rules` sits on top of L2).
 - No browser up to L3: no `chromiumoxide`, no CDP types in a public API.
 - No host format in the core: documents arrive through a trait, not a built-in HTML or XML parser.
 - No `unsafe` without a reason and a comment; `#![forbid(unsafe_code)]` where possible.
