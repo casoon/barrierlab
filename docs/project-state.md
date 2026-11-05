@@ -1,62 +1,52 @@
 ---
 title: "Stand"
-description: "Was im Repository liegt und was noch nicht."
+description: "Was im Repository liegt und wo die offenen Aufgaben stehen."
 order: 5
 ---
 
-**Stand: 2026-09-23**
+**Stand: 2026-11-05**
 
 ## Was ist das
 
-Ein **Bibliotheks-Monorepo** für Web-Audits. Hier entsteht die gemeinsame
-Berechnung, die heute verstreut in mehreren Repositories liegt; von hier wird
-nach crates.io und npm veröffentlicht. Die Werkzeuge bleiben außerhalb und
-binden die Pakete aus den Registries ein.
-
-Vorgeschichte: Dieses Verzeichnis war bis 2026-09-22 reines Konzeptmaterial für
-einen browserseitigen Vorabtest der Zugänglichkeit von Interaktionen (Snapshot →
-handeln → Snapshot → Differenz). Dieser Motor kommt als Paket `a11y-perception`
-hierher; den eigenständigen Host übernimmt Relief (`casoon/relief`) mit eigenem
-Browser. Der Kenntnisstand dazu steht in `plan/reader/`.
-
-## Stand
-
-Phase 3 ist durch: die vier a11y-Crates liegen hier, mit ihrer Historie, und
-0.10.2 ist **aus diesem Repository** auf crates.io veröffentlicht — inklusive
-korrigierter `repository`-Metadaten. Die Veröffentlichung lief lokal mit
-`cargo publish`; der Workflow erkennt die Pakete und die Tags, sein Upload-Weg
-ist aber noch ohne Anmeldung (Trusted Publishing je Crate steht aus).
+Ein **Bibliotheks-Monorepo** für Web-Audits. Die gemeinsame Berechnung der
+Werkzeuge (auditmysite, astro-post-audit, liveaudit, Relief) liegt hier und
+wird nach crates.io und npm veröffentlicht. Die Werkzeuge bleiben in eigenen
+Repositories und binden die Pakete aus den Registries ein
+([Konsumenten](consumers.md)).
 
 ## Was im Repository liegt
 
+16 Crates unter `crates/`, dazu das npm-Paket `packages/a11y-wasm`:
+
+| Schicht | Pakete |
+|---|---|
+| L0 | `html5-parser`, `csp-parse`, `media-query-parse`, `xpath-eval`, `relax-ng`, `schematron-engine` |
+| L1 | `a11y-dom`, `a11y-report`, `html-conform`, `stylesheet-parse` |
+| L2 | `accname`, `style-cascade`, `a11y-rules`, `a11y-perception`, `web-checks` |
+| L3 | `a11y-wasm` (Crate und npm-Paket `@casoon/a11y-wasm`, gebaut über `packages/a11y-wasm/build.mjs`) |
+
+Schichten und Regeln: [Architektur](architecture.md). Je Paket eine Seite unter
+`docs/packages/`.
+
 ```
 .
-├── Cargo.toml              # Workspace, noch ohne Member
-├── rust-toolchain.toml     # stable, mit rustfmt und clippy
-├── pnpm-workspace.yaml     # packages/*, site
-├── release-plz.toml        # ein Tag je Paket: <paket>-vX.Y.Z
-├── .github/workflows/      # ci.yml, release-plz.yml (bis Phase 3 nur manuell)
-├── crates/                 # a11y-report, a11y-dom, accname, a11y-rules (0.10.2)
-├── packages/               # leer — npm kommt mit a11y-wasm
-├── examples/a11y/          # Beispielgenerator der a11y-Crates (eigener Workspace)
-├── docs/                   # diese Doku, docs/a11y/ die ausführliche a11y-Doku
-└── plan/                   # lokal, gitignored
+├── crates/          # die 16 Crates
+├── packages/        # a11y-wasm (npm)
+├── examples/a11y/   # Beispielgenerator der a11y-Crates (eigener Workspace)
+├── docs/            # diese Doku
+├── site/            # Projektseite (Pages)
+├── xtask/           # Hilfsskripte
+└── release-plz.toml # ein Tag je Paket: <paket>-vX.Y.Z
 ```
 
-Die Node-Schritte in CI prüfen weiter, ob es überhaupt etwas zu bauen gibt —
-`packages/` ist bis Phase 5 leer. Die Rust-Schritte laufen seit dem Import
-vollständig: fmt, clippy und Tests über den Workspace.
+## Wo die Aufgaben stehen
 
-## Wo die Arbeit liegt
+Ein lokales `plan/` wird nicht mehr genutzt. **GitHub-Issues sind der einzige
+Tracker.** Tracking-Issue für `html-conform` ist #89; der Rest steht in den
+offenen Issues dieses Repositorys.
 
-`plan/status.md` ist der einzige Index. Das Reader-Thema ist geschlossen, Relief
-ersetzt den geplanten Host; sein Referenzrahmen bleibt in
-`plan/reader/spezifikation/` als Nachschlagewerk.
+## Prüfungen
 
-## Was hier absichtlich fehlt
-
-`constraints.md` und `decisions.md` beschreiben laut Konvention den Ist-Zustand.
-Beides entsteht mit dem ersten importierten Paket — Entscheidungen, die sich an
-einer Zeile Code belegen lassen, gibt es noch nicht. Die Entscheidungen über
-Zuschnitt, Historie, Werkzeuggrenze und Doku stehen bis dahin in
-`plan/00-monorepo-konzept.md`.
+Lokal: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`. Releases laufen über `release-plz` (siehe
+[Releases](releasing.md)).

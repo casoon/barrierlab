@@ -19,8 +19,10 @@ L3  a11y-wasm (Crate + npm)
 
 ## Feste Regeln
 
-- **Abhängigkeiten nur nach unten.** Kein Paket importiert eines derselben oder
-  einer höheren Schicht. Kein Host in diesem Repository.
+- **Abhängigkeiten nur nach unten.** Kein Paket importiert ein Paket einer höheren
+  Schicht. Innerhalb einer Schicht sind Abhängigkeiten erlaubt, solange der
+  Graph azyklisch ist; in L2 steht `a11y-rules` oben (hängt von `accname` und
+  `style-cascade` ab). Kein Host in diesem Repository.
 - **Browserfrei bis L3.** Kein `chromiumoxide`, keine CDP-Typen in einer
   öffentlichen API. Ein Paket nimmt Daten entgegen, es beschafft sie nicht.
 - **Kein Host-Format im Kern.** Instanzdokumente kommen über ein generisches
