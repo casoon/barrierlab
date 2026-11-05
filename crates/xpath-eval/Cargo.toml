@@ -7,3 +7,7 @@ license = "MIT"
 repository.workspace = true
 
 [dependencies]
+
+[dev-dependencies]
+# Only for tests: the Jaxen corpus (tests/jaxen.rs) is XML.
+roxmltree = "0.21.1"
