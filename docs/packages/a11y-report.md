@@ -35,6 +35,7 @@ flowchart LR
 | `Severity`, `WcagLevel` | classification of a finding |
 | `Finding`, `Evidence`, `Location` | a finding and what it is anchored to |
 | `Report`, `RuleRun`, `NotRun`, `Summary` | what a run produced, including the rules that did not run |
+| `InputNote`, `InputKind` | `Report::inputs`: the host notes that an input was incomplete (stylesheet unavailable or unresolved, partial document). Rules do not read these notes; with `stylesheet_unavailable` present, treat the contrast rules as untested |
 | `Extra` | host-specific additional fields, without breaking the contract |
 | `FindingId`, `RootCauseId`, `normalize_selector` | stable identifier of a finding (rule + element pattern) and of a cause, the same across pages and across runs |
 | `CauseConfidence`, `ImpactArea`, `EvidenceBasis` | how well a shared cause and an impact are supported |

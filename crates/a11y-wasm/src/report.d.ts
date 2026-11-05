@@ -63,9 +63,23 @@ export interface Summary {
   rules_not_run: number;
 }
 
+export type InputKind =
+  | "stylesheet_unavailable"
+  | "stylesheet_unresolved"
+  | "document_incomplete"
+  | "other";
+
+/** Vermerk über unvollständige Eingaben; vom Host eingetragen, von keiner Regel gelesen. */
+export interface InputNote {
+  kind: InputKind;
+  subject?: string;
+  detail?: string;
+}
+
 /** Der Bericht von `Scan.run()`; spiegelt die Serialisierung von `a11y-report`. */
 export interface Report {
   findings: Finding[];
   rule_runs?: RuleRun[];
+  inputs?: InputNote[];
   summary: Summary;
 }

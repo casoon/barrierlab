@@ -370,7 +370,8 @@ mod tests {
     #[test]
     fn typescript_interface_deckt_die_serialisierung_von_a11y_report() {
         use a11y_report::{
-            Evidence, Finding, Location, NotRun, Outcome, Report, RuleRun, Severity, WcagLevel,
+            Evidence, Finding, InputKind, InputNote, Location, NotRun, Outcome, Report, RuleRun,
+            Severity, WcagLevel,
         };
         let mut report = Report::new();
         report.push(
@@ -405,9 +406,15 @@ mod tests {
                 .with_wcag(["1.4.3"])
                 .with_reason("why"),
         );
+        report.note_input(
+            InputNote::new(InputKind::Other)
+                .with_subject("s")
+                .with_detail("d"),
+        );
         let json = serde_json::to_value(report.finish()).unwrap();
 
         assert_eq!(json_felder(&json), ts_felder("Report"));
+        assert_eq!(json_felder(&json["inputs"][0]), ts_felder("InputNote"));
         assert_eq!(json_felder(&json["summary"]), ts_felder("Summary"));
         let befund = &json["findings"][0];
         assert_eq!(json_felder(befund), ts_felder("Finding"));
@@ -434,6 +441,15 @@ mod tests {
         }
         for l in [WcagLevel::A, WcagLevel::AA, WcagLevel::AAA] {
             assert!(REPORT_TS.contains(&format!("\"{}\"", l.as_str())), "{l:?}");
+        }
+        for k in [
+            InputKind::StylesheetUnavailable,
+            InputKind::StylesheetUnresolved,
+            InputKind::DocumentIncomplete,
+            InputKind::Other,
+        ] {
+            let lit = serde_json::to_string(&k).unwrap();
+            assert!(REPORT_TS.contains(&lit), "{k:?}");
         }
         for n in [
             NotRun::CapabilityMissing,
