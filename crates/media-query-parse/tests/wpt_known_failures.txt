@@ -7,10 +7,6 @@
 # after every new entry has been examined. Never add entries by hand to silence
 # a failure.
 #
-# Known cause of all three: CSS Syntax closes an unclosed `(` block at end of
-# input, so `(color` is the valid query `(color)`; the parser rejects it.
+# Currently empty: every extracted case passes.
 # --- entries below, one per line ---
 
-match-media-parsing.html:43  "(color" -> expected "(color)" (valid: [true]), got [false]
-match-media-parsing.html:46  " ( color   " -> expected "(color)" (valid: [true]), got [false]
-match-media-parsing.html:49  "  color ), ( color" -> expected "not all, (color)" (valid: [false, true]), got [false, false]
