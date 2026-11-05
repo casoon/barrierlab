@@ -30,7 +30,41 @@ const SCHEMA: &str = r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron">
     </pattern>
 </schema>"#;
 
+/// Many rules over several patterns: the shape of a real rule set (barrierlab#115),
+/// where the cost is one document traversal per rule, not per-node work.
+fn many_rules_schema() -> String {
+    let mut out = String::from(r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron">"#);
+    for pattern in 0..3 {
+        out.push_str("<pattern>");
+        for rule in 0..30 {
+            out.push_str(&format!(
+                r#"<rule context="item[@k{pattern}x{rule}]"><assert test="@id">a</assert></rule>"#
+            ));
+        }
+        out.push_str(
+            r#"<rule context="item[@flag = 'true']"><report test="@id">r</report></rule>"#,
+        );
+        out.push_str(r#"<rule context="item"><assert test="@id">b</assert></rule>"#);
+        out.push_str("</pattern>");
+    }
+    out.push_str("</schema>");
+    out
+}
+
 fn main() {
+    let many = parse(&many_rules_schema()).expect("benchmark schema must parse");
+    println!("schema: 3 patterns, 32 rules each");
+    for &size in &[1_000usize, 10_000] {
+        let doc = build_document(size);
+        let start = Instant::now();
+        let reports = evaluate(&many, &doc).expect("benchmark document must evaluate");
+        println!(
+            "{size:>6} items: {:>12?} total, {:>6} reports fired",
+            start.elapsed(),
+            reports.len()
+        );
+    }
+
     let schema = parse(SCHEMA).expect("benchmark schema must parse");
 
     println!("schema: 1 pattern, 1 rule, 1 assert + 1 report");
