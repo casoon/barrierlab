@@ -322,3 +322,61 @@ fn darstellungsattribute() {
         Some(rgb(0x11, 0x22, 0x33))
     );
 }
+
+#[test]
+fn darstellungsattribut_verliert_gegen_ebene() {
+    let d = seite(r##"<table id="b" bgcolor="#ff0000"><tr><td>t</td></tr></table>"##);
+    let c = kaskade("@layer base { table { background-color: #00ff00 } }");
+    assert_eq!(
+        c.specified(finde(&d, "b"), "background-color"),
+        Specified::Set("#00ff00".into())
+    );
+}
+
+#[test]
+fn style_attribut_wichtig_schlaegt_wichtig_in_ebene() {
+    let d = seite(r#"<p id="p" style="color:#010101 !important">t</p>"#);
+    let c = kaskade("@layer a { #p { color: #020202 !important } }");
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(1, 1, 1)));
+}
+
+#[test]
+fn rangfolge_normal_bleibt() {
+    let d = seite(r#"<p id="p" style="color:#010101">t</p>"#);
+    let c = kaskade("#p { color: #020202 }");
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(1, 1, 1)));
+    let d = seite(r#"<p id="p">t</p>"#);
+    let c = kaskade("@layer a { #p { color: #010101 } } p { color: #020202 }");
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(2, 2, 2)));
+}
+
+#[test]
+fn unaufgeloestes_import_macht_unbekannt() {
+    let css = "@import url(theme.css); p { color: #010101 }";
+    let d = seite(r#"<p id="p">t</p>"#);
+    let c = kaskade(css);
+    assert_eq!(c.unresolved_imports(), ["url(theme.css)"]);
+    assert_eq!(c.specified(finde(&d, "p"), "color"), Specified::Unknown);
+    // Nur ein `!important` im `style`-Attribut kann der Import nicht überstimmen.
+    let d = seite(r#"<p id="p" style="color:#030303 !important">t</p>"#);
+    let c = kaskade(css);
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(3, 3, 3)));
+}
+
+#[test]
+fn ohne_import_unveraendert() {
+    let d = seite(r#"<p id="p">t</p>"#);
+    let c = kaskade("p { color: #010101 }");
+    assert!(c.unresolved_imports().is_empty());
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(1, 1, 1)));
+}
+
+#[test]
+fn aufgeloester_import_gibt_klare_antwort() {
+    // Ein Host, der `@import` auflöst, reicht die importierten Regeln
+    // stattdessen mit (hier einfach vorangestellt) und bekommt eine Antwort.
+    let d = seite(r#"<p id="p">t</p>"#);
+    let c = kaskade("p { color: #020202 } p { color: #010101 }");
+    assert!(c.unresolved_imports().is_empty());
+    assert_eq!(farbe(&c, &d, "p"), Some(rgb(1, 1, 1)));
+}
