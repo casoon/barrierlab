@@ -686,4 +686,55 @@ mod tests {
         assert_eq!(role(mit_id(&doc, "ohne")), Some("generic"));
         assert_eq!(role(mit_id(&doc, "mit")), Some("region"));
     }
+
+    #[test]
+    fn labelledby_zieht_nachkommen_eines_versteckten_ziels_heran() {
+        // <span id=l hidden><b>Nested</b></span><input aria-labelledby=l>
+        let doc = Arena::builder()
+            .open("div")
+            .open("span")
+            .attr("id", "l")
+            .attr("hidden", "")
+            .open("b")
+            .text("Nested")
+            .close()
+            .close()
+            .open("input")
+            .attr("aria-labelledby", "l")
+            .close()
+            .close()
+            .build();
+        let ids = IdIndex::build(doc.root());
+        assert_eq!(name(finde(&doc, "input"), &ids).as_deref(), Some("Nested"));
+    }
+
+    #[test]
+    fn labelledby_versteckte_wurzel_gilt_nicht_fuer_geschwister() {
+        // Das Flag gehoert zum Teilbaum des Ziels: das zweite Ziel ist
+        // sichtbar, aber sein verstecktes Kind bleibt draussen.
+        let doc = Arena::builder()
+            .open("div")
+            .open("span")
+            .attr("id", "a")
+            .attr("hidden", "")
+            .open("b")
+            .text("A")
+            .close()
+            .close()
+            .open("span")
+            .attr("id", "b")
+            .text("B")
+            .open("i")
+            .attr("hidden", "")
+            .text("X")
+            .close()
+            .close()
+            .open("input")
+            .attr("aria-labelledby", "a b")
+            .close()
+            .close()
+            .build();
+        let ids = IdIndex::build(doc.root());
+        assert_eq!(name(finde(&doc, "input"), &ids).as_deref(), Some("A B"));
+    }
 }

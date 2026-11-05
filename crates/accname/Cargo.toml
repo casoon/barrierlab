@@ -12,3 +12,7 @@ categories.workspace = true
 
 [dependencies]
 a11y-dom = { workspace = true }
+
+[dev-dependencies]
+# Nur für Tests: der WPT-Korpus liegt als HTML vor.
+html5-parser = { workspace = true }
