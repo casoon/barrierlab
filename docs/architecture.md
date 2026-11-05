@@ -34,6 +34,7 @@ flowchart BT
     acc[accname]
     cas[style-cascade]
     rules[a11y-rules]
+    stat[a11y-static]
     perc[a11y-perception]
     wc[web-checks]
   end
@@ -54,6 +55,7 @@ flowchart BT
   acc --> dom
   cas --> dom & cssp & mq
   rules --> dom & rep & acc & cas
+  stat --> h5 & dom & rep & rules & acc & cas & cssp
   perc --> rep
   wc --> rep
   wasm --> rules
@@ -67,7 +69,7 @@ flowchart BT
 |---|---|---|
 | L0 | Syntax lesen: HTML, CSP, Media Queries, XPath, RELAX NG, Schematron | keine Bewertung, keine Zugänglichkeitsbegriffe |
 | L1 | Datenmodell: Baum, Befund, Konformanz, Stylesheet | ein Befundmodell für alle Hosts (`a11y-report`) |
-| L2 | Berechnung: Name, Kaskade, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei; `a11y-rules` darf auf `accname` und `style-cascade` aufbauen |
+| L2 | Berechnung: Name, Kaskade, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei; `a11y-rules` darf auf `accname` und `style-cascade` aufbauen; `a11y-static` steht darüber und fügt Parser, Modell, Regeln und Kaskade zum Lauf über statisches HTML zusammen |
 | L3 | Auslieferung in andere Laufzeiten (WASM) | reicht durch, bewertet nicht |
 | L4 | Erhebung, Orchestrierung, Ausgabe | außerhalb dieses Repositorys |
 

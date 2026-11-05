@@ -17,6 +17,7 @@ members = [
     "crates/accname",
     "crates/style-cascade",
     "crates/a11y-rules",
+    "crates/a11y-static",
     "crates/a11y-perception",
     "crates/web-checks",
     # L3 — Auslieferung
@@ -59,6 +60,7 @@ a11y-report = { version = "0.26.1", path = "crates/a11y-report" }
 a11y-rules = { version = "0.26.1", path = "crates/a11y-rules", default-features = false }
 a11y-dom = { version = "0.26.1", path = "crates/a11y-dom" }
 accname = { version = "0.26.1", path = "crates/accname" }
+a11y-static = { version = "0.1.0", path = "crates/a11y-static" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
