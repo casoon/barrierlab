@@ -1050,6 +1050,8 @@ fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
     ]
 }
 
+const _: () = assert!(METAS.len() == 29);
+
 /// Alle Tier-2-Regeln.
 pub fn rules<D: Semantics>() -> Vec<SemanticsRule<D>> {
     METAS

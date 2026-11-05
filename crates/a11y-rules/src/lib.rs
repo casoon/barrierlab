@@ -121,7 +121,7 @@ pub fn stylesheet_rules<D: Document>() -> Vec<StylesheetRule<D>> {
 fn vermerke(meta: &Meta, gefunden: &[Finding], report: &mut Report) {
     for id in meta.ids {
         let anzahl = gefunden.iter().filter(|f| f.rule_id == *id).count();
-        report.record(RuleRun::ran(*id, anzahl));
+        report.record(RuleRun::ran(*id, anzahl).with_wcag(meta.wcag.iter().copied()));
     }
 }
 
@@ -133,7 +133,11 @@ fn vermerke(meta: &Meta, gefunden: &[Finding], report: &mut Report) {
 fn nicht_gelaufen(metas: &'static [Meta], grund: &str, report: &mut Report) {
     for meta in metas {
         for id in meta.ids {
-            report.record(RuleRun::not_run(*id, NotRun::CapabilityMissing).with_reason(grund));
+            report.record(
+                RuleRun::not_run(*id, NotRun::CapabilityMissing)
+                    .with_wcag(meta.wcag.iter().copied())
+                    .with_reason(grund),
+            );
         }
     }
 }

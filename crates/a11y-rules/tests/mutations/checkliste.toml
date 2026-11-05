@@ -108,9 +108,15 @@ id = "manual/use-of-color"
 file = "src/checkliste.rs"
 kind = "drop-condition"
 find = '''
+        id: "manual/use-of-color",
+        wcag: &["1.4.1"],
+        severity: Severity::Medium,
         gilt: |a| a.links || a.felder,
 '''
 replace = '''
+        id: "manual/use-of-color",
+        wcag: &["1.4.1"],
+        severity: Severity::Medium,
         gilt: |a| a.felder,
 '''
 test = "korpus"
@@ -245,6 +251,196 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
+id = "manual/dragging-movements"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/dragging-movements",
+        wcag: &["2.5.7"],
+        severity: Severity::Medium,
+        gilt: |a| a.gesten,
+'''
+replace = '''
+        id: "manual/dragging-movements",
+        wcag: &["2.5.7"],
+        severity: Severity::Medium,
+        gilt: |a| !a.gesten,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-help"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-help",
+        wcag: &["3.2.6"],
+        severity: Severity::Low,
+        gilt: |a| a.text,
+'''
+replace = '''
+        id: "manual/consistent-help",
+        wcag: &["3.2.6"],
+        severity: Severity::Low,
+        gilt: |a| !a.text,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/keyboard-trap"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/keyboard-trap",
+        wcag: &["2.1.2"],
+        severity: Severity::High,
+        gilt: |a| a.links || a.felder || a.unterbrechungen,
+'''
+replace = '''
+        id: "manual/keyboard-trap",
+        wcag: &["2.1.2"],
+        severity: Severity::High,
+        gilt: |a| !(a.links || a.felder || a.unterbrechungen),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/character-shortcuts"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/character-shortcuts",
+        wcag: &["2.1.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.tastenkuerzel,
+'''
+replace = '''
+        id: "manual/character-shortcuts",
+        wcag: &["2.1.4"],
+        severity: Severity::Medium,
+        gilt: |a| !a.tastenkuerzel,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/error-prevention"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/error-prevention",
+        wcag: &["3.3.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.felder,
+'''
+replace = '''
+        id: "manual/error-prevention",
+        wcag: &["3.3.4"],
+        severity: Severity::Medium,
+        gilt: |a| !a.felder,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/pointer-cancellation"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/pointer-cancellation",
+        wcag: &["2.5.2"],
+        severity: Severity::Medium,
+        gilt: |a| a.zeigerereignisse,
+'''
+replace = '''
+        id: "manual/pointer-cancellation",
+        wcag: &["2.5.2"],
+        severity: Severity::Medium,
+        gilt: |a| !a.zeigerereignisse,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-navigation"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-navigation",
+        wcag: &["3.2.3"],
+        severity: Severity::Medium,
+        gilt: |a| a.links,
+'''
+replace = '''
+        id: "manual/consistent-navigation",
+        wcag: &["3.2.3"],
+        severity: Severity::Medium,
+        gilt: |a| !a.links,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-identification"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-identification",
+        wcag: &["3.2.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.links || a.felder,
+'''
+replace = '''
+        id: "manual/consistent-identification",
+        wcag: &["3.2.4"],
+        severity: Severity::Medium,
+        gilt: |a| !(a.links || a.felder),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/sensory-characteristics"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/sensory-characteristics",
+        wcag: &["1.3.3"],
+        severity: Severity::Medium,
+        gilt: |a| a.text,
+'''
+replace = '''
+        id: "manual/sensory-characteristics",
+        wcag: &["1.3.3"],
+        severity: Severity::Medium,
+        gilt: |a| !a.text,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/multiple-ways"
+file = "src/checkliste.rs"
+kind = "invert"
+find = '''
+        id: "manual/multiple-ways",
+        wcag: &["2.4.5"],
+        severity: Severity::Medium,
+        gilt: |a| a.links,
+'''
+replace = '''
+        id: "manual/multiple-ways",
+        wcag: &["2.4.5"],
+        severity: Severity::Medium,
+        gilt: |a| !a.links,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
 id = "manual/authentication"
 file = "src/checkliste.rs"
 kind = "invert"
@@ -318,9 +514,15 @@ id = "manual/pointer-gestures"
 file = "src/checkliste.rs"
 kind = "invert"
 find = '''
+        id: "manual/pointer-gestures",
+        wcag: &["2.5.1"],
+        severity: Severity::Medium,
         gilt: |a| a.gesten,
 '''
 replace = '''
+        id: "manual/pointer-gestures",
+        wcag: &["2.5.1"],
+        severity: Severity::Medium,
         gilt: |a| !a.gesten,
 '''
 test = "korpus"

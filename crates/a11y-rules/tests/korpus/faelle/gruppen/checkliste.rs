@@ -239,6 +239,166 @@ fn checkliste() -> Vec<Fall> {
             r#"<p>Only text</p>"#,
             "WCAG 3.3.5: keine Eingabe",
         ),
+        // --- manual/dragging-movements (2.5.7) --------------------------------------------
+        untested(
+            "manual/dragging-movements",
+            r#"<div draggable="true">Drag me</div>"#,
+            "WCAG 2.5.7: Ziehen; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/dragging-movements",
+            r#"<div draggable="false">Fixed</div>"#,
+            "WCAG 2.5.7: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/dragging-movements",
+            r#"<div></div>"#,
+            "WCAG 2.5.7: kein Inhalt",
+        ),
+        // --- manual/consistent-help (3.2.6) --------------------------------------------
+        untested(
+            "manual/consistent-help",
+            r#"<p>Need help? Call us.</p>"#,
+            "WCAG 3.2.6: Hilfe, die auf Seiten steht; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/consistent-help",
+            r#"<p style="display:none">Hidden</p><img src="a.png" alt="">"#,
+            "WCAG 3.2.6: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/consistent-help",
+            r#"<div></div>"#,
+            "WCAG 3.2.6: kein Inhalt",
+        ),
+        // --- manual/keyboard-trap (2.1.2) --------------------------------------------
+        untested(
+            "manual/keyboard-trap",
+            r#"<a href="/x">Link</a>"#,
+            "WCAG 2.1.2: Bedienelemente; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/keyboard-trap",
+            r#"<script>var x = 1;</script>"#,
+            "WCAG 2.1.2: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/keyboard-trap",
+            r#"<div></div>"#,
+            "WCAG 2.1.2: kein Inhalt",
+        ),
+        // --- manual/character-shortcuts (2.1.4) --------------------------------------------
+        untested(
+            "manual/character-shortcuts",
+            r#"<div onkeydown="run(event)">App</div>"#,
+            "WCAG 2.1.4: Tastenkürzel; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/character-shortcuts",
+            r#"<p>Text</p><div onclick="go()">Click</div>"#,
+            "WCAG 2.1.4: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/character-shortcuts",
+            r#"<div></div>"#,
+            "WCAG 2.1.4: kein Inhalt",
+        ),
+        // --- manual/error-prevention (3.3.4) --------------------------------------------
+        untested(
+            "manual/error-prevention",
+            r#"<input type="text" aria-label="Amount">"#,
+            "WCAG 3.3.4: Eingaben, die rechtliche oder finanzielle Wirkung haben können; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/error-prevention",
+            r#"<input type="submit" value="Send">"#,
+            "WCAG 3.3.4: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/error-prevention",
+            r#"<div></div>"#,
+            "WCAG 3.3.4: kein Inhalt",
+        ),
+        // --- manual/pointer-cancellation (2.5.2) --------------------------------------------
+        untested(
+            "manual/pointer-cancellation",
+            r#"<button onmousedown="go()">Go</button>"#,
+            "WCAG 2.5.2: Auslösung beim Herunterdrücken; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/pointer-cancellation",
+            r#"<button onclick="go()">Go</button>"#,
+            "WCAG 2.5.2: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/pointer-cancellation",
+            r#"<div></div>"#,
+            "WCAG 2.5.2: kein Inhalt",
+        ),
+        // --- manual/consistent-navigation (3.2.3) --------------------------------------------
+        untested(
+            "manual/consistent-navigation",
+            r#"<nav><a href="/a">A</a><a href="/b">B</a></nav>"#,
+            "WCAG 3.2.3: wiederkehrende Navigation; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/consistent-navigation",
+            r#"<p>Text</p>"#,
+            "WCAG 3.2.3: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/consistent-navigation",
+            r#"<div></div>"#,
+            "WCAG 3.2.3: kein Inhalt",
+        ),
+        // --- manual/consistent-identification (3.2.4) --------------------------------------------
+        untested(
+            "manual/consistent-identification",
+            r#"<a href="/search">Search</a>"#,
+            "WCAG 3.2.4: gleiche Funktion, gleicher Name; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/consistent-identification",
+            r#"<p>Text</p>"#,
+            "WCAG 3.2.4: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/consistent-identification",
+            r#"<div></div>"#,
+            "WCAG 3.2.4: kein Inhalt",
+        ),
+        // --- manual/sensory-characteristics (1.3.3) --------------------------------------------
+        untested(
+            "manual/sensory-characteristics",
+            r#"<p>Press the round button.</p>"#,
+            "WCAG 1.3.3: Anweisungen im Text; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/sensory-characteristics",
+            r#"<div></div>"#,
+            "WCAG 1.3.3: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/sensory-characteristics",
+            r#"<div></div>"#,
+            "WCAG 1.3.3: kein Inhalt",
+        ),
+        // --- manual/multiple-ways (2.4.5) --------------------------------------------
+        untested(
+            "manual/multiple-ways",
+            r#"<a href="/a">A</a>"#,
+            "WCAG 2.4.5: mehrere Wege; nur von Hand prüfbar",
+        ),
+        negativ(
+            "manual/multiple-ways",
+            r#"<p>Text</p>"#,
+            "WCAG 2.4.5: ähnliche Seite ohne Anlass, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/multiple-ways",
+            r#"<div></div>"#,
+            "WCAG 2.4.5: kein Inhalt",
+        ),
         // --- manual/authentication (3.3.8) ----------------------------------
         untested(
             "manual/authentication",

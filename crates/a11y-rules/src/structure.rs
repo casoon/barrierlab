@@ -2397,6 +2397,8 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
     ]
 }
 
+const _: () = assert!(METAS.len() == 57);
+
 /// Alle Tier-1-Regeln.
 pub fn rules<D: Document>() -> Vec<StructureRule<D>> {
     METAS
