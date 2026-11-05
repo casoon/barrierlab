@@ -4,8 +4,13 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **TypeScript:** `Scan.run()` ist als `Report` typisiert (`Report`, `Finding`, `RuleRun`, `Summary`, `Outcome`, `Severity` und weitere in der `.d.ts`); ein Test hält die Felder gegen die Serialisierung von `a11y-report`.
+
 ### Changed
 
+- **Schnittstelle:** `new Scan(...)` prüft die Spalten des Collectors und wirft einen `Error` mit Angabe der Spalte, statt das Modul bei ungleichen Längen oder Indizes außerhalb des Bereichs abzubrechen.
 - **npm:** `@casoon/a11y-wasm` wird aus einem GitHub-Actions-Workflow mit Trusted Publishing und Provenance veröffentlicht; das Paket enthält jetzt LICENSE und README.
 
 ## [0.14.0] - 2026-10-24

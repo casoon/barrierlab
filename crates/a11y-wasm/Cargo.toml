@@ -22,3 +22,6 @@ a11y-rules = { workspace = true }
 accname = { workspace = true }
 serde-wasm-bindgen = "0.6"
 wasm-bindgen = "0.2"
+
+[dev-dependencies]
+serde_json = { workspace = true }

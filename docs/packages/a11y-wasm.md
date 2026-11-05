@@ -48,6 +48,14 @@ step aborts with a schema error.
 `wasm-bindgen` entry points for a scan. Rust consumers can also use the crate
 without WASM as an `rlib`.
 
+`new Scan(...)` takes the eleven column arrays of the collector and validates
+them (equal lengths, `attr_start` of node count + 1 entries, monotonic and within
+the attribute columns, parents before children, dictionary indices and blob
+ranges in bounds). A mismatch makes the constructor **throw an `Error`** naming the
+column; it does not trap the module. `run()` is typed: the generated `.d.ts`
+carries `Report`, `Finding`, `RuleRun`, `Summary` and the enums, hand-written to
+mirror the serialisation of `a11y-report` and checked against it by a test.
+
 ## Limits
 
 No collection: the package opens no page and reads no DOM. Anyone who collects the tree
