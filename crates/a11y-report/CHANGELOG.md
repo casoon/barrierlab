@@ -7,6 +7,13 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added
+
+- **Eingaben:** `Report::inputs` mit `InputNote` und `InputKind` (`stylesheet_unavailable`,
+  `stylesheet_unresolved`, `document_incomplete`, `other`) sowie `Report::note_input`: der Host
+  vermerkt unvollständige Eingaben. Regeln lesen die Vermerke nicht. Das Feld entfällt im JSON,
+  solange es leer ist.
+
 ## [0.26.1] - 2026-10-27
 
 ### Changed

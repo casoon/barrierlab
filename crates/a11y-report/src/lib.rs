@@ -55,6 +55,26 @@
 //! assert_eq!(report.summary.rules_not_run, 1);
 //! ```
 
+//! # Unvollständige Eingaben
+//!
+//! [`InputNote`] hält fest, dass dem Lauf etwas fehlte — ein Stylesheet, das
+//! sich nicht laden ließ, ein abgeschnittenes Dokument. Regeln lesen diese
+//! Vermerke nicht; der Host trägt sie mit [`Report::note_input`] ein. Wer
+//! [`InputKind::StylesheetUnavailable`] findet, darf die Kontrastregeln als
+//! ungeprüft ansehen.
+//!
+//! ```
+//! use a11y_report::{InputKind, InputNote, Report};
+//!
+//! let mut report = Report::new();
+//! report.note_input(
+//!     InputNote::new(InputKind::StylesheetUnavailable)
+//!         .with_subject("https://example.com/site.css")
+//!         .with_detail("HTTP 404"),
+//! );
+//! assert_eq!(report.finish().inputs.len(), 1);
+//! ```
+
 #![forbid(unsafe_code)]
 
 mod extra;
@@ -70,7 +90,7 @@ pub use identity::{
     RootCauseId, normalize_selector,
 };
 pub use outcome::{Outcome, Severity, WcagLevel};
-pub use report::{NotRun, Report, RuleRun, Summary};
+pub use report::{InputKind, InputNote, NotRun, Report, RuleRun, Summary};
 
 #[cfg(test)]
 mod tests {
@@ -313,5 +333,36 @@ mod tests {
         let r = r.finish();
         assert_eq!(r.summary.rules_not_run, 1);
         assert_eq!(r.rule_runs[0].wcag, vec!["1.4.3"]);
+    }
+
+    #[test]
+    fn eingaben_json_unveraendert_wenn_leer_und_alt_lesbar() {
+        let golden = r#"{"findings":[],"summary":{"fail":0,"review":0,"pass":0,"untested":0,"critical":0,"high":0,"medium":0,"low":0,"rules_not_run":0}}"#;
+        let r = Report::new();
+        assert_eq!(serde_json::to_string(&r).unwrap(), golden);
+        let alt: Report = serde_json::from_str(golden).unwrap();
+        assert!(alt.inputs.is_empty());
+    }
+
+    #[test]
+    fn eingaben_roundtrip_und_namen() {
+        let mut r = Report::new();
+        r.note_input(
+            InputNote::new(InputKind::StylesheetUnresolved)
+                .with_subject("@import url(a.css)")
+                .with_detail("Host lieferte es nicht"),
+        );
+        r.note_input(InputNote::new(InputKind::DocumentIncomplete));
+        let json = serde_json::to_string(&r).unwrap();
+        assert!(json.contains(r#""kind":"stylesheet_unresolved""#), "{json}");
+        assert!(json.contains(r#""kind":"document_incomplete""#), "{json}");
+        let back: Report = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, r);
+        for (k, n) in [
+            (InputKind::StylesheetUnavailable, "stylesheet_unavailable"),
+            (InputKind::Other, "other"),
+        ] {
+            assert_eq!(serde_json::to_string(&k).unwrap(), format!("\"{n}\""));
+        }
     }
 }
