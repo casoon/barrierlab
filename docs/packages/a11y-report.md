@@ -42,6 +42,13 @@ flowchart LR
 | `CauseConfidence`, `ImpactArea`, `EvidenceBasis` | how well a shared cause and an impact are supported |
 | `CriterionState` | state of an assessment criterion; "not detected" is not "not met"
 
+### Extensibility decisions
+
+- `Report`, `Finding`, `RuleRun`, `Summary`, `Evidence`, `Location`, `InputNote`, `NotRun` (and `Meta` in `a11y-rules`) are `#[non_exhaustive]`: the crate produces them, hosts only read or build them through constructors, so new fields are not breaking.
+- `Outcome`, `Severity` and `WcagLevel` stay exhaustive: they are closed vocabularies, and a new member would change what a verdict means, so a `match` that breaks is the intended signal.
+- The host-input types `ComputedStyle`, `Layout`, `Rect`, `Color` and `Backdrop` stay exhaustive: hosts fill them completely, and a field added silently would be left at a default instead of being supplied.
+- `Evidence::source` stays a free string: the set of sources is open (`ax_tree`, `dom_attribute`, `computed`, `meta`, `http_header`, and what hosts add), it is part of the JSON contract, and an enum would need an `Other(String)` escape that gives no more safety than the string.
+
 ## Dependencies
 
 Downward: only `serde`. Upward: `a11y-rules`, `a11y-perception` (planned),
