@@ -9,10 +9,8 @@ Git-Historie.
 ### Added
 
 - **Konformanz:** Die WPT-Dateien `test_media_queries.html` und `match-media-parsing.html` laufen als
-  Korpus (`tests/wpt.rs`, vendort über `xtask/vendor-wpt-mediaqueries.sh`); drei bekannte
-  Fehlschläge (Block am Eingabeende nicht geschlossen) stehen in `tests/wpt_known_failures.txt`
-  (casoon/barrierlab#111).
-- **Changelog:** Diese Datei (casoon/barrierlab#116).
+  Korpus (`tests/wpt.rs`, vendort über `xtask/vendor-wpt-mediaqueries.sh`); die Liste
+  bekannter Fehlschläge `tests/wpt_known_failures.txt` ist leer (casoon/barrierlab#111).
 
 ### Changed
 
@@ -23,3 +21,10 @@ Git-Historie.
   öffentlichen API). `<ratio>` folgt Media Queries Level 4: Dezimalzahlen sind erlaubt
   (`1.5/1`), negative Werte und Nicht-Zahlen werden abgelehnt, ein Nenner von 0 ist
   syntaktisch gültig. Eine einzelne Zahl bleibt `MfValue::Number`.
+
+### Fixed
+
+- **Parser:** Ein am Eingabeende offener Block wird nach CSS Syntax 3 §5.4 implizit geschlossen;
+  `(color` ist damit die gültige Abfrage `(color)` statt `UnbalancedParens`
+  (casoon/barrierlab#111).
+- **Changelog:** Diese Datei (casoon/barrierlab#116).

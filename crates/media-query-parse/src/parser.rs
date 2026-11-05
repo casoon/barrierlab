@@ -584,6 +584,15 @@ fn prepare_tokens(input: &str) -> Vec<PositionedToken> {
             }
         }
     }
+    // CSS Syntax 3 §5.4.7/§5.4.8: a block still open at end of input is
+    // closed implicitly, so `(color` means `(color)`.
+    let mut closers: Vec<Token> = Vec::new();
+    for (token, _) in &result {
+        track_bracket_depth(token, &mut closers);
+    }
+    while let Some(closer) = closers.pop() {
+        result.push((closer, false));
+    }
     result
 }
 
@@ -946,10 +955,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_on_unbalanced_parens() {
+    fn unclosed_paren_is_closed_at_end_of_input() {
+        assert!(parse_media_query("(color").is_ok());
+        assert_eq!(parse_media_query("(color"), parse_media_query("(color)"));
         assert_eq!(
-            parse_media_query("(color"),
-            Err(ParseError::UnbalancedParens)
+            parse_media_query("(min-width: 1px"),
+            parse_media_query("(min-width: 1px)")
         );
     }
 
@@ -962,7 +973,7 @@ mod tests {
             results[1],
             Err(ParseError::ReservedMediaType("layer".into()))
         );
-        assert_eq!(results[2], Err(ParseError::UnbalancedParens));
+        assert_eq!(results[2], parse_media_query("(color)"));
     }
 
     // --- `<mf-comparison>` (phase 04) ---
