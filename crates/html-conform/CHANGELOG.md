@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Check:** `csp.meta-enforcement` no longer flags inline scripts and styles whose `nonce`
+  matches a `'nonce-…'` source of the policy (barrierlab#104). `'unsafe-inline'` is ignored when
+  the source list carries a nonce or hash source, as in CSP3. Where a hash source is present the
+  finding is an Info ("hash matching is not evaluated") instead of a warning.
+
 ## [0.3.4] - 2026-10-31
 
 ### Changed
