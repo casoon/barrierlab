@@ -29,6 +29,13 @@ rather than guessing.
 Usage:
     python3 xtask/fetch-html5lib-tests.py
 
+Also vendors the html5lib tokenizer `.test` JSON files (from
+html5lib/html5lib-tests, `tokenizer/`) into `tests/html5lib-tests/tokenizer/`;
+they are run by `src/tokenizer_conformance.rs`. `xmlViolation.test` is
+deliberately not vendored: it tests XML infoset coercion, which is not part
+of the WHATWG tokenizer. Pass `--tokenizer-only` to refresh only those
+files (the tree-construction `.dat` files stay untouched).
+
 Network access required (fetches each `.dat` file from
 raw.githubusercontent.com); pass a local directory of already-downloaded
 `.dat` files as the first argument to regenerate offline from a saved
@@ -45,6 +52,28 @@ RAW_BASE_URL = (
     "html/syntax/parsing/resources"
 )
 DEST = Path(__file__).resolve().parent.parent / "tests" / "html5lib-tests"
+
+TOKENIZER_RAW_BASE_URL = (
+    "https://raw.githubusercontent.com/html5lib/html5lib-tests/master/tokenizer"
+)
+TOKENIZER_DEST = DEST / "tokenizer"
+# Listing of html5lib-tests/tokenizer (GitHub contents API, 2026-11-05),
+# minus xmlViolation.test (see the module docstring) and README.md.
+TOKENIZER_FILES = [
+    "contentModelFlags.test",
+    "domjs.test",
+    "entities.test",
+    "escapeFlag.test",
+    "namedEntities.test",
+    "numericEntities.test",
+    "pendingSpecChanges.test",
+    "test1.test",
+    "test2.test",
+    "test3.test",
+    "test4.test",
+    "unicodeChars.test",
+    "unicodeCharsProblematic.test",
+]
 
 FILES = [
     "adoption01.dat",
@@ -117,16 +146,31 @@ def fetch_file(name):
         return response.read()
 
 
+def vendor_tokenizer(source_dir):
+    TOKENIZER_DEST.mkdir(parents=True, exist_ok=True)
+    for name in TOKENIZER_FILES:
+        if source_dir is not None:
+            data = (source_dir / "tokenizer" / name).read_bytes()
+        else:
+            with urllib.request.urlopen(f"{TOKENIZER_RAW_BASE_URL}/{name}") as response:
+                data = response.read()
+        (TOKENIZER_DEST / name).write_bytes(data)
+    print(f"Vendored {len(TOKENIZER_FILES)} tokenizer .test files into {TOKENIZER_DEST}")
+
+
 def main():
-    DEST.mkdir(parents=True, exist_ok=True)
-    if len(sys.argv) > 1:
-        source_dir = Path(sys.argv[1])
+    args = [a for a in sys.argv[1:] if a != "--tokenizer-only"]
+    tokenizer_only = "--tokenizer-only" in sys.argv[1:]
+    source_dir = Path(args[0]) if args else None
+    if not tokenizer_only:
+        DEST.mkdir(parents=True, exist_ok=True)
         for name in FILES:
-            (DEST / name).write_bytes((source_dir / name).read_bytes())
-    else:
-        for name in FILES:
-            (DEST / name).write_bytes(fetch_file(name))
-    print(f"Vendored {len(FILES)} .dat files into {DEST}")
+            if source_dir is not None:
+                (DEST / name).write_bytes((source_dir / name).read_bytes())
+            else:
+                (DEST / name).write_bytes(fetch_file(name))
+        print(f"Vendored {len(FILES)} .dat files into {DEST}")
+    vendor_tokenizer(source_dir)
 
 
 if __name__ == "__main__":
