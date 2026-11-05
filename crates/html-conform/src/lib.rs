@@ -23,11 +23,14 @@ mod infoset;
 mod parse;
 mod schema;
 mod scripts;
+mod skipped;
 mod table_integrity;
 
 use assertions::SchematronEngine;
 
-pub use finding::{CheckError, CheckReport, Finding, Severity, SourceLocation};
+pub use finding::{
+    CheckError, CheckReport, Finding, Severity, Skipped, SkippedClass, SourceLocation,
+};
 
 /// The deepest element nesting [`check_with_options`] validates; deeper
 /// documents get [`CheckError::DocumentTooDeep`] instead of a report.
@@ -128,7 +131,9 @@ pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckRepo
     findings.extend(csp_enforcement::findings(parsed.document()));
     findings.extend(table_integrity::findings(parsed.document()));
 
-    Ok(CheckReport { findings })
+    let skipped = skipped::detect(parsed.document(), &findings);
+
+    Ok(CheckReport { findings, skipped })
 }
 
 #[cfg(test)]

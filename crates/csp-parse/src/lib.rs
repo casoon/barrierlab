@@ -1,7 +1,7 @@
 //! A parser for the Content Security Policy (CSP) directive grammar,
 //! written in 100% safe Rust.
 //!
-//! Phases 02-05 (see `plan/`): the generic top-level split (policy-list
+//! Phases 02-05: the generic top-level split (policy-list
 //! -> policy -> directive name/raw value), the `serialized-source-list`
 //! value grammar, and the CSP3 directive registry are implemented so
 //! far.

@@ -13,6 +13,7 @@ categories = ["web-programming", "parser-implementations", "development-tools"]
 exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches", "/site", "/docs", "/examples"]
 
 [dependencies]
+a11y-report = { workspace = true }
 csp-parse = { workspace = true }
 encoding_rs = "0.8"
 html5-parser = { workspace = true }

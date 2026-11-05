@@ -26,20 +26,20 @@ use a11y_dom::{
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
-use crate::structure::explizite_rolle;
+use crate::structure::explicit_role;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
-fn input_typ<'a, N: Node<'a>>(n: N) -> String {
+fn input_type<'a, N: Node<'a>>(n: N) -> String {
     n.attr("type")
         .map(|t| t.trim().to_ascii_lowercase())
         .unwrap_or_else(|| "text".into())
 }
 
-fn ist_input<'a, N: Node<'a>>(n: N, typen: &[&str]) -> bool {
-    n.is_element("input") && typen.contains(&input_typ(n).as_str())
+fn is_input<'a, N: Node<'a>>(n: N, types: &[&str]) -> bool {
+    n.is_element("input") && types.contains(&input_type(n).as_str())
 }
 
 /// Die IDs der Sicht. Was in einem versteckten Teilbaum liegt, fehlt darin.
@@ -55,7 +55,7 @@ fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<ScopedId<'a>, D::N<'a>> {
 
 /// Der Formulareigentümer nach HTML: das `form`-Attribut, sonst das nächste
 /// `<form>` darüber.
-fn formular<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Option<N> {
+fn form<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Option<N> {
     match n.attr("form") {
         Some(f) => ids
             .get(&scoped_id(n, f.trim()))
@@ -71,13 +71,13 @@ fn formular<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Option<N> 
 /// Ein Ziel außerhalb der Sicht ist entweder versteckt — dann trägt es nach
 /// accname trotzdem zur Beschreibung bei — oder fehlt ganz, und das meldet
 /// `aria/reference-missing`. Beide Fälle zählen hier als beschrieben.
-fn beschreibung<'a, N: Node<'a>>(
+fn description<'a, N: Node<'a>>(
     n: N,
     attr: &str,
     ids: &HashMap<ScopedId<'a>, N>,
 ) -> (String, bool) {
     let mut text = String::new();
-    let mut offen = false;
+    let mut open = false;
     for t in n.attr(attr).unwrap_or("").split_whitespace() {
         match ids.get(&scoped_id(n, t)) {
             Some(z) => {
@@ -86,39 +86,39 @@ fn beschreibung<'a, N: Node<'a>>(
                 text.push_str(&subtree_text(*z));
                 text.push(' ');
             }
-            None => offen = true,
+            None => open = true,
         }
     }
-    (text, offen)
+    (text, open)
 }
 
-fn beschrieben<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<ScopedId<'a>, N>) -> bool {
-    let (text, offen) = beschreibung(n, attr, ids);
-    offen || !text.trim().is_empty()
+fn described<'a, N: Node<'a>>(n: N, attr: &str, ids: &HashMap<ScopedId<'a>, N>) -> bool {
+    let (text, open) = description(n, attr, ids);
+    open || !text.trim().is_empty()
 }
 
 /// Wörter in Kleinschreibung, getrennt an allem, was kein Buchstabe und keine
 /// Ziffer ist, und an camelCase-Grenzen (`viewName` → `view`, `name`).
-fn woerter(text: &str) -> Vec<String> {
+fn words(text: &str) -> Vec<String> {
     let mut out = Vec::new();
-    let mut aktuell = String::new();
-    let mut klein = false;
+    let mut current = String::new();
+    let mut small = false;
     for c in text.chars() {
         if !c.is_alphanumeric() {
-            if !aktuell.is_empty() {
-                out.push(std::mem::take(&mut aktuell));
+            if !current.is_empty() {
+                out.push(std::mem::take(&mut current));
             }
-            klein = false;
+            small = false;
             continue;
         }
-        if c.is_uppercase() && klein {
-            out.push(std::mem::take(&mut aktuell));
+        if c.is_uppercase() && small {
+            out.push(std::mem::take(&mut current));
         }
-        klein = c.is_lowercase();
-        aktuell.extend(c.to_lowercase());
+        small = c.is_lowercase();
+        current.extend(c.to_lowercase());
     }
-    if !aktuell.is_empty() {
-        out.push(aktuell);
+    if !current.is_empty() {
+        out.push(current);
     }
     out
 }
@@ -127,7 +127,7 @@ fn woerter(text: &str) -> Vec<String> {
 
 /// Feldnamen ohne Kontaktangabe (HTML, „Autofill", Tabelle der
 /// „autofill field names").
-const AUTOFILL_FELD: &[&str] = &[
+const AUTOFILL_FIELD: &[&str] = &[
     "name",
     "honorific-prefix",
     "given-name",
@@ -175,7 +175,7 @@ const AUTOFILL_FELD: &[&str] = &[
 ];
 
 /// Feldnamen, vor denen eine Kontaktangabe stehen darf.
-const AUTOFILL_KONTAKTFELD: &[&str] = &[
+const AUTOFILL_CONTACT_FIELD: &[&str] = &[
     "tel",
     "tel-country-code",
     "tel-national",
@@ -188,13 +188,13 @@ const AUTOFILL_KONTAKTFELD: &[&str] = &[
     "impp",
 ];
 
-const AUTOFILL_KONTAKT: &[&str] = &["home", "work", "mobile", "fax", "pager"];
+const AUTOFILL_CONTACT: &[&str] = &["home", "work", "mobile", "fax", "pager"];
 
 /// Die Grammatik der Autofill-Angabe (HTML, „autofill detail tokens"):
 /// `[section-*] [shipping|billing] [Kontakt] Feldname [webauthn]`, oder
 /// allein `on` bzw. `off`. Groß-/Kleinschreibung zählt nicht.
-fn autocomplete_gueltig(wert: &str) -> bool {
-    let tokens: Vec<String> = wert
+fn autocomplete_valid(value: &str) -> bool {
+    let tokens: Vec<String> = value
         .split_ascii_whitespace()
         .map(str::to_ascii_lowercase)
         .collect();
@@ -205,14 +205,14 @@ fn autocomplete_gueltig(wert: &str) -> bool {
     if rest.last() == Some(&"webauthn") {
         rest.pop();
     }
-    let Some(feld) = rest.pop() else {
+    let Some(field) = rest.pop() else {
         return false;
     };
-    let kontaktfeld = AUTOFILL_KONTAKTFELD.contains(&feld);
-    if !kontaktfeld && !AUTOFILL_FELD.contains(&feld) {
+    let contact_field = AUTOFILL_CONTACT_FIELD.contains(&field);
+    if !contact_field && !AUTOFILL_FIELD.contains(&field) {
         return false;
     }
-    if kontaktfeld && rest.last().is_some_and(|k| AUTOFILL_KONTAKT.contains(k)) {
+    if contact_field && rest.last().is_some_and(|k| AUTOFILL_CONTACT.contains(k)) {
         rest.pop();
     }
     if rest
@@ -239,31 +239,31 @@ fn autocomplete_gueltig(wert: &str) -> bool {
 /// `aria-disabled="true"`) — dort nimmt niemand eine Eingabe vor.
 pub(crate) fn autocomplete_invalid<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let feld = match n.local_name() {
+        let field = match n.local_name() {
             "select" | "textarea" => true,
             "input" => !matches!(
-                input_typ(n).as_str(),
+                input_type(n).as_str(),
                 "hidden" | "button" | "submit" | "reset"
             ),
             _ => false,
-        } && !deaktiviert(n)
+        } && !disabled(n)
             && !n
                 .attr("aria-disabled")
                 .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"));
-        let Some(wert) = n.attr("autocomplete").filter(|_| feld) else {
+        let Some(value) = n.attr("autocomplete").filter(|_| field) else {
             continue;
         };
-        if autocomplete_gueltig(wert) {
+        if autocomplete_valid(value) {
             continue;
         }
-        let wert = wert.trim();
+        let value = value.trim();
         out.push(
             Finding::fail(
                 "forms/autocomplete-invalid",
                 tr!(
                     locale,
-                    "autocomplete=\"{wert}\" is not a valid autofill token.",
-                    "autocomplete=\"{wert}\" ist keine gültige Autofill-Angabe.",
+                    "autocomplete=\"{value}\" is not a valid autofill token.",
+                    "autocomplete=\"{value}\" ist keine gültige Autofill-Angabe.",
                 ),
             )
             .with_severity(Severity::Low)
@@ -277,7 +277,7 @@ pub(crate) fn autocomplete_invalid<D: Document>(doc: &D, locale: Locale, out: &m
 
 /// `aria-invalid` mit einem Wert außer `false` (WAI-ARIA 1.2: unbekannte Werte
 /// gelten als `true`).
-fn ungueltig<'a, N: Node<'a>>(n: N) -> bool {
+fn invalid<'a, N: Node<'a>>(n: N) -> bool {
     n.attr("aria-invalid")
         .map(str::trim)
         .is_some_and(|v| !v.is_empty() && !v.eq_ignore_ascii_case("false"))
@@ -292,9 +292,9 @@ fn ungueltig<'a, N: Node<'a>>(n: N) -> bool {
 pub(crate) fn error_unidentified<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids = id_index(doc);
     for n in elements(doc) {
-        if !ungueltig(n)
-            || beschrieben(n, "aria-describedby", &ids)
-            || beschrieben(n, "aria-errormessage", &ids)
+        if !invalid(n)
+            || described(n, "aria-describedby", &ids)
+            || described(n, "aria-errormessage", &ids)
         {
             continue;
         }
@@ -318,23 +318,23 @@ pub(crate) fn error_unidentified<D: Document>(doc: &D, locale: Locale, out: &mut
 
 /// Ob ein Vorfahre die Felder gruppiert: `<fieldset>`, `<details>` (HTML-AAM:
 /// `group`) oder `role="group"`/`"radiogroup"`.
-fn in_gruppe<'a, N: Node<'a>>(n: N) -> bool {
-    ancestors(n).any(|a| match explizite_rolle(a) {
+fn in_group<'a, N: Node<'a>>(n: N) -> bool {
+    ancestors(n).any(|a| match explicit_role(a) {
         Some(r) => r == "group" || r == "radiogroup",
         None => a.is_element("fieldset") || a.is_element("details"),
     })
 }
 
-fn ist_radio<'a, N: Node<'a>>(n: N) -> bool {
-    match explizite_rolle(n) {
+fn is_radio<'a, N: Node<'a>>(n: N) -> bool {
+    match explicit_role(n) {
         Some(r) => r == "radio",
-        None => ist_input(n, &["radio"]),
+        None => is_input(n, &["radio"]),
     }
 }
 
 /// Ein Kontrollkästchen, das zu einer Menge gehören kann: mit `name`.
 fn checkbox_name<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
-    if !ist_input(n, &["checkbox"]) || explizite_rolle(n).is_some_and(|r| r != "checkbox") {
+    if !is_input(n, &["checkbox"]) || explicit_role(n).is_some_and(|r| r != "checkbox") {
         return None;
     }
     n.attr("name").map(str::trim).filter(|v| !v.is_empty())
@@ -350,17 +350,16 @@ fn checkbox_name<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
 /// Beschriftungen schon alles, ist 1.3.1 erfüllt (auditmysite#779).
 pub(crate) fn group_missing<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids = id_index(doc);
-    let schluessel = |n| checkbox_name(n).map(|name| (formular(n, &ids).map(|f| f.id()), name));
-    let mut mengen: HashMap<(Option<NodeId>, &str), usize> = HashMap::new();
+    let key = |n| checkbox_name(n).map(|name| (form(n, &ids).map(|f| f.id()), name));
+    let mut sets: HashMap<(Option<NodeId>, &str), usize> = HashMap::new();
     for n in elements(doc) {
-        if let Some(k) = schluessel(n) {
-            *mengen.entry(k).or_default() += 1;
+        if let Some(k) = key(n) {
+            *sets.entry(k).or_default() += 1;
         }
     }
     for n in elements(doc) {
-        let gruppiert =
-            ist_radio(n) || schluessel(n).is_some_and(|k| mengen.get(&k).is_some_and(|&z| z > 1));
-        if !gruppiert || in_gruppe(n) {
+        let grouped = is_radio(n) || key(n).is_some_and(|k| sets.get(&k).is_some_and(|&z| z > 1));
+        if !grouped || in_group(n) {
             continue;
         }
         out.push(
@@ -381,20 +380,20 @@ pub(crate) fn group_missing<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 
 // --- forms/no-submit --------------------------------------------------------
 
-fn deaktiviert<'a, N: Node<'a>>(n: N) -> bool {
+fn disabled<'a, N: Node<'a>>(n: N) -> bool {
     n.has_attr("disabled")
 }
 
-fn ist_bedienelement<'a, N: Node<'a>>(n: N) -> bool {
+fn is_control<'a, N: Node<'a>>(n: N) -> bool {
     match n.local_name() {
-        "input" => input_typ(n) != "hidden" && !deaktiviert(n),
-        "select" | "textarea" | "button" => !deaktiviert(n),
+        "input" => input_type(n) != "hidden" && !disabled(n),
+        "select" | "textarea" | "button" => !disabled(n),
         _ => false,
     }
 }
 
-fn ist_absenden<'a, N: Node<'a>>(n: N) -> bool {
-    if deaktiviert(n) {
+fn is_submit<'a, N: Node<'a>>(n: N) -> bool {
+    if disabled(n) {
         return false;
     }
     if n.is_element("button") {
@@ -405,10 +404,10 @@ fn ist_absenden<'a, N: Node<'a>>(n: N) -> bool {
             t.eq_ignore_ascii_case("button") || t.eq_ignore_ascii_case("reset")
         });
     }
-    if ist_input(n, &["submit", "image"]) {
+    if is_input(n, &["submit", "image"]) {
         return true;
     }
-    explizite_rolle(n) == Some("button")
+    explicit_role(n) == Some("button")
         && (n.has_attr("data-submit")
             || n.attr("aria-label").is_some_and(|l| {
                 let l = l.to_lowercase();
@@ -417,11 +416,11 @@ fn ist_absenden<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Ein Feld, in dem die Eingabetaste das Formular implizit absendet.
-fn ist_texteingabe<'a, N: Node<'a>>(n: N) -> bool {
+fn is_text_input<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("input")
-        && !deaktiviert(n)
+        && !disabled(n)
         && !matches!(
-            input_typ(n).as_str(),
+            input_type(n).as_str(),
             "hidden"
                 | "checkbox"
                 | "radio"
@@ -436,10 +435,10 @@ fn ist_texteingabe<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 #[derive(Default)]
-struct Bestand {
-    felder: usize,
-    absenden: bool,
-    texteingabe: bool,
+struct Inventory {
+    fields: usize,
+    submit: bool,
+    text_input: bool,
 }
 
 /// Ein Formular mit Eingaben, aber ohne Absende-Element (H32, 3.2.2). Immer
@@ -453,34 +452,34 @@ struct Bestand {
 /// außerhalb des Formulars stehen (HTML, „form owner").
 pub(crate) fn no_submit<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let ids = id_index(doc);
-    let mut bestand: HashMap<NodeId, Bestand> = HashMap::new();
+    let mut inventory: HashMap<NodeId, Inventory> = HashMap::new();
     for n in elements(doc) {
-        let feld = ist_bedienelement(n);
-        let absenden = ist_absenden(n);
-        if !feld && !absenden {
+        let field = is_control(n);
+        let submit = is_submit(n);
+        if !field && !submit {
             continue;
         }
-        let Some(f) = formular(n, &ids) else { continue };
-        let b = bestand.entry(f.id()).or_default();
-        b.felder += usize::from(feld);
-        b.absenden |= absenden;
-        b.texteingabe |= ist_texteingabe(n);
+        let Some(f) = form(n, &ids) else { continue };
+        let b = inventory.entry(f.id()).or_default();
+        b.fields += usize::from(field);
+        b.submit |= submit;
+        b.text_input |= is_text_input(n);
     }
     for f in elements(doc).filter(|n| n.is_element("form")) {
-        let Some(b) = bestand.get(&f.id()) else {
+        let Some(b) = inventory.get(&f.id()) else {
             continue;
         };
-        if b.felder == 0 || b.absenden {
+        if b.fields == 0 || b.submit {
             continue;
         }
-        let anzahl = b.felder;
-        let finding = if !f.has_attr("action") && !b.texteingabe {
+        let count = b.fields;
+        let finding = if !f.has_attr("action") && !b.text_input {
             Finding::review(
                 "forms/no-submit",
                 tr!(
                     locale,
-                    "The form has {anzahl} control(s), no submit control and nothing submits it without script; check that changing a control does not submit, navigate or open a window.",
-                    "Das Formular hat {anzahl} Bedienelement(e), kein Absende-Element, und ohne Skript sendet es nichts ab; prüfen, dass eine Änderung nicht absendet, navigiert oder ein Fenster öffnet.",
+                    "The form has {count} control(s), no submit control and nothing submits it without script; check that changing a control does not submit, navigate or open a window.",
+                    "Das Formular hat {count} Bedienelement(e), kein Absende-Element, und ohne Skript sendet es nichts ab; prüfen, dass eine Änderung nicht absendet, navigiert oder ein Fenster öffnet.",
                 ),
             )
             .with_severity(Severity::Low)
@@ -489,8 +488,8 @@ pub(crate) fn no_submit<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
                 "forms/no-submit",
                 tr!(
                     locale,
-                    "The form has {anzahl} control(s) but no submit control.",
-                    "Das Formular hat {anzahl} Bedienelement(e), aber kein Absende-Element.",
+                    "The form has {count} control(s) but no submit control.",
+                    "Das Formular hat {count} Bedienelement(e), aber kein Absende-Element.",
                 ),
             )
             .with_severity(Severity::Medium)
@@ -503,31 +502,31 @@ pub(crate) fn no_submit<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
 
 /// Angaben, die ein Formular nicht zweimal verlangen sollte, mit den Wörtern,
 /// an denen sie zu erkennen sind (auditmysite `redundant_entry`).
-struct Angabe {
+struct Info {
     en: &'static str,
     #[cfg(feature = "de")]
     de: &'static str,
-    woerter: &'static [&'static str],
+    words: &'static [&'static str],
 }
 
-const ANGABEN: &[Angabe] = &[
-    Angabe {
+const INFOS: &[Info] = &[
+    Info {
         en: "email address",
         #[cfg(feature = "de")]
         de: "E-Mail-Adresse",
-        woerter: &["email", "e-mail"],
+        words: &["email", "e-mail"],
     },
-    Angabe {
+    Info {
         en: "phone number",
         #[cfg(feature = "de")]
         de: "Telefonnummer",
-        woerter: &["telefon", "phone", "mobil", "handynummer"],
+        words: &["telefon", "phone", "mobil", "handynummer"],
     },
-    Angabe {
+    Info {
         en: "name",
         #[cfg(feature = "de")]
         de: "Name",
-        woerter: &[
+        words: &[
             "vorname",
             "nachname",
             "first name",
@@ -539,22 +538,22 @@ const ANGABEN: &[Angabe] = &[
             "family name",
         ],
     },
-    Angabe {
+    Info {
         en: "street address",
         #[cfg(feature = "de")]
         de: "Straße",
-        woerter: &["straße", "strasse", "address line", "street address"],
+        words: &["straße", "strasse", "address line", "street address"],
     },
-    Angabe {
+    Info {
         en: "postal code",
         #[cfg(feature = "de")]
         de: "Postleitzahl",
-        woerter: &["postleitzahl", "plz", "zip code", "zipcode", "postal code"],
+        words: &["postleitzahl", "plz", "zip code", "zipcode", "postal code"],
     },
 ];
 
 /// Bewusste Wiederholung: Bestätigungsfelder, Einmalcodes, Captchas.
-const WIEDERHOLUNG: &[&str] = &[
+const REPETITION: &[&str] = &[
     "confirm",
     "repeat",
     "again",
@@ -571,7 +570,7 @@ const WIEDERHOLUNG: &[&str] = &[
 ];
 
 /// Formulierungen, mit denen ein Formular die frühere Angabe anbietet.
-const UEBERNAHME: &[&str] = &[
+const ADOPTION: &[&str] = &[
     "same as",
     "identical to",
     "use shipping",
@@ -584,14 +583,14 @@ const UEBERNAHME: &[&str] = &[
     "gleich wie",
 ];
 
-fn angabe(text: &str) -> Option<usize> {
+fn info(text: &str) -> Option<usize> {
     let text = text.to_lowercase();
-    if WIEDERHOLUNG.iter().any(|w| text.contains(w)) {
+    if REPETITION.iter().any(|w| text.contains(w)) {
         return None;
     }
-    ANGABEN
+    INFOS
         .iter()
-        .position(|a| a.woerter.iter().any(|w| text.contains(w)))
+        .position(|a| a.words.iter().any(|w| text.contains(w)))
 }
 
 /// Ein Formular verlangt dieselbe Angabe mehrmals, ohne sie vorzubelegen,
@@ -608,16 +607,16 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
         }
     }
     for form in elements(doc).filter(|n| n.is_element("form")) {
-        let formtext = subtree_text(form).to_lowercase();
-        if UEBERNAHME.iter().any(|u| formtext.contains(u)) {
+        let form_text = subtree_text(form).to_lowercase();
+        if ADOPTION.iter().any(|u| form_text.contains(u)) {
             continue;
         }
-        let mut zaehler = [0usize; ANGABEN.len()];
+        let mut counter = [0usize; INFOS.len()];
         for n in descendants(form) {
-            let feld = match n.local_name() {
+            let field = match n.local_name() {
                 "select" | "textarea" => true,
                 "input" => !matches!(
-                    input_typ(n).as_str(),
+                    input_type(n).as_str(),
                     "hidden" | "password" | "submit" | "button" | "reset" | "checkbox" | "radio"
                 ),
                 _ => false,
@@ -626,10 +625,10 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
                 let v = v.trim();
                 !v.is_empty() && !v.eq_ignore_ascii_case("off") && !v.eq_ignore_ascii_case("on")
             });
-            let vorbelegt = n.has_attr("readonly")
-                || deaktiviert(n)
+            let prefilled = n.has_attr("readonly")
+                || disabled(n)
                 || n.attr("value").is_some_and(|v| !v.trim().is_empty());
-            if !feld || autocomplete || vorbelegt {
+            if !field || autocomplete || prefilled {
                 continue;
             }
             let mut text = String::new();
@@ -644,12 +643,12 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
             if let Some(l) = closest(n, "label") {
                 text.push_str(&subtree_text(l));
             }
-            if let Some(i) = angabe(&text) {
-                zaehler[i] += 1;
+            if let Some(i) = info(&text) {
+                counter[i] += 1;
             }
         }
-        for (a, &anzahl) in ANGABEN.iter().zip(&zaehler) {
-            if anzahl < 2 {
+        for (a, &count) in INFOS.iter().zip(&counter) {
+            if count < 2 {
                 continue;
             }
             let was = pick!(locale, a.en, a.de);
@@ -658,8 +657,8 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
                     "forms/redundant-entry",
                     tr!(
                         locale,
-                        "The form asks for the {was} {anzahl} times without autocomplete, prefill or a \"same as\" option.",
-                        "Das Formular fragt {anzahl}-mal nach {was}, ohne autocomplete, Vorbelegung oder „wie oben\".",
+                        "The form asks for the {was} {count} times without autocomplete, prefill or a \"same as\" option.",
+                        "Das Formular fragt {count}-mal nach {was}, ohne autocomplete, Vorbelegung oder „wie oben\".",
                     ),
                 )
                 .with_severity(Severity::Medium)
@@ -674,7 +673,7 @@ pub(crate) fn redundant_entry<D: Document>(doc: &D, locale: Locale, out: &mut Ve
 
 /// Code, mit dem ein Handler den Kontext wechselt: Navigation, Absenden, neues
 /// Fenster, Fokus (ohne Leerraum verglichen).
-const KONTEXTWECHSEL: &[&str] = &[
+const CONTEXT_CHANGE: &[&str] = &[
     "location=",
     "location.href=",
     "location.assign(",
@@ -702,22 +701,22 @@ pub(crate) fn on_input<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
         let Some(handler) = n.attr("onchange") else {
             continue;
         };
-        let auswahl = match explizite_rolle(n) {
+        let selection = match explicit_role(n) {
             Some(r) => matches!(r, "combobox" | "listbox" | "radio" | "checkbox"),
-            None => n.is_element("select") || ist_input(n, &["radio", "checkbox"]),
+            None => n.is_element("select") || is_input(n, &["radio", "checkbox"]),
         };
-        if !auswahl {
+        if !selection {
             continue;
         }
         let code: String = handler.chars().filter(|c| !c.is_whitespace()).collect();
         // 3.2.2 lässt den Kontextwechsel zu, wenn vorher darauf hingewiesen
         // wird (G13). Eine Beschreibung am Feld kann dieser Hinweis sein; ob
         // sie es ist, entscheidet ein Prüfer.
-        let hingewiesen = n
+        let pointed_out = n
             .attr("aria-describedby")
             .is_some_and(|v| !v.trim().is_empty());
-        let wechsel = KONTEXTWECHSEL.iter().any(|k| code.contains(k));
-        let finding = if wechsel && hingewiesen {
+        let change = CONTEXT_CHANGE.iter().any(|k| code.contains(k));
+        let finding = if change && pointed_out {
             Finding::review(
                 "context/on-input",
                 pick!(
@@ -727,7 +726,7 @@ pub(crate) fn on_input<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
                 ),
             )
             .with_severity(Severity::Medium)
-        } else if wechsel {
+        } else if change {
             Finding::fail(
                 "context/on-input",
                 pick!(
@@ -754,7 +753,7 @@ pub(crate) fn on_input<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 
 // --- context/on-focus, context/autofocus ------------------------------------
 
-const INTERAKTIVE_ROLLEN: &[&str] = &[
+const INTERACTIVE_ROLES: &[&str] = &[
     "button",
     "link",
     "checkbox",
@@ -779,13 +778,13 @@ const INTERAKTIVE_ROLLEN: &[&str] = &[
 /// nicht. Die Schweregrade bleiben (hoch, mittel).
 pub(crate) fn on_focus<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let rolle = explizite_rolle(n);
+        let role = explicit_role(n);
         if n.has_attr("onfocus")
             && !matches!(
                 n.local_name(),
                 "a" | "button" | "input" | "select" | "textarea" | "summary"
             )
-            && !rolle.is_some_and(|r| INTERAKTIVE_ROLLEN.contains(&r))
+            && !role.is_some_and(|r| INTERACTIVE_ROLES.contains(&r))
         {
             out.push(
                 Finding::review(
@@ -803,7 +802,7 @@ pub(crate) fn on_focus<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
         }
         if n.has_attr("autofocus")
             && !matches!(n.local_name(), "input" | "select" | "textarea")
-            && !rolle.is_some_and(|r| matches!(r, "textbox" | "searchbox" | "combobox"))
+            && !role.is_some_and(|r| matches!(r, "textbox" | "searchbox" | "combobox"))
         {
             out.push(
                 Finding::review(
@@ -824,9 +823,9 @@ pub(crate) fn on_focus<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 
 // --- auth/captcha -------------------------------------------------------------
 
-fn ist_anmeldefeld<'a, N: Node<'a>>(n: N) -> bool {
+fn is_login_field<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("input")
-        && (input_typ(n) == "password"
+        && (input_type(n) == "password"
             || n.attr("autocomplete").is_some_and(|v| {
                 v.split_ascii_whitespace().any(|t| {
                     t.eq_ignore_ascii_case("one-time-code")
@@ -837,13 +836,13 @@ fn ist_anmeldefeld<'a, N: Node<'a>>(n: N) -> bool {
 
 /// Die Widgets der verbreiteten Captcha-Dienste und Captcha-Bilder, ohne die
 /// unsichtbaren Varianten, die keinen Test stellen.
-fn ist_captcha<'a, N: Node<'a>>(n: N) -> bool {
-    let unsichtbar = n.attr("data-size") == Some("invisible");
-    let klasse = |k: &str| {
+fn is_captcha<'a, N: Node<'a>>(n: N) -> bool {
+    let invisible = n.attr("data-size") == Some("invisible");
+    let class = |k: &str| {
         n.attr("class")
             .is_some_and(|c| c.split_ascii_whitespace().any(|x| x == k))
     };
-    if (klasse("g-recaptcha") || klasse("h-captcha")) && !unsichtbar {
+    if (class("g-recaptcha") || class("h-captcha")) && !invisible {
         return true;
     }
     let src = n.attr("src").unwrap_or("").to_ascii_lowercase();
@@ -867,7 +866,7 @@ fn ist_captcha<'a, N: Node<'a>>(n: N) -> bool {
 /// nicht zu 3.3.8. Der Einfüge-Test an Passwortfeldern bleibt im Host.
 pub(crate) fn captcha<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for form in elements(doc).filter(|n| n.is_element("form")) {
-        if !descendants(form).any(ist_anmeldefeld) || !descendants(form).any(ist_captcha) {
+        if !descendants(form).any(is_login_field) || !descendants(form).any(is_captcha) {
             continue;
         }
         out.push(
@@ -890,12 +889,12 @@ pub(crate) fn captcha<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
 
 /// Die Rolle eines Felds. Ein Passwortfeld hat nach HTML-AAM keine Rolle,
 /// Chrome stellt es als `textbox` aus — hier für jeden Host gleich.
-fn feldrolle<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Option<String> {
+fn field_role<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Option<String> {
     doc.role(n)
-        .or_else(|| ist_input(n, &["password"]).then(|| "textbox".to_string()))
+        .or_else(|| is_input(n, &["password"]).then(|| "textbox".to_string()))
 }
 
-const EINGABE_ROLLEN: &[&str] = &[
+const INPUT_ROLES: &[&str] = &[
     "textbox",
     "searchbox",
     "combobox",
@@ -912,8 +911,8 @@ const EINGABE_ROLLEN: &[&str] = &[
 /// Wörter, an denen eine Beschriftung eine Angabe über die Person erkennen
 /// lässt — als ganze Wörter, damit „Hotel" kein „tel" ist. Englisch und
 /// Deutsch gemischt, unabhängig von der Ausgabesprache. „name" fehlt: Es
-/// benennt Dinge so oft wie Personen (auditmysite#658, [`namensbezug`]).
-const PERSONENWOERTER: &[&str] = &[
+/// benennt Dinge so oft wie Personen (auditmysite#658, [`name_reference`]).
+const PERSON_WORDS: &[&str] = &[
     "email",
     "phone",
     "telephone",
@@ -960,37 +959,37 @@ const PERSONENWOERTER: &[&str] = &[
 ];
 
 /// Anfänge zusammengesetzter Wörter („Telefonnummer", „Geburtsort").
-const PERSONEN_ANFANG: &[&str] = &[
+const PEOPLE_START: &[&str] = &[
     "telefon", "phone", "email", "postal", "postleit", "password", "passwort", "birth", "geburts",
 ];
 
 /// Enden zusammengesetzter Wörter („Lieferadresse", „Hauptstraße").
-const PERSONEN_ENDE: &[&str] = &[
+const PEOPLE_END: &[&str] = &[
     "adresse", "address", "telefon", "strasse", "straße", "passwort", "password", "kennwort",
 ];
 
 /// Vor „address" machen diese Wörter eine technische Adresse daraus
 /// (`ip_address`, auditmysite `identify_purpose`).
-const TECHNISCHE_ADRESSE: &[&str] = &["ip", "mac", "wallet", "contract"];
+const TECHNICAL_ADDRESS: &[&str] = &["ip", "mac", "wallet", "contract"];
 
-fn fragt_nach_person(text: &str) -> bool {
-    let w = woerter(text);
-    w.iter().enumerate().any(|(i, wort)| {
-        let wort = wort.as_str();
-        let treffer = PERSONENWOERTER.contains(&wort)
-            || PERSONEN_ANFANG.iter().any(|p| wort.starts_with(p))
-            || PERSONEN_ENDE.iter().any(|s| wort.ends_with(s))
+fn asks_for_person(text: &str) -> bool {
+    let w = words(text);
+    w.iter().enumerate().any(|(i, word)| {
+        let word = word.as_str();
+        let hit = PERSON_WORDS.contains(&word)
+            || PEOPLE_START.iter().any(|p| word.starts_with(p))
+            || PEOPLE_END.iter().any(|s| word.ends_with(s))
             // „E-Mail" zerfällt in „e" und „mail".
-            || (wort == "mail" && i > 0 && w[i - 1] == "e");
-        let technisch = i > 0
-            && TECHNISCHE_ADRESSE.contains(&w[i - 1].as_str())
-            && (wort.ends_with("address") || wort.ends_with("adresse"));
-        treffer && !technisch
+            || (word == "mail" && i > 0 && w[i - 1] == "e");
+        let technical = i > 0
+            && TECHNICAL_ADDRESS.contains(&w[i - 1].as_str())
+            && (word.ends_with("address") || word.ends_with("adresse"));
+        hit && !technical
     })
 }
 
 /// Wörter, die immer den Namen einer Person meinen.
-const PERSONENNAME: &[&str] = &[
+const PERSON_NAME: &[&str] = &[
     "firstname",
     "lastname",
     "fullname",
@@ -1054,52 +1053,52 @@ const NAME_NEUTRAL: &[&str] = &[
 ];
 
 /// Wörter nach „name", die das benannte Ding einleiten („Name der Ansicht").
-const NAME_VON: &[&str] = &["of", "for", "der", "des", "für", "von"];
+const NAME_OF: &[&str] = &["of", "for", "der", "des", "für", "von"];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Namensbezug {
+enum NameReference {
     Person,
-    Ding,
+    Thing,
 }
 
 /// Was ein Text über „Name" sagt; `None` ohne Namenswort. Eine Lesart als
 /// Person irgendwo im Text schlägt die als Ding (auditmysite#658).
-fn namensbezug(text: &str) -> Option<Namensbezug> {
-    let w = woerter(text);
-    let mut ergebnis = None;
-    for (i, wort) in w.iter().enumerate() {
-        if PERSONENNAME.contains(&wort.as_str()) {
-            return Some(Namensbezug::Person);
+fn name_reference(text: &str) -> Option<NameReference> {
+    let w = words(text);
+    let mut result = None;
+    for (i, word) in w.iter().enumerate() {
+        if PERSON_NAME.contains(&word.as_str()) {
+            return Some(NameReference::Person);
         }
-        if wort != "name" {
+        if word != "name" {
             continue;
         }
-        let davor = w[..i]
+        let before = w[..i]
             .iter()
             .rev()
             .find(|x| !x.chars().all(|c| c.is_ascii_digit()));
-        let ding = davor.is_some_and(|d| !NAME_NEUTRAL.contains(&d.as_str()))
-            || w.get(i + 1).is_some_and(|n| NAME_VON.contains(&n.as_str()));
-        if !ding {
-            return Some(Namensbezug::Person);
+        let thing = before.is_some_and(|d| !NAME_NEUTRAL.contains(&d.as_str()))
+            || w.get(i + 1).is_some_and(|n| NAME_OF.contains(&n.as_str()));
+        if !thing {
+            return Some(NameReference::Person);
         }
-        ergebnis = Some(Namensbezug::Ding);
+        result = Some(NameReference::Thing);
     }
-    ergebnis
+    result
 }
 
 /// Ob das Feld nach dem Namen der Person fragt. Die Beschriftung entscheidet;
 /// ein Ding in `id` oder `name` (`#view-name` mit Beschriftung „Name") nimmt
 /// es zurück, außer das andere Attribut nennt die Person. Ohne Namenswort in
 /// der Beschriftung zählt ein Personenname in `id` oder `name`.
-fn fragt_nach_namen(beschriftung: &str, attribute: [Option<Namensbezug>; 2]) -> bool {
-    match namensbezug(beschriftung) {
-        Some(Namensbezug::Person) => {
-            attribute.contains(&Some(Namensbezug::Person))
-                || !attribute.contains(&Some(Namensbezug::Ding))
+fn asks_for_names(label: &str, attribute: [Option<NameReference>; 2]) -> bool {
+    match name_reference(label) {
+        Some(NameReference::Person) => {
+            attribute.contains(&Some(NameReference::Person))
+                || !attribute.contains(&Some(NameReference::Thing))
         }
-        Some(Namensbezug::Ding) => false,
-        None => attribute.contains(&Some(Namensbezug::Person)),
+        Some(NameReference::Thing) => false,
+        None => attribute.contains(&Some(NameReference::Person)),
     }
 }
 
@@ -1113,7 +1112,7 @@ fn fragt_nach_namen(beschriftung: &str, attribute: [Option<Namensbezug>; 2]) -> 
 /// `name` erkannte.
 pub(crate) fn purpose_missing<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_input(n, &["text", "email", "tel", "url", "password"])
+        if !is_input(n, &["text", "email", "tel", "url", "password"])
             || doc.is_ignored(n)
             || std::iter::once(n).chain(ancestors(n)).any(|a| {
                 a.attr("role").is_some_and(|role| {
@@ -1125,30 +1124,30 @@ pub(crate) fn purpose_missing<D: Semantics>(doc: &D, locale: Locale, out: &mut V
         {
             continue;
         }
-        let ohne = n.attr("autocomplete").is_none_or(|v| {
+        let without = n.attr("autocomplete").is_none_or(|v| {
             let v = v.trim();
             v.is_empty() || v.eq_ignore_ascii_case("on") || v.eq_ignore_ascii_case("off")
         });
-        if !ohne {
+        if !without {
             continue;
         }
-        let beschriftung = doc.accessible_name(n).unwrap_or_default();
+        let label = doc.accessible_name(n).unwrap_or_default();
         let attribute = [n.attr("id"), n.attr("name")].map(|a| a.unwrap_or(""));
-        let person = matches!(input_typ(n).as_str(), "email" | "tel")
-            || fragt_nach_person(&beschriftung)
-            || attribute.iter().any(|a| fragt_nach_person(a))
-            || fragt_nach_namen(&beschriftung, attribute.map(namensbezug));
+        let person = matches!(input_type(n).as_str(), "email" | "tel")
+            || asks_for_person(&label)
+            || attribute.iter().any(|a| asks_for_person(a))
+            || asks_for_names(&label, attribute.map(name_reference));
         if !person {
             continue;
         }
-        let feld = beschriftung.trim();
+        let field = label.trim();
         out.push(
             Finding::review(
                 "forms/purpose-missing",
                 tr!(
                     locale,
-                    "The field \"{feld}\" seems to ask for information about the user but has no autocomplete token.",
-                    "Das Feld \"{feld}\" fragt offenbar nach Angaben zur Person, hat aber keine autocomplete-Angabe.",
+                    "The field \"{field}\" seems to ask for information about the user but has no autocomplete token.",
+                    "Das Feld \"{field}\" fragt offenbar nach Angaben zur Person, hat aber keine autocomplete-Angabe.",
                 ),
             )
             .with_severity(Severity::Medium)
@@ -1161,7 +1160,7 @@ pub(crate) fn purpose_missing<D: Semantics>(doc: &D, locale: Locale, out: &mut V
 // --- forms/required-unmarked, forms/instructions-missing ----------------------
 
 /// Wörter für „Pflichtfeld" in den Sprachen aus auditmysite.
-const PFLICHT: &[&str] = &[
+const REQUIRED: &[&str] = &[
     "*",
     "required",
     "pflicht",
@@ -1182,7 +1181,7 @@ const PFLICHT: &[&str] = &[
 ];
 
 /// Beschriftungen, hinter denen ein Format steckt, das man kennen muss.
-const FORMATBEDARF: &[&str] = &[
+const FORMAT_NEED: &[&str] = &[
     "date",
     "phone",
     "tel",
@@ -1236,7 +1235,7 @@ const FORMATBEDARF: &[&str] = &[
 ];
 
 /// Formatangaben in der Beschriftung selbst.
-const FORMATHINWEIS: &[&str] = &[
+const FORMAT_HINT: &[&str] = &[
     "format:",
     "example:",
     "e.g.",
@@ -1263,18 +1262,18 @@ const FORMATHINWEIS: &[&str] = &[
 /// Kurze Begriffe („pass", „tel", „date") zählen nur als ganzes Wort — „Was
 /// ist passiert?" ist kein Reisepass (auditmysite#643); längere auch in
 /// Zusammensetzungen („Geburtsdatum").
-fn formatbegriff(name: &str, begriff: &str) -> bool {
-    if begriff.chars().count() >= 5 {
-        return name.contains(begriff);
+fn format_term(name: &str, term: &str) -> bool {
+    if term.chars().count() >= 5 {
+        return name.contains(term);
     }
-    name.match_indices(begriff).any(|(start, _)| {
-        let davor = name[..start].chars().next_back();
-        let danach = name[start + begriff.len()..].chars().next();
-        !davor.is_some_and(char::is_alphanumeric) && !danach.is_some_and(char::is_alphanumeric)
+    name.match_indices(term).any(|(start, _)| {
+        let before = name[..start].chars().next_back();
+        let after = name[start + term.len()..].chars().next();
+        !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
     })
 }
 
-fn ist_pflicht<'a, N: Node<'a>>(n: N) -> bool {
+fn is_required<'a, N: Node<'a>>(n: N) -> bool {
     (n.has_attr("required") && matches!(n.local_name(), "input" | "select" | "textarea"))
         || n.attr("aria-required")
             .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
@@ -1297,20 +1296,20 @@ pub(crate) fn instructions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
         if doc.is_ignored(n) {
             continue;
         }
-        if !feldrolle(doc, n).is_some_and(|r| EINGABE_ROLLEN.contains(&r.as_str())) {
+        if !field_role(doc, n).is_some_and(|r| INPUT_ROLES.contains(&r.as_str())) {
             continue;
         }
         let Some(name) = doc.accessible_name(n).filter(|s| !s.trim().is_empty()) else {
             continue;
         };
         let name = name.to_lowercase();
-        let (beschreibung, offen) = beschreibung(n, "aria-describedby", &ids);
-        let beschreibung = beschreibung.to_lowercase();
+        let (description, open) = description(n, "aria-describedby", &ids);
+        let description = description.to_lowercase();
 
-        if ist_pflicht(n)
-            && !PFLICHT
+        if is_required(n)
+            && !REQUIRED
                 .iter()
-                .any(|p| name.contains(p) || beschreibung.contains(p))
+                .any(|p| name.contains(p) || description.contains(p))
         {
             out.push(
                 Finding::review(
@@ -1327,15 +1326,15 @@ pub(crate) fn instructions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
             );
         }
 
-        let nativ_datum = ist_input(n, &["date", "time", "datetime-local", "month", "week"]);
-        let angeleitet = offen
-            || !beschreibung.trim().is_empty()
-            || FORMATHINWEIS.iter().any(|h| name.contains(h))
+        let native_date = is_input(n, &["date", "time", "datetime-local", "month", "week"]);
+        let guided = open
+            || !description.trim().is_empty()
+            || FORMAT_HINT.iter().any(|h| name.contains(h))
             || n.attr("placeholder").is_some_and(|p| !p.trim().is_empty());
-        if !ist_input(n, &["radio", "checkbox"])
-            && !nativ_datum
-            && !angeleitet
-            && FORMATBEDARF.iter().any(|b| formatbegriff(&name, b))
+        if !is_input(n, &["radio", "checkbox"])
+            && !native_date
+            && !guided
+            && FORMAT_NEED.iter().any(|b| format_term(&name, b))
         {
             out.push(
                 Finding::review(
@@ -1356,7 +1355,7 @@ pub(crate) fn instructions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
 
 // --- forms/title-only-label ---------------------------------------------------
 
-const TITEL_ROLLEN: &[&str] = &[
+const TITLE_ROLES: &[&str] = &[
     "textbox",
     "combobox",
     "listbox",
@@ -1382,13 +1381,13 @@ pub(crate) fn title_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
         if doc.is_ignored(n) || n.has_attr("placeholder") {
             continue;
         }
-        if !feldrolle(doc, n).is_some_and(|r| TITEL_ROLLEN.contains(&r.as_str())) {
+        if !field_role(doc, n).is_some_and(|r| TITLE_ROLES.contains(&r.as_str())) {
             continue;
         }
         let Some(name) = doc.accessible_name(n).filter(|s| !s.trim().is_empty()) else {
             continue;
         };
-        let nur_titel = match doc.name_source(n) {
+        let has_only_title = match doc.name_source(n) {
             Some(q) => q == NameSource::Title,
             None => {
                 n.attr("title").is_some_and(|t| t.trim() == name.trim())
@@ -1402,7 +1401,7 @@ pub(crate) fn title_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
                     && closest(n, "label").is_none()
             }
         };
-        if nur_titel {
+        if has_only_title {
             out.push(
                 Finding::review(
                     "forms/title-only-label",
@@ -1424,7 +1423,7 @@ pub(crate) fn title_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
 
 /// Elemente, die Chrome als `group` ausstellt, die aber keine
 /// Formulargruppen sind.
-const KEINE_FORMULARGRUPPE: &[&str] = &[
+const NO_FORM_GROUP: &[&str] = &[
     "details", "address", "hgroup", "figure", "article", "section", "aside", "optgroup",
 ];
 
@@ -1439,12 +1438,12 @@ pub(crate) fn group_name_missing<D: Semantics>(doc: &D, locale: Locale, out: &mu
         if doc.is_ignored(n) || doc.role(n).as_deref() != Some("group") {
             continue;
         }
-        let formulargruppe = n.is_element("fieldset")
-            || (!KEINE_FORMULARGRUPPE.contains(&n.local_name())
+        let form_group = n.is_element("fieldset")
+            || (!NO_FORM_GROUP.contains(&n.local_name())
                 && descendants(n).any(|d| {
-                    feldrolle(doc, d).is_some_and(|r| EINGABE_ROLLEN.contains(&r.as_str()))
+                    field_role(doc, d).is_some_and(|r| INPUT_ROLES.contains(&r.as_str()))
                 }));
-        if !formulargruppe || crate::semantics::named(doc, n) {
+        if !form_group || crate::semantics::named(doc, n) {
             continue;
         }
         out.push(
@@ -1468,8 +1467,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn autocomplete_grammatik_nach_html() {
-        for gut in [
+    fn autocomplete_grammar_follows_html() {
+        for good in [
             "",
             "on",
             "OFF",
@@ -1482,9 +1481,9 @@ mod tests {
             "transaction-amount",
             "photo",
         ] {
-            assert!(autocomplete_gueltig(gut), "{gut}");
+            assert!(autocomplete_valid(good), "{good}");
         }
-        for schlecht in [
+        for bad in [
             "not-a-real-token",
             "foo email",
             "work name",
@@ -1494,14 +1493,14 @@ mod tests {
             "webauthn",
             "shipping",
         ] {
-            assert!(!autocomplete_gueltig(schlecht), "{schlecht}");
+            assert!(!autocomplete_valid(bad), "{bad}");
         }
     }
 
     /// auditmysite#658: Namen von Dingen sind keine Personendaten.
     #[test]
-    fn name_eines_dings_ist_kein_personenname() {
-        for ding in [
+    fn name_of_a_thing_is_not_a_person_name() {
+        for thing in [
             "View name",
             "File name",
             "Filename",
@@ -1513,8 +1512,8 @@ mod tests {
             "Name der Ansicht",
             "Rename",
         ] {
-            assert!(!fragt_nach_namen(ding, [None, None]), "{ding}");
-            assert!(!fragt_nach_person(ding), "{ding}");
+            assert!(!asks_for_names(thing, [None, None]), "{thing}");
+            assert!(!asks_for_person(thing), "{thing}");
         }
         for person in [
             "Name",
@@ -1529,31 +1528,31 @@ mod tests {
             "Benutzername",
         ] {
             assert!(
-                fragt_nach_namen(person, [None, None]) || fragt_nach_person(person),
+                asks_for_names(person, [None, None]) || asks_for_person(person),
                 "{person}"
             );
         }
-        let attr = |a: &str| [namensbezug(a), None];
-        assert!(!fragt_nach_namen("Name", attr("view-name")));
-        assert!(!fragt_nach_namen("Name", attr("projectName")));
-        assert!(fragt_nach_namen("Name", attr("input-name")));
-        assert!(fragt_nach_namen("Name", attr("billing_first_name")));
-        assert!(fragt_nach_namen("Name", attr("field-2-name")));
-        assert!(fragt_nach_namen(
+        let attr = |a: &str| [name_reference(a), None];
+        assert!(!asks_for_names("Name", attr("view-name")));
+        assert!(!asks_for_names("Name", attr("projectName")));
+        assert!(asks_for_names("Name", attr("input-name")));
+        assert!(asks_for_names("Name", attr("billing_first_name")));
+        assert!(asks_for_names("Name", attr("field-2-name")));
+        assert!(asks_for_names(
             "Name",
-            [namensbezug("view-name"), namensbezug("fullName")]
+            [name_reference("view-name"), name_reference("fullName")]
         ));
         // Die Beschriftung nennt ein Ding: `name="name"` macht keine Person
         // daraus.
-        assert!(!fragt_nach_namen(
+        assert!(!asks_for_names(
             "Project name",
-            [None, namensbezug("name")]
+            [None, name_reference("name")]
         ));
     }
 
     #[test]
-    fn personenwoerter_nur_als_ganze_woerter() {
-        for ja in [
+    fn person_words_only_as_whole_words() {
+        for yes in [
             "Email",
             "E-Mail",
             "Tel.-Nr.",
@@ -1569,9 +1568,9 @@ mod tests {
             "Neues Kennwort",
             "billing_address",
         ] {
-            assert!(fragt_nach_person(ja), "{ja}");
+            assert!(asks_for_person(yes), "{yes}");
         }
-        for nein in [
+        for no in [
             "Hotel",
             "Title",
             "Hostel",
@@ -1585,25 +1584,25 @@ mod tests {
             "mac-address",
             "walletAddress",
         ] {
-            assert!(!fragt_nach_person(nein), "{nein}");
+            assert!(!asks_for_person(no), "{no}");
         }
     }
 
     /// auditmysite#643: kurze Begriffe nur als ganzes Wort.
     #[test]
-    fn formatbegriffe_kurz_nur_als_wort() {
-        let braucht = |name: &str| {
+    fn short_format_terms_only_as_a_word() {
+        let needs = |name: &str| {
             let name = name.to_lowercase();
-            FORMATBEDARF.iter().any(|b| formatbegriff(&name, b))
+            FORMAT_NEED.iter().any(|b| format_term(&name, b))
         };
-        assert!(!braucht("Was ist passiert?"));
-        assert!(!braucht("Hotel"));
-        assert!(!braucht("Last update"));
-        assert!(!braucht("Quantity"));
-        assert!(braucht("Date of birth"));
-        assert!(braucht("Tel."));
-        assert!(braucht("Reisepass"));
-        assert!(braucht("Geburtsdatum"));
-        assert!(braucht("Postal code"));
+        assert!(!needs("Was ist passiert?"));
+        assert!(!needs("Hotel"));
+        assert!(!needs("Last update"));
+        assert!(!needs("Quantity"));
+        assert!(needs("Date of birth"));
+        assert!(needs("Tel."));
+        assert!(needs("Reisepass"));
+        assert!(needs("Geburtsdatum"));
+        assert!(needs("Postal code"));
     }
 }

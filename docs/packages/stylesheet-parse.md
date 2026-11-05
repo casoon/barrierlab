@@ -11,7 +11,7 @@ cascade, no selector matching, no evaluation of media queries.
 
 ## Status
 
-0.1.0, not yet published. Intended for `a11y-rules`, which
+0.1.0 on crates.io. Used by `a11y-rules` and `style-cascade`; `a11y-rules`
 checks stylesheet rules (`outline: none` on `:focus`,
 `prefers-reduced-motion`, media queries on orientation,
 `text-align`/`line-height`). The hosts pass the text in: auditmysite
@@ -26,7 +26,7 @@ release build.
 
 ```mermaid
 flowchart LR
-  css["CSS text"] --> tok["Tokenizer\n(media-query-parse)"]
+  css["CSS text"] --> tok["Tokenizer\n(css-tokenize)"]
   tok --> parse["Parse algorithms\nCSS Syntax §5"]
   parse --> raw["raw tree\n(token ranges)"]
   raw --> conv["Classification\nStyle · Media · Keyframes · Group · Other"]
@@ -51,7 +51,7 @@ nested `@media` apply to the parent selector.
 
 ## Dependencies
 
-Downward: `media-query-parse` (only its tokenizer). Upward:
+Downward: `css-tokenize`. Upward:
 `a11y-rules` (planned).
 
 ## Limits

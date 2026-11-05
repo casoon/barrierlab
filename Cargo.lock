@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "a11y-dom"
 version = "0.27.0"
+dependencies = [
+ "html5-parser",
+]
 
 [[package]]
 name = "a11y-perception"
@@ -30,6 +33,20 @@ dependencies = [
  "a11y-report",
  "accname",
  "html5-parser",
+ "style-cascade",
+ "stylesheet-parse",
+]
+
+[[package]]
+name = "a11y-static"
+version = "0.1.0"
+dependencies = [
+ "a11y-dom",
+ "a11y-report",
+ "a11y-rules",
+ "accname",
+ "html5-parser",
+ "style-cascade",
  "stylesheet-parse",
 ]
 
@@ -42,6 +59,7 @@ dependencies = [
  "a11y-rules",
  "accname",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
 ]
 
@@ -50,6 +68,7 @@ name = "accname"
 version = "0.27.0"
 dependencies = [
  "a11y-dom",
+ "html5-parser",
 ]
 
 [[package]]
@@ -239,6 +258,13 @@ name = "csp-parse"
 version = "0.1.0"
 
 [[package]]
+name = "css-tokenize"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "displaydoc"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -318,6 +344,7 @@ dependencies = [
 name = "html-conform"
 version = "0.3.4"
 dependencies = [
+ "a11y-report",
  "criterion",
  "csp-parse",
  "encoding_rs",
@@ -478,6 +505,9 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 [[package]]
 name = "media-query-parse"
 version = "0.1.0"
+dependencies = [
+ "css-tokenize",
+]
 
 [[package]]
 name = "memchr"
@@ -752,10 +782,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
+name = "style-cascade"
+version = "0.1.0"
+dependencies = [
+ "a11y-dom",
+ "html5-parser",
+ "media-query-parse",
+ "stylesheet-parse",
+]
+
+[[package]]
 name = "stylesheet-parse"
 version = "0.1.0"
 dependencies = [
- "media-query-parse",
+ "css-tokenize",
 ]
 
 [[package]]
@@ -1066,7 +1106,3 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[patch.unused]]
-name = "auditmysite"
-version = "1.8.0"

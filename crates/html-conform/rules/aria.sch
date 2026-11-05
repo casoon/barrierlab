@@ -3,12 +3,11 @@
   Phase 06 skeleton rule set — proves the assertion-layer pipeline
   end to end with one known-good rule, not yet the real ARIA rule
   coverage. Reuses one of the Phase 02 dependency-spike's validated
-  canary cases (see plan/02-dependency-spike.md and the old
+  canary cases (see the old
   `spike_tests` module in git history) rather than authoring new,
   unverified ARIA logic here.
 
-  Real ARIA rule coverage is Phase 08
-  (plan/08-assertion-refinement-loop.md).
+  Real ARIA rule coverage is Phase 08.
 
   The first rule below needs no `<ns>` binding (`*` wildcard element
   test plus attribute tests only), but the second (Phase 08's

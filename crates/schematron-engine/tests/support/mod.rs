@@ -73,8 +73,7 @@ impl RoxmlDoc {
 /// `roxmltree` represents an explicit `xmlns=""` (resetting the default
 /// namespace back to none — legal, common when embedding an
 /// unnamespaced fragment inside a namespaced document, e.g. this crate's
-/// own `plan/07-abstract-patterns-and-extends.md`-documented
-/// `xmlns=""`-in-abstract-pattern-content style, or the vendored
+/// own `xmlns=""`-in-abstract-pattern-content style, or the vendored
 /// `schxslt-testsuite`'s fixture documents, see
 /// `tests/corpus/schxslt-testsuite/UPSTREAM.md`) as `Some("")`, not
 /// `None` — but an empty string is never a valid namespace URI (XML

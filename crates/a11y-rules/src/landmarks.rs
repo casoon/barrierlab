@@ -21,7 +21,7 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
 use crate::semantics::named;
-use crate::structure::{explizite_rolle, ist_dokumentweit};
+use crate::structure::{explicit_role, is_document_wide};
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -30,7 +30,7 @@ fn at(id: NodeId) -> Location {
 // --- Landmark-Rolle ----------------------------------------------------------
 
 /// Die Landmark-Rollen aus WAI-ARIA 1.2.
-const LANDMARK_ROLLEN: &[&str] = &[
+const LANDMARK_ROLES: &[&str] = &[
     "banner",
     "complementary",
     "contentinfo",
@@ -44,11 +44,11 @@ const LANDMARK_ROLLEN: &[&str] = &[
 /// Ob ein `<aside>` in Sectioning Content steht, das nicht `main` ist. Dann
 /// ist es nach HTML-AAM nur mit Namen `complementary` (Korpus
 /// `landmark_aside_scoping`).
-fn in_sektion<'a, N: Node<'a>>(n: N) -> bool {
+fn in_section<'a, N: Node<'a>>(n: N) -> bool {
     ancestors(n).any(|a| {
         matches!(a.local_name(), "article" | "aside" | "nav" | "section")
             || matches!(
-                explizite_rolle(a),
+                explicit_role(a),
                 Some("article" | "complementary" | "navigation" | "region")
             )
     })
@@ -62,28 +62,28 @@ fn in_sektion<'a, N: Node<'a>>(n: N) -> bool {
 /// `<header>`/`<footer>` sind nur dokumentweit `banner`/`contentinfo`,
 /// `<aside>` in einem Abschnitt nur mit Namen `complementary`.
 fn landmark<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Option<&'static str> {
-    let rolle: &'static str = match explizite_rolle(n) {
-        Some(r) => LANDMARK_ROLLEN.iter().copied().find(|l| *l == r)?,
+    let role: &'static str = match explicit_role(n) {
+        Some(r) => LANDMARK_ROLES.iter().copied().find(|l| *l == r)?,
         None => match n.local_name() {
             "main" => "main",
             "nav" => "navigation",
             "search" => "search",
-            "header" if ist_dokumentweit(n) => "banner",
-            "footer" if ist_dokumentweit(n) => "contentinfo",
-            "aside" if !in_sektion(n) || named(doc, n) => "complementary",
+            "header" if is_document_wide(n) => "banner",
+            "footer" if is_document_wide(n) => "contentinfo",
+            "aside" if !in_section(n) || named(doc, n) => "complementary",
             "section" => "region",
             "form" => "form",
             _ => return None,
         },
     };
-    if matches!(rolle, "form" | "region") && !named(doc, n) {
+    if matches!(role, "form" | "region") && !named(doc, n) {
         return None;
     }
-    Some(rolle)
+    Some(role)
 }
 
 /// Alle Landmarks in Dokumentreihenfolge.
-fn landmarks_von<'n, D: Semantics>(doc: &'n D) -> Vec<(D::N<'n>, &'static str)> {
+fn landmarks_of<'n, D: Semantics>(doc: &'n D) -> Vec<(D::N<'n>, &'static str)> {
     elements(doc)
         .filter(|n| !doc.is_ignored(*n))
         .filter_map(|n| landmark(doc, n).map(|r| (n, r)))
@@ -99,36 +99,36 @@ fn landmarks_von<'n, D: Semantics>(doc: &'n D) -> Vec<(D::N<'n>, &'static str)> 
 /// unterscheidbare Namen nur als SHOULD, und WCAG 1.3.1 setzt keine Namen an
 /// Landmarks voraus (axe: best practice). Schwere wie in auditmysite.
 pub(crate) fn not_unique<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let alle: Vec<_> = landmarks_von(doc)
+    let all: Vec<_> = landmarks_of(doc)
         .into_iter()
-        .map(|(n, rolle)| {
+        .map(|(n, role)| {
             let name = doc
                 .accessible_name(n)
                 .unwrap_or_default()
                 .trim()
                 .to_lowercase();
-            (n, rolle, name)
+            (n, role, name)
         })
         .collect();
-    let mut anzahl: HashMap<(&str, &str), usize> = HashMap::new();
-    for (_, rolle, name) in &alle {
-        *anzahl.entry((rolle, name.as_str())).or_default() += 1;
+    let mut count: HashMap<(&str, &str), usize> = HashMap::new();
+    for (_, role, name) in &all {
+        *count.entry((role, name.as_str())).or_default() += 1;
     }
-    for (n, rolle, name) in &alle {
-        if anzahl[&(*rolle, name.as_str())] < 2 {
+    for (n, role, name) in &all {
+        if count[&(*role, name.as_str())] < 2 {
             continue;
         }
         let text = if name.is_empty() {
             tr!(
                 locale,
-                "Several \"{rolle}\" landmarks have no name and cannot be told apart.",
-                "Mehrere \"{rolle}\"-Landmarks haben keinen Namen und sind nicht zu unterscheiden.",
+                "Several \"{role}\" landmarks have no name and cannot be told apart.",
+                "Mehrere \"{role}\"-Landmarks haben keinen Namen und sind nicht zu unterscheiden.",
             )
         } else {
             tr!(
                 locale,
-                "Several \"{rolle}\" landmarks share the name \"{name}\" and cannot be told apart.",
-                "Mehrere \"{rolle}\"-Landmarks heißen \"{name}\" und sind nicht zu unterscheiden.",
+                "Several \"{role}\" landmarks share the name \"{name}\" and cannot be told apart.",
+                "Mehrere \"{role}\"-Landmarks heißen \"{name}\" und sind nicht zu unterscheiden.",
             )
         };
         out.push(
@@ -151,12 +151,12 @@ pub(crate) fn not_unique<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fi
 /// (auditmysite#727). Der Duplikatbefund zeigt wie `landmarks/main-duplicate`
 /// auf die zweite Landmark, nicht wie auditmysite auf die erste.
 pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let alle = landmarks_von(doc);
-    for (n, rolle) in &alle {
-        if !matches!(*rolle, "banner" | "contentinfo" | "main") {
+    let all = landmarks_of(doc);
+    for (n, role) in &all {
+        if !matches!(*role, "banner" | "contentinfo" | "main") {
             continue;
         }
-        let Some(aussen) = ancestors(*n).find_map(|a| landmark(doc, a)) else {
+        let Some(outside) = ancestors(*n).find_map(|a| landmark(doc, a)) else {
             continue;
         };
         out.push(
@@ -164,34 +164,34 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
                 "landmarks/not-top-level",
                 tr!(
                     locale,
-                    "The \"{rolle}\" landmark is nested inside a \"{aussen}\" landmark.",
-                    "Die \"{rolle}\"-Landmark steckt in einer \"{aussen}\"-Landmark.",
+                    "The \"{role}\" landmark is nested inside a \"{outside}\" landmark.",
+                    "Die \"{role}\"-Landmark steckt in einer \"{outside}\"-Landmark.",
                 ),
             )
             .with_severity(Severity::Medium)
             .at(at(n.id())),
         );
     }
-    for (rolle, kennung) in [
+    for (role, id) in [
         ("banner", "landmarks/banner-duplicate"),
         ("contentinfo", "landmarks/contentinfo-duplicate"),
     ] {
-        let gleiche: Vec<_> = alle.iter().filter(|(_, r)| *r == rolle).collect();
-        if gleiche.len() < 2 {
+        let same: Vec<_> = all.iter().filter(|(_, r)| *r == role).collect();
+        if same.len() < 2 {
             continue;
         }
-        let zahl = gleiche.len();
+        let number = same.len();
         out.push(
             Finding::best_practice(
-                kennung,
+                id,
                 tr!(
                     locale,
-                    "The document has {zahl} \"{rolle}\" landmarks; at most one is allowed.",
-                    "Das Dokument hat {zahl} \"{rolle}\"-Landmarks; höchstens eine ist vorgesehen.",
+                    "The document has {number} \"{role}\" landmarks; at most one is allowed.",
+                    "Das Dokument hat {number} \"{role}\"-Landmarks; höchstens eine ist vorgesehen.",
                 ),
             )
             .with_severity(Severity::Medium)
-            .at(at(gleiche[1].0.id())),
+            .at(at(same[1].0.id())),
         );
     }
 }
@@ -200,7 +200,7 @@ pub(crate) fn structure<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
 
 /// Rollen, die mit Namen als Inhalt zählen — dieselbe Liste wie auditmysite
 /// `region`.
-const INHALT_ROLLEN: &[&str] = &[
+const CONTENT_ROLES: &[&str] = &[
     "heading",
     "paragraph",
     "link",
@@ -218,7 +218,7 @@ const INHALT_ROLLEN: &[&str] = &[
 ];
 
 /// Elemente, deren Text kein Inhalt der Seite ist.
-fn kein_inhalt<'a, N: Node<'a>>(n: N) -> bool {
+fn no_content<'a, N: Node<'a>>(n: N) -> bool {
     matches!(
         n.local_name(),
         "script" | "style" | "template" | "noscript" | "svg"
@@ -228,7 +228,7 @@ fn kein_inhalt<'a, N: Node<'a>>(n: N) -> bool {
 /// Die Sprunglinks der Seite, am Verhalten erkannt: Fragmentlinks vor dem
 /// ersten Link, der die Seite verlässt (axe `isSkipLink`, auditmysite#642).
 /// Sie stehen absichtlich vor jeder Landmark.
-fn sprunglinks<D: Semantics>(doc: &D) -> HashSet<NodeId> {
+fn skip_links<D: Semantics>(doc: &D) -> HashSet<NodeId> {
     elements(doc)
         .filter(|n| n.is_element("a"))
         .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
@@ -241,19 +241,19 @@ fn sprunglinks<D: Semantics>(doc: &D) -> HashSet<NodeId> {
 }
 
 /// Ob unter `n` (einschließlich) etwas steht, das als Inhalt zählt: Text oder
-/// ein benanntes Element einer [`INHALT_ROLLEN`]. Sprunglinks zählen nicht.
-fn hat_inhalt<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, sprung: &HashSet<NodeId>) -> bool {
+/// ein benanntes Element einer [`CONTENT_ROLES`]. Sprunglinks zählen nicht.
+fn has_content<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, jump: &HashSet<NodeId>) -> bool {
     match n.kind() {
         NodeKind::Text => !n.text().trim().is_empty(),
         NodeKind::Element => {
-            if kein_inhalt(n) || sprung.contains(&n.id()) {
+            if no_content(n) || jump.contains(&n.id()) {
                 return false;
             }
-            let benannt = doc
+            let is_named = doc
                 .role(n)
-                .is_some_and(|r| INHALT_ROLLEN.contains(&r.as_str()))
+                .is_some_and(|r| CONTENT_ROLES.contains(&r.as_str()))
                 && named(doc, n);
-            benannt || n.children().any(|k| hat_inhalt(doc, k, sprung))
+            is_named || n.children().any(|k| has_content(doc, k, jump))
         }
     }
 }
@@ -268,23 +268,23 @@ fn hat_inhalt<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, sprung: &HashSet<NodeId
 /// aber Best Practice ohne Kriterium wie axe `region`: 1.3.1 verlangt keine
 /// Landmarks (auditmysite#779).
 pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let sprung = sprunglinks(doc);
-    let mut mit_landmark: HashSet<NodeId> = HashSet::new();
-    for (n, _) in landmarks_von(doc) {
-        mit_landmark.insert(n.id());
-        mit_landmark.extend(ancestors(n).map(|a| a.id()));
+    let jump = skip_links(doc);
+    let mut with_landmark: HashSet<NodeId> = HashSet::new();
+    for (n, _) in landmarks_of(doc) {
+        with_landmark.insert(n.id());
+        with_landmark.extend(ancestors(n).map(|a| a.id()));
     }
     let Some(body) = elements(doc).find(|n| n.is_element("body")) else {
         return;
     };
-    let mut stapel = vec![body];
-    while let Some(n) = stapel.pop() {
-        let mut gemeldet = false;
+    let mut stack = vec![body];
+    while let Some(n) = stack.pop() {
+        let mut reported = false;
         for k in n.children() {
             match k.kind() {
-                NodeKind::Text if !gemeldet && !k.text().trim().is_empty() => {
-                    melden(n.id(), locale, out);
-                    gemeldet = true;
+                NodeKind::Text if !reported && !k.text().trim().is_empty() => {
+                    report(n.id(), locale, out);
+                    reported = true;
                 }
                 // Was der Baum samt Inhalt auslässt (etwa inert hinter einem
                 // modalen Dialog), erreicht niemand über Landmarks. Ein
@@ -293,17 +293,16 @@ pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut V
                 // weiter; eine ausgelassene Landmark (das inerte `main` um den
                 // offenen Dialog) verliert ihre Rolle nicht.
                 NodeKind::Element
-                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
-                }
+                    if doc.is_ignored(k) && (!reachable(doc, k) || landmark(doc, k).is_some()) => {}
                 NodeKind::Element => {
-                    if mit_landmark.contains(&k.id()) {
+                    if with_landmark.contains(&k.id()) {
                         // Eine Landmark selbst ist erledigt; ein Container mit
                         // Landmarks darin wird weiter zerlegt.
                         if landmark(doc, k).is_none() {
-                            stapel.push(k);
+                            stack.push(k);
                         }
-                    } else if hat_inhalt(doc, k, &sprung) {
-                        melden(k.id(), locale, out);
+                    } else if has_content(doc, k, &jump) {
+                        report(k.id(), locale, out);
                     }
                 }
                 _ => {}
@@ -314,7 +313,7 @@ pub(crate) fn content_outside<D: Semantics>(doc: &D, locale: Locale, out: &mut V
 
 /// Ob unter `n` etwas liegt, das der Baum nicht auslässt: ein Element oder
 /// nicht leerer Text.
-fn erreichbar<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
+fn reachable<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
     descendants(n).any(|d| {
         !doc.is_ignored(d)
             && match d.kind() {
@@ -324,7 +323,7 @@ fn erreichbar<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
     })
 }
 
-fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
+fn report(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
     out.push(
         Finding::best_practice(
             "landmarks/content-outside",
@@ -342,7 +341,7 @@ fn melden(id: NodeId, locale: Locale, out: &mut Vec<Finding>) {
 // --- keyboard/focusable-no-role, keyboard/interactive-not-focusable ----------
 
 /// Ob das Element ohne `tabindex` fokussierbar ist (HTML, „focusable area").
-fn nativ_fokussierbar<'a, N: Node<'a>>(n: N) -> bool {
+fn native_focusable<'a, N: Node<'a>>(n: N) -> bool {
     if n.has_attr("contenteditable")
         && !n
             .attr("contenteditable")
@@ -368,11 +367,11 @@ fn tabindex<'a, N: Node<'a>>(n: N) -> Option<i32> {
 
 /// Ob das Element fokussiert werden kann, auch nur per Skript
 /// (`tabindex="-1"`) — das, was Chrome als `focusable` meldet.
-fn fokussierbar<'a, N: Node<'a>>(n: N) -> bool {
-    tabindex(n).is_some() || nativ_fokussierbar(n)
+fn focusable<'a, N: Node<'a>>(n: N) -> bool {
+    tabindex(n).is_some() || native_focusable(n)
 }
 
-fn deaktiviert<'a, N: Node<'a>>(n: N) -> bool {
+fn disabled<'a, N: Node<'a>>(n: N) -> bool {
     n.has_attr("disabled")
         && matches!(
             n.local_name(),
@@ -388,7 +387,7 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
 /// benannter, fokussierbarer Bereich ist das empfohlene Muster für scrollbare
 /// Bereiche (axe `scrollable-region-focusable`, auditmysite-Korpus
 /// `scrollable_region_focusable`).
-const NICHT_INTERAKTIV: &[&str] = &[
+const NOT_INTERACTIVE: &[&str] = &[
     "generic",
     "group",
     "article",
@@ -399,7 +398,7 @@ const NICHT_INTERAKTIV: &[&str] = &[
 ];
 
 /// Interaktive Rollen, die fokussierbar sein müssen (auditmysite `keyboard`).
-const INTERAKTIV: &[&str] = &[
+const INTERACTIVE: &[&str] = &[
     "button",
     "link",
     "checkbox",
@@ -416,7 +415,7 @@ const INTERAKTIV: &[&str] = &[
 /// Ob ein Vorfahre den Fokus per `aria-activedescendant` verwaltet. Dann sind
 /// seine Optionen, Einträge und Menüpunkte zu Recht nicht selbst fokussierbar
 /// (WAI-ARIA 1.2, `aria-activedescendant`).
-fn fokus_verwaltet<'a, N: Node<'a>>(n: N) -> bool {
+fn focus_managed<'a, N: Node<'a>>(n: N) -> bool {
     ancestors(n).any(|a| {
         a.attr("aria-activedescendant")
             .is_some_and(|v| !v.trim().is_empty())
@@ -442,15 +441,15 @@ pub(crate) fn keyboard<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Find
         }
         // Ein `a` ohne `href` ist nach HTML-AAM `generic`, kein Link — auch
         // wenn ein Host es anders meldet.
-        let rolle = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {
+        let role = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {
             None
         } else {
             doc.role(n)
         };
-        let rolle = rolle.as_deref();
+        let role = role.as_deref();
         if tabindex(n).is_some_and(|t| t >= 0)
-            && !nativ_fokussierbar(n)
-            && rolle.is_none_or(|r| NICHT_INTERAKTIV.contains(&r))
+            && !native_focusable(n)
+            && role.is_none_or(|r| NOT_INTERACTIVE.contains(&r))
         {
             out.push(
                 Finding::review(
@@ -466,10 +465,10 @@ pub(crate) fn keyboard<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Find
                 .at(at(n.id())),
             );
         }
-        let Some(r) = rolle.filter(|r| INTERAKTIV.contains(r)) else {
+        let Some(r) = role.filter(|r| INTERACTIVE.contains(r)) else {
             continue;
         };
-        if fokussierbar(n) || deaktiviert(n) || n.is_element("option") || fokus_verwaltet(n) {
+        if focusable(n) || disabled(n) || n.is_element("option") || focus_managed(n) {
             continue;
         }
         out.push(
@@ -504,9 +503,7 @@ pub(crate) fn dialog_focusable<D: Semantics>(doc: &D, locale: Locale, out: &mut 
         if !matches!(doc.role(n).as_deref(), Some("dialog" | "alertdialog")) {
             continue;
         }
-        if descendants(n)
-            .any(|d| d.kind() == NodeKind::Element && fokussierbar(d) && !deaktiviert(d))
-        {
+        if descendants(n).any(|d| d.kind() == NodeKind::Element && focusable(d) && !disabled(d)) {
             continue;
         }
         out.push(

@@ -17,20 +17,23 @@
 //! enforcement engine:
 //! - Only `<meta http-equiv>` CSP (no HTTP header — this checker only
 //!   ever sees a single HTML document, no response headers).
-//! - Only the `'unsafe-inline'` keyword is treated as "allows inline" —
-//!   a real browser also allows a matching `nonce-*`/hash source, but no
-//!   corpus fixture exercises that combination for this check, and
-//!   guessing at nonce/hash matching semantics here would be exactly the
-//!   kind of extrapolation `rules/README.md` warns against.
-//! - `script-src`/`style-src`, each falling back to `default-src` if
-//!   absent (CSP3 §6.1's fetch-directive fallback list) — the only two
-//!   fallback chains any corpus fixture exercises.
+//! - Inline `<script>`/`<style>` follow CSP3 "Does a source list allow all
+//!   inline behavior" and the nonce/hash checks: a `'nonce-…'` source
+//!   equal to the element's `nonce` attribute allows it; `'unsafe-inline'`
+//!   is ignored as soon as the list carries a nonce or hash source (and,
+//!   for scripts, `'strict-dynamic'`).
+//! - Hash sources are **not evaluated**: no hashing dependency is
+//!   justified for this check. An inline element that a hash source might
+//!   allow is reported as `Info` ("not evaluated") instead of a warning.
+//! - Fallback chains: `script-src-elem`/`script-src-attr` →
+//!   `script-src` → `default-src`, and the `style-src-*` analogue.
 //! - Multiple `<meta>` CSP declarations are enforced cumulatively (like
-//!   multiple HTTP header policies would be): if *any* declared policy's
-//!   effective source list lacks `'unsafe-inline'`, the corresponding
-//!   inline content is blocked.
+//!   multiple HTTP header policies would be): if *any* declared policy
+//!   blocks the inline content, it is blocked.
 
-use csp_parse::{Keyword, SourceExpression, SourceList, parse_policy_list, parse_source_list};
+use csp_parse::{
+    Keyword, PolicyList, SourceExpression, SourceList, parse_policy_list, parse_source_list,
+};
 use html5_parser::{Document, NodeId, NodeKind};
 
 use crate::{Finding, Severity, SourceLocation};
@@ -41,30 +44,15 @@ const RULE_ID: &str = "csp.meta-enforcement";
 /// the document, then flags inline scripts/styles/event handlers/style
 /// attributes that a resulting policy would block.
 pub(crate) fn findings(document: &Document) -> Vec<Finding> {
-    let policy_contents = collect_meta_csp_contents(document, document.root());
-    if policy_contents.is_empty() {
+    let policies: Vec<PolicyList> = collect_meta_csp_contents(document, document.root())
+        .iter()
+        .map(|content| parse_policy_list(content))
+        .collect();
+    if policies.is_empty() {
         return Vec::new();
     }
-
-    let script_blocked = policy_contents
-        .iter()
-        .any(|content| directive_blocks_inline(content, "script-src"));
-    let style_blocked = policy_contents
-        .iter()
-        .any(|content| directive_blocks_inline(content, "style-src"));
-
-    if !script_blocked && !style_blocked {
-        return Vec::new();
-    }
-
     let mut findings = Vec::new();
-    collect_violations(
-        document,
-        document.root(),
-        script_blocked,
-        style_blocked,
-        &mut findings,
-    );
+    collect_violations(document, document.root(), &policies, &mut findings);
     findings
 }
 
@@ -100,55 +88,109 @@ fn collect_meta_csp_contents_into(document: &Document, id: NodeId, out: &mut Vec
     }
 }
 
-/// `true` if a `Content-Security-Policy` `content` value's effective
-/// source list for `fetch_directive` (`script-src`/`style-src`, falling
-/// back to `default-src`) does *not* contain `'unsafe-inline'` — i.e.
-/// inline content governed by that directive is blocked.
-fn directive_blocks_inline(policy_content: &str, fetch_directive: &str) -> bool {
-    let policy_list = parse_policy_list(policy_content);
-    policy_list.policies.iter().any(|policy| {
-        let directive = policy
-            .directives
-            .iter()
-            .find(|directive| directive.name.eq_ignore_ascii_case(fetch_directive))
-            .or_else(|| {
-                policy
-                    .directives
-                    .iter()
-                    .find(|directive| directive.name.eq_ignore_ascii_case("default-src"))
-            });
-        let Some(directive) = directive else {
-            // Neither the specific directive nor default-src is present:
-            // nothing restricts this fetch directive, so nothing is
-            // blocked by *this* policy.
-            return false;
-        };
-        let Some(raw_value) = &directive.raw_value else {
-            return true;
-        };
-        let source_list = parse_source_list(raw_value);
-        !source_list_allows_unsafe_inline(&source_list)
-    })
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Verdict {
+    Allowed,
+    /// Only a hash source could allow it; hashes are not evaluated.
+    HashUnverified,
+    Blocked,
 }
 
-fn source_list_allows_unsafe_inline(source_list: &SourceList) -> bool {
-    match source_list {
-        SourceList::None => false,
-        SourceList::Sources(entries) => entries.iter().any(|entry| {
-            matches!(
-                entry.expression,
-                Some(SourceExpression::Keyword(Keyword::UnsafeInline))
-            )
-        }),
-        _ => false,
+/// Which inline construct is checked: the fallback chain of fetch
+/// directives, and whether a `'strict-dynamic'` source disables
+/// `'unsafe-inline'` (scripts only).
+#[derive(Clone, Copy)]
+struct Kind {
+    chain: [&'static str; 3],
+    strict_dynamic_counts: bool,
+}
+
+const SCRIPT_ELEM: Kind = Kind {
+    chain: ["script-src-elem", "script-src", "default-src"],
+    strict_dynamic_counts: true,
+};
+const SCRIPT_ATTR: Kind = Kind {
+    chain: ["script-src-attr", "script-src", "default-src"],
+    strict_dynamic_counts: true,
+};
+const STYLE_ELEM: Kind = Kind {
+    chain: ["style-src-elem", "style-src", "default-src"],
+    strict_dynamic_counts: false,
+};
+const STYLE_ATTR: Kind = Kind {
+    chain: ["style-src-attr", "style-src", "default-src"],
+    strict_dynamic_counts: false,
+};
+
+/// Combines the verdicts of all declared policies for one inline
+/// construct. `nonce` is the element's `nonce` attribute, if any.
+fn verdict(policies: &[PolicyList], kind: Kind, nonce: Option<&str>) -> Verdict {
+    let mut result = Verdict::Allowed;
+    for policy in policies.iter().flat_map(|list| &list.policies) {
+        let directive = kind.chain.iter().find_map(|name| {
+            policy
+                .directives
+                .iter()
+                .find(|directive| directive.name.eq_ignore_ascii_case(name))
+        });
+        // Neither the specific directive nor default-src is present:
+        // nothing restricts this fetch directive in *this* policy.
+        let Some(directive) = directive else {
+            continue;
+        };
+        let Some(raw_value) = &directive.raw_value else {
+            return Verdict::Blocked;
+        };
+        match source_list_verdict(&parse_source_list(raw_value), kind, nonce) {
+            Verdict::Blocked => return Verdict::Blocked,
+            Verdict::HashUnverified => result = Verdict::HashUnverified,
+            Verdict::Allowed => {}
+        }
+    }
+    result
+}
+
+fn source_list_verdict(source_list: &SourceList, kind: Kind, nonce: Option<&str>) -> Verdict {
+    let SourceList::Sources(entries) = source_list else {
+        return Verdict::Blocked;
+    };
+    let mut has_nonce_or_hash = false;
+    let mut has_hash = false;
+    let mut unsafe_inline = false;
+    let mut strict_dynamic = false;
+    for expression in entries.iter().filter_map(|entry| entry.expression.as_ref()) {
+        match expression {
+            SourceExpression::Nonce(value) => {
+                if nonce == Some(value.as_str()) {
+                    return Verdict::Allowed;
+                }
+                has_nonce_or_hash = true;
+            }
+            SourceExpression::Hash(_) => {
+                has_nonce_or_hash = true;
+                has_hash = true;
+            }
+            SourceExpression::Keyword(Keyword::UnsafeInline) => unsafe_inline = true,
+            SourceExpression::Keyword(Keyword::StrictDynamic) => strict_dynamic = true,
+            _ => {}
+        }
+    }
+    // CSP3: 'unsafe-inline' is ignored when the list has a nonce or hash
+    // source (or 'strict-dynamic', for scripts).
+    let ignored = has_nonce_or_hash || (kind.strict_dynamic_counts && strict_dynamic);
+    if unsafe_inline && !ignored {
+        Verdict::Allowed
+    } else if has_hash {
+        Verdict::HashUnverified
+    } else {
+        Verdict::Blocked
     }
 }
 
 fn collect_violations(
     document: &Document,
     id: NodeId,
-    script_blocked: bool,
-    style_blocked: bool,
+    policies: &[PolicyList],
     findings: &mut Vec<Finding>,
 ) {
     let node = document.node(id);
@@ -161,67 +203,96 @@ fn collect_violations(
             column: position.column,
             byte_offset: position.byte_offset,
         });
+        let nonce = attributes
+            .iter()
+            .find(|attribute| attribute.name.eq_ignore_ascii_case("nonce"))
+            .map(|attribute| attribute.value.as_str());
 
-        if script_blocked {
-            if name.eq_ignore_ascii_case("script")
-                && !attributes
-                    .iter()
-                    .any(|attribute| attribute.name.eq_ignore_ascii_case("src"))
+        if name.eq_ignore_ascii_case("script")
+            && !attributes
+                .iter()
+                .any(|attribute| attribute.name.eq_ignore_ascii_case("src"))
+        {
+            report(
+                verdict(policies, SCRIPT_ELEM, nonce),
+                "Inline script violates Content Security Policy (meta tag): blocked by \
+                 \"script-src\" directive (missing \"'unsafe-inline'\" or nonce/hash)."
+                    .to_owned(),
+                location,
+                findings,
+            );
+        }
+        // Attributes can only be allowed by 'unsafe-inline' (nonces do not
+        // apply; 'unsafe-hashes' is not evaluated).
+        for attribute in attributes {
+            if attribute.name.len() > 2
+                && attribute.name.as_bytes()[0..2].eq_ignore_ascii_case(b"on")
             {
-                findings.push(finding(
-                    "Inline script violates Content Security Policy (meta tag): blocked by \
-                     \"script-src\" directive (missing \"'unsafe-inline'\" or nonce/hash)."
-                        .to_owned(),
+                report(
+                    verdict(policies, SCRIPT_ATTR, None),
+                    format!(
+                        "Event handler attribute \"{}\" violates Content Security Policy \
+                         (meta tag): blocked by \"script-src\" directive.",
+                        attribute.name
+                    ),
                     location,
-                ));
-            }
-            for attribute in attributes {
-                if attribute.name.len() > 2
-                    && attribute.name.as_bytes()[0..2].eq_ignore_ascii_case(b"on")
-                {
-                    findings.push(finding(
-                        format!(
-                            "Event handler attribute \"{}\" violates Content Security Policy \
-                             (meta tag): blocked by \"script-src\" directive.",
-                            attribute.name
-                        ),
-                        location,
-                    ));
-                }
+                    findings,
+                );
             }
         }
 
-        if style_blocked {
-            if name.eq_ignore_ascii_case("style") {
-                findings.push(finding(
-                    "Inline style violates Content Security Policy (meta tag): blocked by \
-                     \"style-src\" directive (missing \"'unsafe-inline'\" or nonce/hash)."
-                        .to_owned(),
-                    location,
-                ));
-            }
-            if attributes
-                .iter()
-                .any(|attribute| attribute.name.eq_ignore_ascii_case("style"))
-            {
-                findings.push(finding(
-                    "The \"style\" attribute violates Content Security Policy (meta tag): \
-                     blocked by \"style-src\" directive."
-                        .to_owned(),
-                    location,
-                ));
-            }
+        if name.eq_ignore_ascii_case("style") {
+            report(
+                verdict(policies, STYLE_ELEM, nonce),
+                "Inline style violates Content Security Policy (meta tag): blocked by \
+                 \"style-src\" directive (missing \"'unsafe-inline'\" or nonce/hash)."
+                    .to_owned(),
+                location,
+                findings,
+            );
+        }
+        if attributes
+            .iter()
+            .any(|attribute| attribute.name.eq_ignore_ascii_case("style"))
+        {
+            report(
+                verdict(policies, STYLE_ATTR, None),
+                "The \"style\" attribute violates Content Security Policy (meta tag): \
+                 blocked by \"style-src\" directive."
+                    .to_owned(),
+                location,
+                findings,
+            );
         }
     }
     for child in document.children(id) {
-        collect_violations(document, child, script_blocked, style_blocked, findings);
+        collect_violations(document, child, policies, findings);
     }
 }
 
-fn finding(message: String, location: Option<SourceLocation>) -> Finding {
+fn report(
+    verdict: Verdict,
+    message: String,
+    location: Option<SourceLocation>,
+    findings: &mut Vec<Finding>,
+) {
+    match verdict {
+        Verdict::Allowed => {}
+        Verdict::Blocked => findings.push(finding(message, Severity::Warning, location)),
+        Verdict::HashUnverified => findings.push(finding(
+            "Inline content is governed by a Content Security Policy (meta tag) with hash \
+             sources; hash matching is not evaluated, so whether it is allowed is unknown."
+                .to_owned(),
+            Severity::Info,
+            location,
+        )),
+    }
+}
+
+fn finding(message: String, severity: Severity, location: Option<SourceLocation>) -> Finding {
     Finding {
         rule_id: RULE_ID.to_owned(),
-        severity: Severity::Warning,
+        severity,
         message,
         location,
     }
@@ -332,5 +403,71 @@ mod tests {
             )
             .is_empty()
         );
+    }
+
+    const NONCE_META: &str = "<!doctype html><title>t</title>\
+         <meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'nonce-abc123'\">";
+
+    #[test]
+    fn matching_nonce_allows_inline_script() {
+        assert!(
+            csp_findings(&format!(
+                "{NONCE_META}<script nonce=\"abc123\">alert(1)</script>"
+            ))
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn mismatching_nonce_is_flagged() {
+        let findings = csp_findings(&format!(
+            "{NONCE_META}<script nonce=\"other\">alert(1)</script>"
+        ));
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].severity, crate::Severity::Warning);
+    }
+
+    #[test]
+    fn missing_nonce_is_flagged() {
+        assert_eq!(
+            csp_findings(&format!("{NONCE_META}<script>alert(1)</script>")).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn unsafe_inline_is_ignored_when_nonce_present() {
+        let findings = csp_findings(
+            "<!doctype html><title>t</title>\
+             <meta http-equiv=\"Content-Security-Policy\" \
+             content=\"script-src 'unsafe-inline' 'nonce-abc123'\">\
+             <script>alert(1)</script>",
+        );
+        assert_eq!(findings.len(), 1);
+    }
+
+    #[test]
+    fn matching_nonce_allows_inline_style_via_default_src() {
+        assert!(
+            csp_findings(
+                "<!doctype html><title>t</title>\
+                 <meta http-equiv=\"Content-Security-Policy\" \
+                 content=\"default-src 'nonce-abc123'\">\
+                 <style nonce=\"abc123\">body{color:red}</style>"
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn hash_source_downgrades_to_info() {
+        let findings = csp_findings(
+            "<!doctype html><title>t</title>\
+             <meta http-equiv=\"Content-Security-Policy\" \
+             content=\"script-src 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='\">\
+             <script>alert(1)</script>",
+        );
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].severity, crate::Severity::Info);
     }
 }

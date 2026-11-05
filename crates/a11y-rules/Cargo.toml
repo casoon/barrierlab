@@ -18,6 +18,7 @@ de = []
 
 [dependencies]
 stylesheet-parse = { workspace = true }
+style-cascade = { workspace = true }
 a11y-dom = { workspace = true }
 a11y-report = { workspace = true }
 

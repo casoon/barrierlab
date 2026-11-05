@@ -4,7 +4,7 @@
 //! Das Paket nimmt rohen CSS-Text entgegen — aus den Stylesheets eines
 //! Browsers, aus `dist/*.css`, aus `<style>` — und liefert Regeln mit
 //! serialisierten Präludien und Deklarationen. Es holt nichts, es bewertet
-//! nichts. Tokenisiert wird mit dem Tokenizer aus `media-query-parse`.
+//! nichts. Tokenisiert wird mit dem Tokenizer aus `css-tokenize`.
 //!
 //! Fehlerbehandlung wie in der Spezifikation: Eine ungültige Deklaration
 //! fällt bis zum nächsten `;` derselben Ebene weg, offene Blöcke schließt das
@@ -36,7 +36,7 @@ mod serialize;
 
 use std::ops::Range;
 
-use media_query_parse::tokenizer::{Token, tokenize};
+use css_tokenize::{Token, tokenize};
 
 use crate::parser::{Block, Parser, Raw, components, contains_bad_tokens};
 use crate::serialize::{Writer, serialize};

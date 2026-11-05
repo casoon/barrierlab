@@ -93,6 +93,7 @@ impl ColumnBuilder {
             self.tag_names,
             self.attr_names,
         )
+        .expect("Testspalten sind gültig")
     }
 }
 

@@ -11,7 +11,7 @@ use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
 use crate::locale::{Locale, pick};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 /// Was über eine Regel unabhängig vom Host feststeht.
 ///
@@ -37,8 +37,7 @@ pub struct Meta {
     pub severity: Severity,
     /// Hinweis zur Regel, englisch. Für andere Sprachen [`Meta::help_in`].
     pub help: &'static str,
-    /// Derselbe Hinweis auf Deutsch. Nur mit dem Feature `de`.
-    #[cfg(feature = "de")]
+    /// Derselbe Hinweis auf Deutsch. Ohne das Feature `de` leer.
     pub help_de: &'static str,
 }
 

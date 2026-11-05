@@ -3,8 +3,7 @@
 //! surrounding `'...'` quotes, is what Subresource Integrity's unquoted
 //! `integrity=""` hash tokens (e.g. `sha256-...`) also use. `csp-parse`'s
 //! `hash-source` (the quoted `'sha256-...'` form used inside a
-//! `source-list`) is built on top of this module -- see
-//! `plan/DECISIONS.md`, 2026-08-21 and 2026-08-22 entries.
+//! `source-list`) is built on top of this module.
 
 /// One of the three hash algorithms CSP3 recognizes (`hash-algorithm`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

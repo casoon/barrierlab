@@ -1,6 +1,6 @@
 //! Tokenizer for XPath 1.0 expressions, implementing the lexical
 //! disambiguation rules of [XPath 1.0 §3.7](https://www.w3.org/TR/1999/REC-xpath-19991116/#exprlex)
-//! verbatim (see `plan/02-lexer-parser.md` for the four numbered rules):
+//! verbatim (the four numbered rules):
 //!
 //! 1. If there is a preceding token and it is not one of `@`, `::`, `(`,
 //!    `[`, `,` or an `Operator`, then `*` must be recognized as

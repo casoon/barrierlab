@@ -1,12 +1,9 @@
 //! The `http://whattf.org/datatype-draft` custom RELAX NG datatype library
 //! used by the vendored vnu HTML5 schema (Phase 05c). Each submodule owns
-//! one batch of `w:*` types (see `plan/05c-datatype-library.md` for the
-//! batch split and `plan/05c-research-group-a.md`/`05c-research-group-b.md`
-//! for the per-type research this was implemented from); this module ties
+//! one batch of `w:*` types; this module ties
 //! them all together into the actual [`relax_ng::DatatypeLibrary`] impl.
 //!
-//! **vnu-parity as the default** (see `plan/05c-datatype-library.md`,
-//! "Verbindliches Prinzip"): every type replicates vnu's actual behavior,
+//! **vnu-parity as the default** : every type replicates vnu's actual behavior,
 //! including documented vnu-specific quirks/bugs, rather than a "corrected"
 //! reading of the underlying spec — `html-conform` is positioned as
 //! vnu-comparable, not vnu-stricter-or-looser.

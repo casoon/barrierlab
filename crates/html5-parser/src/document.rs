@@ -7,7 +7,7 @@
 // `html-conform`'s existing `src/infoset.rs::normalize()` already adapts
 // (currently written against its current HTML5-parsing dependency's tree
 // shape) that switching `normalize()` over to this crate should need only
-// modest changes. See plan/03-tree-construction.md, "Zieldatenmodell".
+// modest changes.
 
 use std::num::NonZeroU32;
 
@@ -30,11 +30,19 @@ impl NodeId {
     fn index(self) -> usize {
         self.0.get() as usize
     }
+
+    /// The node's arena index as a plain number, unique within its
+    /// [`Document`] and stable for that document's lifetime. Ids are
+    /// handed out in allocation order, which is *not* document order
+    /// (foster parenting and the adoption agency move nodes after the
+    /// fact).
+    pub fn as_u32(self) -> u32 {
+        self.0.get()
+    }
 }
 
 /// An HTML attribute, resolved to its (possibly foreign-content-adjusted)
-/// namespace during tree construction — see plan/03-tree-construction.md's
-/// Foreign-Content-Dispatch step.
+/// namespace during tree construction (Foreign-Content-Dispatch).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attribute {
     pub name: String,
@@ -148,9 +156,7 @@ impl Node {
 /// Mutation (`new_node`/`append_child`/...) stays crate-internal — it's
 /// `tree_builder`'s job to build the tree in the first place, following
 /// the spec-level insertion algorithms ("insert a comment", "insert an
-/// HTML element", table foster parenting, ...), see
-/// plan/03-tree-construction.md's "gemeinsame
-/// Tree-Construction-Infrastruktur" step.
+/// HTML element", table foster parenting, ...).
 #[derive(Debug)]
 pub struct Document {
     nodes: Vec<Node>,
@@ -177,6 +183,13 @@ impl Document {
 
     /// Returns the node identified by `id`: its kind, source position, and
     /// tree-navigation links (via [`Document::parent`]/[`Document::children`]).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` is out of range for this document, which is what
+    /// happens with a [`NodeId`] taken from a different `Document`. A
+    /// foreign id that happens to be in range is not detected: it silently
+    /// names an unrelated node. Only pass ids obtained from this document.
     pub fn node(&self, id: NodeId) -> &Node {
         &self.nodes[id.index()]
     }

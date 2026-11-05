@@ -3,8 +3,7 @@
 //! used by the vendored vnu HTML5 schema.
 //!
 //! Source of truth: `validator/validator`, Java package
-//! `src/nu/validator/datatype/` (see `plan/05c-research-group-b.md`, items
-//! 11, 12, 20, 21, 22, 23, 26). Per `plan/05c-datatype-library.md`'s
+//! `src/nu/validator/datatype/`. Per the
 //! "vnu-Parität als Default" principle, these functions replicate vnu's
 //! actual runtime behavior — including documented vnu-specific no-op stubs
 //! and the accepted, temporary `w:source-size-list` media-condition gap —
@@ -25,13 +24,13 @@ fn is_html_whitespace(c: char) -> bool {
 }
 
 /// `w:email-address` → `EmailAddress.java` — **No-Op-Stub in vnu**
-/// (`plan/05c-research-group-b.md` item 11): vnu's `checkValid` for this
+/// : vnu's `checkValid` for this
 /// type is a literal empty method body (historically a
 /// `// TODO Auto-generated method stub` that was never filled in). It never
 /// throws, so it accepts every string, including the empty string — there is
 /// no WHATWG "valid e-mail address" regex implemented anywhere in vnu for
 /// this type. Per the "vnu-Parität als Default" principle
-/// (`plan/05c-datatype-library.md`), this is replicated 1:1 as a genuine,
+/// , this is replicated 1:1 as a genuine,
 /// intentional no-op — this is the finished, intended behavior, not an
 /// unfinished TODO on our side.
 pub(crate) fn check_email_address(_value: &str) -> Result<(), String> {
@@ -39,7 +38,7 @@ pub(crate) fn check_email_address(_value: &str) -> Result<(), String> {
 }
 
 /// `w:email-address-list` → `EmailAddressList.java` — **also a No-Op-Stub**
-/// (`plan/05c-research-group-b.md` item 12): identical situation to
+/// : identical situation to
 /// [`check_email_address`] — vnu's `checkValid` never validates anything,
 /// so this accepts every string unconditionally, by deliberate vnu-parity
 /// design, not because the check is unimplemented.
@@ -48,7 +47,7 @@ pub(crate) fn check_email_address_list(_value: &str) -> Result<(), String> {
 }
 
 /// `w:color` → `Color.java` — **No-Op-Stub in vnu**
-/// (`plan/05c-research-group-b.md` item 20): like `w:email-address`, vnu's
+/// : like `w:email-address`, vnu's
 /// `checkValid` has an empty method body and validates nothing. Used for
 /// `<link rel="mask-icon" color="">` and `<meta name="theme-color"
 /// content="">`.
@@ -87,7 +86,7 @@ fn check_unsigned_integer(s: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `w:circle` → `Circle.java` (`plan/05c-research-group-b.md` item 21):
+/// `w:circle` → `Circle.java`:
 /// used by `<area shape="circle" coords="">`. Exactly three
 /// comma-separated values (x, y, radius); x and y are signed integers,
 /// radius is an unsigned (non-negative) integer.
@@ -102,7 +101,7 @@ pub(crate) fn check_circle(value: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `w:polyline` → `Polyline.java` (`plan/05c-research-group-b.md` item 22):
+/// `w:polyline` → `Polyline.java`:
 /// used by `<area shape="poly" coords="">`. At least six comma-separated
 /// values, an even count overall, every value a signed integer.
 pub(crate) fn check_polyline(value: &str) -> Result<(), String> {
@@ -121,8 +120,8 @@ pub(crate) fn check_polyline(value: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// `w:rectangle` → `Rectangle.java` (`plan/05c-research-group-b.md` item
-/// 23): used by `<area shape="rect" coords="">`. Exactly four
+/// `w:rectangle` → `Rectangle.java`:
+/// used by `<area shape="rect" coords="">`. Exactly four
 /// comma-separated signed integers (left, top, right, bottom), plus the
 /// non-degenerate-rectangle constraints `left < right` and `top < bottom`.
 ///
@@ -162,14 +161,14 @@ pub(crate) fn check_rectangle(value: &str) -> Result<(), String> {
 }
 
 /// CSS math function names allowed to terminate a `w:source-size-list` entry
-/// (case-insensitive), per `plan/05c-research-group-b.md` item 26.
+/// (case-insensitive).
 const SOURCE_SIZE_MATH_FUNCTIONS: &[&str] = &[
     "calc", "min", "max", "clamp", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "pow",
     "sqrt", "hypot", "log", "exp", "abs", "sign",
 ];
 
 /// CSS `<length>` units, including the CSS Values 4 viewport-unit variants,
-/// per `plan/05c-research-group-b.md` item 26 (originally researched for
+/// (originally researched for
 /// `w:source-size-list`; also reused by `w:media-query`'s `width`/`height`
 /// media-feature value-type check — the CSS `<length>` production is the
 /// same type in both contexts).
@@ -397,19 +396,16 @@ fn strip_surrounding_css_comments(s: &str) -> &str {
     s
 }
 
-/// `w:source-size-list` → `SourceSizeList.java` (`plan/05c-research-group-b.md`
-/// item 26): the `sizes=""` microsyntax on `<img>`/`<source>` for responsive
+/// `w:source-size-list` → `SourceSizeList.java`:
+/// the `sizes=""` microsyntax on `<img>`/`<source>` for responsive
 /// images — a comma-separated list of `(media-condition) length` entries,
 /// where the final entry may omit its media condition, plus the
 /// not-yet-stabilized `sizes="auto[, ...]"` feature.
 ///
-/// **Known, documented, temporary limitation** (see
-/// `plan/05c-datatype-library.md`'s "Risiken" section and
-/// `plan/05c-research-group-b.md` item 26): vnu delegates the actual
+/// **Known, documented, temporary limitation**: vnu delegates the actual
 /// media-condition grammar of each entry to its embedded CSS engine's
 /// `MediaCondition` parser. `media-query-parse` (the sister project this
-/// gap was waiting on) is now published (see `plan/DECISIONS.md`, the
-/// `w:media-query` entries) and used for the separate `w:media-query`
+/// gap was waiting on) is now published and used for the separate `w:media-query`
 /// datatype (`src/datatypes/media_query.rs`) — but it exposes no standalone
 /// `<media-condition>`-fragment parser (only `parse_media_query`/
 /// `parse_media_query_list`, which parse the full `<media-query>` grammar

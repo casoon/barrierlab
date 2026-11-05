@@ -4,7 +4,7 @@
 // `src/infoset.rs::normalize()` to consume, per Step 1 of this crate's
 // two-stage scope (see `CLAUDE.md`). `Tokenizer`/`TreeBuilder` and
 // everything else stay crate-internal; there's no commitment to their
-// shape yet. See plan/DECISIONS.md.
+// shape yet.
 
 mod document;
 mod entities;
@@ -45,10 +45,10 @@ pub struct ParseResult {
 /// elements") isn't implied by the loop simply ending.
 ///
 /// Returns [`ParseResult`], not a bare [`Document`], as of Phase 07
-/// (`plan/07-parse-errors.md`) — `errors` covers every tokenizer-level
+/// — `errors` covers every tokenizer-level
 /// parse error (`src/tokenizer.rs`'s `error()` call sites) plus, as of
-/// Phase 08 (`plan/08-tree-construction-errors.md`), the
-/// tree-construction-level (§13.2.6) conditions listed there. Both
+/// Phase 08, the
+/// tree-construction-level (§13.2.6) conditions listed in [`ParseErrorKind`]. Both
 /// sources are merged and sorted by source position, so `errors` is
 /// always in document order regardless of which stage produced each
 /// entry (the two stages interleave: the tokenizer runs ahead of the
@@ -219,8 +219,7 @@ mod tests {
         );
     }
 
-    // The test matrix from plan/03-tree-construction.md's "Testmatrix"
-    // step: cases ported from html-conform's own src/infoset.rs test
+    // The tree-construction test matrix: cases ported from html-conform's own src/infoset.rs test
     // matrix (so the eventual switch from its current HTML5-parsing
     // dependency to this crate is behavior-preserving), plus spec-
     // derived cases html-conform doesn't cover at all (adoption agency,
@@ -730,7 +729,7 @@ mod tests {
     }
 }
 
-/// Phase 08 (`plan/08-tree-construction-errors.md`): one minimal
+/// Phase 08: one minimal
 /// trigger per tree-construction [`ParseErrorKind`] variant, mirroring
 /// Phase 07's per-variant table test for the tokenizer-level kinds.
 ///

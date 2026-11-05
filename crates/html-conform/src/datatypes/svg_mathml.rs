@@ -2,8 +2,7 @@
 //! SVG 1.1/MathML 3 schema modules (`schema/svg11/`, `schema/mml3/`,
 //! vendored by `xtask/vendor-svg-mathml.sh`) reference that the HTML5
 //! schema's own modules never do (confirmed by a full-text `w:` grep across
-//! every vendored `.rnc` file before implementing anything — see
-//! `plan/DECISIONS.md`'s SVG/MathML entry).
+//! every vendored `.rnc` file before implementing anything).
 
 /// `w:xml-name` (`nu.validator.datatype.XmlName`): XML 1.0's `Name`
 /// production (§2.3) — `NameStartChar (NameChar)*` — using the *original*
@@ -194,8 +193,7 @@ fn is_xml_name_trail_char(c: char) -> bool {
 /// on essentially every well-formed or clearly-malformed input, but may
 /// diverge from vnu's exact edge-case leniency in ways neither this
 /// crate's own test suite nor the vendored corpus can currently surface
-/// (zero corpus fixtures exercise SVG path-data content at all — see
-/// `plan/DECISIONS.md`'s SVG/MathML entry). A documented, deliberate
+/// (zero corpus fixtures exercise SVG path-data content at all). A documented, deliberate
 /// narrower scope, not a silently-incomplete implementation.
 pub(crate) fn check_svg_pathdata(value: &str) -> Result<(), String> {
     let mut parser = PathParser {

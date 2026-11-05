@@ -26,19 +26,19 @@ use a11y_dom::{
 };
 use a11y_report::{Evidence, Finding, Location, Severity};
 
-use crate::darstellung;
-use crate::heuristik;
-use crate::locale::{Locale, pick, tr};
+use crate::heuristics;
+use crate::locale::{Locale, de_text, pick, tr};
+use crate::presentation;
 use crate::registry::{Meta, RenderingRule};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
 /// Relative Leuchtdichte nach WCAG 2.x, Definition „relative luminance".
-fn luminanz(c: Color) -> f64 {
-    fn kanal(v: u8) -> f64 {
+fn luminance(c: Color) -> f64 {
+    fn channel(v: u8) -> f64 {
         let s = f64::from(v) / 255.0;
         if s <= 0.03928 {
             s / 12.92
@@ -46,14 +46,14 @@ fn luminanz(c: Color) -> f64 {
             ((s + 0.055) / 1.055).powf(2.4)
         }
     }
-    0.2126 * kanal(c.r) + 0.7152 * kanal(c.g) + 0.0722 * kanal(c.b)
+    0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
 }
 
 /// Kontrastverhältnis nach WCAG 2.x, 1,0 bis 21,0.
-pub(crate) fn verhaeltnis(vorn: Color, hinten: Color) -> f64 {
-    let (a, b) = (luminanz(vorn), luminanz(hinten));
-    let (hell, dunkel) = if a >= b { (a, b) } else { (b, a) };
-    (hell + 0.05) / (dunkel + 0.05)
+pub(crate) fn ratio(front: Color, back: Color) -> f64 {
+    let (a, b) = (luminance(front), luminance(back));
+    let (light, dark) = if a >= b { (a, b) } else { (b, a) };
+    (light + 0.05) / (dark + 0.05)
 }
 
 /// Legt eine teildurchsichtige Farbe über eine deckende.
@@ -61,16 +61,16 @@ pub(crate) fn verhaeltnis(vorn: Color, hinten: Color) -> f64 {
 /// Der Host löst die Transparenz des *Hintergrunds* auf, nicht die des
 /// Vordergrunds: `color: rgba(0,0,0,.5)` bleibt als solches stehen und wird
 /// erst hier verrechnet.
-pub(crate) fn ueber(vorn: Color, hinten: Color) -> Color {
-    if vorn.a == 255 {
-        return vorn;
+pub(crate) fn over(front: Color, back: Color) -> Color {
+    if front.a == 255 {
+        return front;
     }
-    let a = f64::from(vorn.a) / 255.0;
-    let misch = |v: u8, h: u8| (f64::from(v) * a + f64::from(h) * (1.0 - a)).round() as u8;
+    let a = f64::from(front.a) / 255.0;
+    let mix = |v: u8, h: u8| (f64::from(v) * a + f64::from(h) * (1.0 - a)).round() as u8;
     Color {
-        r: misch(vorn.r, hinten.r),
-        g: misch(vorn.g, hinten.g),
-        b: misch(vorn.b, hinten.b),
+        r: mix(front.r, back.r),
+        g: mix(front.g, back.g),
+        b: mix(front.b, back.b),
         a: 255,
     }
 }
@@ -79,32 +79,32 @@ pub(crate) fn ueber(vorn: Color, hinten: Color) -> Color {
 ///
 /// Gerechnet wird in CSS-Pixeln, weil der berechnete Stil sie liefert:
 /// 18 pt sind 24 px, 14 pt sind 18,66 px.
-fn ist_grosser_text(stil: &ComputedStyle) -> bool {
-    let Some(px) = stil.font_size_px else {
+fn is_large_text(style: &ComputedStyle) -> bool {
+    let Some(px) = style.font_size_px else {
         return false;
     };
-    let fett = stil.font_weight.is_some_and(|w| w >= 700);
-    px >= 24.0 || (fett && px >= 18.66)
+    let bold = style.font_weight.is_some_and(|w| w >= 700);
+    px >= 24.0 || (bold && px >= 18.66)
 }
 
 /// Ob dieses Element selbst Text trägt — nicht, ob irgendwo darunter Text
 /// steht. Der Kontrast gehört an das Element, dessen Farbe gilt.
-fn traegt_text<'a, N: Node<'a>>(n: N) -> bool {
+fn carries_text<'a, N: Node<'a>>(n: N) -> bool {
     n.children()
         .any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty())
 }
 
 /// Ob das Element überhaupt dargestellt wird. `display: none` und
 /// `visibility: hidden` sind kein Kontrastproblem.
-fn wird_dargestellt(stil: &ComputedStyle) -> bool {
-    stil.display.as_deref() != Some("none") && stil.visibility.as_deref() != Some("hidden")
+fn is_rendered(style: &ComputedStyle) -> bool {
+    style.display.as_deref() != Some("none") && style.visibility.as_deref() != Some("hidden")
 }
 
 /// Teil eines inaktiven Bedienelements: `disabled` an einem Formularelement
 /// oder einem `fieldset` darüber, oder `aria-disabled="true"`. WCAG 1.4.3,
 /// 1.4.6 und 1.4.11 nehmen inaktive Bedienelemente ausdrücklich aus (ACT
 /// afw4f7: „not part of a disabled widget").
-fn inaktiv<'a, N: Node<'a>>(n: N) -> bool {
+fn inactive<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n).chain(ancestors(n)).any(|a| {
         a.attr("aria-disabled")
             .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
@@ -117,40 +117,40 @@ fn inaktiv<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Was eine Messung am Element ergibt.
-enum Messung {
+enum Measurement {
     /// Eine Hintergrundfarbe gilt: Verhältnis und ob der Text groß ist.
-    Wert(f64, bool),
+    Value(f64, bool),
     /// Abgetasteter Hintergrund: Median und 40. Perzentil der Verhältnisse
     /// über die Stichprobe, und ob der Text groß ist.
-    Spanne { median: f64, p40: f64, gross: bool },
+    Span { median: f64, p40: f64, large: bool },
     /// Nicht bestimmbar, mit Grund.
-    Unbestimmt(Grund),
+    Undetermined(Reason),
 }
 
-enum Grund {
+enum Reason {
     /// Vorder- oder Hintergrundfarbe fehlt, und keine Abtastung hilft.
-    Farbe,
+    Color,
     /// Ein fixiertes oder klebendes fremdes Element überdeckt die Mitte.
-    Verdeckt,
+    Covered,
 }
 
-fn verhaeltnis_lum(a: f64, b: f64) -> f64 {
-    let (hell, dunkel) = if a >= b { (a, b) } else { (b, a) };
-    (hell + 0.05) / (dunkel + 0.05)
+fn ratio_lum(a: f64, b: f64) -> f64 {
+    let (light, dark) = if a >= b { (a, b) } else { (b, a) };
+    (light + 0.05) / (dark + 0.05)
 }
 
 /// Median und 40. Perzentil der Verhältnisse zwischen Textfarbe und den
 /// abgetasteten Pixeln — wie auditmysite vor der Umstellung: Die Glyphen
 /// selbst liegen in der Stichprobe und ziehen die unteren Werte nach unten,
 /// deshalb nicht das Minimum.
-fn spanne(vorn: Color, stichprobe: &[f64]) -> Option<(f64, f64)> {
-    if stichprobe.is_empty() {
+fn span(front: Color, sample: &[f64]) -> Option<(f64, f64)> {
+    if sample.is_empty() {
         return None;
     }
     // Halbdurchsichtige Schrift wird gegen Weiß verrechnet; der genaue
     // Untergrund ist hier gerade unbekannt.
-    let vorn = luminanz(ueber(
-        vorn,
+    let front = luminance(over(
+        front,
         Color {
             r: 255,
             g: 255,
@@ -158,13 +158,13 @@ fn spanne(vorn: Color, stichprobe: &[f64]) -> Option<(f64, f64)> {
             a: 255,
         },
     ));
-    let mut v: Vec<f64> = stichprobe
+    let mut v: Vec<f64> = sample
         .iter()
-        .map(|l| verhaeltnis_lum(vorn, l.clamp(0.0, 1.0)))
+        .map(|l| ratio_lum(front, l.clamp(0.0, 1.0)))
         .collect();
     v.sort_by(f64::total_cmp);
-    let bei = |q: f64| v[((v.len() as f64 * q) as usize).min(v.len() - 1)];
-    Some((bei(0.5), bei(0.4)))
+    let quantile = |q: f64| v[((v.len() as f64 * q) as usize).min(v.len() - 1)];
+    Some((quantile(0.5), quantile(0.4)))
 }
 
 /// Misst den Kontrast eines Elements, das selbst Text trägt. `None`, wenn es
@@ -173,104 +173,106 @@ fn spanne(vorn: Color, stichprobe: &[f64]) -> Option<(f64, f64)> {
 ///
 /// Text unter `aria-hidden` wird gemessen: WCAG 1.4.3 gilt für sichtbaren
 /// Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn aus (#395).
-fn messe<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Messung> {
-    if !traegt_text(n) || inaktiv(n) {
+fn measure<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Measurement> {
+    if !carries_text(n) || inactive(n) {
         return None;
     }
-    let stil = doc.computed_style(n)?;
-    if !wird_dargestellt(&stil) || doc.visually_hidden(n) == Some(true) {
+    let style = doc.computed_style(n)?;
+    if !is_rendered(&style) || doc.visually_hidden(n) == Some(true) {
         return None;
     }
     if doc.layout(n).and_then(|l| l.obscured) == Some(true) {
-        return Some(Messung::Unbestimmt(Grund::Verdeckt));
+        return Some(Measurement::Undetermined(Reason::Covered));
     }
-    let gross = ist_grosser_text(&stil);
-    Some(match (stil.color, stil.background_color) {
-        (Some(vorn), Some(hinten)) => {
-            Messung::Wert(verhaeltnis(ueber(vorn, hinten), hinten), gross)
-        }
-        (Some(vorn), None) => match doc
+    let large = is_large_text(&style);
+    Some(match (style.color, style.background_color) {
+        (Some(front), Some(back)) => Measurement::Value(ratio(over(front, back), back), large),
+        (Some(front), None) => match doc
             .sampled_backdrop(n)
-            .and_then(|b| spanne(vorn, &b.luminance))
+            .and_then(|b| span(front, &b.luminance))
         {
-            Some((median, p40)) => Messung::Spanne { median, p40, gross },
-            None => Messung::Unbestimmt(Grund::Farbe),
+            Some((median, p40)) => Measurement::Span { median, p40, large },
+            None => Measurement::Undetermined(Reason::Color),
         },
-        _ => Messung::Unbestimmt(Grund::Farbe),
+        _ => Measurement::Undetermined(Reason::Color),
     })
 }
 
-fn text_art(locale: Locale, gross: bool) -> &'static str {
-    if gross {
+fn text_kind(locale: Locale, large: bool) -> &'static str {
+    if large {
         pick!(locale, "large text", "großen Text")
     } else {
         pick!(locale, "normal text", "normalen Text")
     }
 }
 
-fn belege(wert: f64, schwelle: f64) -> [Evidence; 2] {
+fn evidences(value: f64, threshold: f64) -> [Evidence; 2] {
     [
-        Evidence::computed("contrast_ratio", format!("{wert:.2}")),
-        Evidence::computed("required_ratio", format!("{schwelle:.1}")),
+        Evidence::computed("contrast_ratio", format!("{value:.2}")),
+        Evidence::computed("required_ratio", format!("{threshold:.1}")),
     ]
 }
 
 /// Eine Prüfung gegen eine Schwelle — für 1.4.3 und 1.4.6 dieselbe.
-enum Urteil {
-    Besteht,
-    Verfehlt(f64),
+enum Verdict {
+    Passes,
+    Fails(f64),
     /// Abgetastet: Median besteht, das 40. Perzentil nicht.
-    Grenzwertig {
+    Borderline {
         median: f64,
         p40: f64,
     },
 }
 
-fn urteile(m: &Messung, schwelle_klein: f64, schwelle_gross: f64) -> Option<(Urteil, f64, bool)> {
+fn verdicts(
+    m: &Measurement,
+    threshold_small: f64,
+    threshold_large: f64,
+) -> Option<(Verdict, f64, bool)> {
     // Ohne Toleranz: Understanding 1.4.3 verlangt, das Verhältnis nicht zu
     // runden — 4,499:1 erreicht 4,5:1 nicht.
-    let knapp = |w: f64, s: f64| w < s;
+    let narrowly = |w: f64, s: f64| w < s;
     match *m {
-        Messung::Wert(w, gross) => {
-            let s = if gross {
-                schwelle_gross
+        Measurement::Value(w, large) => {
+            let s = if large {
+                threshold_large
             } else {
-                schwelle_klein
+                threshold_small
             };
             Some((
-                if knapp(w, s) {
-                    Urteil::Verfehlt(w)
+                if narrowly(w, s) {
+                    Verdict::Fails(w)
                 } else {
-                    Urteil::Besteht
+                    Verdict::Passes
                 },
                 s,
-                gross,
+                large,
             ))
         }
-        Messung::Spanne { median, p40, gross } => {
-            let s = if gross {
-                schwelle_gross
+        Measurement::Span { median, p40, large } => {
+            let s = if large {
+                threshold_large
             } else {
-                schwelle_klein
+                threshold_small
             };
-            let u = if knapp(median, s) {
-                Urteil::Verfehlt(median)
-            } else if knapp(p40, s) {
-                Urteil::Grenzwertig { median, p40 }
+            let u = if narrowly(median, s) {
+                Verdict::Fails(median)
+            } else if narrowly(p40, s) {
+                Verdict::Borderline { median, p40 }
             } else {
-                Urteil::Besteht
+                Verdict::Passes
             };
-            Some((u, s, gross))
+            Some((u, s, large))
         }
-        Messung::Unbestimmt(_) => None,
+        Measurement::Undetermined(_) => None,
     }
 }
 
-fn grenzwertig(
+fn borderline(
     id: &str,
     median: f64,
     p40: f64,
-    schwelle: f64,
+    threshold: f64,
     wcag: &str,
     locale: Locale,
     n: NodeId,
@@ -281,10 +283,10 @@ fn grenzwertig(
             locale,
             "The text lies over an image or gradient. Over most of its box the contrast \
              reaches {median:.2}:1, in darker or lighter parts only {p40:.2}:1 \
-             ({schwelle:.1}:1 required). Check it by hand.",
+             ({threshold:.1}:1 required). Check it by hand.",
             "Der Text liegt über einem Bild oder Verlauf. Über den größten Teil seines Kastens \
              erreicht der Kontrast {median:.2}:1, in helleren oder dunkleren Teilen nur \
-             {p40:.2}:1 (gefordert {schwelle:.1}:1). Von Hand prüfen."
+             {p40:.2}:1 (gefordert {threshold:.1}:1). Von Hand prüfen."
         ),
     )
     .with_severity(Severity::Medium)
@@ -292,31 +294,31 @@ fn grenzwertig(
     .with_evidence([
         Evidence::computed("contrast_ratio", format!("{median:.2}")),
         Evidence::computed("contrast_ratio_p40", format!("{p40:.2}")),
-        Evidence::computed("required_ratio", format!("{schwelle:.1}")),
+        Evidence::computed("required_ratio", format!("{threshold:.1}")),
     ])
     .at(at(n))
 }
 
 /// 1.4.3 (AA): 4,5:1, bei großem Text 3:1.
-fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let Some(messung) = messe(doc, n) else {
+        let Some(measurement) = measure(doc, n) else {
             continue;
         };
-        if let Messung::Unbestimmt(grund) = messung {
+        if let Measurement::Undetermined(reason) = measurement {
             // Rule 3: Nicht prüfbar ist nicht bestanden.
             out.push(
                 Finding::untested(
                     "contrast/text-undetermined",
-                    match grund {
-                        Grund::Farbe => pick!(
+                    match reason {
+                        Reason::Color => pick!(
                             locale,
                             "The contrast cannot be determined automatically — the host could \
                              not resolve the foreground or background colour. Check it by hand.",
                             "Der Kontrast ist automatisiert nicht bestimmbar — der Host konnte \
                              Vorder- oder Hintergrundfarbe nicht auflösen. Von Hand prüfen.",
                         ),
-                        Grund::Verdeckt => pick!(
+                        Reason::Covered => pick!(
                             locale,
                             "A fixed or sticky element covers this text, so its contrast cannot \
                              be determined. Check it by hand with the overlay closed.",
@@ -332,33 +334,33 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
             );
             continue;
         }
-        let Some((urteil, schwelle, gross)) = urteile(&messung, 4.5, 3.0) else {
+        let Some((verdict, threshold, large)) = verdicts(&measurement, 4.5, 3.0) else {
             continue;
         };
-        match urteil {
-            Urteil::Besteht => {}
-            Urteil::Verfehlt(wert) => out.push(
+        match verdict {
+            Verdict::Passes => {}
+            Verdict::Fails(value) => out.push(
                 Finding::fail(
                     "contrast/text-insufficient",
                     tr!(
                         locale,
-                        "The text reaches a contrast ratio of {wert:.2}:1; \
-                         {schwelle:.1}:1 is required for {}.",
-                        "Der Text erreicht ein Kontrastverhältnis von {wert:.2}:1, \
-                         gefordert sind {schwelle:.1}:1 für {}.",
-                        text_art(locale, gross)
+                        "The text reaches a contrast ratio of {value:.2}:1; \
+                         {threshold:.1}:1 is required for {}.",
+                        "Der Text erreicht ein Kontrastverhältnis von {value:.2}:1, \
+                         gefordert sind {threshold:.1}:1 für {}.",
+                        text_kind(locale, large)
                     ),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.4.3"])
-                .with_evidence(belege(wert, schwelle))
+                .with_evidence(evidences(value, threshold))
                 .at(at(n.id())),
             ),
-            Urteil::Grenzwertig { median, p40 } => out.push(grenzwertig(
+            Verdict::Borderline { median, p40 } => out.push(borderline(
                 "contrast/text-undetermined",
                 median,
                 p40,
-                schwelle,
+                threshold,
                 "1.4.3",
                 locale,
                 n.id(),
@@ -370,37 +372,40 @@ fn text_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 /// 1.4.6 (AAA): 7:1, bei großem Text 4,5:1. Gemeldet wird nur, was AA
 /// besteht — was schon 1.4.3 verfehlt oder dort offen ist, steht dort und
 /// nicht doppelt.
-fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn text_contrast_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let Some(messung) = messe(doc, n) else {
+        let Some(measurement) = measure(doc, n) else {
             continue;
         };
-        if !matches!(urteile(&messung, 4.5, 3.0), Some((Urteil::Besteht, _, _))) {
+        if !matches!(
+            verdicts(&measurement, 4.5, 3.0),
+            Some((Verdict::Passes, _, _))
+        ) {
             continue;
         }
-        let Some((urteil, aaa, gross)) = urteile(&messung, 7.0, 4.5) else {
+        let Some((verdict, aaa, large)) = verdicts(&measurement, 7.0, 4.5) else {
             continue;
         };
-        match urteil {
-            Urteil::Besteht => {}
-            Urteil::Verfehlt(wert) => out.push(
+        match verdict {
+            Verdict::Passes => {}
+            Verdict::Fails(value) => out.push(
                 Finding::fail(
                     "contrast/text-enhanced",
                     tr!(
                         locale,
-                        "The text reaches {wert:.2}:1; enhanced contrast (AAA) requires \
+                        "The text reaches {value:.2}:1; enhanced contrast (AAA) requires \
                          {aaa:.1}:1 for {}.",
-                        "Der Text erreicht {wert:.2}:1; erhöhter Kontrast (AAA) verlangt \
+                        "Der Text erreicht {value:.2}:1; erhöhter Kontrast (AAA) verlangt \
                          {aaa:.1}:1 für {}.",
-                        text_art(locale, gross)
+                        text_kind(locale, large)
                     ),
                 )
                 .with_severity(Severity::Medium)
                 .with_wcag(["1.4.6"])
-                .with_evidence(belege(wert, aaa))
+                .with_evidence(evidences(value, aaa))
                 .at(at(n.id())),
             ),
-            Urteil::Grenzwertig { median, p40 } => out.push(grenzwertig(
+            Verdict::Borderline { median, p40 } => out.push(borderline(
                 "contrast/text-enhanced",
                 median,
                 p40,
@@ -416,12 +421,12 @@ fn text_kontrast_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Fi
 /// Ob das Element ein Kontrollkästchen, Optionsfeld, Schalter oder
 /// Schieberegler ist — die Bedienelemente, deren Grenze 1.4.11 betrifft und
 /// die Autoren mit `appearance: none` gern selbst zeichnen.
-fn ist_auswahlelement<'a, N: Node<'a>>(n: N) -> bool {
-    let typ = n
+fn is_select_element<'a, N: Node<'a>>(n: N) -> bool {
+    let ty = n
         .attr("type")
         .map(|t| t.trim().to_ascii_lowercase())
         .unwrap_or_default();
-    (n.is_element("input") && matches!(typ.as_str(), "checkbox" | "radio" | "range"))
+    (n.is_element("input") && matches!(ty.as_str(), "checkbox" | "radio" | "range"))
         || matches!(n.attr("role"), Some("checkbox" | "radio" | "switch"))
 }
 
@@ -433,32 +438,32 @@ fn ist_auswahlelement<'a, N: Node<'a>>(n: N) -> bool {
 /// Rahmen, wenn er gezeichnet wird, sonst die eigene Fläche. Ist beides
 /// durchsichtig, gibt es keine Grenze zu messen. Kein Hintergrund am
 /// Elternelement heißt `UNTESTED`, nicht ein Vergleich gegen Weiß.
-fn bedienelement_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn control_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_auswahlelement(n) || inaktiv(n) || doc.bounds(n).is_some_and(|b| b.is_empty()) {
+        if !is_select_element(n) || inactive(n) || doc.bounds(n).is_some_and(|b| b.is_empty()) {
             continue;
         }
-        let Some(stil) = doc.computed_style(n) else {
+        let Some(style) = doc.computed_style(n) else {
             continue;
         };
-        if !wird_dargestellt(&stil) || stil.appearance.as_deref() != Some("none") {
+        if !is_rendered(&style) || style.appearance.as_deref() != Some("none") {
             continue;
         }
-        let rahmen = stil.border_top_width_px.is_some_and(|w| w > 0.0)
-            && !matches!(stil.border_top_style.as_deref(), Some("none" | "hidden"));
-        let grenze = if rahmen {
-            stil.border_top_color
+        let frame = style.border_top_width_px.is_some_and(|w| w > 0.0)
+            && !matches!(style.border_top_style.as_deref(), Some("none" | "hidden"));
+        let limit = if frame {
+            style.border_top_color
         } else {
-            stil.own_background_color
+            style.own_background_color
         };
-        let Some(grenze) = grenze.filter(|c| c.a > 0) else {
+        let Some(limit) = limit.filter(|c| c.a > 0) else {
             continue;
         };
-        let hinten = n
+        let back = n
             .parent()
             .and_then(|p| doc.computed_style(p))
             .and_then(|s| s.background_color);
-        let Some(hinten) = hinten else {
+        let Some(back) = back else {
             out.push(
                 Finding::untested(
                     "contrast/control-undetermined",
@@ -477,8 +482,8 @@ fn bedienelement_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
             );
             continue;
         };
-        let wert = verhaeltnis(ueber(grenze, hinten), hinten);
-        if wert >= 3.0 {
+        let value = ratio(over(limit, back), back);
+        if value >= 3.0 {
             continue;
         }
         out.push(
@@ -486,21 +491,21 @@ fn bedienelement_kontrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
                 "contrast/control-insufficient",
                 tr!(
                     locale,
-                    "The boundary of this custom control reaches {wert:.2}:1 against its \
+                    "The boundary of this custom control reaches {value:.2}:1 against its \
                      background; 3:1 is required.",
-                    "Die Grenze dieses selbst gezeichneten Bedienelements erreicht {wert:.2}:1 \
+                    "Die Grenze dieses selbst gezeichneten Bedienelements erreicht {value:.2}:1 \
                      gegenüber ihrem Hintergrund, gefordert sind 3:1.",
                 ),
             )
             .with_severity(Severity::Medium)
             .with_wcag(["1.4.11"])
-            .with_evidence(belege(wert, 3.0))
+            .with_evidence(evidences(value, 3.0))
             .at(at(n.id())),
         );
     }
 }
 
-const KONTRAST_BEDIENELEMENT: Meta = Meta {
+const CONTRAST_CONTROL: Meta = Meta {
     ids: &[
         "contrast/control-insufficient",
         "contrast/control-undetermined",
@@ -511,13 +516,14 @@ const KONTRAST_BEDIENELEMENT: Meta = Meta {
     severity: Severity::Medium,
     help: "A custom-drawn checkbox, radio button, switch or slider (appearance: none) needs \
            a boundary with a contrast ratio of at least 3:1 against its background.",
-    #[cfg(feature = "de")]
-    help_de: "Ein selbst gezeichnetes Kontrollkästchen, Optionsfeld, Schalter oder \
+    help_de: de_text!(
+        "Ein selbst gezeichnetes Kontrollkästchen, Optionsfeld, Schalter oder \
               Schieberegler (appearance: none) braucht eine Grenze mit mindestens 3:1 \
-              gegenüber seinem Hintergrund.",
+              gegenüber seinem Hintergrund."
+    ),
 };
 
-const KONTRAST: Meta = Meta {
+const CONTRAST: Meta = Meta {
     ids: &["contrast/text-insufficient", "contrast/text-undetermined"],
     tier: Tier::Rendering,
     scope: Scope::Rendered,
@@ -525,52 +531,55 @@ const KONTRAST: Meta = Meta {
     severity: Severity::High,
     help: "Text needs a contrast ratio against its background of at least 4.5:1, \
            or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
-    #[cfg(feature = "de")]
-    help_de: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
+    help_de: de_text!(
+        "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
               mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
-              fettem Schnitt ab 14 pt.",
+              fettem Schnitt ab 14 pt."
+    ),
 };
 
-const KONTRAST_ERHOEHT: Meta = Meta {
+const CONTRAST_ENHANCED: Meta = Meta {
     ids: &["contrast/text-enhanced"],
     tier: Tier::Rendering,
     scope: Scope::Rendered,
     wcag: &["1.4.6"],
     severity: Severity::Medium,
     help: "Enhanced contrast (AAA): at least 7:1, or 4.5:1 for large text.",
-    #[cfg(feature = "de")]
-    help_de: "Erhöhter Kontrast (AAA): mindestens 7:1, bei großem Text 4,5:1.",
+    help_de: de_text!("Erhöhter Kontrast (AAA): mindestens 7:1, bei großem Text 4,5:1."),
 };
 
 pub(crate) const METAS: &[Meta] = &[
-    KONTRAST,
-    KONTRAST_ERHOEHT,
-    KONTRAST_BEDIENELEMENT,
-    heuristik::METAS[0],
-    heuristik::METAS[1],
-    heuristik::METAS[2],
-    heuristik::METAS[3],
-    heuristik::METAS[4],
-    heuristik::METAS[5],
-    heuristik::METAS[6],
-    heuristik::METAS[7],
-    darstellung::METAS[0],
-    darstellung::METAS[1],
-    darstellung::METAS[2],
+    CONTRAST,
+    CONTRAST_ENHANCED,
+    CONTRAST_CONTROL,
+    heuristics::METAS[0],
+    heuristics::METAS[1],
+    heuristics::METAS[2],
+    heuristics::METAS[3],
+    heuristics::METAS[4],
+    heuristics::METAS[5],
+    heuristics::METAS[6],
+    heuristics::METAS[7],
+    presentation::METAS[0],
+    presentation::METAS[1],
+    presentation::METAS[2],
 ];
 
+/// Drei eigene Regeln, dazu die Heuristiken und die Darstellungsregeln.
+const _: () = assert!(METAS.len() == 3 + heuristics::METAS.len() + presentation::METAS.len());
+
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
-    let funktionen = [
-        text_kontrast as fn(&D, Locale, &mut Vec<Finding>),
-        text_kontrast_erhoeht,
-        bedienelement_kontrast,
+    let functions = [
+        text_contrast as fn(&D, Locale, &mut Vec<Finding>),
+        text_contrast_enhanced,
+        control_contrast,
     ]
     .into_iter()
-    .chain(heuristik::funktionen::<D>())
-    .chain(darstellung::funktionen::<D>());
+    .chain(heuristics::functions::<D>())
+    .chain(presentation::functions::<D>());
     METAS
         .iter()
-        .zip(funktionen)
+        .zip(functions)
         .map(|(meta, run)| RenderingRule { meta: *meta, run })
         .collect()
 }
@@ -579,13 +588,13 @@ pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
 mod tests {
     use super::*;
 
-    const SCHWARZ: Color = Color {
+    const BLACK: Color = Color {
         r: 0,
         g: 0,
         b: 0,
         a: 255,
     };
-    const WEISS: Color = Color {
+    const WHITE: Color = Color {
         r: 255,
         g: 255,
         b: 255,
@@ -593,51 +602,51 @@ mod tests {
     };
 
     #[test]
-    fn verhaeltnis_schwarz_auf_weiss_ist_21() {
-        assert!((verhaeltnis(SCHWARZ, WEISS) - 21.0).abs() < 0.01);
+    fn ratio_black_on_white_is_21() {
+        assert!((ratio(BLACK, WHITE) - 21.0).abs() < 0.01);
     }
 
     #[test]
-    fn verhaeltnis_ist_symmetrisch() {
-        assert!((verhaeltnis(SCHWARZ, WEISS) - verhaeltnis(WEISS, SCHWARZ)).abs() < 1e-9);
+    fn ratio_is_symmetric() {
+        assert!((ratio(BLACK, WHITE) - ratio(WHITE, BLACK)).abs() < 1e-9);
     }
 
     #[test]
-    fn gleiche_farbe_ergibt_eins() {
-        assert!((verhaeltnis(WEISS, WEISS) - 1.0).abs() < 1e-9);
+    fn same_color_yields_one() {
+        assert!((ratio(WHITE, WHITE) - 1.0).abs() < 1e-9);
     }
 
     /// Die Referenzwerte stammen aus WCAG 1.4.3: #767676 ist die dunkelste
     /// Graustufe, die auf Weiß noch 4,5:1 erreicht.
     #[test]
-    fn grenzfall_767676_auf_weiss_besteht_knapp() {
-        let grau = Color {
+    fn edge_case_767676_on_white_passes_narrowly() {
+        let gray = Color {
             r: 0x76,
             g: 0x76,
             b: 0x76,
             a: 255,
         };
-        let v = verhaeltnis(grau, WEISS);
+        let v = ratio(gray, WHITE);
         assert!(v >= 4.5, "{v} sollte 4,5 erreichen");
         assert!(v < 4.6, "{v} sollte knapp darüber liegen");
     }
 
     #[test]
-    fn halbdurchsichtiges_schwarz_auf_weiss_wird_grau() {
-        let halb = Color {
+    fn semi_transparent_black_on_white_becomes_gray() {
+        let half = Color {
             r: 0,
             g: 0,
             b: 0,
             a: 128,
         };
-        let gemischt = ueber(halb, WEISS);
-        assert_eq!(gemischt.a, 255);
-        assert_eq!(gemischt.r, 127);
+        let mixed = over(half, WHITE);
+        assert_eq!(mixed.a, 255);
+        assert_eq!(mixed.r, 127);
     }
 
     #[test]
-    fn grosser_text_ab_24px_oder_fett_ab_18_66px() {
-        let stil = |px: f32, w: u16| ComputedStyle {
+    fn large_text_from_24px_or_bold_from_18_66px() {
+        let style = |px: f32, w: u16| ComputedStyle {
             color: None,
             background_color: None,
             font_size_px: Some(px),
@@ -646,9 +655,9 @@ mod tests {
             visibility: None,
             ..Default::default()
         };
-        assert!(ist_grosser_text(&stil(24.0, 400)));
-        assert!(!ist_grosser_text(&stil(23.0, 400)));
-        assert!(ist_grosser_text(&stil(19.0, 700)));
-        assert!(!ist_grosser_text(&stil(19.0, 400)));
+        assert!(is_large_text(&style(24.0, 400)));
+        assert!(!is_large_text(&style(23.0, 400)));
+        assert!(is_large_text(&style(19.0, 700)));
+        assert!(!is_large_text(&style(19.0, 400)));
     }
 }

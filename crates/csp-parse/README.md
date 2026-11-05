@@ -36,8 +36,7 @@ unrecognized `source-expression` token, or a byte outside a
 production's allowed character class does not fail the whole parse —
 it's still reported structurally, with per-item validity queryable
 separately (`Directive::name_is_valid`/`value_is_valid`,
-`DirectiveValue::Unknown`, `SourceListEntry::expression: None`, …). See
-`plan/DECISIONS.md` for the reasoning.
+`DirectiveValue::Unknown`, `SourceListEntry::expression: None`, …).
 
 ### Directive registry scope
 
@@ -66,8 +65,7 @@ caller: [`html-conform`](https://github.com/casoon/html-conform)'s
 
 Phases 02–07 implemented (generic directive splitting, source-list
 grammar, directive registry, spec-example/edge-case sweep, public API
-docs, licensing/compliance) — see `plan/00-STATUS.md` (not tracked in
-git, local working document; see `plan/README.md` for why). Not yet
+docs, licensing/compliance). Not yet
 published to crates.io (Phase 08). No official CSP grammar-only
 testsuite exists to vendor (web-platform-tests' CSP tests are
 browser-enforcement tests, not syntax tests); conformance confidence

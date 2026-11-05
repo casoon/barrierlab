@@ -50,9 +50,14 @@ flowchart TB
 have their own small API and can be used individually — `xpath-eval`
 and `schematron-engine`, for example, also outside of HTML.
 
+`CheckReport::to_report()` converts the result into `a11y-report`'s `Report`, and
+`CheckReport::skipped` names unchecked classes present in the document (CSS in `<style>`,
+CSP hash sources); both appear there as `DocumentIncomplete` input notes. The crate's own
+`Finding` types remain for now.
+
 ## Dependencies
 
-Downward: the six above. Upward: auditmysite, astro-post-audit, in future
+Downward: the six above and `a11y-report` (for `to_report`). Upward: auditmysite, astro-post-audit, in future
 `web-checks`.
 
 ## Limits

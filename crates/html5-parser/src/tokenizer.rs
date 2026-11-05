@@ -4,7 +4,7 @@
 // The full state machine is implemented: tag/attribute/text tokenization,
 // character references, comments, DOCTYPE, processing instructions,
 // RCDATA/RAWTEXT/PLAINTEXT/script-data (including escaped/double-escaped),
-// and CDATA sections. See plan/02-tokenizer.md.
+// and CDATA sections.
 
 use std::collections::VecDeque;
 
@@ -38,10 +38,9 @@ pub struct ParseError {
 /// PascalCase. Only variants this crate actually detects and reports
 /// exist — no catch-all/string-payload variant, so matching on a
 /// specific kind stays meaningful. `#[non_exhaustive]` because more
-/// variants may still be added: the tokenizer level (§13.2.5,
-/// `plan/07-parse-errors.md`) is complete at 50 of the 52 named errors,
-/// but the tree-construction level (§13.2.6,
-/// `plan/08-tree-construction-errors.md`) covers only the conditions
+/// variants may still be added: the tokenizer level (§13.2.5)
+/// is complete at 50 of the 52 named errors,
+/// but the tree-construction level (§13.2.6) covers only the conditions
 /// with a demonstrated consumer need, not all of §13.2.6's unnamed
 /// ones — adding one later must not be a breaking change for any caller
 /// matching on this type.
@@ -111,7 +110,7 @@ pub enum ParseErrorKind {
     // detect, so no dead variant for it.
     NoncharacterInInputStream,
     ControlCharacterInInputStream,
-    // Tree construction (§13.2.6) — see `plan/08-tree-construction-errors.md`.
+    // Tree construction (§13.2.6).
     //
     // Unlike every variant above, §13.2.6 gives these conditions **no**
     // names: the algorithm just says "this is a parse error" inline,
@@ -343,7 +342,7 @@ pub(crate) struct Token {
 
 /// The tokenizer's current state (§13.2.5). Only the states needed for
 /// tag/attribute/text tokenization are implemented so far — see the module
-/// header and plan/02-tokenizer.md for what is still missing.
+/// header.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
     Data,
@@ -438,8 +437,7 @@ enum State {
 /// HTML element was just inserted (`<title>`/`<textarea>` → `RcData`,
 /// `<style>`/`<xmp>`/`<iframe>`/`<noembed>`/`<noframes>` → `RawText`,
 /// `<script>` → `ScriptData`, `<plaintext>` → `PlainText`), knowledge the
-/// tokenizer deliberately does not have — see plan/02-tokenizer.md's
-/// Normative Grundlage.
+/// tokenizer deliberately does not have.
 ///
 /// There is deliberately no matching "switch back" method: leaving these
 /// states again is entirely tokenizer-internal, driven by the
@@ -663,7 +661,7 @@ impl Tokenizer {
     /// Records a [`ParseError`] at `position`. Called at every point in
     /// the state machine below marked with a `// <kebab-case-name> parse
     /// error.` comment (identified during Phase 02's spec research,
-    /// implemented in Phase 07 — see `plan/07-parse-errors.md`).
+    /// implemented in Phase 07).
     fn error(&mut self, kind: ParseErrorKind, position: Position) {
         self.errors.push(ParseError { kind, position });
     }
@@ -3178,7 +3176,7 @@ impl Iterator for Tokenizer {
 
 #[cfg(test)]
 mod tests {
-    // Phase 02 tokenizer tests: the subset of plan/02-tokenizer.md's test
+    // Phase 02 tokenizer tests: the subset of the test
     // matrix covered by the states implemented so far (tags, attributes,
     // plain text). Character references, comments, DOCTYPE, CDATA, and
     // RCDATA/RAWTEXT/script-data/PLAINTEXT switching are not covered yet.
@@ -3201,7 +3199,7 @@ mod tests {
     }
 
     /// Runs `input` to completion and returns every [`ParseErrorKind`]
-    /// recorded, in encounter order. Phase 07 (`plan/07-parse-errors.md`)
+    /// recorded, in encounter order. Phase 07
     /// helper — mirrors [`tokenize`] above but for errors instead of
     /// tokens.
     fn errors_for(input: &str) -> Vec<ParseErrorKind> {
@@ -4195,7 +4193,7 @@ mod tests {
         );
     }
 
-    // Phase 07 parse-error tests (`plan/07-parse-errors.md`): one minimal
+    // Phase 07 parse-error tests: one minimal
     // triggering input per implemented `ParseErrorKind` — not per call
     // site (several kinds fire from more than one state; one
     // representative site is enough to confirm the kind itself is wired

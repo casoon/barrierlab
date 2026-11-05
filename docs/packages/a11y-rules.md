@@ -165,8 +165,8 @@ CSS text of each sheet to `stylesheet_parse::parse_stylesheet` and the report of
 with `NotRun::CapabilityMissing`. Where the text comes from is up to the
 host: from `document.styleSheets` in the browser or from the files of a build.
 
-Whether a rule applies on this page is decided by a dedicated selector match
-against the document (subset of Selectors Level 4; states and
+Whether a rule applies on this page is decided by the selector match of
+`style-cascade` (subset of Selectors Level 4; states and
 pseudo-elements count as satisfied, unknown things such as `:has()` as a possible
 match). No cascade with specificity: for body text, the last
 matching declaration on the paragraph counts, otherwise on the nearest ancestor.

@@ -1,0 +1,26 @@
+[package]
+name = "a11y-static"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Browser-free accessibility audit of static HTML: HTML text plus the stylesheet texts the host fetched in, one Report out."
+keywords = ["accessibility", "a11y", "html", "css", "audit"]
+categories = ["accessibility", "web-programming"]
+readme = "README.md"
+
+[features]
+# Deutsche Befundtexte (`Locale::De`), durchgereicht an a11y-rules.
+de = ["a11y-rules/de"]
+
+[dependencies]
+a11y-dom = { workspace = true, features = ["html5-parser"] }
+a11y-report = { workspace = true }
+a11y-rules = { workspace = true }
+accname = { workspace = true }
+html5-parser = { workspace = true }
+style-cascade = { workspace = true }
+stylesheet-parse = { workspace = true }

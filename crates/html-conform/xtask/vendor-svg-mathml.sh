@@ -45,7 +45,7 @@ fi
 # up the ARIA-in-foreign-content patterns this crate's schema layer
 # already remaps custom elements/data-*/etc. into
 # (src/infoset.rs::merge_text_and_comment_runs used to unconditionally
-# skip these subtrees — see plan/DECISIONS.md, this vendoring's entry).
+# skip these subtrees).
 curl -sSf -o "${REPO_ROOT}/schema/html5-svg-mathml.rnc" \
   "${RAW_BASE}/.drivers/html5-svg-mathml.rnc"
 # REUSE-IgnoreStart

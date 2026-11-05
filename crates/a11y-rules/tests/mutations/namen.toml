@@ -43,10 +43,10 @@ id = "svg/name-missing"
 file = "src/semantics.rs"
 kind = "invert"
 find = '''
-            let f = if bild {
+            let f = if image {
 '''
 replace = '''
-            let f = if !bild {
+            let f = if !image {
 '''
 test = "korpus"
 expect = "killed"
@@ -56,10 +56,10 @@ id = "links/ambiguous-name"
 file = "src/semantics.rs"
 kind = "threshold"
 find = '''
-        if ziele.len() < 2 {
+        if targets.len() < 2 {
 '''
 replace = '''
-        if ziele.len() < 1 {
+        if targets.len() < 1 {
 '''
 test = "korpus"
 expect = "killed"
@@ -69,16 +69,16 @@ id = "links/generic-name"
 file = "src/semantics.rs"
 kind = "invert"
 find = '''
-        if !NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+        if !MEANINGLESS.contains(&key(&name).as_str()) {
             continue;
         }
-        let kontext = hat_kontext(doc, n);
+        let context = has_context(doc, n);
 '''
 replace = '''
-        if NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+        if MEANINGLESS.contains(&key(&name).as_str()) {
             continue;
         }
-        let kontext = hat_kontext(doc, n);
+        let context = has_context(doc, n);
 '''
 test = "korpus"
 expect = "killed"
@@ -88,10 +88,10 @@ id = "links/url-name"
 file = "src/semantics.rs"
 kind = "drop-condition"
 find = '''
-        if !sieht_aus_wie_url(&name) || hat_kontext(doc, n) {
+        if !looks_like_url(&name) || has_context(doc, n) {
 '''
 replace = '''
-        if !sieht_aus_wie_url(&name) {
+        if !looks_like_url(&name) {
 '''
 test = "korpus"
 expect = "killed"
@@ -101,10 +101,10 @@ id = "links/single-character-name"
 file = "src/semantics.rs"
 kind = "drop-condition"
 find = '''
-        if c.is_ascii_digit() || NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+        if c.is_ascii_digit() || MEANINGLESS.contains(&key(&name).as_str()) {
 '''
 replace = '''
-        if NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+        if MEANINGLESS.contains(&key(&name).as_str()) {
 '''
 test = "korpus"
 expect = "killed"
@@ -114,10 +114,10 @@ id = "links/new-window-unannounced"
 file = "src/semantics.rs"
 kind = "drop-condition"
 find = '''
-        if NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+        if NEW_WINDOW.iter().any(|h| small.contains(h)) {
 '''
 replace = '''
-        if false && NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+        if false && NEW_WINDOW.iter().any(|h| small.contains(h)) {
 '''
 test = "korpus"
 expect = "killed"
@@ -127,10 +127,10 @@ id = "links/purpose-link-only"
 file = "src/semantics.rs"
 kind = "invert"
 find = '''
-        if !NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+        if !ONLY_LINK_TEXT_VAGUE.contains(&key(&name).as_str()) {
 '''
 replace = '''
-        if NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+        if ONLY_LINK_TEXT_VAGUE.contains(&key(&name).as_str()) {
 '''
 test = "korpus"
 expect = "killed"
@@ -157,10 +157,10 @@ id = "names/symbol-only"
 file = "src/names.rs"
 kind = "drop-condition"
 find = '''
-        if z.is_alphanumeric() || !name_aus_attribut(doc, n, &name) {
+        if z.is_alphanumeric() || !name_from_attribute(doc, n, &name) {
 '''
 replace = '''
-        if !name_aus_attribut(doc, n, &name) {
+        if !name_from_attribute(doc, n, &name) {
 '''
 test = "korpus"
 expect = "killed"
@@ -196,7 +196,7 @@ id = "summary/name-missing"
 file = "src/names.rs"
 kind = "drop-condition"
 find = '''
-                    .is_some_and(|erste| erste == n)
+                    .is_some_and(|first| first == n)
 '''
 replace = '''
                     .is_some()
@@ -222,10 +222,10 @@ id = "status/live-overridden"
 file = "src/names.rs"
 kind = "drop-condition"
 find = '''
-            "polite" | "assertive" if live != vorgabe && rolle != "log" => Finding::review(
+            "polite" | "assertive" if live != default && role != "log" => Finding::review(
 '''
 replace = '''
-            "polite" | "assertive" if live != vorgabe => Finding::review(
+            "polite" | "assertive" if live != default => Finding::review(
 '''
 test = "korpus"
 expect = "killed"
@@ -235,10 +235,10 @@ id = "label-in-name/mismatch"
 file = "src/names.rs"
 kind = "threshold"
 find = '''
-        let f = if umgestellt || s.chars().count() > m.chars().count() * ZUSAMMENGESETZT {
+        let f = if rearranged || s.chars().count() > m.chars().count() * COMPOSED {
 '''
 replace = '''
-        let f = if umgestellt || s.chars().count() >= m.chars().count() * ZUSAMMENGESETZT {
+        let f = if rearranged || s.chars().count() >= m.chars().count() * COMPOSED {
 '''
 test = "korpus"
 expect = "killed"
@@ -261,10 +261,10 @@ id = "images/area-alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if n.is_element("area") && n.has_attr("href") && !gefuellt(n, "alt") && !aria_benannt(n) {
+        if n.is_element("area") && n.has_attr("href") && !filled(n, "alt") && !aria_named(n) {
 '''
 replace = '''
-        if n.is_element("area") && !gefuellt(n, "alt") && !aria_benannt(n) {
+        if n.is_element("area") && !filled(n, "alt") && !aria_named(n) {
 '''
 test = "korpus"
 expect = "killed"
@@ -274,10 +274,10 @@ id = "images/input-alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if grafik_button && !gefuellt(n, "alt") && !aria_benannt(n) {
+        if graphic_button && !filled(n, "alt") && !aria_named(n) {
 '''
 replace = '''
-        if grafik_button && !aria_benannt(n) {
+        if graphic_button && !aria_named(n) {
 '''
 test = "korpus"
 expect = "killed"
@@ -287,10 +287,10 @@ id = "images/server-side-map"
 file = "src/media.rs"
 kind = "revert-fix"
 find = '''
-        if n.is_element("img") && n.has_attr("ismap") && im_link {
+        if n.is_element("img") && n.has_attr("ismap") && in_link {
 '''
 replace = '''
-        if n.is_element("img") && n.has_attr("ismap") || im_link && false {
+        if n.is_element("img") && n.has_attr("ismap") || in_link && false {
 '''
 test = "korpus"
 expect = "killed"
@@ -300,10 +300,10 @@ id = "images/server-side-map"
 file = "src/media.rs"
 kind = "invert"
 find = '''
-        if n.is_element("img") && n.has_attr("ismap") && im_link {
+        if n.is_element("img") && n.has_attr("ismap") && in_link {
 '''
 replace = '''
-        if n.is_element("img") && !n.has_attr("ismap") && im_link {
+        if n.is_element("img") && !n.has_attr("ismap") && in_link {
 '''
 test = "korpus"
 expect = "killed"
@@ -313,10 +313,10 @@ id = "objects/alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if !ersatztext && !aria_benannt(n) && !gefuellt(n, "title") {
+        if !replacement_text && !aria_named(n) && !filled(n, "title") {
 '''
 replace = '''
-        if !aria_benannt(n) && !gefuellt(n, "title") {
+        if !aria_named(n) && !filled(n, "title") {
 '''
 test = "korpus"
 expect = "killed"
@@ -354,10 +354,10 @@ id = "frames/name-missing"
 file = "src/media.rs"
 kind = "threshold"
 find = '''
-    let winzig = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1"));
+    let tiny = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1"));
 '''
 replace = '''
-    let winzig = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1" | "2"));
+    let tiny = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1" | "2"));
 '''
 test = "korpus"
 expect = "killed"

@@ -3,12 +3,9 @@
 //! The vendored HTML5 RELAX NG schema (`schema/html5/html5.rnc`) is not a
 //! schema for raw HTML5 parser nodes: it expects an XHTML-namespaced element
 //! tree with expanded names, not html5-parser's `namespace: None` on plain
-//! elements. This module bridges that gap. See
-//! `plan/04a-input-normalization.md` for the phase plan and the
-//! adapter-contract entry in `plan/DECISIONS.md` for the full, documented
-//! contract this module implements (originally written against xmloxide;
-//! see `plan/DECISIONS.md`'s Phase 08 migration entry for what changed
-//! when this module switched to html5-parser — the tree shape this
+//! elements. This module bridges that gap
+//! (originally written against xmloxide; when this module switched to
+//! html5-parser, the tree shape this
 //! module reads is deliberately close to identical, so the contract
 //! itself carries over almost unchanged).
 //!
@@ -23,9 +20,7 @@
 //! node — this is what lets it carry a working [`NormalizedNode::parent`],
 //! which the owned-tree shape structurally could not provide (no
 //! back-pointers). That gap — and this arena rebuild as its resolution —
-//! was already anticipated in `xpath-eval/plan/03-document-trait.md`
-//! ("Bekannte Kompatibilitätslücke") and `plan/05a-element-adapter.md`; see
-//! `plan/DECISIONS.md` for the actual decision record. A synthetic
+//! was already anticipated in the `xpath-eval` document-trait design. A synthetic
 //! `Kind::Root` node (always [`NodeId`] `0`) is the document's XPath root —
 //! its children are this document's top-level nodes (normally a single
 //! `<html>` element, but a leading comment before it is preserved too).
@@ -38,8 +33,7 @@ use crate::finding::SourceLocation;
 ///
 /// html5-parser's tree builder assigns `namespace: None` to ordinary
 /// elements; SVG and MathML elements already carry their correct
-/// namespace URI, assigned during foreign-content insertion. See the
-/// adapter-contract entry in `plan/DECISIONS.md`.
+/// namespace URI, assigned during foreign-content insertion.
 pub(crate) const XHTML_NAMESPACE: &str = "http://www.w3.org/1999/xhtml";
 
 /// The XML-spec-mandated namespace URI the `xml` prefix is always
@@ -61,8 +55,8 @@ pub(crate) const XML_NAMESPACE: &str = "http://www.w3.org/XML/1998/namespace";
 /// [`relax_ng::Element::attributes()`]'s schema-layer drop below.
 const XMLNS_NAMESPACE: &str = "http://www.w3.org/2000/xmlns/";
 
-/// SVG and MathML namespace URIs — see the module doc comment / the
-/// adapter-contract entry in `plan/DECISIONS.md` for how html5-parser's
+/// SVG and MathML namespace URIs — see the module doc comment for how
+/// html5-parser's
 /// tree builder assigns these during foreign-content insertion. Since the
 /// Phase 08 SVG/MathML schema vendoring (`xtask/vendor-svg-mathml.sh`),
 /// no production code here needs to single either namespace out anymore
@@ -125,8 +119,7 @@ enum Kind {
     Attribute { name: ExpandedName, value: String },
     /// A text node. Named/numeric character references are already resolved
     /// by the HTML5 tokenizer; `script`/`style` (RAWTEXT/script-data)
-    /// content is plain text too, with no special representation — see the
-    /// adapter-contract entry in `plan/DECISIONS.md`.
+    /// content is plain text too, with no special representation.
     Text { content: String },
     /// A comment node.
     Comment { content: String },
@@ -271,8 +264,7 @@ impl<'a> NormalizedNode<'a> {
 /// are dropped: the vendored schema's content model does not reference
 /// DOCTYPE/PI representation. html5-parser never produces `EntityRef` or
 /// `CData` nodes at all (character references and RAWTEXT content are
-/// resolved straight to `Text`) — see the adapter-contract entry in
-/// `plan/DECISIONS.md`. `DocumentFragment` (a `<template>` element's
+/// resolved straight to `Text`). `DocumentFragment` (a `<template>` element's
 /// synthetic "template contents" wrapper, its sole real tree child) is
 /// transparent here: not represented as a node of its own, its children
 /// are spliced directly into its parent's (the `<template>` element's)
@@ -283,8 +275,7 @@ impl<'a> NormalizedNode<'a> {
 /// html5-parser's own `Position` (`None` only for a node html5-parser
 /// itself synthesizes, e.g. an implied `<html>`/`<head>`/`<body>` —
 /// closes the "no source position available" gap this module's
-/// xmloxide-based predecessor had, documented in `plan/DECISIONS.md`'s
-/// Phase 04a entries and resolved by the Phase 08 migration entry).
+/// xmloxide-based predecessor had, resolved by the Phase 08 migration).
 pub(crate) fn normalize(document: &Document, source: &str) -> NormalizedHtmlDocument {
     let _ = source;
 
@@ -473,7 +464,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
                 {
                     // Schema-layer-only remap — see CUSTOM_ELEMENT_NAMESPACE's
                     // doc comment. Confirmed necessary against the vendored
-                    // corpus (plan/DECISIONS.md's Phase 08 entry): custom
+                    // corpus: custom
                     // elements like `<view-source>`/`<streaming-element>`
                     // were rejected outright as "unexpected element" without
                     // this remap.
@@ -503,7 +494,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
     /// expects: `{namespace: XML_NAMESPACE, local: "lang"}`.
     ///
     /// Two distinct issues, both traced empirically against the vendored
-    /// corpus (`plan/DECISIONS.md`'s Phase 08 entry):
+    /// corpus:
     ///
     /// 1. `schema/html5/common.rnc`'s `common.attrs.lang` is `& XMLonly`,
     ///    and `html5.rnc`'s HTML-mode override sets `XMLonly = notAllowed`
@@ -709,8 +700,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
 /// separate driver, `schema/.drivers/html5-svg-mathml.rnc`, that patches
 /// `<svg>`/`<math>` in via the vendored SVG 1.1/MathML 3 modules
 /// (`schema/svg11/`, `schema/mml3/`) — see `src/schema.rs`'s `ROOT_ENTRY`
-/// and `plan/DECISIONS.md`'s SVG/MathML entry for the full vendoring and
-/// integration story, including three genuine `relax-ng` parser gaps
+/// for the integration, including three genuine `relax-ng` parser gaps
 /// (RNC annotations, `default namespace PREFIX = "..."` prefix
 /// registration, single-quoted string literals) discovered and fixed
 /// along the way. An earlier version of this function skipped both
@@ -753,7 +743,7 @@ fn merge_text_and_comment_runs<'a>(
 /// what this crate's own infoset actually represents:
 /// - No namespace nodes ([`Node::namespaces`] is always empty) — mirrors
 ///   `relax_ng::Element::namespace_bindings`'s existing Stage-1 scope
-///   decision (`plan/05a-element-adapter.md`): `NormalizedNode` has no
+///   decision: `NormalizedNode` has no
 ///   `xmlns` declarations in its model, only already-resolved `namespace`
 ///   fields on elements/attributes.
 /// - No `ProcessingInstruction` nodes — [`normalize`] already drops them
@@ -1050,7 +1040,7 @@ mod xpath_node_tests {
 mod tests {
     // Phase 04a input-normalization spike: matrix of HTML shapes the
     // adapter must normalize correctly, plus the provenance invariant
-    // ("never invents a position"). See plan/04a-input-normalization.md.
+    // ("never invents a position").
     // Phase 06: rewritten against the arena/handle shape — see this
     // module's doc comment.
     use super::{
@@ -1525,7 +1515,7 @@ mod tests {
         // Bare `<p>hi</p>` triggers both explicit (`p`, its text content)
         // and parser-inserted implicit (`html`/`head`/`body`) elements,
         // exercising both cases — since the Phase 08 html5-parser
-        // migration (see plan/DECISIONS.md), explicit nodes carry a real
+        // migration, explicit nodes carry a real
         // position; only html5-parser's own synthesized nodes still have
         // none (matching html5_parser::Node's own documented contract).
         let document = normalize_html("<p>hi</p>");
@@ -1581,8 +1571,7 @@ mod tests {
 
 #[cfg(test)]
 mod element_adapter_tests {
-    // Phase 05a: relax_ng::Element impl for NormalizedNode. See
-    // plan/05a-element-adapter.md. Phase 06: rewritten against the
+    // Phase 05a: relax_ng::Element impl for NormalizedNode. Phase 06: rewritten against the
     // arena/handle shape — see this module's doc comment.
     use relax_ng::{Content, Element};
 
@@ -1714,8 +1703,7 @@ mod element_adapter_tests {
     #[test]
     fn location_is_some_for_an_explicit_element_since_the_html5_parser_migration() {
         // Was `None` unconditionally under the old xmloxide-based parser
-        // (it never tracked per-node positions at all, see
-        // plan/DECISIONS.md's Phase 04a entries) — the Phase 08 migration
+        // (it never tracked per-node positions at all) — the Phase 08 migration
         // to html5-parser closes that gap for explicit (non-synthesized)
         // nodes; see `synthesized_nodes_have_no_position_but_explicit_ones_do`
         // in the sibling `tests` module for the synthesized-node case.

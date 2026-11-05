@@ -1,0 +1,21 @@
+[package]
+name = "style-cascade"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "CSS cascade without a browser: selector matching with specificity, inheritance, var() and @media over a document, producing computed styles for accessibility rules."
+keywords = ["css", "cascade", "selectors", "accessibility", "contrast"]
+categories = ["web-programming", "parser-implementations"]
+readme = "README.md"
+
+[dependencies]
+a11y-dom = { workspace = true }
+stylesheet-parse = { workspace = true }
+media-query-parse = { workspace = true }
+
+[dev-dependencies]
+html5-parser = { workspace = true }

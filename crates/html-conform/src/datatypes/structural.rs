@@ -1,11 +1,9 @@
 //! Structural/list `w:*` datatypes for the RELAX NG datatype library
-//! `http://whattf.org/datatype-draft` (see `plan/05c-datatype-library.md`,
-//! item 4/16/17/18/20/22/23/24/25/26 in `plan/05c-research-group-a.md`).
+//! `http://whattf.org/datatype-draft`.
 //!
 //! vnu-parity is the default for every check in this file: quirks in vnu's
 //! actual behavior (`validator/validator`, `src/nu/validator/datatype/`) are
-//! replicated deliberately, not "fixed" (see `plan/05c-datatype-library.md`,
-//! "Verbindliches Prinzip: vnu-Parität als Default"). Deviations are called
+//! replicated deliberately, not "fixed" ("vnu-Parität als Default"). Deviations are called
 //! out explicitly at the relevant function.
 //!
 //! Nothing calls these yet (Phase 05c builds the library in isolation before
@@ -15,8 +13,7 @@ use url::Url;
 
 /// vnu's shared `isWhitespace(char)` helper: exactly these five ASCII
 /// characters, not Rust's `char::is_whitespace()` (which is full Unicode
-/// whitespace and matches a different set). See
-/// `plan/05c-research-group-a.md`, top of file.
+/// whitespace and matches a different set).
 fn is_whitespace(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\x0c' | '\n' | '\r')
 }
@@ -231,8 +228,7 @@ pub(crate) fn check_browsing_context_or_keyword(value: &str) -> Result<(), Strin
 /// `str::split_whitespace()`) leaves a phantom empty leading token when
 /// `value` starts with whitespace: Java's `String.split` with the default
 /// `limit = 0` keeps a leading empty match but drops trailing empty matches.
-/// That phantom token is a documented vnu quirk (`plan/05c-research-group-a.md`,
-/// item 20) — it silently passes the "exactly one codepoint" check (an empty
+/// That phantom token is a documented vnu quirk — it silently passes the "exactly one codepoint" check (an empty
 /// token's length never triggers the ">1 codepoint" rejection) and it can
 /// never collide in the duplicate check (only one leading-whitespace run is
 /// possible, so at most one phantom token ever exists). Its presence or
@@ -534,8 +530,7 @@ pub(crate) fn check_sandbox_allow_list(value: &str) -> Result<(), String> {
 
     // vnu-parity default: `SandboxAllowList.java`'s `WARN` system property
     // defaults to `false`, and for this specific combination that makes it a
-    // *hard* error by default (not softened to a warning) — see
-    // `plan/05c-research-group-a.md`, item 23.
+    // *hard* error by default (not softened to a warning).
     if has("allow-scripts") && has("allow-same-origin") {
         return Err("sandbox must not combine allow-scripts with allow-same-origin".to_string());
     }

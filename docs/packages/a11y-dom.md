@@ -36,6 +36,15 @@ flowchart TB
 | `Layout` | layout information for heuristic rules, via `Rendering::layout()` (default `None`) |
 | `Arena`, `ArenaBuilder`, `ArenaNode` | ready-made implementation for tests and parser-based hosts |
 
+## Parse tree adapter
+
+With the optional feature `html5-parser`, `html5_parser::Document` itself
+implements `Document` (handle type `Html5Node`), so a host can run rules
+over the parse tree without copying it into an `Arena`. Comments and
+doctype are skipped, `<template>` content appears as children of the
+`<template>` element, and `document_order` walks the tree because the
+parser's node ids follow allocation order. The feature is off by default.
+
 ## Dependencies
 
 Downward: nothing except `serde` (optional). Upward: `accname`,

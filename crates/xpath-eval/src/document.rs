@@ -2,7 +2,7 @@
 //! `Node`/`Document` traits a caller implements over their own tree.
 //!
 //! This module only defines the data model — the 13 axes derived on top of
-//! it live in `axes.rs`, not here (see `plan/03-document-trait.md`).
+//! it live in `axes.rs`, not here.
 
 use std::cmp::Ordering;
 
