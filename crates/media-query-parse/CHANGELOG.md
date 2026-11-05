@@ -8,6 +8,10 @@ Git-Historie.
 
 ### Added
 
+- **Konformanz:** Die WPT-Dateien `test_media_queries.html` und `match-media-parsing.html` laufen als
+  Korpus (`tests/wpt.rs`, vendort über `xtask/vendor-wpt-mediaqueries.sh`); drei bekannte
+  Fehlschläge (Block am Eingabeende nicht geschlossen) stehen in `tests/wpt_known_failures.txt`
+  (casoon/barrierlab#111).
 - **Changelog:** Diese Datei (casoon/barrierlab#116).
 
 ### Changed
