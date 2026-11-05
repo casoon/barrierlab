@@ -25,6 +25,12 @@ Repository `casoon/a11y-core`.
   außerhalb des Crates entfallen; neue Felder sind künftig keine Breaking Changes mehr. Bauen über
   `Finding::fail` und Verwandte, `RuleRun::ran`/`not_run`, `Location::file`/`node`, `Evidence::new`.
 
+## [0.27.0] - 2026-11-03
+
+### Added
+
+- **Befundmodell:** `Basis` (`Criterion`, `BestPractice`) und `Finding::basis` für Empfehlungen ohne Erfolgskriterium; `Finding::best_practice(..)` liefert `Review` mit `Basis::BestPractice` und dem Schlagwort `best-practice`, `Finding::is_best_practice()` fragt es ab. Im JSON erscheint `basis` (`best_practice`) nur bei Empfehlungen; älteres JSON bleibt lesbar (casoon/barrierlab#81).
+
 ## [0.26.1] - 2026-10-27
 
 ### Changed

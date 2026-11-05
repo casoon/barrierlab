@@ -14,6 +14,12 @@ Repository `casoon/a11y-core`.
   weg — `<span id=l hidden><b>Nested</b></span><input aria-labelledby=l>`
   ergibt „Nested" statt keinem Namen (#100).
 
+## [0.27.0] - 2026-11-03
+
+### Changed
+
+- **Gleichschritt:** mit `a11y-rules` 0.27.0; keine eigene Änderung.
+
 ## [0.26.1] - 2026-10-27
 
 ### Changed

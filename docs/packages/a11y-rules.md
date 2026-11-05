@@ -52,7 +52,10 @@ focus visibility remains as `UNTESTED`).
 
 A finding with a WCAG criterion and `FAIL` asserts a violation. It may do so
 only if the markup proves it. If a rule proves only a recommendation, the
-finding carries the keyword `best-practice` and no criterion; if it proves
+finding is a best-practice finding (`Finding::best_practice`: `REVIEW`, `basis`
+`best_practice`, keyword `best-practice`, no criterion) — the list with the reasoning
+is `BEST_PRACTICE_RULES` / `best_practice_rule(id)`, so a host needs no
+demotion of its own; if it proves
 a suspicion that only a reviewer decides, it is `REVIEW`. The yardstick is WCAG
 2.2 with Understanding and Techniques (Fxx are failure techniques, everything else
 only sufficient), the W3C's ACT rules and, for comparison, axe-core.

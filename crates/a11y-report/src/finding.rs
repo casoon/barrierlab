@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::extra::Extra;
-use crate::outcome::{Outcome, Severity, WcagLevel};
+use crate::outcome::{Basis, Outcome, Severity, WcagLevel};
 
 /// Wo ein Befund sitzt. Die drei Oberflächen verorten unterschiedlich:
 /// astro-post-audit über Dateipfade, auditmysite über AXTree-Knoten, LiveAudit
@@ -146,6 +146,9 @@ pub struct Finding {
     pub rule_name: Option<String>,
     pub outcome: Outcome,
     pub severity: Severity,
+    /// Kriterium oder Empfehlung. Fehlt im JSON, wenn es ein Kriterium ist.
+    #[serde(default, skip_serializing_if = "Basis::is_criterion")]
+    pub basis: Basis,
     /// Was ist der Fall. Sachlich, ohne Handlungsanweisung.
     pub message: String,
 
@@ -203,6 +206,7 @@ impl Finding {
             rule_name: None,
             outcome,
             severity: Severity::default(),
+            basis: Basis::default(),
             message: message.into(),
             location: Location::default(),
             role: None,
@@ -218,6 +222,20 @@ impl Finding {
             evidence: Vec::new(),
             extra: Extra::none(),
         }
+    }
+
+    /// Empfehlung ohne Erfolgskriterium: [`Outcome::Review`], [`Basis::BestPractice`]
+    /// und das Schlagwort `best-practice`. Kein Verstoß gegen WCAG.
+    pub fn best_practice(rule_id: impl Into<String>, message: impl Into<String>) -> Self {
+        let mut f = Self::new(Outcome::Review, rule_id, message);
+        f.basis = Basis::BestPractice;
+        f.tags.push("best-practice".into());
+        f
+    }
+
+    /// Ist das eine Empfehlung statt einer Aussage über ein Erfolgskriterium?
+    pub fn is_best_practice(&self) -> bool {
+        self.basis == Basis::BestPractice
     }
 
     /// Automatisch festgestelltes Problem.
@@ -281,6 +299,9 @@ impl Finding {
 
     pub fn with_tags(mut self, tags: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.tags = tags.into_iter().map(Into::into).collect();
+        if self.basis == Basis::BestPractice && !self.tags.iter().any(|t| t == "best-practice") {
+            self.tags.push("best-practice".into());
+        }
         self
     }
 

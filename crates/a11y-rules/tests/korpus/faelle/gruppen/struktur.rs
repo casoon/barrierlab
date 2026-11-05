@@ -380,12 +380,12 @@ fn lists() -> Vec<Fall> {
         )
         .variant("hidden"),
         na(INV, r#"<p>Keine Liste</p>"#, UL),
-        fail(
+        review(
             EMPTY,
             r#"<ul></ul>"#,
             "Normative Zuordnung (auditmysite#779): Best Practice, Befund ohne Kriterium",
         ),
-        fail(
+        review(
             EMPTY,
             r#"<div role="list"></div>"#,
             "Normative Zuordnung (auditmysite#779): Best Practice",

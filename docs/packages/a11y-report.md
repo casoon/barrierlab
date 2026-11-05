@@ -32,6 +32,7 @@ flowchart LR
 | Type | Purpose |
 |---|---|
 | `Outcome` | the four states; `NotRun` is one of them, not a special case of "passed" |
+| `Basis` | criterion or recommendation: a best-practice finding (`Finding::best_practice`) is `REVIEW` with `Basis::BestPractice`, never a WCAG failure |
 | `Severity`, `WcagLevel` | classification of a finding |
 | `Finding`, `Evidence`, `Location` | a finding and what it is anchored to |
 | `Report`, `RuleRun`, `NotRun`, `Summary` | what a run produced, including the rules that did not run |

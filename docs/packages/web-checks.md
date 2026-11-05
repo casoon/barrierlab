@@ -146,8 +146,18 @@ real pages examined are valid under both the old and the new check.
 | `hreflang::Alternate` | a `link rel=alternate hreflang` with an `href` resolved by the host |
 | `hreflang::is_valid_code`, `invalid_codes`, `is_x_default`, `has_x_default` | language code and `x-default` |
 | `hreflang::has_self_reference`, `same_page` | reference to the page itself, URL comparison |
+| `third_party::classify_host`, `classify_url` | host or URL → `Match { provider, category }`; the URL form applies path rules (`facebook.net` serves both the Like plugin and the ad pixel) |
+| `third_party::classify_storage_name` | cookie or web-storage name → provider (exact or prefix, case-sensitive) |
+| `third_party::host_of` | host of an absolute or scheme-relative URL; credentials, port and trailing dot stripped |
+| `third_party::PROVIDERS`, `RULESET_VERSION` | the provider list, every entry with a `source`; version of the list |
 
 ## Limits
+
+The provider list is a documented snapshot, not a census. An unknown host is
+`None`; absence from the list says nothing about a host. The seat is the
+provider's own statement and says nothing about where data actually flows.
+Whether a provider may load before consent is a legal question the package
+does not answer.
 
 The bot registries are a snapshot: vendors rename crawlers and
 add new ones. An unknown name is `Unknown`, not "harmless".
