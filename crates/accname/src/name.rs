@@ -34,6 +34,9 @@ struct Ctx<'i, 'a, N: Node<'a>> {
     /// Endlosschleifen über `aria-labelledby`-Ringe.
     besucht: HashSet<NodeId>,
     ziel: Ziel,
+    /// Die per IDREF herangezogene Wurzel war versteckt: Schritt 2A gilt dann
+    /// für ihren ganzen Teilbaum nicht (accname 1.2, 2A).
+    verweis_versteckt: bool,
 }
 
 /// Berechnet den Accessible Name.
@@ -77,6 +80,7 @@ fn name_mit_stil<'a, N: Node<'a>>(
         stil,
         besucht: HashSet::new(),
         ziel: Ziel::Name,
+        verweis_versteckt: false,
     };
     let s = flatten(&berechne(&mut ctx, node, false, false));
     (!s.is_empty()).then_some(s)
@@ -92,6 +96,7 @@ pub fn description<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Str
             stil: None,
             besucht: HashSet::new(),
             ziel: Ziel::Beschreibung,
+            verweis_versteckt: false,
         };
         ctx.besucht.insert(node.id());
         let mut teile = Vec::new();
@@ -129,6 +134,24 @@ fn berechne<'a, N: Node<'a>>(
     rekursion: bool,
     via_verweis: bool,
 ) -> String {
+    let vorher = ctx.verweis_versteckt;
+    if via_verweis
+        && !vorher
+        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))
+    {
+        ctx.verweis_versteckt = true;
+    }
+    let s = berechne_knoten(ctx, node, rekursion, via_verweis);
+    ctx.verweis_versteckt = vorher;
+    s
+}
+
+fn berechne_knoten<'a, N: Node<'a>>(
+    ctx: &mut Ctx<'_, 'a, N>,
+    node: N,
+    rekursion: bool,
+    via_verweis: bool,
+) -> String {
     // Schritt 1: Zyklenschutz. Nicht in der Spezifikation als eigener Schritt,
     // aber sie verlangt an mehreren Stellen, bereits besuchte Knoten zu
     // überspringen.
@@ -145,7 +168,10 @@ fn berechne<'a, N: Node<'a>>(
 
     // Schritt 2A: versteckte Knoten zählen nicht mit — es sei denn, sie werden
     // ausdrücklich per IDREF herangezogen.
-    if !via_verweis && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion)) {
+    if !via_verweis
+        && !ctx.verweis_versteckt
+        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))
+    {
         return String::new();
     }
 

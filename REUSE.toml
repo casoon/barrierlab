@@ -19,3 +19,10 @@ SPDX-License-Identifier = "MIT"
 
 # Die vendorte RELAX-NG-Testsuite bringt eigene .license-Dateien mit
 # (BSD-3-Clause); Herkunft in crates/relax-ng/tests/corpus/relaxng/UPSTREAM.md.
+
+# Vendorte WPT-accname-Fälle (BSD-3-Clause); Herkunft in
+# crates/accname/tests/corpus/wpt/UPSTREAM.md. UPSTREAM.md selbst bleibt MIT.
+[[annotations]]
+path = ["crates/accname/tests/corpus/wpt/**/*.html", "crates/accname/tests/corpus/wpt/LICENSE.md"]
+SPDX-FileCopyrightText = "web-platform-tests contributors"
+SPDX-License-Identifier = "BSD-3-Clause"
