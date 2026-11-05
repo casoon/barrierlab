@@ -25,6 +25,10 @@ Repository `casoon/a11y-core`.
   außerhalb des Crates entfallen; neue Felder sind künftig keine Breaking Changes mehr. Bauen über
   `Finding::fail` und Verwandte, `RuleRun::ran`/`not_run`, `Location::file`/`node`, `Evidence::new`.
 
+### Documented
+
+- **Typentscheidungen:** `docs/packages/a11y-report.md` hält fest, welche Typen `#[non_exhaustive]` sind und welche bewusst nicht (Host-Eingabetypen, geschlossene Enums, `Evidence::source` als freier String); casoon/barrierlab#110.
+
 ## [0.27.0] - 2026-11-03
 
 ### Added
