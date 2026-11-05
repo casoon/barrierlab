@@ -20,6 +20,14 @@ pub struct Environment {
     pub dark: bool,
     /// `prefers-reduced-motion: reduce`.
     pub reduced_motion: bool,
+    /// `hover: hover`; `None`, wenn die Umgebung es nicht festlegt.
+    pub hover: Option<bool>,
+    /// `pointer: fine`; `None`, wenn die Umgebung es nicht festlegt.
+    pub fine_pointer: Option<bool>,
+    /// `prefers-contrast: more`; `None`, wenn die Umgebung es nicht festlegt.
+    pub contrast_more: Option<bool>,
+    /// `forced-colors: active`; `None`, wenn die Umgebung es nicht festlegt.
+    pub forced_colors: Option<bool>,
 }
 
 impl Default for Environment {
@@ -30,6 +38,10 @@ impl Default for Environment {
             height: 800.0,
             dark: false,
             reduced_motion: false,
+            hover: None,
+            fine_pointer: None,
+            contrast_more: None,
+            forced_colors: None,
         }
     }
 }
@@ -141,6 +153,15 @@ fn abmessung(name: &str, env: &Environment) -> Option<f64> {
     }
 }
 
+/// Die Antwort, wenn die Umgebung den Wert festlegt, sonst `Unknown`.
+fn festgelegt(wert: Option<bool>, frage: impl Fn(bool) -> bool) -> Match {
+    match wert {
+        Some(b) if frage(b) => Match::Yes,
+        Some(_) => Match::No,
+        None => Match::Unknown,
+    }
+}
+
 fn merkmal(f: &MediaFeature, env: &Environment) -> Match {
     match f {
         MediaFeature::Boolean(n) => match n.0.to_ascii_lowercase().as_str() {
@@ -177,14 +198,22 @@ fn merkmal(f: &MediaFeature, env: &Environment) -> Match {
                 ("prefers-reduced-motion", "no-preference") => ja(!env.reduced_motion),
                 ("orientation", "landscape") => ja(env.width >= env.height),
                 ("orientation", "portrait") => ja(env.width < env.height),
-                ("hover" | "any-hover", "hover") => Match::Yes,
-                ("hover" | "any-hover", "none") => Match::No,
-                ("pointer" | "any-pointer", "fine") => Match::Yes,
-                ("pointer" | "any-pointer", "coarse" | "none") => Match::No,
-                ("prefers-contrast", "no-preference") => Match::Yes,
-                ("prefers-contrast", "more" | "less" | "custom") => Match::No,
-                ("forced-colors", "none") => Match::Yes,
-                ("forced-colors", "active") => Match::No,
+                ("hover" | "any-hover", "hover") => festgelegt(env.hover, |b| b),
+                ("hover" | "any-hover", "none") => festgelegt(env.hover, |b| !b),
+                ("pointer" | "any-pointer", "fine") => festgelegt(env.fine_pointer, |b| b),
+                // „grob" und „keiner" unterscheidet die Umgebung nicht.
+                ("pointer" | "any-pointer", "coarse" | "none") => match env.fine_pointer {
+                    Some(true) => Match::No,
+                    _ => Match::Unknown,
+                },
+                ("prefers-contrast", "no-preference") => festgelegt(env.contrast_more, |b| !b),
+                ("prefers-contrast", "more") => festgelegt(env.contrast_more, |b| b),
+                ("prefers-contrast", "less" | "custom") => match env.contrast_more {
+                    Some(false) => Match::No,
+                    _ => Match::Unknown,
+                },
+                ("forced-colors", "none") => festgelegt(env.forced_colors, |b| !b),
+                ("forced-colors", "active") => festgelegt(env.forced_colors, |b| b),
                 ("display-mode", "browser") => Match::Yes,
                 ("display-mode", _) => Match::No,
                 ("scripting", "enabled") => Match::Yes,
@@ -281,6 +310,27 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(eval("(prefers-color-scheme: dark)", &dunkel), Match::Yes);
+    }
+
+    #[test]
+    fn eingabe_und_kontrast_nur_wenn_die_umgebung_sie_festlegt() {
+        assert_eq!(e("(hover: hover)"), Match::Unknown);
+        assert_eq!(e("(pointer: fine)"), Match::Unknown);
+        assert_eq!(e("(prefers-contrast: more)"), Match::Unknown);
+        assert_eq!(e("(forced-colors: none)"), Match::Unknown);
+        let maus = Environment {
+            hover: Some(true),
+            fine_pointer: Some(true),
+            contrast_more: Some(false),
+            forced_colors: Some(false),
+            ..Default::default()
+        };
+        assert_eq!(eval("(hover: hover)", &maus), Match::Yes);
+        assert_eq!(eval("(hover: none)", &maus), Match::No);
+        assert_eq!(eval("(pointer: coarse)", &maus), Match::No);
+        assert_eq!(eval("(prefers-contrast: more)", &maus), Match::No);
+        assert_eq!(eval("(prefers-contrast: no-preference)", &maus), Match::Yes);
+        assert_eq!(eval("(forced-colors: active)", &maus), Match::No);
     }
 
     #[test]

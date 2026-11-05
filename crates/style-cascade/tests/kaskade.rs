@@ -162,8 +162,42 @@ fn unbekannte_bedingung_macht_unbestimmt() {
 #[test]
 fn unbekannter_selektor_macht_unbestimmt() {
     let d = seite(r#"<p id="b">t</p>"#);
-    let c = kaskade("p { color: #010101 } p:nth-child(2n+1) { color: #020202 }");
+    let c = kaskade("p { color: #010101 } p:has(b) { color: #020202 }");
     assert_eq!(farbe(&c, &d, "b"), None);
+}
+
+#[test]
+fn formularzustaende_entscheiden_die_farbe() {
+    // Bootstrap: `.btn:not(:disabled):not(.disabled)`
+    let d = seite(
+        r#"<button id="a" class="btn">t</button><button id="b" class="btn" disabled>t</button>"#,
+    );
+    let c =
+        kaskade(".btn { color: #010101 } .btn:not(:disabled):not(.disabled) { color: #020202 }");
+    assert_eq!(farbe(&c, &d, "a"), Some(rgb(2, 2, 2)));
+    assert_eq!(farbe(&c, &d, "b"), Some(rgb(1, 1, 1)));
+}
+
+#[test]
+fn nth_child_entscheidet_die_farbe() {
+    let d = seite(r#"<ul><li id="a">1</li><li id="b">2</li><li id="c">3</li></ul>"#);
+    let c = kaskade("li { color: #010101 } li:nth-child(odd) { color: #020202 }");
+    assert_eq!(farbe(&c, &d, "a"), Some(rgb(2, 2, 2)));
+    assert_eq!(farbe(&c, &d, "b"), Some(rgb(1, 1, 1)));
+    assert_eq!(farbe(&c, &d, "c"), Some(rgb(2, 2, 2)));
+}
+
+#[test]
+fn hover_ohne_umgebung_ist_unbestimmt() {
+    let d = seite(r#"<p id="b">t</p>"#);
+    let css = "p { color: #010101 } @media (hover: hover) { p { color: #020202 } }";
+    assert_eq!(farbe(&kaskade(css), &d, "b"), None);
+    let maus = Environment {
+        hover: Some(true),
+        ..Default::default()
+    };
+    let c = Cascade::new(&[parse_stylesheet(css)], maus);
+    assert_eq!(farbe(&c, &d, "b"), Some(rgb(2, 2, 2)));
 }
 
 #[test]
