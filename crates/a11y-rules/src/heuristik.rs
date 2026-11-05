@@ -27,7 +27,7 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::Meta;
 use crate::sicht::Scope;
 use crate::structure::per_tab_erreichbar;
@@ -834,9 +834,10 @@ pub(crate) const METAS: [Meta; 8] = [
         severity: Severity::Medium,
         help: "Visual order and tab order should match; CSS reordering (flex-direction: \
                *-reverse, order) over focusable content is a hint they do not.",
-        #[cfg(feature = "de")]
-        help_de: "Sichtbare Reihenfolge und Tabreihenfolge sollen übereinstimmen; CSS-\
-                  Umordnung über bedienbarem Inhalt ist ein Hinweis, dass sie es nicht tun.",
+        help_de: de_text!(
+            "Sichtbare Reihenfolge und Tabreihenfolge sollen übereinstimmen; CSS-\
+                  Umordnung über bedienbarem Inhalt ist ein Hinweis, dass sie es nicht tun."
+        ),
     },
     Meta {
         ids: &["motion/infinite-animation"],
@@ -846,9 +847,10 @@ pub(crate) const METAS: [Meta; 8] = [
         severity: Severity::Medium,
         help: "Movement that lasts longer than five seconds needs a way to pause, stop or \
                hide it.",
-        #[cfg(feature = "de")]
-        help_de: "Bewegung, die länger als fünf Sekunden läuft, braucht eine Möglichkeit, sie \
-                  anzuhalten, zu beenden oder auszublenden.",
+        help_de: de_text!(
+            "Bewegung, die länger als fünf Sekunden läuft, braucht eine Möglichkeit, sie \
+                  anzuhalten, zu beenden oder auszublenden."
+        ),
     },
     Meta {
         ids: &["reflow/min-width"],
@@ -858,9 +860,10 @@ pub(crate) const METAS: [Meta; 8] = [
         severity: Severity::Medium,
         help: "Content must reflow at 320 CSS pixels wide; a min-width above that forces \
                horizontal scrolling.",
-        #[cfg(feature = "de")]
-        help_de: "Inhalt muss bei 320 CSS-Pixeln Breite umbrechen; ein min-width darüber \
-                  erzwingt waagerechtes Scrollen.",
+        help_de: de_text!(
+            "Inhalt muss bei 320 CSS-Pixeln Breite umbrechen; ein min-width darüber \
+                  erzwingt waagerechtes Scrollen."
+        ),
     },
     Meta {
         ids: &["keyboard/pointer-only"],
@@ -870,9 +873,10 @@ pub(crate) const METAS: [Meta; 8] = [
         severity: Severity::High,
         help: "Whatever reacts to a click must be a control: a <button> or <a>, or a role and \
                tabindex with keyboard handling.",
-        #[cfg(feature = "de")]
-        help_de: "Was auf einen Klick reagiert, muss ein Bedienelement sein: <button> oder <a>, \
-                  oder Rolle und tabindex mit Tastaturbedienung.",
+        help_de: de_text!(
+            "Was auf einen Klick reagiert, muss ein Bedienelement sein: <button> oder <a>, \
+                  oder Rolle und tabindex mit Tastaturbedienung."
+        ),
     },
     Meta {
         ids: &["focus/obscured"],
@@ -881,9 +885,10 @@ pub(crate) const METAS: [Meta; 8] = [
         wcag: &["2.4.11"],
         severity: Severity::Medium,
         help: "A focused control must not be entirely hidden by fixed or sticky content.",
-        #[cfg(feature = "de")]
-        help_de: "Ein fokussiertes Bedienelement darf nicht ganz von fixiertem oder klebendem \
-                  Inhalt verdeckt sein.",
+        help_de: de_text!(
+            "Ein fokussiertes Bedienelement darf nicht ganz von fixiertem oder klebendem \
+                  Inhalt verdeckt sein."
+        ),
     },
     Meta {
         ids: &["targets/size"],
@@ -893,9 +898,10 @@ pub(crate) const METAS: [Meta; 8] = [
         severity: Severity::Medium,
         help: "Targets need at least 24 × 24 CSS pixels, or enough spacing to their \
                neighbours.",
-        #[cfg(feature = "de")]
-        help_de: "Ziele brauchen mindestens 24 × 24 CSS-Pixel oder genug Abstand zu ihren \
-                  Nachbarn.",
+        help_de: de_text!(
+            "Ziele brauchen mindestens 24 × 24 CSS-Pixel oder genug Abstand zu ihren \
+                  Nachbarn."
+        ),
     },
     Meta {
         ids: &["targets/size-enhanced"],
@@ -904,8 +910,7 @@ pub(crate) const METAS: [Meta; 8] = [
         wcag: &["2.5.5"],
         severity: Severity::Low,
         help: "Enhanced target size (AAA): targets of at least 44 × 44 CSS pixels.",
-        #[cfg(feature = "de")]
-        help_de: "Erhöhte Zielgröße (AAA): Ziele von mindestens 44 × 44 CSS-Pixeln.",
+        help_de: de_text!("Erhöhte Zielgröße (AAA): Ziele von mindestens 44 × 44 CSS-Pixeln."),
     },
     Meta {
         ids: &["focus/indicator-missing", "focus/indicator-unmeasured"],
@@ -914,8 +919,7 @@ pub(crate) const METAS: [Meta; 8] = [
         wcag: &["2.4.7"],
         severity: Severity::High,
         help: "Keyboard focus must be visible on every control.",
-        #[cfg(feature = "de")]
-        help_de: "Der Tastaturfokus muss an jedem Bedienelement sichtbar sein.",
+        help_de: de_text!("Der Tastaturfokus muss an jedem Bedienelement sichtbar sein."),
     },
 ];
 

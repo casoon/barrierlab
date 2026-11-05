@@ -21,6 +21,8 @@ abweichen, steht je Schritt in
 
 ### Changed
 
+- **Breaking, Feature `de`:** `Meta::help_de` gibt es unabhängig vom Feature; ohne `de` ist es
+  leer. Die Gestalt von `Meta` hängt damit nicht mehr von Features ab.
 - **Selektoren:** Der Selektor-Abgleich der Stylesheet-Regeln kommt aus `style-cascade` und liest jetzt CSS-Escapes im Bezeichner (`.sm\:hidden`); Selektoren damit sind nicht mehr „unbekannt".
 
 ## [0.26.1] - 2026-10-27

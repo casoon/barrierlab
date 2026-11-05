@@ -9,10 +9,21 @@ Repository `casoon/a11y-core`.
 
 ### Added
 
+- **Bericht:** `Report::schema` und `SCHEMA_VERSION` (1): Version des JSON-Vertrags, wird immer
+  serialisiert; JSON ohne das Feld bleibt lesbar.
+- **Builder:** `Location::with_node`, `Location::with_source_hint`, `Evidence::with_field` und
+  `Evidence::with_value`, damit Hosts die nun `#[non_exhaustive]`en Typen ohne Struct-Literal bauen.
 - **Eingaben:** `Report::inputs` mit `InputNote` und `InputKind` (`stylesheet_unavailable`,
   `stylesheet_unresolved`, `document_incomplete`, `other`) sowie `Report::note_input`: der Host
   vermerkt unvollständige Eingaben. Regeln lesen die Vermerke nicht. Das Feld entfällt im JSON,
   solange es leer ist.
+
+### Changed
+
+- **Breaking, Semver:** `Report`, `Finding`, `RuleRun`, `Summary`, `Evidence`, `Location`,
+  `InputNote` und `NotRun` sind `#[non_exhaustive]`. Struct-Literale und erschöpfende Matches
+  außerhalb des Crates entfallen; neue Felder sind künftig keine Breaking Changes mehr. Bauen über
+  `Finding::fail` und Verwandte, `RuleRun::ran`/`not_run`, `Location::file`/`node`, `Evidence::new`.
 
 ## [0.26.1] - 2026-10-27
 

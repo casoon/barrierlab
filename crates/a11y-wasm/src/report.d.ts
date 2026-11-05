@@ -78,6 +78,8 @@ export interface InputNote {
 
 /** Der Bericht von `Scan.run()`; spiegelt die Serialisierung von `a11y-report`. */
 export interface Report {
+  /** Version des JSON-Vertrags (`SCHEMA_VERSION`, derzeit 1). */
+  schema: number;
   findings: Finding[];
   rule_runs?: RuleRun[];
   inputs?: InputNote[];

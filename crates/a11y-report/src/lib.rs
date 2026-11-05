@@ -90,7 +90,7 @@ pub use identity::{
     RootCauseId, normalize_selector,
 };
 pub use outcome::{Outcome, Severity, WcagLevel};
-pub use report::{InputKind, InputNote, NotRun, Report, RuleRun, Summary};
+pub use report::{InputKind, InputNote, NotRun, Report, RuleRun, SCHEMA_VERSION, Summary};
 
 #[cfg(test)]
 mod tests {
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn eingaben_json_unveraendert_wenn_leer_und_alt_lesbar() {
-        let golden = r#"{"findings":[],"summary":{"fail":0,"review":0,"pass":0,"untested":0,"critical":0,"high":0,"medium":0,"low":0,"rules_not_run":0}}"#;
+        let golden = r#"{"schema":1,"findings":[],"summary":{"fail":0,"review":0,"pass":0,"untested":0,"critical":0,"high":0,"medium":0,"low":0,"rules_not_run":0}}"#;
         let r = Report::new();
         assert_eq!(serde_json::to_string(&r).unwrap(), golden);
         let alt: Report = serde_json::from_str(golden).unwrap();
@@ -364,5 +364,19 @@ mod tests {
         ] {
             assert_eq!(serde_json::to_string(&k).unwrap(), format!("\"{n}\""));
         }
+    }
+
+    #[test]
+    fn schema_wird_immer_mit_serialisiert() {
+        let j: serde_json::Value = serde_json::to_value(Report::new().finish()).unwrap();
+        assert_eq!(j["schema"], 1);
+        assert_eq!(SCHEMA_VERSION, 1);
+    }
+
+    #[test]
+    fn json_ohne_schema_bleibt_lesbar() {
+        let alt = r#"{"findings":[],"summary":{"fail":0,"review":0,"pass":0,"untested":0,"critical":0,"high":0,"medium":0,"low":0,"rules_not_run":0}}"#;
+        let r: Report = serde_json::from_str(alt).unwrap();
+        assert_eq!(r.schema, SCHEMA_VERSION);
     }
 }

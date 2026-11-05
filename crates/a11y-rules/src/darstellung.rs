@@ -19,7 +19,7 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::Meta;
 use crate::sicht::Scope;
 use crate::structure::{explizite_rolle, per_tab_erreichbar};
@@ -497,8 +497,9 @@ pub(crate) const METAS: [Meta; 3] = [
         wcag: &[],
         severity: Severity::Low,
         help: "role=\"list\" on a <ul> or <ol> is only needed when list-style-type is none.",
-        #[cfg(feature = "de")]
-        help_de: "role=\"list\" an <ul> oder <ol> braucht es nur bei list-style-type: none.",
+        help_de: de_text!(
+            "role=\"list\" an <ul> oder <ol> braucht es nur bei list-style-type: none."
+        ),
     },
     Meta {
         ids: &["color/link-indistinct"],
@@ -508,10 +509,11 @@ pub(crate) const METAS: [Meta; 3] = [
         severity: Severity::Medium,
         help: "A link in running text needs more than colour to stand out: an underline, or \
                a different weight, style, border or background.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Link im Fließtext braucht mehr als Farbe, um sich abzuheben: eine \
+        help_de: de_text!(
+            "Ein Link im Fließtext braucht mehr als Farbe, um sich abzuheben: eine \
                   Unterstreichung oder ein anderes Gewicht, einen anderen Schnitt, eine \
-                  Unterkante oder einen Hintergrund.",
+                  Unterkante oder einen Hintergrund."
+        ),
     },
     Meta {
         ids: &["keyboard/scrollable-region-not-focusable"],
@@ -521,9 +523,10 @@ pub(crate) const METAS: [Meta; 3] = [
         severity: Severity::High,
         help: "A scrollable region needs keyboard access: tabindex=\"0\" on the region or a \
                focusable element inside it.",
-        #[cfg(feature = "de")]
-        help_de: "Ein scrollbarer Bereich braucht Tastaturzugang: tabindex=\"0\" am Bereich oder \
-                  ein fokussierbares Element darin.",
+        help_de: de_text!(
+            "Ein scrollbarer Bereich braucht Tastaturzugang: tabindex=\"0\" am Bereich oder \
+                  ein fokussierbares Element darin."
+        ),
     },
 ];
 

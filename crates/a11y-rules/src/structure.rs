@@ -8,7 +8,7 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, StructureRule};
 use crate::sicht::Scope;
 
@@ -1728,8 +1728,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::High,
         help: "The <html> element needs a valid lang attribute.",
-        #[cfg(feature = "de")]
-        help_de: "Das <html>-Element braucht ein gültiges lang-Attribut.",
+        help_de: de_text!("Das <html>-Element braucht ein gültiges lang-Attribut."),
     },
     Meta {
         ids: &["document/title-missing", "document/title-empty"],
@@ -1738,8 +1737,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.2"],
         severity: Severity::High,
         help: "Every page needs a meaningful <title>.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Seite braucht einen aussagekräftigen <title>.",
+        help_de: de_text!("Jede Seite braucht einen aussagekräftigen <title>."),
     },
     Meta {
         ids: &[
@@ -1752,8 +1750,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.4"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
-        #[cfg(feature = "de")]
-        help_de: "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+        help_de: de_text!("Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern."),
     },
     Meta {
         ids: &[
@@ -1768,8 +1765,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
-        #[cfg(feature = "de")]
-        help_de: "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+        help_de: de_text!("Überschriften bilden die Gliederung; Ebenen nicht überspringen."),
     },
     Meta {
         ids: &["images/alt-missing", "images/alt-suspicious"],
@@ -1778,8 +1774,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative images need descriptive alt text.",
-        #[cfg(feature = "de")]
-        help_de: "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+        help_de: de_text!("Informative Bilder brauchen einen beschreibenden Alt-Text."),
     },
     Meta {
         ids: &["forms/label-missing", "forms/placeholder-as-label"],
@@ -1788,8 +1783,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "3.3.2", "4.1.2"],
         severity: Severity::Critical,
         help: "Every input needs an associated label.",
-        #[cfg(feature = "de")]
-        help_de: "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+        help_de: de_text!("Jedes Eingabefeld braucht ein zugeordnetes Label."),
     },
     Meta {
         ids: &["aria/role-invalid", "aria/role-abstract"],
@@ -1798,8 +1792,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only roles from the ARIA specification.",
-        #[cfg(feature = "de")]
-        help_de: "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+        help_de: de_text!("Nur Rollen aus der ARIA-Spezifikation verwenden."),
     },
     Meta {
         ids: &["aria/reference-missing"],
@@ -1808,8 +1801,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA references must point to IDs that exist.",
-        #[cfg(feature = "de")]
-        help_de: "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
+        help_de: de_text!("ARIA-Verweise müssen auf vorhandene IDs zeigen."),
     },
     Meta {
         ids: &["aria/required-attribute-missing"],
@@ -1818,8 +1810,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "A role that announces a state needs the attribute carrying it.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
+        help_de: de_text!(
+            "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt."
+        ),
     },
     Meta {
         ids: &["ids/duplicate"],
@@ -1828,8 +1821,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "An ID that another element references must be unique.",
-        #[cfg(feature = "de")]
-        help_de: "Eine ID, auf die ein anderes Element verweist, muss eindeutig sein.",
+        help_de: de_text!("Eine ID, auf die ein anderes Element verweist, muss eindeutig sein."),
     },
     Meta {
         ids: &["keyboard/positive-tabindex"],
@@ -1838,8 +1830,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.3"],
         severity: Severity::High,
         help: "Positive tabindex values break the tab order.",
-        #[cfg(feature = "de")]
-        help_de: "Positive tabindex-Werte brechen die Tabreihenfolge.",
+        help_de: de_text!("Positive tabindex-Werte brechen die Tabreihenfolge."),
     },
     Meta {
         ids: &["keyboard/hidden-focusable"],
@@ -1848,8 +1839,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Focusable elements must not be aria-hidden.",
-        #[cfg(feature = "de")]
-        help_de: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
+        help_de: de_text!("Fokussierbare Elemente dürfen nicht aria-hidden sein."),
     },
     Meta {
         ids: &[
@@ -1864,9 +1854,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "<ul> and <ol> may only have <li> as direct children and must not be empty; \
                a list item must stand inside a list.",
-        #[cfg(feature = "de")]
-        help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein; \
-                  ein Listeneintrag muss in einer Liste stehen.",
+        help_de: de_text!(
+            "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein; \
+                  ein Listeneintrag muss in einer Liste stehen."
+        ),
     },
     Meta {
         ids: &[
@@ -1879,8 +1870,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Data tables need <th> header cells.",
-        #[cfg(feature = "de")]
-        help_de: "Datentabellen brauchen <th>-Kopfzellen.",
+        help_de: de_text!("Datentabellen brauchen <th>-Kopfzellen."),
     },
     Meta {
         ids: &[
@@ -1895,8 +1885,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1"],
         severity: Severity::High,
         help: "Landmarks structure the page for everyone who cannot see it.",
-        #[cfg(feature = "de")]
-        help_de: "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+        help_de: de_text!("Landmarks gliedern die Seite für alle, die sie nicht sehen können."),
     },
     Meta {
         ids: &["keyboard/skip-link-missing"],
@@ -1905,8 +1894,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.1"],
         severity: Severity::Medium,
         help: "A skip link bypasses blocks that repeat before the content.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
+        help_de: de_text!("Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt."),
     },
     Meta {
         ids: &["aria/attribute-unknown"],
@@ -1915,8 +1903,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only aria-* attributes defined by WAI-ARIA.",
-        #[cfg(feature = "de")]
-        help_de: "Nur aria-*-Attribute verwenden, die WAI-ARIA definiert.",
+        help_de: de_text!("Nur aria-*-Attribute verwenden, die WAI-ARIA definiert."),
     },
     Meta {
         ids: &["aria/attribute-value-invalid"],
@@ -1925,8 +1912,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "ARIA attributes need a value of their type.",
-        #[cfg(feature = "de")]
-        help_de: "ARIA-Attribute brauchen einen Wert ihres Typs.",
+        help_de: de_text!("ARIA-Attribute brauchen einen Wert ihres Typs."),
     },
     Meta {
         ids: &["aria/owns-conflict"],
@@ -1935,8 +1921,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "An element may be owned by only one aria-owns.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Element darf nur einem aria-owns gehören.",
+        help_de: de_text!("Ein Element darf nur einem aria-owns gehören."),
     },
     Meta {
         ids: &[
@@ -1949,8 +1934,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::Medium,
         help: "Tabs mark the selected tab; an expanded combobox references its popup.",
-        #[cfg(feature = "de")]
-        help_de: "Tabs zeichnen den gewählten Tab aus; eine aufgeklappte Combobox verweist auf ihr Popup.",
+        help_de: de_text!(
+            "Tabs zeichnen den gewählten Tab aus; eine aufgeklappte Combobox verweist auf ihr Popup."
+        ),
     },
     Meta {
         ids: &["popover/target-missing", "popover/target-invalid"],
@@ -1959,8 +1945,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "popovertarget must reference an element with the popover attribute.",
-        #[cfg(feature = "de")]
-        help_de: "popovertarget muss auf ein Element mit popover-Attribut verweisen.",
+        help_de: de_text!("popovertarget muss auf ein Element mit popover-Attribut verweisen."),
     },
     Meta {
         ids: &["inert/dialog-inert"],
@@ -1969,8 +1954,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.1.1", "4.1.2"],
         severity: Severity::High,
         help: "An open dialog must not be inert.",
-        #[cfg(feature = "de")]
-        help_de: "Ein offener Dialog darf nicht inert sein.",
+        help_de: de_text!("Ein offener Dialog darf nicht inert sein."),
     },
     crate::checkliste::META,
     crate::checkliste::META_BEWEGUNG,
@@ -1981,8 +1965,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.5"],
         severity: Severity::Low,
         help: "autocomplete must use the autofill tokens of the HTML standard.",
-        #[cfg(feature = "de")]
-        help_de: "autocomplete muss die Autofill-Angaben des HTML-Standards verwenden.",
+        help_de: de_text!("autocomplete muss die Autofill-Angaben des HTML-Standards verwenden."),
     },
     Meta {
         ids: &["forms/error-unidentified"],
@@ -1991,8 +1974,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.1"],
         severity: Severity::Medium,
         help: "A field marked aria-invalid needs an error description via aria-describedby or aria-errormessage.",
-        #[cfg(feature = "de")]
-        help_de: "Ein als aria-invalid ausgezeichnetes Feld braucht eine Fehlerbeschreibung per aria-describedby oder aria-errormessage.",
+        help_de: de_text!(
+            "Ein als aria-invalid ausgezeichnetes Feld braucht eine Fehlerbeschreibung per aria-describedby oder aria-errormessage."
+        ),
     },
     Meta {
         ids: &["forms/group-missing"],
@@ -2001,8 +1985,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "Radio buttons and checkboxes sharing a name belong in a fieldset with legend or a named group.",
-        #[cfg(feature = "de")]
-        help_de: "Optionsfelder und gleichnamige Kontrollkästchen gehören in ein fieldset mit legend oder eine benannte Gruppe.",
+        help_de: de_text!(
+            "Optionsfelder und gleichnamige Kontrollkästchen gehören in ein fieldset mit legend oder eine benannte Gruppe."
+        ),
     },
     Meta {
         ids: &["forms/no-submit"],
@@ -2011,8 +1996,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.2"],
         severity: Severity::Medium,
         help: "A form that collects input needs an explicit submit control.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Formular, das Eingaben sammelt, braucht ein ausdrückliches Absende-Element.",
+        help_de: de_text!(
+            "Ein Formular, das Eingaben sammelt, braucht ein ausdrückliches Absende-Element."
+        ),
     },
     Meta {
         ids: &["forms/redundant-entry"],
@@ -2021,8 +2007,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.7"],
         severity: Severity::Medium,
         help: "Information entered once is prefilled, autofillable or selectable when asked again.",
-        #[cfg(feature = "de")]
-        help_de: "Einmal Eingegebenes ist bei erneuter Abfrage vorbelegt, automatisch ausfüllbar oder auswählbar.",
+        help_de: de_text!(
+            "Einmal Eingegebenes ist bei erneuter Abfrage vorbelegt, automatisch ausfüllbar oder auswählbar."
+        ),
     },
     Meta {
         ids: &["context/on-input"],
@@ -2031,8 +2018,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.2"],
         severity: Severity::Medium,
         help: "Changing a selection must not submit, navigate or open a window by itself.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Auswahl zu ändern darf nicht von selbst absenden, navigieren oder ein Fenster öffnen.",
+        help_de: de_text!(
+            "Eine Auswahl zu ändern darf nicht von selbst absenden, navigieren oder ein Fenster öffnen."
+        ),
     },
     Meta {
         ids: &["context/on-focus", "context/autofocus"],
@@ -2041,8 +2029,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.1"],
         severity: Severity::High,
         help: "Receiving focus must not change the context.",
-        #[cfg(feature = "de")]
-        help_de: "Der Fokus allein darf den Kontext nicht wechseln.",
+        help_de: de_text!("Der Fokus allein darf den Kontext nicht wechseln."),
     },
     Meta {
         ids: &["auth/captcha"],
@@ -2051,8 +2038,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.8"],
         severity: Severity::Medium,
         help: "A CAPTCHA in a sign-in form needs an alternative without a cognitive function test.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test.",
+        help_de: de_text!(
+            "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test."
+        ),
     },
     Meta {
         ids: &["keyboard/click-handler-not-focusable"],
@@ -2062,9 +2050,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "An element with a click handler must be a control: a <button> or <a href>, or a \
                role and tabindex with keyboard handling.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
-                  <a href>, oder Rolle und tabindex mit Tastaturbedienung.",
+        help_de: de_text!(
+            "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
+                  <a href>, oder Rolle und tabindex mit Tastaturbedienung."
+        ),
     },
     Meta {
         ids: &["links/used-as-button"],
@@ -2073,8 +2062,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Low,
         help: "A link that triggers an action instead of navigating should be a <button>.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein.",
+        help_de: de_text!(
+            "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein."
+        ),
     },
     Meta {
         ids: &["navigation/location-missing"],
@@ -2084,9 +2074,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Low,
         help: "Show users where they are: a breadcrumb trail or aria-current=\"page\" in the \
                navigation.",
-        #[cfg(feature = "de")]
-        help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
-                  der Navigation.",
+        help_de: de_text!(
+            "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
+                  der Navigation."
+        ),
     },
     Meta {
         ids: &["images/area-alt-missing"],
@@ -2095,8 +2086,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An image map <area> with href needs alt text naming its target.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt.",
+        help_de: de_text!("Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt."),
     },
     Meta {
         ids: &["images/input-alt-missing"],
@@ -2105,8 +2095,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An <input type=\"image\"> needs alt text describing its action.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt.",
+        help_de: de_text!(
+            "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt."
+        ),
     },
     Meta {
         ids: &["images/server-side-map"],
@@ -2115,9 +2106,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.1.1"],
         severity: Severity::Medium,
         help: "Do not use server-side image maps (ismap); use a client-side map or text links.",
-        #[cfg(feature = "de")]
-        help_de: "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
-                  Imagemap oder Textlinks.",
+        help_de: de_text!(
+            "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
+                  Imagemap oder Textlinks."
+        ),
     },
     Meta {
         ids: &["objects/alt-missing"],
@@ -2126,8 +2118,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An <object> needs a text alternative: fallback content, aria-label or title.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title.",
+        help_de: de_text!(
+            "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title."
+        ),
     },
     Meta {
         ids: &["media/audio-autoplay"],
@@ -2138,8 +2131,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.2"],
         severity: Severity::Medium,
         help: "Audio that plays automatically must stop within three seconds or be pausable.",
-        #[cfg(feature = "de")]
-        help_de: "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen.",
+        help_de: de_text!(
+            "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen."
+        ),
     },
     Meta {
         ids: &["viz/text-missing"],
@@ -2149,9 +2143,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Every visualisation (figure[data-viz]) needs a non-empty text layer \
                [data-viz-text] with its statement.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
-                  [data-viz-text] mit ihrer Aussage.",
+        help_de: de_text!(
+            "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
+                  [data-viz-text] mit ihrer Aussage."
+        ),
     },
     Meta {
         ids: &["display/text-hidden"],
@@ -2161,9 +2156,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Never put hidden, aria-hidden=\"true\" or inert on [data-viz-text] or its \
                ancestors; hide it visually instead.",
-        #[cfg(feature = "de")]
-        help_de: "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
-                  Vorfahren; die Schicht nur visuell ausblenden.",
+        help_de: de_text!(
+            "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
+                  Vorfahren; die Schicht nur visuell ausblenden."
+        ),
     },
     Meta {
         ids: &["viz/caption-missing"],
@@ -2172,9 +2168,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::Low,
         help: "Every visualisation (figure[data-viz]) needs a <figcaption> that names it.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
-                  benennt.",
+        help_de: de_text!(
+            "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
+                  benennt."
+        ),
     },
     Meta {
         ids: &["viz/static-missing"],
@@ -2184,9 +2181,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "A 3d or interactive visualisation needs a still image [data-viz-static] for calm \
                mode.",
-        #[cfg(feature = "de")]
-        help_de: "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
-                  [data-viz-static] für den ruhigen Modus.",
+        help_de: de_text!(
+            "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
+                  [data-viz-static] für den ruhigen Modus."
+        ),
     },
     Meta {
         ids: &["viz/table-missing"],
@@ -2195,8 +2193,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Low,
         help: "A chart (data-viz=\"chart\") should give its values as a <table>.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben.",
+        help_de: de_text!(
+            "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben."
+        ),
     },
     Meta {
         ids: &["display/toggle-missing"],
@@ -2206,9 +2205,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "A page with visualisations needs a display-mode toggle marked \
                [data-display-toggle].",
-        #[cfg(feature = "de")]
-        help_de: "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
-                  markierten Umschalter für den Darstellungsmodus.",
+        help_de: de_text!(
+            "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
+                  markierten Umschalter für den Darstellungsmodus."
+        ),
     },
     Meta {
         ids: &["display/init-missing"],
@@ -2217,9 +2217,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.2.2"],
         severity: Severity::Low,
         help: "Set html[data-display] in a small blocking script in <head>, before <body>.",
-        #[cfg(feature = "de")]
-        help_de: "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
-                  <body>.",
+        help_de: de_text!(
+            "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
+                  <body>."
+        ),
     },
     Meta {
         ids: &["tables/header-without-data", "tables/data-undetermined"],
@@ -2228,9 +2229,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Header cells need data cells to label; a table of headers only labels nothing.",
-        #[cfg(feature = "de")]
-        help_de: "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
-                  Kopfzellen beschriftet nichts.",
+        help_de: de_text!(
+            "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
+                  Kopfzellen beschriftet nichts."
+        ),
     },
     Meta {
         ids: &["tables/headers-attr-invalid"],
@@ -2243,9 +2245,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "The headers attribute of a cell must list the ids of header cells in the same \
                table.",
-        #[cfg(feature = "de")]
-        help_de: "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
-                  nennen.",
+        help_de: de_text!(
+            "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
+                  nennen."
+        ),
     },
     Meta {
         ids: &["document/lang-mismatch"],
@@ -2254,8 +2257,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::Medium,
         help: "lang and xml:lang on <html> must name the same language.",
-        #[cfg(feature = "de")]
-        help_de: "lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen.",
+        help_de: de_text!("lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen."),
     },
     Meta {
         ids: &["language/part-unmarked", "language/part-undetermined"],
@@ -2264,9 +2266,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.2"],
         severity: Severity::Medium,
         help: "A passage in another language than the page needs its own lang attribute.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
-                  lang-Attribut.",
+        help_de: de_text!(
+            "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
+                  lang-Attribut."
+        ),
     },
     Meta {
         ids: &["language/abbreviation-unexpanded"],
@@ -2275,8 +2278,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.4"],
         severity: Severity::Low,
         help: "Make the expansion of an abbreviation available, e.g. in the title of <abbr>.",
-        #[cfg(feature = "de")]
-        help_de: "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>.",
+        help_de: de_text!(
+            "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>."
+        ),
     },
     Meta {
         ids: &["timing/meta-refresh"],
@@ -2286,9 +2290,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\">; redirect \
                on the server or let users trigger it.",
-        #[cfg(feature = "de")]
-        help_de: "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
-                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen.",
+        help_de: de_text!(
+            "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
+                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen."
+        ),
     },
     Meta {
         ids: &["headings/section-without-heading"],
@@ -2297,9 +2302,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.10"],
         severity: Severity::Low,
         help: "Give articles and named sections a heading so users can find their content.",
-        #[cfg(feature = "de")]
-        help_de: "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
-                  Inhalt findet.",
+        help_de: de_text!(
+            "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
+                  Inhalt findet."
+        ),
     },
     Meta {
         ids: &["aria/role-redundant"],
@@ -2308,8 +2314,7 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Low,
         help: "Do not set a role the element already has implicitly.",
-        #[cfg(feature = "de")]
-        help_de: "Keine Rolle setzen, die das Element ohnehin implizit hat.",
+        help_de: de_text!("Keine Rolle setzen, die das Element ohnehin implizit hat."),
     },
     Meta {
         ids: &["names/title-only"],
@@ -2318,8 +2323,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "Do not rely on the title attribute as a control's only name.",
-        #[cfg(feature = "de")]
-        help_de: "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen.",
+        help_de: de_text!(
+            "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen."
+        ),
     },
     Meta {
         ids: &["patterns/tooltip-unreferenced"],
@@ -2328,9 +2334,10 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Low,
         help: "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
-        #[cfg(feature = "de")]
-        help_de: "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
-                  verweisen.",
+        help_de: de_text!(
+            "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
+                  verweisen."
+        ),
     },
 ];
 

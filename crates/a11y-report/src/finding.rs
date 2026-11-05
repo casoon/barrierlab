@@ -10,6 +10,7 @@ use crate::outcome::{Outcome, Severity, WcagLevel};
 /// über den Index in seiner Arena. Alle Felder sind deshalb optional — welche
 /// gefüllt sind, hängt vom Host ab, nicht von der Regel.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Location {
     /// Datei relativ zur Ausgabewurzel, z. B. `about/index.html`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -43,6 +44,11 @@ impl Location {
         }
     }
 
+    pub fn with_node(mut self, id: impl Into<String>) -> Self {
+        self.node = Some(id.into());
+        self
+    }
+
     pub fn with_selector(mut self, s: impl Into<String>) -> Self {
         self.selector = Some(s.into());
         self
@@ -50,6 +56,11 @@ impl Location {
 
     pub fn with_url(mut self, u: impl Into<String>) -> Self {
         self.url = Some(u.into());
+        self
+    }
+
+    pub fn with_source_hint(mut self, h: impl Into<String>) -> Self {
+        self.source_hint = Some(h.into());
         self
     }
 
@@ -63,6 +74,7 @@ impl Location {
 /// Aussage aus dem nativen Accessibility-Tree stammt, aus einem Attribut oder
 /// aus einer Messung — was je nach Oberfläche unterschiedlich verfügbar ist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Evidence {
     /// `ax_tree`, `dom_attribute`, `meta`, `css_property`, `http_header`, `computed`.
     pub source: String,
@@ -79,6 +91,16 @@ impl Evidence {
             field: None,
             value: None,
         }
+    }
+
+    pub fn with_field(mut self, f: impl Into<String>) -> Self {
+        self.field = Some(f.into());
+        self
+    }
+
+    pub fn with_value(mut self, v: impl Into<String>) -> Self {
+        self.value = Some(v.into());
+        self
     }
 
     pub fn ax_tree(value: impl Into<String>) -> Self {
@@ -113,6 +135,7 @@ impl Evidence {
 /// [`Finding::untested`] erzeugt und mit den `with_*`-Methoden angereichert —
 /// der Zustand ist damit immer bewusst gesetzt und nie ein Vorgabewert.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Finding {
     /// Stabile Regelkennung, z. B. `a11y/img-alt`. Über alle Oberflächen
     /// identisch — das ist der Sinn des gemeinsamen Modells.

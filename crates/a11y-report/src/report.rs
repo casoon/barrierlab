@@ -12,6 +12,7 @@ use crate::outcome::{Outcome, Severity};
 /// Kontrastprüfung ohne Rendering-Zugriff wie eine bestandene Prüfung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum NotRun {
     /// Der Host liefert die nötigen Daten nicht — z. B. Rendering-Werte bei
     /// statischer HTML-Analyse. Die Regel ist nicht anwendbar, nicht bestanden.
@@ -27,6 +28,7 @@ pub enum NotRun {
 /// Ein Ausführungsvermerk je Regel. Beantwortet „lief das überhaupt?", während
 /// [`Finding`] beantwortet „was kam dabei heraus?".
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct RuleRun {
     pub rule_id: String,
     /// Der Durchgang, in dem diese Regel lief — etwa `desktop` oder `mobile`.
@@ -100,6 +102,7 @@ impl RuleRun {
 /// Score würde genau die Unterscheidung einebnen, für die es die vier Zustände
 /// gibt.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Summary {
     pub fail: usize,
     pub review: usize,
@@ -147,6 +150,7 @@ pub enum InputKind {
 /// [`InputKind::StylesheetUnavailable`] liest, muss die Kontrastregeln als
 /// ungeprüft behandeln: „keine Befunde" heißt dann nicht „bestanden".
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct InputNote {
     pub kind: InputKind,
     /// Das Betroffene — eine URL, ein Pfad, die Vorspann-Zeichen eines `@import`.
@@ -177,9 +181,22 @@ impl InputNote {
     }
 }
 
+/// Version des JSON-Vertrags von [`Report`]. Wird bei einer nicht
+/// abwärtskompatiblen Änderung der Serialisierung erhöht.
+pub const SCHEMA_VERSION: u16 = 1;
+
+fn schema_version() -> u16 {
+    SCHEMA_VERSION
+}
+
 /// Das Gesamtergebnis eines Laufs.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Report {
+    /// Version des JSON-Vertrags, siehe [`SCHEMA_VERSION`]. Fehlt das Feld in
+    /// altem JSON, gilt [`SCHEMA_VERSION`].
+    #[serde(default = "schema_version")]
+    pub schema: u16,
     pub findings: Vec<Finding>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rule_runs: Vec<RuleRun>,
@@ -188,6 +205,18 @@ pub struct Report {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub inputs: Vec<InputNote>,
     pub summary: Summary,
+}
+
+impl Default for Report {
+    fn default() -> Self {
+        Report {
+            schema: SCHEMA_VERSION,
+            findings: Vec::new(),
+            rule_runs: Vec::new(),
+            inputs: Vec::new(),
+            summary: Summary::default(),
+        }
+    }
 }
 
 impl Report {

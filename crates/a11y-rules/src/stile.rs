@@ -19,7 +19,7 @@ use stylesheet_parse::{Declaration, Scoped, Stylesheet};
 use a11y_dom::{Document, Node};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, tr};
+use crate::locale::{Locale, de_text, tr};
 use style_cascade::selector::{Match, Mode, Selector, any_match};
 
 fn seite<D: Document>(doc: &D) -> Location {
@@ -817,10 +817,11 @@ pub(crate) const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Keep a visible focus indicator: do not remove the outline on :focus without a \
                replacement, or limit the removal to :focus:not(:focus-visible).",
-        #[cfg(feature = "de")]
-        help_de: "Einen sichtbaren Fokushinweis behalten: den Rahmen unter :focus nicht ohne \
+        help_de: de_text!(
+            "Einen sichtbaren Fokushinweis behalten: den Rahmen unter :focus nicht ohne \
                   Ersatz entfernen, oder das Entfernen auf :focus:not(:focus-visible) \
-                  beschränken.",
+                  beschränken."
+        ),
     },
     Meta {
         ids: &["motion/reduced-motion-ignored"],
@@ -829,8 +830,7 @@ pub(crate) const METAS: &[Meta] = &[
         wcag: &["2.3.3"],
         severity: Severity::Medium,
         help: "Switch off movement under @media (prefers-reduced-motion: reduce).",
-        #[cfg(feature = "de")]
-        help_de: "Bewegung unter @media (prefers-reduced-motion: reduce) abschalten.",
+        help_de: de_text!("Bewegung unter @media (prefers-reduced-motion: reduce) abschalten."),
     },
     Meta {
         ids: &["orientation/content-hidden"],
@@ -840,9 +840,10 @@ pub(crate) const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "Content must work in portrait and landscape; do not hide or rotate it per \
                orientation.",
-        #[cfg(feature = "de")]
-        help_de: "Inhalt muss hoch- und querformatig funktionieren; ihn nicht je nach \
-                  Ausrichtung ausblenden oder drehen.",
+        help_de: de_text!(
+            "Inhalt muss hoch- und querformatig funktionieren; ihn nicht je nach \
+                  Ausrichtung ausblenden oder drehen."
+        ),
     },
     Meta {
         ids: &["text/justified", "text/line-height-tight"],
@@ -851,8 +852,7 @@ pub(crate) const METAS: &[Meta] = &[
         wcag: &["1.4.8"],
         severity: Severity::Low,
         help: "Running text: no justified alignment, line height at least 1.5.",
-        #[cfg(feature = "de")]
-        help_de: "Fließtext: kein Blocksatz, Zeilenhöhe mindestens 1,5.",
+        help_de: de_text!("Fließtext: kein Blocksatz, Zeilenhöhe mindestens 1,5."),
     },
 ];
 

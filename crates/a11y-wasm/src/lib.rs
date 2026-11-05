@@ -49,7 +49,7 @@ impl Scan {
     /// verbunden — ein Zeichen, das in Tag- und Attributnamen nicht vorkommt.
     ///
     /// Wirft einen `Error`, wenn die Spalten einander widersprechen (Längen,
-    /// Indizes, Bereiche) — siehe [`arena::validate_columns`].
+    /// Indizes, Bereiche) — siehe `arena::validate_columns`.
     #[wasm_bindgen(constructor)]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -378,13 +378,11 @@ mod tests {
             Finding::fail("r/x", "m")
                 .with_rule_name("n")
                 .with_severity(Severity::High)
-                .at(Location {
-                    file: Some("f".into()),
-                    url: Some("u".into()),
-                    selector: Some("s".into()),
-                    node: Some("n".into()),
-                    source_hint: Some("h".into()),
-                })
+                .at(Location::file("f")
+                    .with_url("u")
+                    .with_selector("s")
+                    .with_source_hint("h")
+                    .with_node("n"))
                 .with_element(Some("button".into()), Some("Name".into()))
                 .with_wcag(["1.1.1"])
                 .with_wcag_level(WcagLevel::AA)
@@ -394,11 +392,7 @@ mod tests {
                 .with_suggestion("s")
                 .with_suggested_code("c")
                 .with_snippet("<a>")
-                .add_evidence(Evidence {
-                    source: "s".into(),
-                    field: Some("f".into()),
-                    value: Some("v".into()),
-                }),
+                .add_evidence(Evidence::new("s").with_field("f").with_value("v")),
         );
         report.record(
             RuleRun::not_run("r/y", NotRun::CapabilityMissing)

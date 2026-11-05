@@ -28,7 +28,7 @@ use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::darstellung;
 use crate::heuristik;
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, RenderingRule};
 use crate::sicht::Scope;
 
@@ -511,10 +511,11 @@ const KONTRAST_BEDIENELEMENT: Meta = Meta {
     severity: Severity::Medium,
     help: "A custom-drawn checkbox, radio button, switch or slider (appearance: none) needs \
            a boundary with a contrast ratio of at least 3:1 against its background.",
-    #[cfg(feature = "de")]
-    help_de: "Ein selbst gezeichnetes Kontrollkästchen, Optionsfeld, Schalter oder \
+    help_de: de_text!(
+        "Ein selbst gezeichnetes Kontrollkästchen, Optionsfeld, Schalter oder \
               Schieberegler (appearance: none) braucht eine Grenze mit mindestens 3:1 \
-              gegenüber seinem Hintergrund.",
+              gegenüber seinem Hintergrund."
+    ),
 };
 
 const KONTRAST: Meta = Meta {
@@ -525,10 +526,11 @@ const KONTRAST: Meta = Meta {
     severity: Severity::High,
     help: "Text needs a contrast ratio against its background of at least 4.5:1, \
            or 3:1 for large text. Large text starts at 18 pt, or 14 pt when bold.",
-    #[cfg(feature = "de")]
-    help_de: "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
+    help_de: de_text!(
+        "Text braucht gegenüber seinem Hintergrund ein Kontrastverhältnis von \
               mindestens 4,5:1, bei großem Text 3:1. Großer Text ist ab 18 pt, bei \
-              fettem Schnitt ab 14 pt.",
+              fettem Schnitt ab 14 pt."
+    ),
 };
 
 const KONTRAST_ERHOEHT: Meta = Meta {
@@ -538,8 +540,7 @@ const KONTRAST_ERHOEHT: Meta = Meta {
     wcag: &["1.4.6"],
     severity: Severity::Medium,
     help: "Enhanced contrast (AAA): at least 7:1, or 4.5:1 for large text.",
-    #[cfg(feature = "de")]
-    help_de: "Erhöhter Kontrast (AAA): mindestens 7:1, bei großem Text 4,5:1.",
+    help_de: de_text!("Erhöhter Kontrast (AAA): mindestens 7:1, bei großem Text 4,5:1."),
 };
 
 pub(crate) const METAS: &[Meta] = &[
