@@ -43,6 +43,7 @@ dependencies = [
  "a11y-rules",
  "accname",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
 ]
 
@@ -51,6 +52,7 @@ name = "accname"
 version = "0.26.1"
 dependencies = [
  "a11y-dom",
+ "html5-parser",
 ]
 
 [[package]]
