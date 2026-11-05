@@ -18,7 +18,7 @@
 use a11y_dom::{Document, Node, NodeKind, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick};
+use crate::locale::{Locale, de_text, pick};
 use crate::registry::Meta;
 use crate::sicht::Scope;
 
@@ -487,10 +487,11 @@ pub(crate) const META: Meta = Meta {
     severity: Severity::Medium,
     help: "Criteria no machine can decide. Each appears once per page when the page contains \
            something it applies to, as UNTESTED — a checklist, not a verdict.",
-    #[cfg(feature = "de")]
-    help_de: "Kriterien, die keine Maschine entscheiden kann. Jedes erscheint einmal je Seite, \
+    help_de: de_text!(
+        "Kriterien, die keine Maschine entscheiden kann. Jedes erscheint einmal je Seite, \
               wenn die Seite etwas enthält, für das es gilt, als UNTESTED — eine Checkliste, \
-              kein Urteil.",
+              kein Urteil."
+    ),
 };
 
 pub(crate) fn checkliste<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
@@ -519,9 +520,10 @@ pub(crate) const META_BEWEGUNG: Meta = Meta {
     severity: Severity::Medium,
     help: "Checklist item for motion actuation, shown when an inline script listens to \
            device motion or orientation.",
-    #[cfg(feature = "de")]
-    help_de: "Checklistenpunkt für Bewegungssteuerung, erscheint, wenn ein Inline-Skript \
-              auf Gerätebewegung oder -ausrichtung hört.",
+    help_de: de_text!(
+        "Checklistenpunkt für Bewegungssteuerung, erscheint, wenn ein Inline-Skript \
+              auf Gerätebewegung oder -ausrichtung hört."
+    ),
 };
 
 pub(crate) fn bewegung<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {

@@ -49,7 +49,7 @@ pub struct Arena {
 impl Arena {
     /// Baut die Arena aus den Spalten des Collectors.
     ///
-    /// Prüft vorher die Invarianten der Spalten ([`validate_columns`]); ein
+    /// Prüft vorher die Invarianten der Spalten (`validate_columns`); ein
     /// Collector mit einem Fehler um eins bekommt eine Meldung statt eines
     /// Traps im WASM-Modul.
     #[allow(clippy::too_many_arguments)]

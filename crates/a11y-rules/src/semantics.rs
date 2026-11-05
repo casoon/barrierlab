@@ -15,7 +15,7 @@
 use a11y_dom::{Node, NodeId, Semantics, Tier, elements};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, SemanticsRule};
 use crate::sicht::Scope;
 
@@ -720,8 +720,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4", "4.1.2"],
         severity: Severity::Critical,
         help: "Every link needs a name that describes its target.",
-        #[cfg(feature = "de")]
-        help_de: "Jeder Link braucht einen Namen, der sein Ziel beschreibt.",
+        help_de: de_text!("Jeder Link braucht einen Namen, der sein Ziel beschreibt."),
     },
     Meta {
         ids: &["buttons/name-missing"],
@@ -730,8 +729,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Critical,
         help: "Every button needs a name that describes what it does.",
-        #[cfg(feature = "de")]
-        help_de: "Jeder Button braucht einen Namen, der seine Wirkung beschreibt.",
+        help_de: de_text!("Jeder Button braucht einen Namen, der seine Wirkung beschreibt."),
     },
     Meta {
         ids: &["svg/name-missing"],
@@ -740,8 +738,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative SVGs need a name, decorative ones role=\"presentation\".",
-        #[cfg(feature = "de")]
-        help_de: "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\".",
+        help_de: de_text!(
+            "Informative SVGs brauchen einen Namen, dekorative role=\"presentation\"."
+        ),
     },
     Meta {
         ids: &["links/ambiguous-name"],
@@ -750,8 +749,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Links with the same name should point to the same target.",
-        #[cfg(feature = "de")]
-        help_de: "Gleich benannte Links sollten auf dasselbe Ziel zeigen.",
+        help_de: de_text!("Gleich benannte Links sollten auf dasselbe Ziel zeigen."),
     },
     Meta {
         ids: &["links/generic-name"],
@@ -760,8 +758,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "Link text should say where it leads without the surrounding sentence.",
-        #[cfg(feature = "de")]
-        help_de: "Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt.",
+        help_de: de_text!("Der Linktext soll auch ohne den umgebenden Satz sagen, wohin er führt."),
     },
     Meta {
         ids: &["links/url-name"],
@@ -770,8 +767,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Low,
         help: "A bare address as link text does not say what the target contains.",
-        #[cfg(feature = "de")]
-        help_de: "Eine nackte Adresse als Linktext sagt nicht, was das Ziel enthält.",
+        help_de: de_text!("Eine nackte Adresse als Linktext sagt nicht, was das Ziel enthält."),
     },
     Meta {
         ids: &["links/single-character-name"],
@@ -780,8 +776,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.4"],
         severity: Severity::Medium,
         help: "A single character does not name a link's target.",
-        #[cfg(feature = "de")]
-        help_de: "Ein einzelnes Zeichen benennt kein Linkziel.",
+        help_de: de_text!("Ein einzelnes Zeichen benennt kein Linkziel."),
     },
     Meta {
         ids: &["links/new-window-unannounced"],
@@ -790,8 +785,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.5"],
         severity: Severity::Low,
         help: "Say in the link text when a link opens a new window or tab.",
-        #[cfg(feature = "de")]
-        help_de: "Im Linktext ankündigen, wenn ein Link ein neues Fenster oder Tab öffnet.",
+        help_de: de_text!(
+            "Im Linktext ankündigen, wenn ein Link ein neues Fenster oder Tab öffnet."
+        ),
     },
     Meta {
         ids: &["links/purpose-link-only"],
@@ -800,8 +796,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.9"],
         severity: Severity::Low,
         help: "The link text alone should name the link's purpose.",
-        #[cfg(feature = "de")]
-        help_de: "Der Linktext allein soll den Zweck des Links nennen.",
+        help_de: de_text!("Der Linktext allein soll den Zweck des Links nennen."),
     },
     Meta {
         ids: &["aria/attribute-not-allowed", "aria/attribute-prohibited"],
@@ -810,8 +805,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only ARIA attributes the element's role supports.",
-        #[cfg(feature = "de")]
-        help_de: "Nur ARIA-Attribute verwenden, die die Rolle des Elements unterstützt.",
+        help_de: de_text!("Nur ARIA-Attribute verwenden, die die Rolle des Elements unterstützt."),
     },
     Meta {
         ids: &[
@@ -823,8 +817,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Roles that belong together must be nested as WAI-ARIA requires.",
-        #[cfg(feature = "de")]
-        help_de: "Zusammengehörige Rollen müssen verschachtelt sein, wie WAI-ARIA es verlangt.",
+        help_de: de_text!(
+            "Zusammengehörige Rollen müssen verschachtelt sein, wie WAI-ARIA es verlangt."
+        ),
     },
     Meta {
         ids: &["names/required-missing"],
@@ -833,8 +828,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1", "4.1.2"],
         severity: Severity::High,
         help: "Elements whose role requires a name (fields, toggles, menu items, meters, …) need one.",
-        #[cfg(feature = "de")]
-        help_de: "Elemente, deren Rolle einen Namen verlangt (Felder, Schalter, Menüpunkte, Messanzeigen, …), brauchen einen.",
+        help_de: de_text!(
+            "Elemente, deren Rolle einen Namen verlangt (Felder, Schalter, Menüpunkte, Messanzeigen, …), brauchen einen."
+        ),
     },
     Meta {
         ids: &["names/symbol-only"],
@@ -843,8 +839,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "An accessible name should be words, not a single symbol.",
-        #[cfg(feature = "de")]
-        help_de: "Ein zugänglicher Name sollte aus Wörtern bestehen, nicht aus einem einzelnen Symbol.",
+        help_de: de_text!(
+            "Ein zugänglicher Name sollte aus Wörtern bestehen, nicht aus einem einzelnen Symbol."
+        ),
     },
     Meta {
         ids: &["dialog/name-missing"],
@@ -853,8 +850,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Every dialog needs a name, usually via aria-labelledby on its heading.",
-        #[cfg(feature = "de")]
-        help_de: "Jeder Dialog braucht einen Namen, meist per aria-labelledby auf seine Überschrift.",
+        help_de: de_text!(
+            "Jeder Dialog braucht einen Namen, meist per aria-labelledby auf seine Überschrift."
+        ),
     },
     Meta {
         ids: &["dialog/modal-unmarked"],
@@ -863,8 +861,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "A modal dialog should carry aria-modal=\"true\".",
-        #[cfg(feature = "de")]
-        help_de: "Ein modaler Dialog sollte aria-modal=\"true\" tragen.",
+        help_de: de_text!("Ein modaler Dialog sollte aria-modal=\"true\" tragen."),
     },
     Meta {
         ids: &["summary/name-missing"],
@@ -873,8 +870,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "The <summary> of a <details> element needs text.",
-        #[cfg(feature = "de")]
-        help_de: "Die <summary> eines <details>-Elements braucht Text.",
+        help_de: de_text!("Die <summary> eines <details>-Elements braucht Text."),
     },
     Meta {
         ids: &["status/live-overridden"],
@@ -883,8 +879,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.3"],
         severity: Severity::High,
         help: "Live regions should keep the aria-live their role implies.",
-        #[cfg(feature = "de")]
-        help_de: "Live-Regionen sollten das aria-live behalten, das ihre Rolle vorgibt.",
+        help_de: de_text!("Live-Regionen sollten das aria-live behalten, das ihre Rolle vorgibt."),
     },
     Meta {
         ids: &["label-in-name/mismatch"],
@@ -893,8 +888,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.5.3"],
         severity: Severity::Medium,
         help: "The accessible name must contain the visible label text.",
-        #[cfg(feature = "de")]
-        help_de: "Der zugängliche Name muss den sichtbaren Beschriftungstext enthalten.",
+        help_de: de_text!("Der zugängliche Name muss den sichtbaren Beschriftungstext enthalten."),
     },
     Meta {
         ids: &["forms/purpose-missing"],
@@ -903,8 +897,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.5"],
         severity: Severity::Medium,
         help: "Fields asking for information about the user carry the matching autocomplete token.",
-        #[cfg(feature = "de")]
-        help_de: "Felder, die nach Angaben zur Person fragen, tragen die passende autocomplete-Angabe.",
+        help_de: de_text!(
+            "Felder, die nach Angaben zur Person fragen, tragen die passende autocomplete-Angabe."
+        ),
     },
     Meta {
         ids: &["forms/required-unmarked", "forms/instructions-missing"],
@@ -913,8 +908,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.2"],
         severity: Severity::Medium,
         help: "Required fields and expected formats are stated in the label or description.",
-        #[cfg(feature = "de")]
-        help_de: "Pflichtfelder und erwartete Formate stehen in Beschriftung oder Beschreibung.",
+        help_de: de_text!(
+            "Pflichtfelder und erwartete Formate stehen in Beschriftung oder Beschreibung."
+        ),
     },
     Meta {
         ids: &["forms/title-only-label"],
@@ -923,8 +919,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "A field should have a visible label, not only a title attribute.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Feld sollte eine sichtbare Beschriftung haben, nicht nur ein title-Attribut.",
+        help_de: de_text!(
+            "Ein Feld sollte eine sichtbare Beschriftung haben, nicht nur ein title-Attribut."
+        ),
     },
     Meta {
         ids: &["forms/group-name-missing"],
@@ -933,8 +930,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "3.3.2"],
         severity: Severity::Medium,
         help: "A fieldset needs a legend, a form group a name.",
-        #[cfg(feature = "de")]
-        help_de: "Ein fieldset braucht eine legend, eine Formulargruppe einen Namen.",
+        help_de: de_text!("Ein fieldset braucht eine legend, eine Formulargruppe einen Namen."),
     },
     Meta {
         ids: &["landmarks/not-unique"],
@@ -943,8 +939,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "Landmarks of the same role should have distinct names.",
-        #[cfg(feature = "de")]
-        help_de: "Landmarks derselben Rolle sollten unterscheidbare Namen haben.",
+        help_de: de_text!("Landmarks derselben Rolle sollten unterscheidbare Namen haben."),
     },
     Meta {
         ids: &[
@@ -957,8 +952,9 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Medium,
         help: "banner, contentinfo and main belong at the top level; banner and contentinfo at most once.",
-        #[cfg(feature = "de")]
-        help_de: "banner, contentinfo und main gehören auf die oberste Ebene; banner und contentinfo höchstens einmal.",
+        help_de: de_text!(
+            "banner, contentinfo und main gehören auf die oberste Ebene; banner und contentinfo höchstens einmal."
+        ),
     },
     Meta {
         ids: &["landmarks/content-outside"],
@@ -967,8 +963,7 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Medium,
         help: "All content belongs inside a landmark.",
-        #[cfg(feature = "de")]
-        help_de: "Aller Inhalt gehört in eine Landmark.",
+        help_de: de_text!("Aller Inhalt gehört in eine Landmark."),
     },
     Meta {
         ids: &[
@@ -980,8 +975,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.1.1"],
         severity: Severity::High,
         help: "Interactive roles must be focusable; focusable elements need an interactive role.",
-        #[cfg(feature = "de")]
-        help_de: "Interaktive Rollen müssen fokussierbar sein; fokussierbare Elemente brauchen eine interaktive Rolle.",
+        help_de: de_text!(
+            "Interaktive Rollen müssen fokussierbar sein; fokussierbare Elemente brauchen eine interaktive Rolle."
+        ),
     },
     Meta {
         ids: &["dialog/focusable-missing"],
@@ -990,8 +986,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.3"],
         severity: Severity::Medium,
         help: "A dialog needs at least one focusable element.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Dialog braucht mindestens ein fokussierbares Element.",
+        help_de: de_text!("Ein Dialog braucht mindestens ein fokussierbares Element."),
     },
     Meta {
         ids: &["patterns/accordion-controls-missing"],
@@ -1000,8 +995,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Low,
         help: "An expanded button should reference the region it controls with aria-controls.",
-        #[cfg(feature = "de")]
-        help_de: "Ein aufgeklappter Button sollte per aria-controls auf den gesteuerten Bereich verweisen.",
+        help_de: de_text!(
+            "Ein aufgeklappter Button sollte per aria-controls auf den gesteuerten Bereich verweisen."
+        ),
     },
     Meta {
         ids: &["frames/name-missing"],
@@ -1010,8 +1006,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Every iframe needs a name, usually a title saying what it contains.",
-        #[cfg(feature = "de")]
-        help_de: "Jeder Rahmen braucht einen Namen, meist einen title, der sagt, was er enthält.",
+        help_de: de_text!(
+            "Jeder Rahmen braucht einen Namen, meist einen title, der sagt, was er enthält."
+        ),
     },
 ];
 

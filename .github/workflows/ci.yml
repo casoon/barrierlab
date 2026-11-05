@@ -36,6 +36,10 @@ jobs:
       - if: steps.members.outputs.present == 'true'
         run: cargo clippy --workspace --all-targets -- -D warnings
       - if: steps.members.outputs.present == 'true'
+        run: cargo check -p a11y-rules --no-default-features
+      - if: steps.members.outputs.present == 'true'
+        run: cargo check -p a11y-static --no-default-features
+      - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
       # Kaputte Doku-Verweise fallen sonst erst auf docs.rs auf, wo sie nicht

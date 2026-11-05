@@ -6,6 +6,7 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ### Added
 
+- **TypeScript:** `Report.schema: number` in der `.d.ts` (Version des JSON-Vertrags, derzeit 1).
 - **TypeScript:** `Report.inputs?: InputNote[]` und `InputKind` in der `.d.ts`.
 - **TypeScript:** `Scan.run()` ist als `Report` typisiert (`Report`, `Finding`, `RuleRun`, `Summary`, `Outcome`, `Severity` und weitere in der `.d.ts`); ein Test hält die Felder gegen die Serialisierung von `a11y-report`.
 

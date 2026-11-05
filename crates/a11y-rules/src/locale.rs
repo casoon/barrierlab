@@ -65,4 +65,21 @@ macro_rules! tr {
     }};
 }
 
-pub(crate) use {pick, tr};
+/// Ein deutscher Text, der ohne Feature `de` zu `""` wird und nicht in den
+/// Binärcode gelangt.
+#[cfg(feature = "de")]
+macro_rules! de_text {
+    ($de:expr $(,)?) => {
+        $de
+    };
+}
+
+/// Ohne Feature `de`: leer; der deutsche Text wird verworfen.
+#[cfg(not(feature = "de"))]
+macro_rules! de_text {
+    ($de:expr $(,)?) => {
+        ""
+    };
+}
+
+pub(crate) use {de_text, pick, tr};

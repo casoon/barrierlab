@@ -33,7 +33,7 @@ states exist for.
 
 ## One record per ID
 
-`Report` has three fields: `findings`, `rule_runs` and `summary`. `RuleRun` answers "did it run
+`Report` has the fields `findings`, `rule_runs`, `inputs` and `summary`, plus `schema`, the version of the JSON contract (`SCHEMA_VERSION`, currently 1). `RuleRun` answers "did it run
 at all?", `Finding` answers "what came out of it?". The records are kept per
 **finding** ID, not per parent rule. This way `rule_runs` and
 `findings` use the same set of names and can be joined via `rule_id`.
