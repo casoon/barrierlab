@@ -16,6 +16,7 @@ pub use media::Environment;
 mod color;
 pub use color::{luminance, over, parse_color};
 mod cascade;
+mod layers;
 mod shorthand;
 mod ua;
 mod value;

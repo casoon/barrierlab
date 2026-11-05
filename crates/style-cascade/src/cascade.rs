@@ -7,9 +7,10 @@ use std::rc::Rc;
 use a11y_dom::{Node, NodeId, NodeKind};
 use stylesheet_parse::{Context, Rule as CssRule, Stylesheet, parse_stylesheet};
 
+use crate::layers::{LayerTree, gruppe};
 use crate::media::{Environment, eval};
 use crate::selector::{Key, Match, Mode, Selector, Specificity};
-use crate::shorthand::{PENDING, UNKNOWN, expand};
+use crate::shorthand::{Expanded, expand};
 use crate::ua;
 
 /// Der angegebene Wert einer Eigenschaft an einem Element, nach Kaskade,
@@ -28,7 +29,7 @@ pub enum Specified {
 #[derive(Debug, Clone)]
 struct Decl {
     prop: String,
-    value: String,
+    value: Expanded,
     important: bool,
     order: u32,
 }
@@ -40,6 +41,9 @@ struct Rule {
     selector: Selector,
     spec: Specificity,
     layer: Option<u32>,
+    /// Die Stelle der Ebene in der Reihenfolge ist nicht sicher (siehe
+    /// `layers`): für Vergleiche kann sie überall stehen.
+    layer_unsure: bool,
     /// `Yes` oder `Unknown`; `No` kommt gar nicht erst hinein.
     cond: Match,
     decls: Vec<Decl>,
@@ -86,6 +90,11 @@ fn weight(
 
 enum Declared {
     Value(String),
+    /// Kurzschreibweise mit `var()`, erst am Element zerlegbar.
+    Pending {
+        shorthand: String,
+        raw: String,
+    },
     Nothing,
     Unknown,
 }
@@ -177,26 +186,23 @@ impl Cascade {
                 }
             }
         }
-        // Reihenfolge der Ebenen: `@layer a, b;` legt sie vorab fest, sonst
-        // gilt das erste Auftreten.
-        let mut ebenen: Vec<String> = Vec::new();
-        for s in sheets {
-            for r in &s.rules {
-                if let CssRule::Other(a) = r
-                    && a.name == "layer"
-                {
-                    for n in a.prelude.split(',') {
-                        ebene(&mut ebenen, n.trim());
-                    }
-                }
-            }
-        }
+        // Ebenenbaum über alle Blätter, in Dokumentreihenfolge (Cascade 5 §6.4).
+        let baum = LayerTree::build(sheets, &self.env);
+        let mut knoten: Vec<Option<usize>> = Vec::new();
         let mut order = 0u32;
         for s in sheets {
             for scoped in s.style_rules() {
-                let (cond, layer) = kontext(&scoped.context, &self.env, &mut ebenen);
+                let mut cond = kontext(&scoped.context, &self.env);
                 if cond == Match::No {
                     continue;
+                }
+                let (node, layer_unsure) = match baum.node_of(&scoped.context.groups) {
+                    Ok(n) => (n, n.is_some_and(|n| baum.is_unsure(n))),
+                    // Ein ungültiger `@layer`-Block: Rang unbekannt.
+                    Err(()) => (None, true),
+                };
+                if layer_unsure {
+                    cond = cond.und(Match::Unknown);
                 }
                 let decls: Vec<Decl> = scoped
                     .declarations
@@ -235,12 +241,25 @@ impl Cascade {
                     self.rules.push(Rule {
                         spec: selector.specificity(),
                         selector,
-                        layer,
+                        layer: None,
+                        layer_unsure,
                         cond,
                         decls: decls.clone(),
                     });
+                    knoten.push(node);
                 }
             }
+        }
+        // Dichter Rang je Ebene aus dem Baum (Unterebenen vor der Ebene selbst,
+        // Geschwister nach erstem Auftreten); gleiche Ebenen, gleicher Rang.
+        let mut schluessel: Vec<Vec<u32>> = knoten.iter().flatten().map(|&n| baum.key(n)).collect();
+        schluessel.sort();
+        schluessel.dedup();
+        for (r, n) in self.rules.iter_mut().zip(&knoten) {
+            r.layer = n.map(|n| {
+                let k = baum.key(n);
+                schluessel.binary_search(&k).unwrap_or_default() as u32
+            });
         }
     }
 
@@ -315,13 +334,17 @@ impl Cascade {
     }
 
     fn declared<'a, N: Node<'a>>(&self, n: N, prop: &str) -> Declared {
-        let mut best: Option<(Weight, &str)> = None;
+        let mut best: Option<(Weight, &Expanded)> = None;
         let mut unsicher: Option<Weight> = None;
         let treffer = self.matched(n);
         for (idx, m) in treffer.iter() {
             let r = &self.rules[*idx];
             for d in r.decls.iter().filter(|d| d.prop == prop) {
-                let w = weight(d.important, true, r.layer, false, r.spec, d.order);
+                let mut w = weight(d.important, true, r.layer, false, r.spec, d.order);
+                if r.layer_unsure {
+                    // Normal: knapp unter „ohne Ebene"; wichtig: ganz oben.
+                    w.layer = if d.important { u32::MAX } else { u32::MAX - 1 };
+                }
                 if *m == Match::Yes {
                     if best.is_none_or(|(b, _)| w > b) {
                         best = Some((w, &d.value));
@@ -349,15 +372,15 @@ impl Cascade {
                 )
             })
             .max_by_key(|(w, _)| *w);
-        let (best_w, best_v): (Option<Weight>, Option<String>) = match (best, inline_best) {
+        let (best_w, best_v): (Option<Weight>, Option<Expanded>) = match (best, inline_best) {
             (Some((w, v)), Some((iw, iv))) => {
                 if iw > w {
                     (Some(iw), Some(iv))
                 } else {
-                    (Some(w), Some(v.to_string()))
+                    (Some(w), Some(v.clone()))
                 }
             }
-            (Some((w, v)), None) => (Some(w), Some(v.to_string())),
+            (Some((w, v)), None) => (Some(w), Some(v.clone())),
             (None, Some((iw, iv))) => (Some(iw), Some(iv)),
             (None, None) => (None, None),
         };
@@ -384,8 +407,9 @@ impl Cascade {
             return Declared::Unknown;
         }
         match best_v {
-            Some(v) if v == UNKNOWN => Declared::Unknown,
-            Some(v) => Declared::Value(v),
+            Some(Expanded::Unknown) => Declared::Unknown,
+            Some(Expanded::Set(v)) => Declared::Value(v),
+            Some(Expanded::Pending { shorthand, raw }) => Declared::Pending { shorthand, raw },
             None => match ua::declared(n, prop) {
                 Some(v) => Declared::Value(v),
                 None => Declared::Nothing,
@@ -431,24 +455,23 @@ impl Cascade {
                     Specified::Unset
                 }
             }
-            Declared::Value(v) if v.starts_with(PENDING) => {
-                let rest = &v[PENDING.len_utf8()..];
-                let (kurz, roh) = rest.split_once(PENDING).unwrap_or(("", rest));
-                match self.loese_var(n, roh, 0) {
-                    Err(Fehler::Unbekannt) => Specified::Unknown,
-                    Err(Fehler::Ungueltig) => {
-                        if erbt {
-                            self.vom_eltern(n, prop)
-                        } else {
-                            Specified::Unset
-                        }
+            Declared::Pending {
+                shorthand: kurz,
+                raw: roh,
+            } => match self.loese_var(n, &roh, 0) {
+                Err(Fehler::Unbekannt) => Specified::Unknown,
+                Err(Fehler::Ungueltig) => {
+                    if erbt {
+                        self.vom_eltern(n, prop)
+                    } else {
+                        Specified::Unset
                     }
-                    Ok(w) => match expand(kurz, &w).into_iter().find(|(p, _)| p == prop) {
-                        Some((_, x)) if x != UNKNOWN => Specified::Set(x),
-                        _ => Specified::Unknown,
-                    },
                 }
-            }
+                Ok(w) => match expand(&kurz, &w).into_iter().find(|(p, _)| p == prop) {
+                    Some((_, Expanded::Set(x))) => Specified::Set(x),
+                    _ => Specified::Unknown,
+                },
+            },
             Declared::Value(v) => {
                 let t = v.trim();
                 match t.to_ascii_lowercase().as_str() {
@@ -543,44 +566,17 @@ fn klammer_ende(s: &str) -> Option<usize> {
     None
 }
 
-fn ebene(ebenen: &mut Vec<String>, name: &str) -> u32 {
-    match ebenen.iter().position(|e| e == name) {
-        Some(i) => i as u32,
-        None => {
-            ebenen.push(name.to_string());
-            (ebenen.len() - 1) as u32
-        }
-    }
-}
-
-/// Gilt der Kontext einer Regel (Medien, `@supports`, Ebene …)?
-fn kontext(ctx: &Context<'_>, env: &Environment, ebenen: &mut Vec<String>) -> (Match, Option<u32>) {
+/// Gilt der Kontext einer Regel (Medien, `@supports` …)? Die Ebene steht im
+/// Ebenenbaum.
+fn kontext(ctx: &Context<'_>, env: &Environment) -> Match {
     let mut cond = Match::Yes;
     for m in &ctx.media {
         cond = cond.und(eval(m, env));
     }
-    let mut layer = None;
     for (name, prelude) in &ctx.groups {
-        match *name {
-            "layer" => {
-                let p = prelude.trim();
-                let name = if p.is_empty() {
-                    format!("\u{0}anon{}", ebenen.len())
-                } else {
-                    p.to_string()
-                };
-                layer = Some(ebene(ebenen, &name));
-            }
-            // Eine Bedingung für Funktionen, die moderne Browser kennen; nur
-            // das Negierte (Ersatz für alte Browser) greift nicht.
-            "supports" => {
-                if prelude.trim_start().to_ascii_lowercase().starts_with("not") {
-                    cond = cond.und(Match::No);
-                }
-            }
-            "starting-style" => cond = cond.und(Match::No),
-            _ => cond = cond.und(Match::Unknown),
+        if *name != "layer" {
+            cond = cond.und(gruppe(name, prelude));
         }
     }
-    (cond, layer)
+    cond
 }

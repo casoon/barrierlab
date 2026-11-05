@@ -1,18 +1,22 @@
 //! Kurzschreibweisen in die Einzeleigenschaften zerlegen, die die Kaskade
 //! auswertet. Was nicht sicher zu zerlegen ist (`var()`, Systemschriften),
-//! wird zu [`UNKNOWN`]: die Einzeleigenschaften sind dann unbestimmt, nicht
-//! geraten.
+//! wird zu [`Expanded::Unknown`]: die Einzeleigenschaften sind dann
+//! unbestimmt, nicht geraten.
 
 use crate::color::{parse_color, teile_oberste_ebene};
 use crate::value::{font_size_px, tokens};
 
-/// Wert, der „hier steht etwas, das wir nicht lesen können" heißt.
-pub(crate) const UNKNOWN: &str = "\u{1}unknown";
-
-/// Beginn eines Werts, der eine Kurzschreibweise mit `var()` trägt: erst am
-/// Element lässt sich die Variable einsetzen und die Kurzschreibweise zerlegen.
-/// Aufbau: `\u{2}<kurzschreibweise>\u{2}<wert>`.
-pub(crate) const PENDING: char = '\u{2}';
+/// Ergebnis der Zerlegung für eine Einzeleigenschaft.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Expanded {
+    /// Der Wert, wie er im Stylesheet steht.
+    Set(String),
+    /// „Hier steht etwas, das wir nicht lesen können."
+    Unknown,
+    /// Eine Kurzschreibweise mit `var()`: erst am Element lässt sich die
+    /// Variable einsetzen und die Kurzschreibweise zerlegen.
+    Pending { shorthand: String, raw: String },
+}
 
 const KURZSCHREIBWEISEN: &[&str] = &[
     "background",
@@ -49,11 +53,15 @@ const LISTEN_TYPEN: &[&str] = &[
     "none",
 ];
 
-fn alle(props: &[&str], v: &str) -> Vec<(String, String)> {
+fn alle(props: &[&str], v: &Expanded) -> Vec<(String, Expanded)> {
     props
         .iter()
-        .map(|p| ((*p).to_string(), v.to_string()))
+        .map(|p| ((*p).to_string(), v.clone()))
         .collect()
+}
+
+fn set(v: impl Into<String>) -> Expanded {
+    Expanded::Set(v.into())
 }
 
 fn ist_farbe(t: &str) -> bool {
@@ -72,19 +80,30 @@ fn ist_bild(t: &str) -> bool {
 
 /// Zerlegt eine Deklaration in (Eigenschaft, Wert)-Paare. Eine Eigenschaft,
 /// die keine Kurzschreibweise ist, kommt unverändert zurück.
-pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
+pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, Expanded)> {
     let v = value.trim();
     let hat_var = v.to_ascii_lowercase().contains("var(");
     if hat_var && KURZSCHREIBWEISEN.contains(&name) {
         return expand(name, "")
             .into_iter()
-            .map(|(p, _)| (p, format!("{PENDING}{name}{PENDING}{v}")))
+            .map(|(p, _)| {
+                (
+                    p,
+                    Expanded::Pending {
+                        shorthand: name.to_string(),
+                        raw: v.to_string(),
+                    },
+                )
+            })
             .collect();
     }
     match name {
         "background" => {
             if hat_var {
-                return alle(&["background-color", "background-image"], UNKNOWN);
+                return alle(
+                    &["background-color", "background-image"],
+                    &Expanded::Unknown,
+                );
             }
             let schichten = teile_oberste_ebene(v, ',');
             let bilder: Vec<&str> = schichten
@@ -102,14 +121,14 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
                 .and_then(|s| tokens(s).into_iter().find(|t| ist_farbe(t)))
                 .unwrap_or("transparent");
             vec![
-                ("background-color".into(), farbe.to_string()),
+                ("background-color".into(), set(farbe)),
                 (
                     "background-image".into(),
-                    if bild {
+                    set(if bild {
                         bilder.join(", ")
                     } else {
                         "none".to_string()
-                    },
+                    }),
                 ),
             ]
         }
@@ -127,7 +146,7 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
                     "caption" | "icon" | "menu" | "message-box" | "small-caption" | "status-bar"
                 )
             {
-                return alle(&props, UNKNOWN);
+                return alle(&props, &Expanded::Unknown);
             }
             let t = tokens(v);
             let (mut stil, mut gewicht) = ("normal", "normal");
@@ -147,7 +166,7 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
                 i += 1;
             }
             let Some(groesse_zeile) = t.get(i) else {
-                return alle(&props, UNKNOWN);
+                return alle(&props, &Expanded::Unknown);
             };
             let (groesse, zeilenhoehe) = match groesse_zeile.split_once('/') {
                 Some((g, l)) => (g, l),
@@ -155,14 +174,14 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
             };
             let familie = t[i + 1..].join(" ");
             if familie.is_empty() {
-                return alle(&props, UNKNOWN);
+                return alle(&props, &Expanded::Unknown);
             }
             vec![
-                ("font-style".into(), stil.into()),
-                ("font-weight".into(), gewicht.into()),
-                ("font-size".into(), groesse.into()),
-                ("line-height".into(), zeilenhoehe.into()),
-                ("font-family".into(), familie),
+                ("font-style".into(), set(stil)),
+                ("font-weight".into(), set(gewicht)),
+                ("font-size".into(), set(groesse)),
+                ("line-height".into(), set(zeilenhoehe)),
+                ("font-family".into(), set(familie)),
             ]
         }
         "border" | "border-top" | "border-bottom" => {
@@ -171,11 +190,11 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
                 "border-top" => &["top"],
                 _ => &["bottom"],
             };
-            let teile: Vec<(String, String)> = if hat_var {
+            let teile: Vec<(&str, Expanded)> = if hat_var {
                 vec![
-                    ("width".into(), UNKNOWN.into()),
-                    ("style".into(), UNKNOWN.into()),
-                    ("color".into(), UNKNOWN.into()),
+                    ("width", Expanded::Unknown),
+                    ("style", Expanded::Unknown),
+                    ("color", Expanded::Unknown),
                 ]
             } else {
                 let (mut breite, mut stil, mut farbe) = ("medium", "none", "currentcolor");
@@ -192,9 +211,9 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
                     }
                 }
                 vec![
-                    ("width".into(), breite.into()),
-                    ("style".into(), stil.into()),
-                    ("color".into(), farbe.into()),
+                    ("width", set(breite)),
+                    ("style", set(stil)),
+                    ("color", set(farbe)),
                 ]
             };
             seiten
@@ -208,20 +227,20 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
         }
         "border-style" | "border-width" | "border-color" => {
             let art = &name["border-".len()..];
-            let t = if hat_var { vec![UNKNOWN] } else { tokens(v) };
+            let t = if hat_var { Vec::new() } else { tokens(v) };
             let (oben, unten) = match t.as_slice() {
-                [a] | [a, _] => (*a, *a),
-                [a, _, c] | [a, _, c, _] => (*a, *c),
-                _ => (UNKNOWN, UNKNOWN),
+                [a] | [a, _] => (set(*a), set(*a)),
+                [a, _, c] | [a, _, c, _] => (set(*a), set(*c)),
+                _ => (Expanded::Unknown, Expanded::Unknown),
             };
             vec![
-                (format!("border-top-{art}"), oben.to_string()),
-                (format!("border-bottom-{art}"), unten.to_string()),
+                (format!("border-top-{art}"), oben),
+                (format!("border-bottom-{art}"), unten),
             ]
         }
         "text-decoration" => {
             if hat_var {
-                return alle(&["text-decoration-line"], UNKNOWN);
+                return alle(&["text-decoration-line"], &Expanded::Unknown);
             }
             let linien: Vec<&str> = tokens(v)
                 .into_iter()
@@ -232,19 +251,19 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
             } else {
                 linien.join(" ")
             };
-            vec![("text-decoration-line".into(), wert)]
+            vec![("text-decoration-line".into(), set(wert))]
         }
         "list-style" => {
             if hat_var {
-                return alle(&["list-style-type"], UNKNOWN);
+                return alle(&["list-style-type"], &Expanded::Unknown);
             }
             let typ = tokens(v)
                 .into_iter()
                 .find(|t| LISTEN_TYPEN.contains(&t.to_ascii_lowercase().as_str()))
                 .unwrap_or("disc");
-            vec![("list-style-type".into(), typ.to_string())]
+            vec![("list-style-type".into(), set(typ))]
         }
-        _ => vec![(name.to_string(), v.to_string())],
+        _ => vec![(name.to_string(), set(v))],
     }
 }
 
@@ -252,11 +271,13 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, String)> {
 mod tests {
     use super::*;
 
-    fn get(p: &[(String, String)], k: &str) -> String {
-        p.iter()
-            .find(|(n, _)| n == k)
-            .map(|(_, v)| v.clone())
-            .unwrap_or_default()
+    fn get(p: &[(String, Expanded)], k: &str) -> String {
+        match p.iter().find(|(n, _)| n == k) {
+            Some((_, Expanded::Set(v))) => v.clone(),
+            Some((_, Expanded::Unknown)) => "<unknown>".into(),
+            Some((_, Expanded::Pending { .. })) => "<pending>".into(),
+            None => String::new(),
+        }
     }
 
     #[test]
@@ -268,8 +289,8 @@ mod tests {
         assert_eq!(get(&p, "background-color"), "transparent");
         assert_ne!(get(&p, "background-image"), "none");
         let p = expand("background", "var(--bg)");
-        assert!(get(&p, "background-color").starts_with(PENDING));
-        assert!(get(&p, "background-image").starts_with(PENDING));
+        assert_eq!(get(&p, "background-color"), "<pending>");
+        assert_eq!(get(&p, "background-image"), "<pending>");
     }
 
     #[test]
@@ -281,7 +302,7 @@ mod tests {
         assert_eq!(get(&p, "line-height"), "1.5");
         assert_eq!(get(&p, "font-family"), "Georgia, serif");
         let p = expand("font", "menu");
-        assert_eq!(get(&p, "font-size"), UNKNOWN);
+        assert_eq!(get(&p, "font-size"), "<unknown>");
     }
 
     #[test]
@@ -325,7 +346,7 @@ mod tests {
     fn einzeleigenschaft_bleibt() {
         assert_eq!(
             expand("color", " red "),
-            vec![("color".to_string(), "red".to_string())]
+            vec![("color".to_string(), Expanded::Set("red".to_string()))]
         );
     }
 }

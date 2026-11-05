@@ -67,8 +67,10 @@ What cannot be determined without layout stays undetermined, never guessed:
   of the first opaque surface, make the background unknown.
 - **No layout.** Overlap, sizes and what an absolutely positioned box really sits on are not
   known.
-- **Approximations.** `@supports` conditions count as true unless negated; layers rank by first
-  appearance or `@layer a, b;`; colours outside sRGB are clipped, not gamut-mapped; the page
+- **Approximations.** `@supports` conditions count as true unless negated; layers (named, dotted, nested and anonymous, Cascade 5 §6.4) rank by first
+  appearance in document order; a layer first seen only under a condition with unknown outcome
+  (`@container`, unknown `@media`) or with an invalid name has no certain rank, so its rules
+  make the properties they declare `Unknown`; colours outside sRGB are clipped, not gamut-mapped; the page
   is assumed in the default light scheme unless `Environment` says otherwise.
 - **`@import`.** An unresolved `@import` makes all answers `Unknown` (except an inline `!important`)
   until the host inlines the imported sheet; presentational hints rank below all author rules,

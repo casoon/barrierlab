@@ -1,0 +1,8 @@
+# Known-failing html5lib-tests tokenizer cases (see
+# src/tokenizer_conformance.rs). One `<file>#<index>@<initial_state>` key
+# per line (0-based index within the file's `tests` array).
+#
+# Regenerate with `HTML5LIB_BLESS=1 cargo test -p html5-parser
+# html5lib_tokenizer_conformance` only after investigating why each entry
+# fails — never hand-add an entry just to silence a failure.
+# --- entries below, one per line ---

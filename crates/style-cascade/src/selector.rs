@@ -73,6 +73,8 @@ const ZUSTAENDE: &[&str] = &[
     "focus-within",
     "active",
     "checked",
+    "read-only",
+    "read-write",
     "target",
     "visited",
     "link",
@@ -789,6 +791,52 @@ fn sammle_optionen<'a, N: Node<'a>>(n: N, out: &mut Vec<N>) {
     }
 }
 
+/// `:read-write` nach HTML §4.16.3: veränderbares `input`/`textarea`
+/// (ohne `readonly`, nicht deaktiviert) oder ein Element, das ein
+/// Bearbeitungshost ist oder in einem liegt (`contenteditable`). `:read-only`
+/// ist das Gegenteil. Der Entwurfsmodus des Dokuments (`designMode`) ist nur
+/// zur Laufzeit gesetzt und aus den Attributen nicht zu sehen; wie bei
+/// `:checked` gilt der ursprüngliche Zustand.
+fn schreibbar<'a, N: Node<'a>>(n: N) -> bool {
+    match n.local_name() {
+        "textarea" => !n.has_attr("readonly") && deaktiviert(n) == Match::No,
+        "input" => {
+            // Ungültige oder fehlende Art ist `text`; `readonly` gilt nur für
+            // Texteingaben, Datums- und Zahlenfelder.
+            let art = n.attr("type").unwrap_or("").trim().to_ascii_lowercase();
+            let kennt_readonly = !matches!(
+                art.as_str(),
+                "hidden"
+                    | "range"
+                    | "color"
+                    | "checkbox"
+                    | "radio"
+                    | "file"
+                    | "submit"
+                    | "image"
+                    | "reset"
+                    | "button"
+            );
+            kennt_readonly && !n.has_attr("readonly") && deaktiviert(n) == Match::No
+        }
+        _ => {
+            let mut e = Some(n);
+            while let Some(k) = e {
+                if let Some(v) = k.attr("contenteditable") {
+                    match v.trim().to_ascii_lowercase().as_str() {
+                        "" | "true" | "plaintext-only" => return true,
+                        "false" => return false,
+                        // Ungültiger Wert: wie `inherit`.
+                        _ => {}
+                    }
+                }
+                e = k.parent().filter(|p| p.kind() == NodeKind::Element);
+            }
+            false
+        }
+    }
+}
+
 /// `:required`; das zweite Feld sagt, ob das Element überhaupt `required`
 /// tragen kann (dann ist es sonst `:optional`).
 fn erforderlich<'a, N: Node<'a>>(n: N) -> (Match, bool) {
@@ -828,6 +876,20 @@ fn zustand<'a, N: Node<'a>>(n: N, z: &str, m: Mode) -> Match {
         "enabled" if !ist_bedienelement(n) => deaktiviert(n),
         "enabled" => deaktiviert(n).nicht(),
         "checked" => angekreuzt(n),
+        "read-write" => {
+            if schreibbar(n) {
+                Match::Yes
+            } else {
+                Match::No
+            }
+        }
+        "read-only" => {
+            if schreibbar(n) {
+                Match::No
+            } else {
+                Match::Yes
+            }
+        }
         "required" => erforderlich(n).0,
         "optional" => {
             let (erforderlich, kann) = erforderlich(n);
@@ -1232,6 +1294,18 @@ mod tests {
         b = el(b, "my-input", &[]);
         b = b.close();
         b = b.close();
+        b = el(b, "input", &[("id", "ro1"), ("readonly", "")]);
+        b = el(b, "input", &[("id", "ro2"), ("type", "checkbox")]);
+        b = el(b, "input", &[("id", "ro3"), ("disabled", "")]);
+        b = el(b, "input", &[("id", "rw1"), ("type", "foo")]);
+        b = el(b, "textarea", &[("id", "ro4"), ("readonly", "")]);
+        b = b
+            .open("div")
+            .attr("id", "ce")
+            .attr("contenteditable", "true");
+        b = el(b, "span", &[("id", "ce1")]);
+        b = el(b, "span", &[("id", "ce2"), ("contenteditable", "false")]);
+        b = b.close();
         b = b.open("select").attr("id", "s1");
         b = el(b, "option", &[]);
         b = el(b, "option", &[("selected", "")]);
@@ -1279,6 +1353,19 @@ mod tests {
         assert_eq!(r("textarea:required"), Match::No);
         assert_eq!(r("textarea:optional"), Match::Yes);
         assert_eq!(r("div:required"), Match::No);
+        // HTML §4.16.3: read-write / read-only.
+        assert_eq!(r("#rw1:read-write"), Match::Yes);
+        assert_eq!(r("#ro1:read-write"), Match::No);
+        assert_eq!(r("#ro1:read-only"), Match::Yes);
+        assert_eq!(r("#ro2:read-only"), Match::Yes);
+        assert_eq!(r("#ro3:read-only"), Match::Yes);
+        assert_eq!(r("#ro4:read-only"), Match::Yes);
+        assert_eq!(r("textarea:not([readonly]):read-write"), Match::Yes);
+        assert_eq!(r("#ce:read-write"), Match::Yes);
+        assert_eq!(r("#ce1:read-write"), Match::Yes);
+        assert_eq!(r("#ce2:read-write"), Match::No);
+        assert_eq!(r("#ce2:read-only"), Match::Yes);
+        assert_eq!(r("#b1:read-only"), Match::Yes);
         // Möglich: Zustände gelten weiter als erfüllt.
         assert_eq!(any_match(&d, "#b1:disabled", Mode::Possible), Match::Yes);
     }

@@ -5,7 +5,7 @@
 use a11y_dom::{Node, ancestors};
 
 use crate::color::parse_color;
-use crate::shorthand::UNKNOWN;
+use crate::shorthand::Expanded;
 
 /// Was das UA-Stylesheet für `prop` an diesem Element festlegt.
 pub(crate) fn declared<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
@@ -67,21 +67,21 @@ pub(crate) fn declared<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
 /// Eine Farbe in einem Darstellungsattribut (`bgcolor="#ff6600"`). Nur die
 /// Schreibungen, die sich ohne den alten Parse-Algorithmus (HTML „rules for
 /// parsing a legacy colour value") eindeutig lesen lassen; sonst unbekannt.
-fn alte_farbe(v: &str) -> String {
+fn alte_farbe(v: &str) -> Expanded {
     let v = v.trim();
     if parse_color(v, false).is_some() {
-        return v.to_string();
+        return Expanded::Set(v.to_string());
     }
     let hex = v.strip_prefix('#').unwrap_or(v);
     if matches!(hex.len(), 3 | 6) && hex.chars().all(|c| c.is_ascii_hexdigit()) {
-        return format!("#{hex}");
+        return Expanded::Set(format!("#{hex}"));
     }
-    UNKNOWN.to_string()
+    Expanded::Unknown
 }
 
 /// Darstellungsattribute (HTML „Rendering", Presentational hints): wirken
 /// wie eine Angabe des Autors mit Spezifität 0, unter jeder Regel.
-pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
+pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<Expanded> {
     let tag = n.local_name().to_ascii_lowercase();
     let t = tag.as_str();
     match prop {
@@ -97,7 +97,7 @@ pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
         "background-image" if matches!(t, "body" | "table" | "td" | "th") => n
             .attr("background")
             .filter(|b| !b.trim().is_empty())
-            .map(|_| "url(#)".to_string()),
+            .map(|_| Expanded::Set("url(#)".to_string())),
         "color" if t == "font" => n.attr("color").map(alte_farbe),
         "color" if t == "body" => n.attr("text").map(alte_farbe),
         "color" if matches!(t, "a" | "area") && n.has_attr("href") => ancestors(n)
@@ -105,14 +105,14 @@ pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
             .and_then(|b| b.attr("link"))
             .map(alte_farbe),
         "font-size" if t == "font" => n.attr("size").map(|v| match v.trim() {
-            "1" => "10px".to_string(),
-            "2" => "13px".to_string(),
-            "3" => "16px".to_string(),
-            "4" => "18px".to_string(),
-            "5" => "24px".to_string(),
-            "6" => "32px".to_string(),
-            "7" => "48px".to_string(),
-            _ => UNKNOWN.to_string(),
+            "1" => Expanded::Set("10px".to_string()),
+            "2" => Expanded::Set("13px".to_string()),
+            "3" => Expanded::Set("16px".to_string()),
+            "4" => Expanded::Set("18px".to_string()),
+            "5" => Expanded::Set("24px".to_string()),
+            "6" => Expanded::Set("32px".to_string()),
+            "7" => Expanded::Set("48px".to_string()),
+            _ => Expanded::Unknown,
         }),
         _ => None,
     }

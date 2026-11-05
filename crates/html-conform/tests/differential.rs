@@ -5,6 +5,9 @@
 //! Only uses `html_conform`'s public API (`check`), the same as any real
 //! consumer would — this is a black-box comparison, not a unit test.
 
+// Reads the deprecated `Finding::rule_id` on purpose: the corpus baseline predates the shared model.
+#![allow(deprecated)]
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
