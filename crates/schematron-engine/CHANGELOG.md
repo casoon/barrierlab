@@ -7,6 +7,16 @@ version bump.
 
 ## [Unreleased]
 
+### Changed
+
+- **Evaluation:** a rule's `context` is parsed once when the schema is loaded and rewritten on the
+  XPath AST instead of spliced as a string; contexts of one child step with name test and
+  position-free predicates are looked up in a per-document element-name index instead of walking
+  the whole document per rule (barrierlab#115). A relative context starting with `/` is now
+  absolute (before, `/a/b` matched anywhere).
+- **API:** `Rule` carries a crate-private compiled form, so it can no longer be built with a
+  struct literal outside the crate.
+
 ## [0.2.1] - 2026-10-31
 
 ### Added

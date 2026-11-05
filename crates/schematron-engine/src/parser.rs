@@ -789,6 +789,7 @@ fn parse_rule(
     )?;
 
     Ok(Rule {
+        compiled: crate::context::CompiledContext::new(&context),
         context,
         lets,
         checks,

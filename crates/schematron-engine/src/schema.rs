@@ -125,6 +125,8 @@ pub struct Pattern {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
     pub context: String,
+    /// `context`, parsed once when the schema is loaded.
+    pub(crate) compiled: crate::context::CompiledContext,
     pub lets: Vec<LetBinding>,
     pub checks: Vec<Check>,
 }
