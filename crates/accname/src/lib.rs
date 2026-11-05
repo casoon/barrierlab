@@ -433,7 +433,7 @@ mod tests {
     fn dt_bekommt_keinen_namen_aus_seinem_inhalt() {
         // Rolle `term`: weder in ARIA 1.2 noch in 1.3 „name from content",
         // in 1.3 ausdrücklich „name prohibited". Chrome benennt `<dt>` aus dem
-        // Inhalt — eine Chrome-Abweichung, kein Fehler hier (plan/01).
+        // Inhalt — eine Chrome-Abweichung, kein Fehler hier.
         let doc = Arena::builder()
             .open("dl")
             .open("dt")

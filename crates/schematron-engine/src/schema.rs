@@ -2,8 +2,7 @@
 //! `assert`/`report`, as produced by [`crate::parser::parse`].
 //!
 //! `context` and `test` are kept as raw, unparsed XPath strings — parsing
-//! them is a later phase, gated on the sister crate `xpath-eval` (see
-//! `plan/02-schema-parser.md`, "Voraussetzungen").
+//! them is a later phase, gated on the sister crate `xpath-eval`.
 
 /// A parsed Schematron schema (Stage-1 subset, plus Stage-2 `<let>`).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,7 +30,7 @@ pub struct Schema {
 
 /// A `<diagnostic id="..." role="...">` — referenced by a [`Check`]'s
 /// `diagnostics` IDREFS list. `message` uses the same rich-content model
-/// as a check's own message (see `plan/08-diagnostics.md`).
+/// as a check's own message.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Diagnostic {
     pub id: String,
@@ -58,8 +57,7 @@ pub struct Property {
 }
 
 /// A `<phase id="..."><active pattern="..."/>...</phase>` — a named,
-/// selectable subset of patterns. See `plan/05-phase-selection.md` for how
-/// `Schema.default_phase`/`Schema.phases` feed into
+/// selectable subset of patterns. `Schema.default_phase`/`Schema.phases` feed into
 /// [`crate::engine::evaluate_with_phase`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Phase {
@@ -73,7 +71,7 @@ pub struct Phase {
 /// A `<let name="...">` variable binding — either `<let name="..."
 /// value="...">` ([`LetValue::Expr`]) or `<let name="...">`, with literal
 /// XML content instead of a `value` attribute ([`LetValue::Literal`],
-/// issue #3). See `plan/04-let-bindings.md` for evaluation semantics
+/// issue #3). Evaluation semantics:
 /// (schema/pattern-level `<let>` evaluate against the document root,
 /// rule-level against the matched context node, per
 /// [`crate::engine::evaluate`]).
@@ -134,7 +132,7 @@ pub struct Rule {
 /// An `<assert>` or `<report>` element. `test` is the raw, unparsed XPath
 /// expression. `message` is the element's rich content, rendered to a
 /// final string only when the check fires — see
-/// [`crate::engine::evaluate`] and `plan/06-value-of-interpolation.md`.
+/// [`crate::engine::evaluate`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Check {
     pub kind: CheckKind,
@@ -143,7 +141,7 @@ pub struct Check {
     pub role: Option<String>,
     pub message: Vec<MessagePart>,
     /// The `diagnostics="id1 id2"` IDREFS list, raw (not cross-checked
-    /// against `Schema.diagnostics` here — see `plan/08-diagnostics.md`,
+    /// against `Schema.diagnostics` here —
     /// same accepted simplification as `Phase.active`).
     pub diagnostics: Vec<String>,
 }
@@ -152,8 +150,7 @@ pub struct Check {
 ///
 /// The ISO Schematron content model for `assert`/`report` also allows
 /// `name`/`emph`/`dir`/`span` markup (and arbitrary foreign-namespace
-/// elements). `<value-of select="...">` (Stage 2, see
-/// `plan/06-value-of-interpolation.md`) and `<name path="...">` (issue #4)
+/// elements). `<value-of select="...">` (Stage 2) and `<name path="...">` (issue #4)
 /// are both evaluated — `emph`/`dir`/`span` are purely presentational
 /// (HTML-ish emphasis/direction/span wrappers) with no data-dependent
 /// semantics, so text nested inside those still contributes via `Text`

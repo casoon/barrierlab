@@ -5,8 +5,7 @@ impl TreeBuilder {
     /// default end-tag handling) — also the fallback the adoption agency
     /// algorithm itself runs (step 3) when no matching formatting
     /// element exists in the list of active formatting elements. Built
-    /// now, ahead of "in body" itself (not yet implemented — see
-    /// plan/03-tree-construction.md), because the adoption agency
+    /// now, ahead of "in body" itself (not yet implemented), because the adoption agency
     /// algorithm cannot be complete without it.
     pub(super) fn any_other_end_tag_in_body(&mut self, tag: &TagToken, position: Position) {
         let mut node = self
@@ -52,7 +51,7 @@ impl TreeBuilder {
     /// The adoption agency algorithm (§13.2.6.4.7) — handles misnested
     /// formatting element end tags (the canonical `<b><i>x</b>y</i>`
     /// case). `tag` is the end tag token being processed. Implemented as
-    /// its own isolated step per plan/03-tree-construction.md (notorious
+    /// its own isolated step (notorious
     /// for subtle bugs in other implementations), ahead of "in body"
     /// itself (not yet implemented) actually calling it.
     pub(super) fn adoption_agency_algorithm(&mut self, tag: &TagToken, position: Position) {

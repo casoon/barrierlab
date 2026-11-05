@@ -40,7 +40,7 @@ impl TreeBuilder {
             }
             TokenKind::Eof => {
                 // "Stop parsing" is a driver-loop concern, not yet
-                // built — see plan/03-tree-construction.md.
+                // built.
                 TokenOutcome::Consumed(None)
             }
             _ => {

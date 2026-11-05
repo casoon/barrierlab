@@ -120,8 +120,7 @@ impl TreeBuilder {
     /// whichever formatting elements (`a`/`b`/`i`/...) were implicitly
     /// closed since they were last active, by recreating each as a fresh
     /// element via [`insert_html_element`](Self::insert_html_element) —
-    /// which is why this had to wait until that existed (see
-    /// plan/03-tree-construction.md's reordering note). Recreated
+    /// which is why this had to wait until that existed. Recreated
     /// elements get `position: None`: they aren't literally parsed at
     /// this point in the source, this crate's own extension over the
     /// spec (which has no position concept at all) treats them like any

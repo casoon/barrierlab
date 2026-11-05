@@ -1,7 +1,5 @@
 //! The remaining 24 functions of the XPath 1.0 Core Function Library (§4.1,
-//! §4.2, §4.3, §4.4) — see `plan/05-function-library.md` for the verbatim
-//! spec text and worked examples each implementation below is checked
-//! against. `last`/`position`/`count` (§4.1) stay in `eval.rs` (Phase 04).
+//! §4.2, §4.3, §4.4). `last`/`position`/`count` (§4.1) stay in `eval.rs` (Phase 04).
 //!
 //! `id()` relies on `Node::is_id_attribute()`, which defaults to `false`
 //! everywhere — the XPath 1.0 data model derives ID-ness from a DTD/schema,

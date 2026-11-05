@@ -278,7 +278,7 @@ mod insertion_algorithm_tests {
     }
 
     /// Mirrors what the "before html" insertion mode (not yet
-    /// implemented — see plan/03-tree-construction.md) does for the very
+    /// implemented) does for the very
     /// first `<html>` element: append it directly to the Document node
     /// and push it onto the stack, bypassing the generic insertion
     /// algorithm under test here (which requires a current node to

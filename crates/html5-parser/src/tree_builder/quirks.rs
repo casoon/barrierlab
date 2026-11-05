@@ -129,8 +129,7 @@ pub(super) fn starts_with_ignore_ascii_case(value: &str, prefix: &str) -> bool {
 ///
 /// Deliberately doesn't model the spec's "iframe `srcdoc` document" or
 /// "parser cannot change the mode flag" exceptions: this crate parses
-/// whole documents only, never `srcdoc` content or HTML fragments (see
-/// plan/03-tree-construction.md's scope decision), so both are always in
+/// whole documents only, never `srcdoc` content or HTML fragments, so both are always in
 /// their default/false state here.
 pub(crate) fn determine_quirks_mode(doctype: &DoctypeToken) -> QuirksMode {
     let name = doctype.name.as_deref();

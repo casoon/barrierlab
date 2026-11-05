@@ -258,8 +258,7 @@
   <!--
     An *active* tab needs a tabpanel it is actually wired to.
 
-    A first attempt at this (removed again, see `plan/DECISIONS.md`'s
-    "roles-tab-needs-tabpanel" entry) read the message text as "every
+    A first attempt at this (removed again) read the message text as "every
     `role=tab` needs a `role=tabpanel` somewhere in the document" and
     regressed 12 fixtures in `html-aria/roles-properties-supported*/`
     that use an isolated `role="tab"` to test unrelated ARIA property

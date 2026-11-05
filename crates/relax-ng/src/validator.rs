@@ -2,7 +2,7 @@
 //! [`CompiledSchema`](crate::CompiledSchema) using Brzozowski-derivative
 //! pattern matching — the standard approach for RELAX NG validators,
 //! derived independently from the pattern algebra in the spec (not ported
-//! from any other implementation; see `plan/DECISIONS.md`).
+//! from any other implementation).
 //!
 //! # The derivative idea
 //!
@@ -18,8 +18,8 @@
 //! The derivatives themselves live in `crate::derive`, on interned
 //! patterns. Every one of them transparently follows `ref` — including
 //! through `interleave` — which is deliberate: the most serious bug found
-//! in the `xmloxide` RELAX NG parser (the reason this crate exists at all,
-//! see `plan/DECISIONS.md`) was exactly a `ref` inside `interleave` not
+//! in the `xmloxide` RELAX NG parser (the reason this crate exists at all)
+//! was exactly a `ref` inside `interleave` not
 //! being resolved for attribute matching, rejecting almost every attribute
 //! in a modular schema. `attribute_matches_through_ref_and_interleave_xmloxide_issue_56`
 //! (in the test module) is a standing regression test for that failure
@@ -985,7 +985,7 @@ mod tests {
     #[test]
     fn unsupported_datatype_library_fails_fast_before_validating() {
         // Deliberately the whattf library, not XSD — `DatatypeRegistry::new`
-        // now supports XSD out of the box (see `plan/DECISIONS.md`), so
+        // now supports XSD out of the box, so
         // this needs a genuinely unregistered library to still exercise
         // the fail-fast path; the whattf library is exactly that (a
         // caller like html-conform must register its own implementation).
@@ -1202,8 +1202,7 @@ mod tests {
     // --- adapter smoke test: a realistic html-conform/xmloxide-shaped tree
     // (namespace-qualified elements, an unprefixed attribute, nested
     // children, text) — this crate has no dependency on html-conform or
-    // xmloxide (no HTML/XML-parser dependency in the core, see
-    // `plan/DECISIONS.md`), so `TestElement` stands in for its sibling
+    // xmloxide (no HTML/XML-parser dependency in the core), so `TestElement` stands in for its sibling
     // project's `NormalizedNode` adapter output, confirming the `Element`
     // trait contract works for that shape before the Public-API phase. ---
 
@@ -1211,7 +1210,7 @@ mod tests {
     fn adapter_smoke_test_with_a_realistic_xhtml_shaped_tree() {
         const XHTML: &str = "http://www.w3.org/1999/xhtml";
         // Compact-syntax (`.rnc`) prefixed element names are a known,
-        // separate gap outside Phase 05's scope (see `plan/00-STATUS.md`)
+        // separate gap outside Phase 05's scope
         // — the XML (`.rng`) syntax resolves `xmlns:`-qualified names
         // correctly, so this realistic, namespace-qualified smoke test
         // uses that syntax instead.

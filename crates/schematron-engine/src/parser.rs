@@ -1,6 +1,6 @@
 //! Parser for the Stage-1 Schematron XML schema format
 //! (`schema`/`ns`/`pattern`/`rule`/`assert`/`report`) into the
-//! [`crate::schema`] model. See `plan/02-schema-parser.md`.
+//! [`crate::schema`] model.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -86,9 +86,8 @@ fn check_document_wide_id_uniqueness(root: Node<'_, '_>) -> Result<(), ParseErro
 }
 
 // Direct-child allowlists per container, verified against the ISO
-// Schematron RNC grammar (`github.com/Schematron/schema`; source
-// fragments: `plan/04-let-bindings.md`, `plan/05-phase-selection.md`,
-// `plan/08-diagnostics.md`). `title`/`p` are real ISO prose/documentation
+// Schematron RNC grammar (`github.com/Schematron/schema`).
+// `title`/`p` are real ISO prose/documentation
 // elements, accepted but unread. Anything else not listed is either a
 // typo or an unimplemented ISO construct (e.g. `<include>`) — both become
 // `ParseError::UnexpectedElement` (see `validate_known_children`), not a
@@ -146,8 +145,7 @@ pub enum ParseError {
     /// `<pattern abstract="true" id="...">` in the schema.
     UnknownAbstractPattern { pattern: String, position: Position },
     /// `<extends rule="...">` referenced a rule id with no matching
-    /// `<rule id="...">` in the same pattern (see
-    /// `plan/07-abstract-patterns-and-extends.md` for why the lookup is
+    /// `<rule id="...">` in the same pattern (the lookup is
     /// pattern-local, not schema-wide).
     UnknownRuleReference { rule: String, position: Position },
     /// `<extends>` formed a cycle (a rule extending itself, directly or
@@ -364,7 +362,7 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
         .transpose()?
         .unwrap_or_default();
 
-    // Abstract patterns (`plan/07-abstract-patterns-and-extends.md`) are
+    // Abstract patterns are
     // schema-wide templates, looked up by `is-a` regardless of where in
     // the schema they're declared — indexed once, up front.
     let abstract_patterns: HashMap<String, Node<'_, '_>> = root
@@ -678,9 +676,7 @@ fn collect_literal_text(node: Node<'_, '_>) -> String {
 /// Parses a `<phase id="..."><active pattern="..."/>...</phase>` element.
 /// `active/@pattern` is cross-checked against `pattern_ids` (every
 /// concrete `Pattern::id` in the schema) — an unknown reference is
-/// [`ParseError::UnknownActivePattern`] (superseded `plan/05-phase-
-/// selection.md`'s original "not cross-checked" decision, see
-/// `DECISIONS.md`).
+/// [`ParseError::UnknownActivePattern`].
 fn parse_phase(node: Node<'_, '_>, pattern_ids: &HashSet<String>) -> Result<Phase, ParseError> {
     validate_known_children(node, PHASE_ALLOWED_CHILDREN)?;
     let id = required_attribute(node, "phase", "id")?.to_owned();
@@ -711,8 +707,7 @@ fn parse_param(node: Node<'_, '_>) -> Result<(String, String), ParseError> {
 /// Replaces `$name` with `value` for each `(name, value)` in `params`,
 /// applied sequentially in order (each step sees the previous step's
 /// result) — the same semantics as the ISO reference implementation's
-/// abstract-pattern parameter substitution (`plan/07-abstract-patterns-
-/// and-extends.md`). A no-op for `params: &[]`, so this is exactly Stage
+/// abstract-pattern parameter substitution. A no-op for `params: &[]`, so this is exactly Stage
 /// 1's behavior for schemas without abstract patterns.
 fn substitute(text: &str, params: &[(String, String)]) -> String {
     params.iter().fold(text.to_owned(), |acc, (name, value)| {
@@ -723,8 +718,8 @@ fn substitute(text: &str, params: &[(String, String)]) -> String {
 /// Builds a `Pattern` from `node`'s `rule` children. `node` is the
 /// pattern element itself for a normal (non-`is-a`) pattern, or the
 /// *abstract* pattern being instantiated for an `is-a` use (its `rule`s
-/// are the source, but `id` is the `is-a` pattern's own id — see
-/// `plan/07-abstract-patterns-and-extends.md`). `params` drives
+/// are the source, but `id` is the `is-a` pattern's own id).
+/// `params` drives
 /// [`substitute`] in `context`/`test`/`value-of/@select` (empty for a
 /// normal pattern).
 fn parse_pattern(
@@ -798,8 +793,7 @@ fn parse_rule(
 
 /// Walks `node`'s children collecting `assert`/`report` as [`Check`]s and
 /// `<let>` as [`LetBinding`]s, inlining `<extends rule="X">` by recursively
-/// collecting `X`'s own checks *and* lets at that position (see
-/// `plan/07-abstract-patterns-and-extends.md` — `X` must be declared in the
+/// collecting `X`'s own checks *and* lets at that position (`X` must be declared in the
 /// same pattern, i.e. present in `rule_index`). An extended rule's `<let>`s
 /// are carried over exactly like its checks are — same recursive-inlining
 /// mechanism, so a `<let>` in a transitively-extended abstract rule is
@@ -921,7 +915,7 @@ fn parse_check(
 /// `select`/`path` are run through [`substitute`], and neither element's
 /// content is descended into (the grammar defines both as empty). No
 /// trimming here: that now happens on the *rendered* message at evaluation
-/// time (`plan/06-value-of-interpolation.md`), since `value-of`/`name` only
+/// time, since `value-of`/`name` only
 /// have a value once evaluated against a firing check's context node.
 fn collect_message_parts(
     node: Node<'_, '_>,
@@ -1211,7 +1205,7 @@ mod tests {
     }
 
     /// The parser no longer trims (that moved to render time in
-    /// `engine.rs`, see `plan/06-value-of-interpolation.md`) — the raw
+    /// `engine.rs`) — the raw
     /// text, whitespace and all, is captured as-is as a single `Text` part.
     #[test]
     fn message_text_is_captured_untrimmed() {
@@ -1427,8 +1421,7 @@ mod tests {
     }
 
     /// Referential integrity for `diagnostics="..."` IDREFS is checked at
-    /// parse time (superseded `plan/08-diagnostics.md`'s original "not
-    /// checked" decision — see `DECISIONS.md`): a reference to a
+    /// parse time: a reference to a
     /// `diagnostic/@id` that doesn't exist is a hard `ParseError`, not a
     /// silently-empty result at evaluation time.
     #[test]
@@ -1933,8 +1926,7 @@ mod tests {
     }
 
     /// Referential integrity for `active/@pattern` is checked at parse
-    /// time (superseded `plan/05-phase-selection.md`'s original "not
-    /// checked" decision — see `DECISIONS.md`).
+    /// time.
     #[test]
     fn active_unknown_pattern_is_an_error() {
         let error = parse(
@@ -1958,7 +1950,7 @@ mod tests {
     }
 
     /// An abstract pattern's id is never in `Schema.patterns` (it's never
-    /// evaluated on its own, see `plan/07-abstract-patterns-and-extends.md`)
+    /// evaluated on its own)
     /// — so `active` cannot activate it by id either, even though the id
     /// itself is declared somewhere in the schema.
     #[test]
@@ -2411,8 +2403,7 @@ mod tests {
         assert_eq!(schema.patterns[0].id.as_deref(), Some("concrete"));
     }
 
-    /// Verified against the ISO reference implementation
-    /// (`plan/07-abstract-patterns-and-extends.md`): `<let value="...">`
+    /// Verified against the ISO reference implementation: `<let value="...">`
     /// is NOT among the substituted attributes, unlike `context`/`test`/
     /// `select`.
     #[test]

@@ -38,7 +38,7 @@ impl TreeBuilder {
     /// html5lib-tests corpus's `<selectedcontent>` cases use) without a
     /// general tree-order walker with subtree-skipping, which the real
     /// algorithm technically requires for exotic nesting no test here
-    /// exercises. See plan/06-selectedcontent.md.
+    /// exercises.
     pub(super) fn list_of_options(&self, select: NodeId) -> Vec<NodeId> {
         let mut options = Vec::new();
         for child in self.document.children(select) {
@@ -88,8 +88,7 @@ impl TreeBuilder {
     /// `selectedcontent` element can carry from its own "post-connection
     /// steps" (only relevant for exotic nesting — a `selectedcontent`
     /// inside a *second*, unrelated `select`/`option` — this crate's
-    /// namesake corpus cases never trigger it, see
-    /// plan/06-selectedcontent.md).
+    /// namesake corpus cases never trigger it).
     pub(super) fn first_selectedcontent_descendant(&self, select: NodeId) -> Option<NodeId> {
         if self.node_has_html_attribute(select, "multiple") {
             return None;
@@ -157,8 +156,7 @@ impl TreeBuilder {
     /// doesn't exercise. Comparing the stack before/after instead keeps
     /// the hook centralized at only the call sites that matter for
     /// `<select>` content (see its own call sites) — not a fully general
-    /// interception of every possible pop, a deliberate practical scope,
-    /// see plan/06-selectedcontent.md.
+    /// interception of every possible pop, a deliberate practical scope.
     pub(super) fn with_option_pop_hook<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
         let before: Vec<NodeId> = self.open_elements.entries.clone();
         let result = f(self);
