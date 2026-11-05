@@ -7,6 +7,12 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **Conformance:** The Jaxen XPath test cases run as a corpus (`tests/jaxen.rs`, vendored through
+  `xtask/vendor-jaxen.sh`); the 18 known failures (non-XPath-1.0 functions and the unbound-prefix
+  policy) are listed in `tests/jaxen_known_failures.txt` (casoon/barrierlab#111).
+
 ## [0.2.3] - 2026-10-31
 
 ### Added
