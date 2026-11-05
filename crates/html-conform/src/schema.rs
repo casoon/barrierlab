@@ -415,8 +415,41 @@ pub(crate) fn findings(
             // source position — see `NormalizedNode::position`'s own
             // doc comment.
             location: error.location().copied(),
+            detail: Some(detail(error)),
         })
         .collect()
+}
+
+/// The structured arguments of one schema error. `on` is the element the
+/// error occurred on (the last name of the error's path); for an unexpected
+/// element that is the parent, so the offender comes from the error kind.
+fn detail(
+    error: &relax_ng::ValidationError<crate::finding::SourceLocation>,
+) -> crate::finding::FindingDetail {
+    use crate::finding::FindingDetail;
+    use relax_ng::ValidationErrorKind as Kind;
+
+    let on = error
+        .path()
+        .last()
+        .map(|name| name.local.clone())
+        .unwrap_or_default();
+    match error.kind() {
+        Kind::UnexpectedElement(name) => FindingDetail::UnexpectedElement {
+            element: name.local.clone(),
+        },
+        Kind::UnexpectedText => FindingDetail::UnexpectedText { parent: on },
+        Kind::UnexpectedAttribute(name) => FindingDetail::UnexpectedAttribute {
+            attribute: name.local.clone(),
+            element: on,
+        },
+        Kind::InvalidAttributeValue(name, value) => FindingDetail::InvalidAttributeValue {
+            attribute: name.local.clone(),
+            value: value.clone(),
+            element: on,
+        },
+        Kind::MissingContent => FindingDetail::MissingContent { element: on },
+    }
 }
 
 #[cfg(test)]

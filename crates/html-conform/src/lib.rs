@@ -32,7 +32,8 @@ mod table_integrity;
 use assertions::SchematronEngine;
 
 pub use finding::{
-    CheckError, CheckReport, Finding, Severity, Skipped, SkippedClass, SourceLocation,
+    CheckError, CheckReport, Finding, FindingDetail, Severity, Skipped, SkippedClass,
+    SourceLocation,
 };
 
 /// The deepest element nesting [`check_with_options`] validates; deeper
@@ -150,6 +151,42 @@ mod tests {
 
         assert!(report.findings.is_empty());
         assert!(!report.has_errors());
+    }
+
+    #[test]
+    fn schema_findings_carry_structured_details() {
+        use super::FindingDetail;
+
+        let report = check(
+            r#"<!doctype html><html lang="en"><title>t</title><body><p bogus="1">x</p><ul><span>y</span></ul><input type="search2">"#,
+        )
+        .expect("HTML5 parsing should recover");
+        let details: Vec<_> = report
+            .findings
+            .iter()
+            .filter(|finding| finding.rule_id == "schema.html5")
+            .filter_map(|finding| finding.detail.as_ref())
+            .collect();
+
+        assert!(details.contains(&&FindingDetail::UnexpectedAttribute {
+            attribute: "bogus".to_owned(),
+            element: "p".to_owned(),
+        }));
+        assert!(details.contains(&&FindingDetail::UnexpectedElement {
+            element: "span".to_owned(),
+        }));
+        assert!(details.iter().any(|detail| matches!(
+            detail,
+            FindingDetail::InvalidAttributeValue { attribute, value, element }
+                if attribute == "type" && value == "search2" && element == "input"
+        )));
+        assert!(
+            report
+                .findings
+                .iter()
+                .filter(|finding| finding.rule_id != "schema.html5")
+                .all(|finding| finding.detail.is_none())
+        );
     }
 
     #[test]

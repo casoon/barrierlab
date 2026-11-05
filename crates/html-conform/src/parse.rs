@@ -90,6 +90,7 @@ pub(crate) fn findings(parsed: &ParsedHtml) -> Vec<Finding> {
                 column: diagnostic.position.column,
                 byte_offset: diagnostic.position.byte_offset,
             }),
+            detail: None,
         })
         .chain(doctype_findings(parsed.document()))
         .chain(charset_after_1024_findings(parsed.document()))
@@ -143,6 +144,7 @@ fn doctype_findings(document: &Document) -> Vec<Finding> {
                       “<!DOCTYPE html>”"
                 .to_owned(),
             location: None,
+            detail: None,
         }];
     };
 
@@ -173,6 +175,7 @@ fn doctype_findings(document: &Document) -> Vec<Finding> {
         severity: Severity::Error,
         message: message.to_owned(),
         location,
+        detail: None,
     }]
 }
 
@@ -237,6 +240,7 @@ fn charset_after_1024_findings(document: &Document) -> Vec<Finding> {
                             column: pos.column,
                             byte_offset: pos.byte_offset,
                         }),
+                        detail: None,
                     });
                 }
             }
