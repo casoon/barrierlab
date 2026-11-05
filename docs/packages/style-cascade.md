@@ -48,7 +48,7 @@ flowchart LR
 | `Cascade::backdrop_luminances` | luminance samples where a gradient lies behind the text |
 | `selector::Selector`, `Specificity`, `Mode` | selector matching; `Resting` for the cascade, `Possible` for "could this rule apply?" |
 | `parse_color`, `over`, `luminance` | CSS colours (including `oklch()`, `lab()`, `color-mix()` in srgb and oklab) and compositing |
-| `Environment` | the assumed window: size, colour scheme, reduced motion |
+| `Environment` | the assumed window: size, colour scheme, reduced motion; optional hover, pointer, contrast and forced-colors (`Unknown` when unset) |
 
 ## Dependencies
 
@@ -59,7 +59,7 @@ Downward: `a11y-dom`, `stylesheet-parse`, `media-query-parse`. Upward: `a11y-rul
 What cannot be determined without layout stays undetermined, never guessed:
 
 - **`Unknown` propagates.** A rule whose selector or `@media` condition is not understood
-  (`:has()`, `@container`, resolution queries) makes every property it declares unknown on the
+  (`:has()`, `@container`, resolution queries, `hover`/`pointer` queries without a value in `Environment`) makes every property it declares unknown on the
   elements it could match, unless a certain rule with higher weight wins anyway.
 - **Backgrounds.** A background image makes the colour unknown. A gradient gives luminance
   samples (each stop and the midpoints), not every pixel. `opacity`, `filter` and blend modes

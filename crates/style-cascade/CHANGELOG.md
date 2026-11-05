@@ -14,6 +14,11 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 - **Darstellungsattribute:** `bgcolor`, `background`, `<font color>`, `<font size>`, `<body text>` und `<body link>` zählen wie eine Angabe mit Spezifität 0.
 - **Farben:** `parse_color` liest Hex, `rgb()`, `hsl()`, `hwb()`, `oklab()`, `oklch()`, `lab()`, `lch()`, `color(srgb …)`, `light-dark()` und `color-mix()` in srgb und oklab.
 
+### Changed
+
+- **Selektoren:** Im Ruhezustand sind `:disabled`, `:enabled`, `:checked`, `:required` und `:optional` aus den Attributen entschieden (inkl. `fieldset`-Vererbung und `legend`-Ausnahme) statt `Unknown`; `:nth-child()`, `:nth-last-child()` (mit `of S`), `:nth-of-type()`, `:nth-last-of-type()`, `:first-of-type`, `:last-of-type` und `:only-of-type` werden ausgewertet.
+- **Medien:** `hover`, `pointer`, `prefers-contrast` und `forced-colors` sind `Unknown`, solange `Environment` sie nicht festlegt. `Environment` hat dafür die Felder `hover`, `fine_pointer`, `contrast_more` und `forced_colors` (je `Option<bool>`); wer `Environment` ohne `..Default::default()` als Literal baut, muss sie ergänzen.
+
 ### Fixed
 
 - **Kaskade:** Das `style`-Attribut steht über allen Ebenen, auch bei `!important`; Darstellungsattribute (`bgcolor` usw.) verlieren gegen jede Autorenregel, auch in einer `@layer` (CSS Cascade 5 §6.1, §6.5).
