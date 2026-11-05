@@ -1,7 +1,6 @@
 //! Phase 07: differential test against the vendored vnu test corpus
-//! (`tests/corpus/`) — see `plan/07-corpus-differential.md` and
-//! `plan/DECISIONS.md` (the Phase 07 entry) for the expectation model,
-//! corpus scope, and how the baseline below was established.
+//! (`tests/corpus/`); the baseline below records the expectation model and
+//! corpus scope.
 //!
 //! Only uses `html_conform`'s public API (`check`), the same as any real
 //! consumer would — this is a black-box comparison, not a unit test.
@@ -19,7 +18,7 @@ fn corpus_dir() -> PathBuf {
 /// vnu's own expected-message map, trimmed to `html/`/`html-aria/` keys by
 /// `xtask/vendor-corpus.sh`. Only key *presence* is used — message text
 /// isn't compared (different implementations, different wording; see
-/// `plan/07-corpus-differential.md`'s "Risiken" and `tests/corpus/README.md`).
+/// `tests/corpus/README.md`).
 fn expected_findings_by_path() -> HashMap<String, String> {
     let raw = fs::read_to_string(corpus_dir().join("messages.json"))
         .expect("tests/corpus/messages.json should be vendored — run xtask/vendor-corpus.sh");
@@ -80,8 +79,7 @@ const MISSING_LANG_RULE_ID: &str = "assertion.elements.html-missing-lang";
 /// findings from that one rule are dropped before deciding `has_findings`;
 /// for [`MISSING_LANG_FIXTURE`] the findings are used as-is. Deliberately
 /// pinned to this one rule id rather than built out into a general ignore
-/// list — no other rule has this problem. See `plan/DECISIONS.md`'s
-/// Batch 24 and Batch 25 entries.
+/// list — no other rule has this problem.
 fn has_findings_for_comparison(relative_path: &str, report: &CheckReport) -> bool {
     if relative_path == MISSING_LANG_FIXTURE {
         return !report.findings.is_empty();
@@ -103,7 +101,7 @@ struct Metrics {
     false_positive: usize,
     /// Expected findings, `check()` found none — this crate is missing a
     /// check vnu has (expected in bulk for `html-aria/`: Phase 08 hasn't
-    /// built out the real ARIA rule set yet, see `plan/DECISIONS.md`).
+    /// built out the real ARIA rule set yet).
     false_negative: usize,
     /// `check()` itself returned `Err` (a setup failure, not a per-document
     /// verdict) — not counted as agreement or disagreement.
@@ -197,8 +195,7 @@ fn differential_against_vendored_vnu_corpus() {
         println!("not-comparable examples (check() returned Err): {not_comparable_examples:?}");
     }
 
-    // Baseline / regression gate (plan/07-corpus-differential.md,
-    // plan/DECISIONS.md's Phase 07 entry): this corpus is real-world vnu
+    // Baseline / regression gate: this corpus is real-world vnu
     // test material exercising far more than this crate currently
     // implements (Phase 08's real ARIA assertion rules in particular are
     // still four reused canary placeholders, not the full rule set) —
@@ -301,9 +298,8 @@ fn differential_against_vendored_vnu_corpus() {
 /// particular has no real rule behind it yet — a large, genuine
 /// follow-up scope for this rule loop, not a regression from this fix.
 /// New baseline: `true_positive=2336 true_negative=868
-/// false_positive=41 false_negative=1410 not_comparable=0`. See
-/// `plan/DECISIONS.md`'s Phase 07 and Phase 08 entries for the full
-/// breakdown, spot-checked examples, and what's still open
+/// false_positive=41 false_negative=1410 not_comparable=0`.
+/// What's still open
 /// (special-scheme slash requirements, userinfo character-class
 /// validation, host hex/octal/fullwidth-digit IPv4 forms in
 /// `w:iri-ref` — a documented, accepted residual gap; `<meter>`
@@ -331,9 +327,8 @@ fn differential_against_vendored_vnu_corpus() {
 /// text itself says "contained in, *or owned by*". New baseline:
 /// `true_positive=2498 true_negative=868 false_positive=41
 /// false_negative=1248 not_comparable=0` — 162 fewer false negatives,
-/// zero new false positives (back to the 41-baseline noise floor). See
-/// `plan/DECISIONS.md`'s Phase 07 and Phase 08 entries for the full
-/// breakdown, spot-checked examples, and what's still open
+/// zero new false positives (back to the 41-baseline noise floor).
+/// What's still open
 /// (special-scheme slash requirements, userinfo character-class
 /// validation, host hex/octal/fullwidth-digit IPv4 forms in
 /// `w:iri-ref` — a documented, accepted residual gap; `<meter>`
@@ -425,9 +420,8 @@ fn differential_against_vendored_vnu_corpus() {
 ///
 /// Updated once more the same day: `src/parse.rs`/`src/infoset.rs`
 /// migrated from `xmloxide` to `html5-parser` (a sibling crate built
-/// specifically to replace it, see `plan/DECISIONS.md`'s Phase 08
-/// migration entry) — html5-parser now tracks WHATWG parse errors
-/// itself (50 of the 52 named kinds, see its own `plan/07-parse-errors.md`),
+/// specifically to replace it) — html5-parser now tracks WHATWG parse errors
+/// itself (50 of the 52 named kinds),
 /// closing the interim `parser.html5`-diagnostics gap xmloxide left, and
 /// also supplies real per-node source positions for the first time
 /// (`Finding.location` was `None` unconditionally before this — both for
@@ -634,7 +628,7 @@ fn differential_against_vendored_vnu_corpus() {
 /// `relax-ng` crate (RNC annotations in two more positions, `default
 /// namespace PREFIX = "..."` not registering `PREFIX`, single-quoted
 /// string literals not tokenized, string literals corrupting any raw
-/// backslash) — see `../relax-ng/plan/DECISIONS.md`. Also needed two new
+/// backslash). Also needed two new
 /// `w:*` datatypes only the SVG/MathML modules reference
 /// (`src/datatypes/svg_mathml.rs`): `w:xml-name` (a verbatim port of
 /// `XmlName.java`'s XML 1.0 `Name` character-class tables) and
@@ -1030,7 +1024,7 @@ fn differential_against_vendored_vnu_corpus() {
 /// (3) `rules/headings.sch`: `headings-no-top-level` (missing h1 warning) and `headings-skip-level` (h1 to h3 skip error).
 /// `false_positive` unchanged (0); `false_negative` 71→55 (−16, 0 regressions).
 /// New baseline: `true_positive=3691 true_negative=909 false_positive=0 false_negative=55 not_comparable=0`.
-/// Updated again 2026-09-01 (Batch 23 — real tree-construction parse-error tracking via `html5-parser` 0.3.0, closing backlog item 2 from `plan/00-STATUS.md`):
+/// Updated again 2026-09-01 (Batch 23 — real tree-construction parse-error tracking via `html5-parser` 0.3.0):
 /// `html5-parser` 0.3.0 adds 15 `ParseErrorKind` variants for WHATWG §13.2.6
 /// tree-construction conditions (stray/implied end tags, "no p element in
 /// scope", self-closing flag acknowledgement on non-void elements, table

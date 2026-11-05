@@ -182,7 +182,6 @@
     reference to an existing role=tabpanel element) but no corpus
     fixture pins down aria-controls resolution specifically enough to
     implement that with confidence — left open, see
-    html-aria/misc/role-tab-with-no-role-tabpanel-novalid.html in
-    plan/00-STATUS.md's remaining backlog.
+    html-aria/misc/role-tab-with-no-role-tabpanel-novalid.html.
   -->
 </schema>

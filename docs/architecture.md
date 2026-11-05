@@ -18,6 +18,7 @@ flowchart BT
   subgraph L0["L0 · Parser und Engines"]
     h5[html5-parser]
     csp[csp-parse]
+    tok[css-tokenize]
     mq[media-query-parse]
     xp[xpath-eval]
     rng[relax-ng]
@@ -31,7 +32,9 @@ flowchart BT
   end
   subgraph L2["L2 · Berechnung"]
     acc[accname]
+    cas[style-cascade]
     rules[a11y-rules]
+    stat[a11y-static]
     perc[a11y-perception]
     wc[web-checks]
   end
@@ -47,9 +50,12 @@ flowchart BT
 
   sch --> xp
   hc --> h5 & csp & mq & rng & sch
-  cssp --> mq
+  cssp --> tok
+  mq --> tok
   acc --> dom
-  rules --> dom & rep & acc
+  cas --> dom & cssp & mq
+  rules --> dom & rep & acc & cas
+  stat --> h5 & dom & rep & rules & acc & cas & cssp
   perc --> rep
   wc --> rep
   wasm --> rules
@@ -63,17 +69,24 @@ flowchart BT
 |---|---|---|
 | L0 | Syntax lesen: HTML, CSP, Media Queries, XPath, RELAX NG, Schematron | keine Bewertung, keine Zugänglichkeitsbegriffe |
 | L1 | Datenmodell: Baum, Befund, Konformanz, Stylesheet | ein Befundmodell für alle Hosts (`a11y-report`) |
-| L2 | Berechnung: Name, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei |
+| L2 | Berechnung: Name, Kaskade, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei; `a11y-rules` darf auf `accname` und `style-cascade` aufbauen; `a11y-static` steht darüber und fügt Parser, Modell, Regeln und Kaskade zum Lauf über statisches HTML zusammen |
 | L3 | Auslieferung in andere Laufzeiten (WASM) | reicht durch, bewertet nicht |
 | L4 | Erhebung, Orchestrierung, Ausgabe | außerhalb dieses Repositorys |
 
 ## Feste Regeln
 
-1. **Abhängigkeiten nur nach unten.** Kein Paket importiert ein Paket derselben
-   oder einer höheren Schicht. Kein Host im Repository.
+1. **Abhängigkeiten nur nach unten.** Kein Paket importiert ein Paket einer
+   höheren Schicht. Innerhalb einer Schicht sind Abhängigkeiten erlaubt, solange
+   der Graph azyklisch ist; in L2 steht `a11y-rules` oben und hängt von
+   `accname` und `style-cascade` ab (`schematron-engine` → `xpath-eval` in L0
+   ist derselbe Fall). Kein Host im Repository.
 2. **Browserfrei bis L3.** Kein `chromiumoxide`, keine CDP-Typen in einer
    öffentlichen API. Die Aufnahme im Browser bleibt Sache der Hosts; Pakete
-   nehmen Daten entgegen, sie holen sie nicht.
+   nehmen Daten entgegen, sie holen sie nicht. Zwei benannte Ausnahmen vom
+   Zuschnitt: Die Datentypen von `a11y-perception` spiegeln den
+   CDP-Zugänglichkeitsbaum 1:1 — bewusst, damit Hosts ihn ohne Umwege füllen
+   können; CDP-Typen selbst stehen nicht in der API. `web-checks` ist
+   SEO-Code, den zwei Hosts gemeinsam brauchen, keine Zugänglichkeit.
 3. **Intern `path` + `version`.** Interne Abhängigkeiten stehen mit beidem in
    `workspace.dependencies`, damit dasselbe Manifest lokal baut und
    veröffentlichbar bleibt. Hosts binden ausschließlich aus der Registry ein.

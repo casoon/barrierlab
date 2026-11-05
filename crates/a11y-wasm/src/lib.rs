@@ -22,6 +22,9 @@ pub use arena::{Arena, ArenaNode};
 pub use rendering::{LayoutColumns, RenderArena, RenderingColumns};
 pub use semantics::SemanticArena;
 
+#[wasm_bindgen(typescript_custom_section)]
+const _REPORT_TS: &str = include_str!("report.d.ts");
+
 /// Ein Scan: die Arena eines Dokuments, über die der Regelbestand läuft.
 ///
 /// Die Arena wird einmal je Scan aufgebaut und gehalten. Der `IdIndex` für die
@@ -44,6 +47,9 @@ impl Scan {
     ///
     /// `tag_dict` und `attr_dict` sind die internierten Namen, mit `\u{1}`
     /// verbunden — ein Zeichen, das in Tag- und Attributnamen nicht vorkommt.
+    ///
+    /// Wirft einen `Error`, wenn die Spalten einander widersprechen (Längen,
+    /// Indizes, Bereiche) — siehe `arena::validate_columns`.
     #[wasm_bindgen(constructor)]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -58,7 +64,7 @@ impl Scan {
         blob: Vec<u8>,
         tag_dict: String,
         attr_dict: String,
-    ) -> Scan {
+    ) -> Result<Scan, JsValue> {
         let split = |s: String| -> Vec<String> {
             if s.is_empty() {
                 Vec::new()
@@ -66,23 +72,25 @@ impl Scan {
                 s.split('\u{1}').map(str::to_string).collect()
             }
         };
-        Scan {
+        let arena = Arena::from_columns(
+            &tag,
+            &parent,
+            &text_off,
+            &text_len,
+            &attr_start,
+            attr_name,
+            attr_val_off,
+            attr_val_len,
+            blob,
+            split(tag_dict),
+            split(attr_dict),
+        )
+        .map_err(|msg| JsValue::from(JsError::new(&format!("invalid arena columns: {msg}"))))?;
+        Ok(Scan {
             rendering: None,
             layout: None,
-            arena: Arena::from_columns(
-                &tag,
-                &parent,
-                &text_off,
-                &text_len,
-                &attr_start,
-                attr_name,
-                attr_val_off,
-                attr_val_len,
-                blob,
-                split(tag_dict),
-                split(attr_dict),
-            ),
-        }
+            arena,
+        })
     }
 
     /// Wie viele Knoten die Arena trägt. Der Collector vergleicht das gegen
@@ -140,6 +148,7 @@ impl Scan {
         });
     }
 
+    #[wasm_bindgen(unchecked_return_type = "Report")]
     pub fn run(&self) -> Result<JsValue, JsValue> {
         let report = match &self.rendering {
             Some(spalten) => {
@@ -160,6 +169,9 @@ mod tests {
     use super::testing::build;
     use super::*;
     use std::collections::BTreeSet;
+
+    /// Derselbe Text, den `typescript_custom_section` in die `.d.ts` schreibt.
+    const REPORT_TS: &str = include_str!("report.d.ts");
 
     fn rule_ids(arena: &Arena) -> BTreeSet<String> {
         let host = SemanticArena::new(arena);
@@ -333,5 +345,114 @@ mod tests {
                 .sum::<usize>()
         );
         assert_eq!(report.summary.pass, 0);
+    }
+
+    /// Die Felder eines `export interface <name> { … }` aus dem TypeScript-Text.
+    fn ts_felder(name: &str) -> BTreeSet<String> {
+        let kopf = format!("export interface {name} {{");
+        let rest = REPORT_TS.split(&kopf).nth(1).expect("Interface fehlt");
+        rest.split("\n}")
+            .next()
+            .unwrap()
+            .lines()
+            .filter_map(|z| z.trim().split(':').next())
+            .filter(|f| !f.is_empty() && !f.starts_with("/**"))
+            .map(|f| f.trim_end_matches('?').to_string())
+            .collect()
+    }
+
+    fn json_felder(v: &serde_json::Value) -> BTreeSet<String> {
+        v.as_object().unwrap().keys().cloned().collect()
+    }
+
+    /// Die Typen driften nicht: ein vollständig gefüllter Bericht, wie
+    /// `a11y-report` ihn serialisiert, trägt genau die Felder des Interface.
+    #[test]
+    fn typescript_interface_deckt_die_serialisierung_von_a11y_report() {
+        use a11y_report::{
+            Evidence, Finding, InputKind, InputNote, Location, NotRun, Outcome, Report, RuleRun,
+            Severity, WcagLevel,
+        };
+        let mut report = Report::new();
+        report.push(
+            Finding::fail("r/x", "m")
+                .with_rule_name("n")
+                .with_severity(Severity::High)
+                .at(Location::file("f")
+                    .with_url("u")
+                    .with_selector("s")
+                    .with_source_hint("h")
+                    .with_node("n"))
+                .with_element(Some("button".into()), Some("Name".into()))
+                .with_wcag(["1.1.1"])
+                .with_wcag_level(WcagLevel::AA)
+                .with_tags(["t"])
+                .with_help("h")
+                .with_help_url("u")
+                .with_suggestion("s")
+                .with_suggested_code("c")
+                .with_snippet("<a>")
+                .add_evidence(Evidence::new("s").with_field("f").with_value("v")),
+        );
+        report.record(
+            RuleRun::not_run("r/y", NotRun::CapabilityMissing)
+                .in_viewport("mobile")
+                .with_wcag(["1.4.3"])
+                .with_reason("why"),
+        );
+        report.note_input(
+            InputNote::new(InputKind::Other)
+                .with_subject("s")
+                .with_detail("d"),
+        );
+        let json = serde_json::to_value(report.finish()).unwrap();
+
+        assert_eq!(json_felder(&json), ts_felder("Report"));
+        assert_eq!(json_felder(&json["inputs"][0]), ts_felder("InputNote"));
+        assert_eq!(json_felder(&json["summary"]), ts_felder("Summary"));
+        let befund = &json["findings"][0];
+        assert_eq!(json_felder(befund), ts_felder("Finding"));
+        assert_eq!(json_felder(&befund["location"]), ts_felder("Location"));
+        assert_eq!(json_felder(&befund["evidence"][0]), ts_felder("Evidence"));
+        assert_eq!(json_felder(&json["rule_runs"][0]), ts_felder("RuleRun"));
+
+        // Aufzählungen: jede Variante steht als Literal im Typ.
+        for o in [
+            Outcome::Fail,
+            Outcome::Review,
+            Outcome::Pass,
+            Outcome::Untested,
+        ] {
+            assert!(REPORT_TS.contains(&format!("\"{}\"", o.as_str())), "{o:?}");
+        }
+        for s in [
+            Severity::Low,
+            Severity::Medium,
+            Severity::High,
+            Severity::Critical,
+        ] {
+            assert!(REPORT_TS.contains(&format!("\"{}\"", s.as_str())), "{s:?}");
+        }
+        for l in [WcagLevel::A, WcagLevel::AA, WcagLevel::AAA] {
+            assert!(REPORT_TS.contains(&format!("\"{}\"", l.as_str())), "{l:?}");
+        }
+        for k in [
+            InputKind::StylesheetUnavailable,
+            InputKind::StylesheetUnresolved,
+            InputKind::DocumentIncomplete,
+            InputKind::Other,
+        ] {
+            let lit = serde_json::to_string(&k).unwrap();
+            assert!(REPORT_TS.contains(&lit), "{k:?}");
+        }
+        for n in [
+            NotRun::CapabilityMissing,
+            NotRun::Disabled,
+            NotRun::NotApplicable,
+            NotRun::Errored,
+        ] {
+            let lit = serde_json::to_string(&n).unwrap();
+            assert!(REPORT_TS.contains(&lit), "{n:?}");
+        }
     }
 }

@@ -4,11 +4,7 @@
 //! <https://github.com/HtmlUnit/htmlunit-csp>). This module reimplements
 //! that library's *parse-time syntax validation* rules against
 //! [`csp_parse`]'s structured output, so it is a from-source-verified
-//! reimplementation rather than a guess — see `plan/DECISIONS.md`, entry
-//! "csp-parse veröffentlicht; `w:content-security-policy`s Accept/Reject-
-//! Mapping ist eigene Recherche, nicht in dieser Sitzung entschieden"
-//! (2026-08-22) for how this was researched, and the entry immediately
-//! above it in the log for the implementation itself.
+//! reimplementation rather than a guess.
 //!
 //! ## vnu-parity model: why message text/severity bookkeeping is skipped
 //!
@@ -18,8 +14,7 @@
 //! is a system property (`nu.validator.datatype.warn`) that defaults to
 //! `false` — meaning **no severity is ever softened to a non-fatal
 //! warning** in vnu's default configuration (the same `WARN`-gate pattern
-//! already documented for `w:rel-value`/`w:sandbox-allow-list` in
-//! `plan/05c-datatype-library.md`). Error, Warning, and Info diagnostics
+//! already documented for `w:rel-value`/`w:sandbox-allow-list`). Error, Warning, and Info diagnostics
 //! therefore all make the checked string invalid by default. The one
 //! documented exception — messages containing `"experimental directive"`
 //! are discarded before counting — is a no-op against the actual

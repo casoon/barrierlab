@@ -7,6 +7,13 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Name (2A):** Nachkommen eines versteckten Knotens, der direkt per
+  `aria-labelledby`/`aria-describedby` herangezogen wird, fallen nicht mehr
+  weg — `<span id=l hidden><b>Nested</b></span><input aria-labelledby=l>`
+  ergibt „Nested" statt keinem Namen (#100).
+
 ## [0.27.0] - 2026-11-03
 
 ### Changed

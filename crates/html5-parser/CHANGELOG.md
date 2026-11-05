@@ -7,6 +7,18 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **Document:** `NodeId::as_u32` returns the node's arena index as a plain number.
+
+### Changed
+
+- **Tree construction:** `tree_builder.rs` is split into a `tree_builder/` module directory
+  (insertion modes, adoption agency, foreign content, scope helpers, tests). Internal only, no
+  API or behaviour change.
+- **Document:** `Document::node` now documents that it panics on a `NodeId` from another
+  document.
+
 ## [0.4.1] - 2026-10-27
 
 ### Fixed

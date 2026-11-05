@@ -2,9 +2,9 @@
 //!
 //! Mirrors vnu's `nu.validator.datatype.AbstractDatetime` and its concrete
 //! subclasses `Date`, `DatetimeLocal`, `DatetimeTz`, `Month`, `Time`,
-//! `TimeDatetime`, `Week` (see `plan/05c-research-group-b.md`, items 1-7).
-//! Per `plan/05c-datatype-library.md` ("Verbindliches Prinzip: vnu-Parität
-//! als Default") the goal is vnu-parity, not an independent re-derivation
+//! `TimeDatetime`, `Week`.
+//! Per the principle "vnu-Parität
+//! als Default" the goal is vnu-parity, not an independent re-derivation
 //! of the WHATWG date/time grammars — including a documented quirk where
 //! `DatetimeTz.java`'s doc comment claims seconds are mandatory in the
 //! timezone-qualified form while the actual regex (and thus the behaviour
@@ -325,8 +325,7 @@ pub(crate) fn check_datetime_local(value: &str) -> Result<(), String> {
 ///
 /// Seconds are optional here, exactly like `check_datetime_local` — this
 /// replicates `DatetimeTz.java`'s actual regex behaviour, which the
-/// class's own doc comment (incorrectly) claims makes seconds mandatory
-/// (see `plan/05c-research-group-b.md`, item 3).
+/// class's own doc comment (incorrectly) claims makes seconds mandatory.
 pub(crate) fn check_datetime_tz(value: &str) -> Result<(), String> {
     let (year, month, day, rest) = parse_date_prefix(value)?;
     check_date_parts(year, month, day)?;
@@ -522,8 +521,7 @@ fn check_iso_duration(value: &str) -> Result<(), String> {
 
 /// vnu's own "word-style" duration liberalization, used only inside
 /// `TimeDatetime.java`/`check_time_datetime` — this is **not** part of the
-/// WHATWG duration-string grammar; it is a vnu-specific extension
-/// (documented in `plan/05c-research-group-b.md`, item 6). One or more
+/// WHATWG duration-string grammar; it is a vnu-specific extension. One or more
 /// repetitions of: optional whitespace, digits, optional whitespace, then
 /// either a single unit letter from `W`/`D`/`H`/`M` (case-insensitive), or
 /// an optional `.`+digits fraction followed by `S`/`s`.

@@ -1,10 +1,8 @@
 //! Conformance regression tests curated from two device-independent,
-//! `testharness.js`-based web-platform-tests (WPT) files. See
-//! `plan/05-conformance.md` for the full research/selection rationale
-//! (why these two files and not the rest of `css/mediaqueries/`, which
+//! `testharness.js`-based web-platform-tests (WPT) files. The rest of `css/mediaqueries/` is not used: those
 //! are visual reftests whose pass/fail signal depends on the executing
 //! device/viewport and is therefore a "matching" concern, not a "parse"
-//! concern — out of scope for this crate, see `CLAUDE.md`).
+//! concern — out of scope for this crate, see `CLAUDE.md`.
 //!
 //! Sources (retrieved 2026-08-22):
 //!

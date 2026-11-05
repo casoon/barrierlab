@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **API:** `CheckReport::to_report()` converts a report into the shared `a11y_report::Report`
+  (Error to Fail/Medium, Warning to Review/Low, Info to Untested/Low), so hosts can switch from
+  the crate's own `Finding` types to the shared model (barrierlab#106). The old types stay.
+- **API:** `CheckReport::skipped` lists classes the run did not check but the document contains
+  (`SkippedClass::StyleElementCss`, `SkippedClass::CspHashSource`). `to_report()` turns each into
+  an `InputKind::DocumentIncomplete` note. New public field: code that builds `CheckReport` with
+  a struct literal must add it.
+
+### Fixed
+
+- **Check:** `csp.meta-enforcement` no longer flags inline scripts and styles whose `nonce`
+  matches a `'nonce-…'` source of the policy (barrierlab#104). `'unsafe-inline'` is ignored when
+  the source list carries a nonce or hash source, as in CSP3. Where a hash source is present the
+  finding is an Info ("hash matching is not evaluated") instead of a warning.
+
 ## [0.3.4] - 2026-10-31
 
 ### Changed

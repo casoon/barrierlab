@@ -13,4 +13,4 @@ categories = ["parser-implementations", "web-programming"]
 readme = "README.md"
 
 [dependencies]
-media-query-parse = { workspace = true }
+css-tokenize = { workspace = true }

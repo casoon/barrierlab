@@ -31,15 +31,15 @@ things about the same `robots.txt`. BarrierLab is where those checks live once.
 - **"Did not run" is not "passed".** If a rule's prerequisite is missing (no accessible
   names, no computed styles, no focus), it appears in the report as `NotRun` with a
   reason. There is no silent success.
-- **Dependencies point down.** Four layers, no cycles, no host code in the repository.
+- **Dependencies point down.** Four layers, no cycles (within a layer only acyclic, with `a11y-rules` on top of L2), no host code in the repository.
 
 ## What is in here
 
 | Layer | Crates | What they do |
 |---|---|---|
-| **L0** parsers | `html5-parser` · `csp-parse` · `media-query-parse` · `xpath-eval` · `relax-ng` · `schematron-engine` | WHATWG HTML tree construction, CSP3 and Media Queries grammars, XPath 1.0, RELAX NG, ISO Schematron |
+| **L0** parsers | `html5-parser` · `css-tokenize` · `csp-parse` · `media-query-parse` · `xpath-eval` · `relax-ng` · `schematron-engine` | WHATWG HTML tree construction, CSP3 and Media Queries grammars, XPath 1.0, RELAX NG, ISO Schematron |
 | **L1** models | `a11y-dom` · `a11y-report` · `stylesheet-parse` · `html-conform` | document model as a trait, the shared finding model, CSS with `@media` context, HTML5 conformance without a JVM |
-| **L2** computation | `accname` · `a11y-rules` · `a11y-perception` · `web-checks` | accessible name and description, 152 rule IDs, reading order and snapshot diffs, robots / meta / OpenGraph / JSON-LD / hreflang |
+| **L2** computation | `accname` · `style-cascade` · `a11y-rules` · `a11y-static` · `a11y-perception` · `web-checks` | accessible name and description, the CSS cascade without a browser, 162 rule IDs, reading order and snapshot diffs, robots / meta / OpenGraph / JSON-LD / hreflang |
 | **L3** delivery | `a11y-wasm` (crate + npm `@casoon/a11y-wasm`) | the rule set inside a live page |
 
 All 15 crates are on crates.io. One page per package, with dependencies and limits:
@@ -103,7 +103,7 @@ Four outcomes exist: `fail`, `review` (needs a human decision), `pass` and `unte
 (manual checks the machine cannot make). The rule IDs are stable across every surface.
 
 <p align="center">
-  <img src="docs/img/rules-by-tier.svg" width="720" alt="Bar chart: 95 structure rules, 35 semantics rules, 17 rendering rules and 5 stylesheet rules, 152 rule IDs in total.">
+  <img src="docs/img/rules-by-tier.svg" width="720" alt="Bar chart: 105 structure rules, 35 semantics rules, 17 rendering rules and 5 stylesheet rules, 162 rule IDs in total.">
 </p>
 
 Each rule declares what it needs. A rule that needs rendering cannot even be called with a
@@ -176,7 +176,7 @@ Who uses what, and why a package lives here at all:
 
 ## Ground rules
 
-- Dependencies only point down; no package imports one of its own or a higher layer.
+- Dependencies only point down; no package imports a higher layer, and within a layer the graph stays acyclic (`a11y-rules` sits on top of L2).
 - No browser up to L3: no `chromiumoxide`, no CDP types in a public API.
 - No host format in the core: documents arrive through a trait, not a built-in HTML or XML parser.
 - No `unsafe` without a reason and a comment; `#![forbid(unsafe_code)]` where possible.

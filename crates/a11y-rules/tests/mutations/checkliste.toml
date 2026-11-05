@@ -1,13 +1,13 @@
 # Mutationen der Gruppe „checkliste“ — siehe xtask/mutate.py
 
-# --- src/checkliste.rs --------------------------------------------------------
+# --- src/checklist.rs --------------------------------------------------------
 
 [[mutation]]
 id = "manual/media-alternatives"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-finding"
 find = '''
-                "video" | "audio" => a.medien = true,
+                "video" | "audio" => a.media = true,
 '''
 replace = '''
                 "video" | "audio" => {}
@@ -17,7 +17,7 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/media-alternatives"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         .any(|h| host == *h || host.strip_suffix(h).is_some_and(|v| v.ends_with('.')))
@@ -30,7 +30,7 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/media-alternatives"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "scope"
 find = '''
     scope: Scope::Rendered,
@@ -43,16 +43,16 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/image-alternatives"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-finding"
 find = '''
             if n.attr("role") == Some("img") {
-                a.bilder = true;
+                a.images = true;
             }
 '''
 replace = '''
             if n.attr("role") == Some("img") {
-                a.bilder = false;
+                a.images = false;
             }
 '''
 test = "korpus"
@@ -60,10 +60,10 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/image-alternatives"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-finding"
 find = '''
-                "img" | "area" => a.bilder = true,
+                "img" | "area" => a.images = true,
 '''
 replace = '''
                 "img" | "area" => {}
@@ -73,26 +73,26 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/visual-structure"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/visual-structure",
         wcag: &["1.3.1"],
         severity: Severity::Medium,
-        gilt: |a| a.text,
+        applies: |a| a.text,
 '''
 replace = '''
         id: "manual/visual-structure",
         wcag: &["1.3.1"],
         severity: Severity::Medium,
-        gilt: |a| !a.text,
+        applies: |a| !a.text,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/visual-structure"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                 && !matches!(n.local_name(), "title" | "script" | "style" | "noscript")
@@ -105,20 +105,26 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/use-of-color"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
-        gilt: |a| a.links || a.felder,
+        id: "manual/use-of-color",
+        wcag: &["1.4.1"],
+        severity: Severity::Medium,
+        applies: |a| a.links || a.fields,
 '''
 replace = '''
-        gilt: |a| a.felder,
+        id: "manual/use-of-color",
+        wcag: &["1.4.1"],
+        severity: Severity::Medium,
+        applies: |a| a.fields,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/use-of-color"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                 "a" if n.has_attr("href") => a.links = true,
@@ -131,26 +137,26 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/timing"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
         id: "manual/timing",
         wcag: &["2.2.1"],
         severity: Severity::High,
-        gilt: |a| a.felder || a.auto_refresh,
+        applies: |a| a.fields || a.auto_refresh,
 '''
 replace = '''
         id: "manual/timing",
         wcag: &["2.2.1"],
         severity: Severity::High,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/error-handling"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                     "hidden" | "submit" | "button" | "reset" => {}
@@ -163,26 +169,26 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/no-timing"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
         id: "manual/no-timing",
         wcag: &["2.2.3"],
         severity: Severity::Low,
-        gilt: |a| a.felder || a.auto_refresh,
+        applies: |a| a.fields || a.auto_refresh,
 '''
 replace = '''
         id: "manual/no-timing",
         wcag: &["2.2.3"],
         severity: Severity::Low,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/no-timing"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                         .is_some_and(|h| h.eq_ignore_ascii_case("refresh")) =>
@@ -195,77 +201,267 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/error-handling"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/error-handling",
         wcag: &["3.3.1", "3.3.3"],
         severity: Severity::High,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
 '''
 replace = '''
         id: "manual/error-handling",
         wcag: &["3.3.1", "3.3.3"],
         severity: Severity::High,
-        gilt: |a| !a.felder,
+        applies: |a| !a.fields,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/error-handling"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
-                "select" | "textarea" => a.felder = true,
+                "select" | "textarea" => a.fields = true,
 '''
 replace = '''
-                "textarea" => a.felder = true,
+                "textarea" => a.fields = true,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/help"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/help",
         wcag: &["3.3.5"],
         severity: Severity::Low,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
 '''
 replace = '''
         id: "manual/help",
         wcag: &["3.3.5"],
         severity: Severity::Low,
-        gilt: |a| !a.felder,
+        applies: |a| !a.fields,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/dragging-movements"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/dragging-movements",
+        wcag: &["2.5.7"],
+        severity: Severity::Medium,
+        applies: |a| a.gestures,
+'''
+replace = '''
+        id: "manual/dragging-movements",
+        wcag: &["2.5.7"],
+        severity: Severity::Medium,
+        applies: |a| !a.gestures,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-help"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-help",
+        wcag: &["3.2.6"],
+        severity: Severity::Low,
+        applies: |a| a.text,
+'''
+replace = '''
+        id: "manual/consistent-help",
+        wcag: &["3.2.6"],
+        severity: Severity::Low,
+        applies: |a| !a.text,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/keyboard-trap"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/keyboard-trap",
+        wcag: &["2.1.2"],
+        severity: Severity::High,
+        applies: |a| a.links || a.fields || a.interruptions,
+'''
+replace = '''
+        id: "manual/keyboard-trap",
+        wcag: &["2.1.2"],
+        severity: Severity::High,
+        applies: |a| !(a.links || a.fields || a.interruptions),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/character-shortcuts"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/character-shortcuts",
+        wcag: &["2.1.4"],
+        severity: Severity::Medium,
+        applies: |a| a.shortcut,
+'''
+replace = '''
+        id: "manual/character-shortcuts",
+        wcag: &["2.1.4"],
+        severity: Severity::Medium,
+        applies: |a| !a.shortcut,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/error-prevention"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/error-prevention",
+        wcag: &["3.3.4"],
+        severity: Severity::Medium,
+        applies: |a| a.fields,
+'''
+replace = '''
+        id: "manual/error-prevention",
+        wcag: &["3.3.4"],
+        severity: Severity::Medium,
+        applies: |a| !a.fields,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/pointer-cancellation"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/pointer-cancellation",
+        wcag: &["2.5.2"],
+        severity: Severity::Medium,
+        applies: |a| a.pointer_events,
+'''
+replace = '''
+        id: "manual/pointer-cancellation",
+        wcag: &["2.5.2"],
+        severity: Severity::Medium,
+        applies: |a| !a.pointer_events,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-navigation"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-navigation",
+        wcag: &["3.2.3"],
+        severity: Severity::Medium,
+        applies: |a| a.links,
+'''
+replace = '''
+        id: "manual/consistent-navigation",
+        wcag: &["3.2.3"],
+        severity: Severity::Medium,
+        applies: |a| !a.links,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/consistent-identification"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/consistent-identification",
+        wcag: &["3.2.4"],
+        severity: Severity::Medium,
+        applies: |a| a.links || a.fields,
+'''
+replace = '''
+        id: "manual/consistent-identification",
+        wcag: &["3.2.4"],
+        severity: Severity::Medium,
+        applies: |a| !(a.links || a.fields),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/sensory-characteristics"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/sensory-characteristics",
+        wcag: &["1.3.3"],
+        severity: Severity::Medium,
+        applies: |a| a.text,
+'''
+replace = '''
+        id: "manual/sensory-characteristics",
+        wcag: &["1.3.3"],
+        severity: Severity::Medium,
+        applies: |a| !a.text,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/multiple-ways"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/multiple-ways",
+        wcag: &["2.4.5"],
+        severity: Severity::Medium,
+        applies: |a| a.links,
+'''
+replace = '''
+        id: "manual/multiple-ways",
+        wcag: &["2.4.5"],
+        severity: Severity::Medium,
+        applies: |a| !a.links,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/authentication"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/authentication",
         wcag: &["3.3.8"],
         severity: Severity::High,
-        gilt: |a| a.anmeldung,
+        applies: |a| a.login,
 '''
 replace = '''
         id: "manual/authentication",
         wcag: &["3.3.8"],
         severity: Severity::High,
-        gilt: |a| !a.anmeldung,
+        applies: |a| !a.login,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/authentication"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
             v.contains("captcha") || v.contains("turnstile")
@@ -278,36 +474,36 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/re-authenticating"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/re-authenticating",
         wcag: &["2.2.5"],
         severity: Severity::Low,
-        gilt: |a| a.anmeldung,
+        applies: |a| a.login,
 '''
 replace = '''
         id: "manual/re-authenticating",
         wcag: &["2.2.5"],
         severity: Severity::Low,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/re-authenticating"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-finding"
 find = '''
                     "password" => {
-                        a.felder = true;
-                        a.anmeldung = true;
+                        a.fields = true;
+                        a.login = true;
                     }
 '''
 replace = '''
                     "password" => {
-                        a.felder = true;
+                        a.fields = true;
                     }
 '''
 test = "korpus"
@@ -315,20 +511,26 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/pointer-gestures"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
-        gilt: |a| a.gesten,
+        id: "manual/pointer-gestures",
+        wcag: &["2.5.1"],
+        severity: Severity::Medium,
+        applies: |a| a.gestures,
 '''
 replace = '''
-        gilt: |a| !a.gesten,
+        id: "manual/pointer-gestures",
+        wcag: &["2.5.1"],
+        severity: Severity::Medium,
+        applies: |a| !a.gestures,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/pointer-gestures"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                     .any(|w| k == *w || k.starts_with(&format!("{w}-")))
@@ -341,7 +543,7 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/interruptions"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
                 .is_some_and(|v| !v.trim().eq_ignore_ascii_case("off"))
@@ -354,10 +556,10 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/interruptions"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-finding"
 find = '''
-                "dialog" => a.unterbrechungen = true,
+                "dialog" => a.interruptions = true,
 '''
 replace = '''
                 "dialog" => {}
@@ -367,39 +569,39 @@ expect = "killed"
 
 [[mutation]]
 id = "manual/unusual-words"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
         id: "manual/unusual-words",
         wcag: &["3.1.3"],
         severity: Severity::Low,
-        gilt: |a| a.text,
+        applies: |a| a.text,
 '''
 replace = '''
         id: "manual/unusual-words",
         wcag: &["3.1.3"],
         severity: Severity::Low,
-        gilt: |a| !a.text,
+        applies: |a| !a.text,
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/motion-actuation"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "invert"
 find = '''
-    if hoert_auf_bewegung {
+    if listens_for_motion {
 '''
 replace = '''
-    if !hoert_auf_bewegung {
+    if !listens_for_motion {
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "manual/motion-actuation"
-file = "src/checkliste.rs"
+file = "src/checklist.rs"
 kind = "drop-condition"
 find = '''
                     && (k.text().contains("devicemotion") || k.text().contains("deviceorientation"))
@@ -416,12 +618,8 @@ expect = "killed"
 id = "viz/text-missing"
 file = "src/viz.rs"
 kind = "invert"
-find = '''
-            .any(|s| !subtree_text(*s).trim().is_empty())
-'''
-replace = '''
-            .any(|s| subtree_text(*s).trim().is_empty())
-'''
+find = '''layers.iter().any(|s| !subtree_text(*s).trim().is_empty()) {'''
+replace = '''layers.iter().any(|s| subtree_text(*s).trim().is_empty()) {'''
 test = "korpus"
 expect = "killed"
 
@@ -429,14 +627,8 @@ expect = "killed"
 id = "viz/text-missing"
 file = "src/viz.rs"
 kind = "invert"
-find = '''
-            .any(|s| !subtree_text(*s).trim().is_empty())
-        {
-'''
-replace = '''
-            .any(|s| !subtree_text(*s).is_empty())
-        {
-'''
+find = '''layers.iter().any(|s| !subtree_text(*s).trim().is_empty()) {'''
+replace = '''layers.iter().any(|s| !subtree_text(*s).is_empty()) {'''
 test = "korpus"
 expect = "killed"
 
@@ -445,10 +637,10 @@ id = "display/text-hidden"
 file = "src/viz.rs"
 kind = "drop-condition"
 find = '''
-            let finding = if !inert && beschrieben_in(fig, text) {
+            let finding = if !inert && described_in(fig, text) {
 '''
 replace = '''
-            let finding = if beschrieben_in(fig, text) {
+            let finding = if described_in(fig, text) {
 '''
 test = "korpus"
 expect = "killed"
@@ -458,10 +650,10 @@ id = "display/text-hidden"
 file = "src/viz.rs"
 kind = "invert"
 find = '''
-            && verborgen_durch(r).is_none()
+            && hidden_by(r).is_none()
 '''
 replace = '''
-            && verborgen_durch(r).is_some()
+            && hidden_by(r).is_some()
 '''
 test = "korpus"
 expect = "killed"
@@ -471,10 +663,10 @@ id = "display/text-hidden"
 file = "src/viz.rs"
 kind = "early-return"
 find = '''
-        if mit_vorfahren(fig).any(|a| a.has_attr("hidden")) {
+        if with_ancestors(fig).any(|a| a.has_attr("hidden")) {
 '''
 replace = '''
-        if mit_vorfahren(fig).any(|a| a.has_attr("data-viz")) {
+        if with_ancestors(fig).any(|a| a.has_attr("data-viz")) {
 '''
 test = "korpus"
 expect = "killed"
@@ -512,10 +704,10 @@ id = "viz/static-missing"
 file = "src/viz.rs"
 kind = "drop-condition"
 find = '''
-        if !matches!(art.as_str(), "3d" | "interactive")
+        if !matches!(kind.as_str(), "3d" | "interactive")
 '''
 replace = '''
-        if !matches!(art.as_str(), "3d")
+        if !matches!(kind.as_str(), "3d")
 '''
 test = "korpus"
 expect = "killed"
@@ -538,10 +730,10 @@ id = "viz/table-missing"
 file = "src/viz.rs"
 kind = "invert"
 find = '''
-        if art(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
+        if kind(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
 '''
 replace = '''
-        if art(fig) == "chart" || descendants(fig).any(|n| n.is_element("table")) {
+        if kind(fig) == "chart" || descendants(fig).any(|n| n.is_element("table")) {
 '''
 test = "korpus"
 expect = "killed"
@@ -551,10 +743,10 @@ id = "viz/table-missing"
 file = "src/viz.rs"
 kind = "drop-condition"
 find = '''
-        if art(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
+        if kind(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
 '''
 replace = '''
-        if art(fig) != "chart" {
+        if kind(fig) != "chart" {
 '''
 test = "korpus"
 expect = "killed"
@@ -564,10 +756,10 @@ id = "display/toggle-missing"
 file = "src/viz.rs"
 kind = "drop-condition"
 find = '''
-    if anzahl == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
+    if count == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
 '''
 replace = '''
-    if anzahl == 0 {
+    if count == 0 {
 '''
 test = "korpus"
 expect = "killed"
@@ -577,10 +769,10 @@ id = "display/toggle-missing"
 file = "src/viz.rs"
 kind = "threshold"
 find = '''
-    if anzahl == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
+    if count == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
 '''
 replace = '''
-    if anzahl <= 1 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
+    if count <= 1 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
 '''
 test = "korpus"
 expect = "killed"
@@ -590,10 +782,10 @@ id = "display/init-missing"
 file = "src/viz.rs"
 kind = "drop-condition"
 find = '''
-    if !benutzt || doc.root().has_attr("data-display") {
+    if !used || doc.root().has_attr("data-display") {
 '''
 replace = '''
-    if !benutzt {
+    if !used {
 '''
 test = "korpus"
 expect = "killed"
@@ -602,12 +794,8 @@ expect = "killed"
 id = "display/init-missing"
 file = "src/viz.rs"
 kind = "invert"
-find = '''
-        && (!script.has_attr("src") || !(script.has_attr("async") || script.has_attr("defer")))
-'''
-replace = '''
-        && !(script.has_attr("async") || script.has_attr("defer"))
-'''
+find = '''classic && (!script.has_attr("src") || !(script.has_attr("async") || script.has_attr("defer")))'''
+replace = '''classic && !(script.has_attr("async") || script.has_attr("defer"))'''
 test = "korpus"
 expect = "killed"
 
@@ -616,49 +804,45 @@ id = "display/init-missing"
 file = "src/viz.rs"
 kind = "invert"
 find = '''
-        n.is_element("script") && ancestors(n).any(|a| a.is_element("head")) && blockiert(n)
+        n.is_element("script") && ancestors(n).any(|a| a.is_element("head")) && blocked(n)
 '''
 replace = '''
-        n.is_element("script") && blockiert(n)
+        n.is_element("script") && blocked(n)
 '''
 test = "korpus"
 expect = "killed"
 
-# --- src/stile.rs ---------------------------------------------------------------
+# --- src/stylesheet_rules.rs ---------------------------------------------------------------
 
 [[mutation]]
 id = "focus/outline-removed"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "invert"
 find = '''
-    if entfernt.is_empty() {
+    if removed.is_empty() {
 '''
 replace = '''
-    if !entfernt.is_empty() {
+    if !removed.is_empty() {
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "focus/outline-removed"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-condition"
-find = '''
-        !entfernt_rahmen(r.declarations)
-            && r.selectors
-'''
-replace = '''
-        true && r.selectors
-'''
+find = '''!removes_frame(r.declarations)
+            && r.selectors'''
+replace = '''true && r.selectors'''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "focus/outline-removed"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "invert"
 find = '''
-    k.contains(":focus") && !k.contains(":focus-within") && !nur_ohne_tastatur(s)
+    k.contains(":focus") && !k.contains(":focus-within") && !only_without_keyboard(s)
 '''
 replace = '''
     k.contains(":focus") && !k.contains(":focus-within")
@@ -668,52 +852,52 @@ expect = "killed"
 
 [[mutation]]
 id = "motion/reduced-motion-ignored"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "threshold"
 find = '''
-const NEUTRALISIERT_BIS_MS: f64 = 50.0;
+const NEUTRALISED_UNTIL_MS: f64 = 50.0;
 '''
 replace = '''
-const NEUTRALISIERT_BIS_MS: f64 = 51.0;
+const NEUTRALISED_UNTIL_MS: f64 = 51.0;
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "motion/reduced-motion-ignored"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-condition"
 find = '''
-            if let Some(b) = beleg
-                && trifft(doc, selektor) != Treffer::Nein
+            if let Some(b) = evidence
+                && any_match(doc, selector, Mode::Possible) != Match::No
             {
 '''
 replace = '''
-            if let Some(b) = beleg {
+            if let Some(b) = evidence {
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "motion/reduced-motion-ignored"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-finding"
 find = '''
-    if belege.is_empty() {
+    if evidences.is_empty() {
         return;
     }
-    let anzahl = belege.len();
-    let beispiele = belege
+    let count = evidences.len();
+    let examples = evidences
         .iter()
         .take(3)
         .cloned()
 '''
 replace = '''
-    if !belege.is_empty() {
+    if !evidences.is_empty() {
         return;
     }
-    let anzahl = belege.len();
-    let beispiele = belege
+    let count = evidences.len();
+    let examples = evidences
         .iter()
         .take(3)
         .cloned()
@@ -723,20 +907,20 @@ expect = "killed"
 
 [[mutation]]
 id = "orientation/content-hidden"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-condition"
 find = '''
-        if !versteckt && !gedreht {
+        if !hidden && !rotated {
 '''
 replace = '''
-        if !versteckt {
+        if !hidden {
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "orientation/content-hidden"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-condition"
 find = '''
             if sel.contains("::")
@@ -750,7 +934,7 @@ expect = "killed"
 
 [[mutation]]
 id = "orientation/content-hidden"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "invert"
 find = '''
             .find(|m| m.to_ascii_lowercase().contains("orientation"))
@@ -763,20 +947,20 @@ expect = "killed"
 
 [[mutation]]
 id = "text/justified"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "threshold"
 find = '''
-    if blocksatz > 0 {
+    if justified_text > 0 {
 '''
 replace = '''
-    if blocksatz > 1 {
+    if justified_text > 1 {
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "text/justified"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "invert"
 find = '''
                 .is_some_and(|v| v.trim().eq_ignore_ascii_case("justify"))
@@ -789,27 +973,27 @@ expect = "killed"
 
 [[mutation]]
 id = "text/line-height-tight"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "threshold"
 find = '''
-        .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z < 1.5))
+        .filter(|v| line_factor(v).is_some_and(|z| z > 0.0 && z < 1.5))
 '''
 replace = '''
-        .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z <= 1.5))
+        .filter(|v| line_factor(v).is_some_and(|z| z > 0.0 && z <= 1.5))
 '''
 test = "korpus"
 expect = "killed"
 
 [[mutation]]
 id = "text/line-height-tight"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "threshold"
 find = '''
-        .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z < 1.5))
+        .filter(|v| line_factor(v).is_some_and(|z| z > 0.0 && z < 1.5))
         .collect();
 '''
 replace = '''
-        .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z < 1.45))
+        .filter(|v| line_factor(v).is_some_and(|z| z > 0.0 && z < 1.45))
         .collect();
 '''
 test = "korpus"
@@ -817,7 +1001,7 @@ expect = "killed"
 
 [[mutation]]
 id = "text/line-height-tight"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "invert"
 find = '''
         return p.parse::<f64>().ok().map(|p| p / 100.0);

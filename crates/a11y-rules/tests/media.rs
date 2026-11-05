@@ -21,18 +21,14 @@ fn html(body: &str) -> Arena {
         "<!DOCTYPE html><html lang=\"en\"><head><title>T</title></head><body><main>{body}</main></body></html>"
     ))
     .document;
-    let wurzel = doc
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .unwrap();
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -42,7 +38,7 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
@@ -51,12 +47,12 @@ fn uebernehmen(
     }
 }
 
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -67,7 +63,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         accname::role(node).map(str::to_string)
     }
@@ -81,10 +77,10 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
-fn pruefe_in(src: &str, locale: a11y_rules::Locale) -> Report {
+fn check_in(src: &str, locale: a11y_rules::Locale) -> Report {
     let a = html(src);
     run_with_semantics_in(
-        &MitSemantik {
+        &WithSemantics {
             doc: &a,
             ids: IdIndex::build(a.root()),
         },
@@ -92,11 +88,11 @@ fn pruefe_in(src: &str, locale: a11y_rules::Locale) -> Report {
     )
 }
 
-fn pruefe(src: &str) -> Report {
-    pruefe_in(src, a11y_rules::Locale::En)
+fn check(src: &str) -> Report {
+    check_in(src, a11y_rules::Locale::En)
 }
 
-fn urteile(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
+fn verdicts(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
     r.findings
         .iter()
         .filter(|f| f.rule_id == id)
@@ -105,16 +101,16 @@ fn urteile(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
 }
 
 /// Die Befunde einer Kennung, verortet an der `id` des Elements.
-fn an(src: &str, r: &Report, rule: &str) -> Vec<String> {
+fn findings_at(src: &str, r: &Report, rule: &str) -> Vec<String> {
     let a = html(src);
     let mut v: Vec<String> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == rule)
         .filter_map(|f| {
-            let knoten = f.location.node.as_deref()?;
+            let node = f.location.node.as_deref()?;
             a11y_dom::self_and_descendants(a.root())
-                .find(|n| n.id().to_string() == knoten)
+                .find(|n| n.id().to_string() == node)
                 .map(|n| n.attr("id").unwrap_or(n.local_name()).to_string())
         })
         .collect();
@@ -133,31 +129,31 @@ const MISC_CONTENT_CHECKS: &str = r##"
     <input id="absenden" type="image" src="/submit.png">"##;
 
 #[test]
-fn korpus_misc_content_checks() {
-    let r = pruefe(MISC_CONTENT_CHECKS);
+fn corpus_misc_content_checks() {
+    let r = check(MISC_CONTENT_CHECKS);
     assert_eq!(
-        an(MISC_CONTENT_CHECKS, &r, "images/area-alt-missing"),
+        findings_at(MISC_CONTENT_CHECKS, &r, "images/area-alt-missing"),
         ["raum"]
     );
     assert_eq!(
-        urteile(&r, "images/area-alt-missing"),
+        verdicts(&r, "images/area-alt-missing"),
         [(Outcome::Fail, Severity::High)]
     );
     assert_eq!(
-        an(MISC_CONTENT_CHECKS, &r, "images/input-alt-missing"),
+        findings_at(MISC_CONTENT_CHECKS, &r, "images/input-alt-missing"),
         ["absenden"]
     );
     assert_eq!(
-        urteile(&r, "images/input-alt-missing"),
+        verdicts(&r, "images/input-alt-missing"),
         [(Outcome::Fail, Severity::High)]
     );
     // Der Ersatzname „Submit Query" verdeckt das fehlende alt —
     // buttons/name-missing schweigt, deshalb die eigene Regel.
-    assert!(urteile(&r, "buttons/name-missing").is_empty());
+    assert!(verdicts(&r, "buttons/name-missing").is_empty());
 }
 
 #[test]
-fn benannte_bereiche_und_grafik_buttons_auditmysite_image_input_rules() {
+fn named_areas_and_graphic_buttons_auditmysite_image_input_rules() {
     let src = r##"
         <span id="ziel">Raum 2</span>
         <map name="m">
@@ -169,21 +165,24 @@ fn benannte_bereiche_und_grafik_buttons_auditmysite_image_input_rules() {
         <input id="i-alt" type="image" src="/a.png" alt="Suchen">
         <input id="i-label" type="IMAGE" src="/b.png" aria-label="Senden">
         <input id="i-leer" type="image" src="/c.png" alt="">"##;
-    let r = pruefe(src);
-    assert_eq!(an(src, &r, "images/area-alt-missing"), ["leeres-alt"]);
-    assert_eq!(an(src, &r, "images/input-alt-missing"), ["i-leer"]);
+    let r = check(src);
+    assert_eq!(
+        findings_at(src, &r, "images/area-alt-missing"),
+        ["leeres-alt"]
+    );
+    assert_eq!(findings_at(src, &r, "images/input-alt-missing"), ["i-leer"]);
 }
 
 // --- images/server-side-map -------------------------------------------------
 
 #[test]
-fn korpus_forms_and_misc() {
+fn corpus_forms_and_misc() {
     let src = r#"<a href="/map"><img id="karte" src="map.png" ismap alt="Site map"></a>
                  <img id="normal" src="x.png" alt="Normal">"#;
-    let r = pruefe(src);
-    assert_eq!(an(src, &r, "images/server-side-map"), ["karte"]);
+    let r = check(src);
+    assert_eq!(findings_at(src, &r, "images/server-side-map"), ["karte"]);
     assert_eq!(
-        urteile(&r, "images/server-side-map"),
+        verdicts(&r, "images/server-side-map"),
         [(Outcome::Review, Severity::Medium)]
     );
     // Tastatur (2.1.1), nicht Textalternative: Das Bild hat ein alt.
@@ -198,77 +197,83 @@ fn korpus_forms_and_misc() {
 // --- objects/alt-missing ----------------------------------------------------
 
 #[test]
-fn korpus_object_no_alt() {
+fn corpus_object_no_alt() {
     let src = r#"<object id="pdf" data="/report.pdf" type="application/pdf" width="400" height="300"></object>"#;
-    let r = pruefe(src);
-    assert_eq!(an(src, &r, "objects/alt-missing"), ["pdf"]);
+    let r = check(src);
+    assert_eq!(findings_at(src, &r, "objects/alt-missing"), ["pdf"]);
     assert_eq!(
-        urteile(&r, "objects/alt-missing"),
+        verdicts(&r, "objects/alt-missing"),
         [(Outcome::Fail, Severity::High)]
     );
 }
 
 #[test]
-fn objekte_mit_alternative_auditmysite_image_input_rules() {
+fn objects_with_alternative_auditmysite_image_input_rules() {
     let src = r#"
         <object id="ersatz" data="/a.pdf"><p>Der <a href="/a.pdf">Bericht als PDF</a>.</p></object>
         <object id="label" data="/b.pdf" aria-label="Bericht"></object>
         <object id="titel" data="/c.pdf" title="Bericht"></object>
         <object id="versteckt" data="/d.swf" aria-hidden="true"></object>
         <object id="leer" data="/e.pdf"> </object>"#;
-    assert_eq!(an(src, &pruefe(src), "objects/alt-missing"), ["leer"]);
+    assert_eq!(
+        findings_at(src, &check(src), "objects/alt-missing"),
+        ["leer"]
+    );
 }
 
 // --- media/audio-autoplay ---------------------------------------------------
 
 #[test]
-fn korpus_media_and_visual() {
+fn corpus_media_and_visual() {
     let src = r#"<audio id="hintergrund" autoplay src="/bg.mp3"></audio>"#;
-    let r = pruefe(src);
-    assert_eq!(an(src, &r, "media/audio-autoplay"), ["hintergrund"]);
+    let r = check(src);
     assert_eq!(
-        urteile(&r, "media/audio-autoplay"),
+        findings_at(src, &r, "media/audio-autoplay"),
+        ["hintergrund"]
+    );
+    assert_eq!(
+        verdicts(&r, "media/audio-autoplay"),
         [(Outcome::Review, Severity::Medium)]
     );
 }
 
 #[test]
-fn vorlesefunktion_zeit_de() {
+fn read_aloud_function_zeit_de() {
     // Echte Seite: zeit.de bietet Artikel zum Anhören an — mit Bedienelementen,
     // ohne autoplay.
     let src = r#"<audio id="vorlesen" class="audio-player__audio" data-src="https://example.org/full.mp3" controls preload="none"></audio>
                  <audio id="stumm" autoplay muted src="/x.mp3"></audio>"#;
-    assert!(urteile(&pruefe(src), "media/audio-autoplay").is_empty());
+    assert!(verdicts(&check(src), "media/audio-autoplay").is_empty());
 }
 
 // --- frames/name-missing ----------------------------------------------------
 
 #[test]
-fn korpus_frame_missing_title() {
+fn corpus_frame_missing_title() {
     let src = r#"<iframe id="widget" src="/embedded-widget" width="300" height="200"></iframe>"#;
-    let r = pruefe(src);
-    assert_eq!(an(src, &r, "frames/name-missing"), ["widget"]);
+    let r = check(src);
+    assert_eq!(findings_at(src, &r, "frames/name-missing"), ["widget"]);
     assert_eq!(
-        urteile(&r, "frames/name-missing"),
+        verdicts(&r, "frames/name-missing"),
         [(Outcome::Fail, Severity::High)]
     );
 }
 
 #[test]
-fn sportdaten_spiegel_de_und_n_tv_de() {
+fn sports_data_spiegel_de_and_n_tv_de() {
     // Echte Seiten: spiegel.de setzt den Rahmen per Alpine aus einem
     // <template> ein (hier wie dargestellt), n-tv.de mit leerem title.
     let src = r#"
         <iframe id="spiegel" scrolling="no" class="w-full h-full" src="https://sportdaten.spiegel.de/iframe/top-matches/topspiele"></iframe>
         <iframe id="ntv" class="iframeResizer_iframe___MR3N" src="https://sportdaten.n-tv.de/iframe/startseitenticker-fussball/wf0/ls-full/to3377" title="" width="100%" height="20" loading="lazy" scrolling="no" frameBorder="0"></iframe>"#;
     assert_eq!(
-        an(src, &pruefe(src), "frames/name-missing"),
+        findings_at(src, &check(src), "frames/name-missing"),
         ["ntv", "spiegel"]
     );
 }
 
 #[test]
-fn benannte_und_unsichtbare_rahmen() {
+fn named_and_invisible_frames() {
     // Echte Seiten: w3.org/WAI (title="Video"), faz.net (title),
     // craigslist.org (display:none), duckduckgo.com (0 × 0),
     // auditmysite-Korpus iframe_widget_rules (aria-hidden).
@@ -281,29 +286,29 @@ fn benannte_und_unsichtbare_rahmen() {
         <span id="beschriftung">Karte</span>
         <iframe id="labelledby" src="/karte" aria-labelledby="beschriftung"></iframe>
         <iframe id="praesentation" src="/x" role="presentation"></iframe>"#;
-    assert!(an(src, &pruefe(src), "frames/name-missing").is_empty());
+    assert!(findings_at(src, &check(src), "frames/name-missing").is_empty());
 }
 
 // --- manual/media-alternatives ----------------------------------------------
 
 #[test]
-fn eingebettetes_video_w3_org_wai() {
+fn embedded_video_w3_org_wai() {
     // Echte Seite: w3.org/WAI bettet ein YouTube-Video ein. Ob es Untertitel
     // hat, steuert der Player der Plattform — also auf die Checkliste.
     let video = r#"<iframe title="Video" width="560" height="315" src="https://www.youtube-nocookie.com/embed/iWO5N3n1DXU"></iframe>"#;
     assert_eq!(
-        urteile(&pruefe(video), "manual/media-alternatives"),
+        verdicts(&check(video), "manual/media-alternatives"),
         [(Outcome::Untested, Severity::High)]
     );
-    let karte =
+    let card =
         r#"<iframe title="Karte" src="https://maps.example.org/embed?youtube.com"></iframe>"#;
-    assert!(urteile(&pruefe(karte), "manual/media-alternatives").is_empty());
+    assert!(verdicts(&check(card), "manual/media-alternatives").is_empty());
 }
 
 #[cfg(feature = "de")]
 #[test]
-fn befunde_folgen_der_sprache() {
-    let r = pruefe_in(r#"<iframe src="/x"></iframe>"#, a11y_rules::Locale::De);
+fn findings_follow_the_language() {
+    let r = check_in(r#"<iframe src="/x"></iframe>"#, a11y_rules::Locale::De);
     let f = r
         .findings
         .iter()

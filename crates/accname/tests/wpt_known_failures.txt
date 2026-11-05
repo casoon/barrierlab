@@ -1,0 +1,129 @@
+# Bekannte Fehlschläge des WPT-Korpus accname/name (siehe tests/wpt.rs und
+# tests/corpus/wpt/UPSTREAM.md).
+#
+# Eine Zeile je Fall: `<Datei>#<Index>` (0-basiert, Reihenfolge der Elemente mit
+# data-expectedlabel in der Datei), danach der Testname als Kommentar.
+#
+# Erzeugen mit `WPT_BLESS=1 cargo test -p accname --test wpt`, erst nachdem
+# jeder neue Eintrag untersucht ist. Bekannte Ursachen: ::before/::after,
+# text-transform und CSS-Zähler, <style>-Blöcke (nur das style-Attribut wird
+# gelesen), Shadow-DOM aus Skripten, tentative Fälle. Nie von Hand ergänzen, um
+# einen Fehlschlag stummzuschalten.
+# --- entries below, one per line ---
+
+comp_embedded_control.html#0  checkbox label with embedded textfield
+comp_embedded_control.html#12  checkbox label with embedded listbox>option[aria-selected=true]
+comp_embedded_control.html#14  checkbox label with embedded input[type=range]
+comp_embedded_control.html#16  checkbox label with embedded input[type=number]
+comp_embedded_control.html#18  checkbox label with embedded ARIA slider (aria-valuenow)
+comp_embedded_control.html#2  checkbox label with embedded select:not([size])
+comp_embedded_control.html#20  checkbox label with embedded ARIA slider (aria-valuetext)
+comp_embedded_control.html#22  checkbox label with embedded ARIA spinbutton (aria-valuenow)
+comp_embedded_control.html#24  checkbox label with embedded ARIA spinbutton (aria-valuetext)
+comp_embedded_control.html#27  button aria-labelledby referencing checkbox labelled via aria-label
+comp_embedded_control.html#4  checkbox label with embedded select[size]
+comp_embedded_control.html#6  checkbox label with embedded combobox (input[type=text])
+comp_hidden_not_referenced.html#4  heading with name from content, containing element that is visibility:hidden with nested content that is visibility:visible
+comp_host_language_label.tentative.html#2  html:label[for]+input[role=none] (role invalidated due to focusability)
+comp_host_language_label.tentative.html#3  html: label>input[role=none] (with label encapsulation, role invalidated due to focusability)
+comp_host_language_label.tentative.html#4  html: label[for][role=none]+input[role=none] (role invalidated due to focusability)
+comp_host_language_label.tentative.html#5  html: label[role=none]>input[role=none] (with label encapsulation, role invalidated due to focusability)
+comp_host_language_label.tentative.html#6  svg: svg>circle>title[role=none] (role none set on title doesn't affect circle acc name)
+comp_label.html#125  nav with trailing nbsp char aria-label is valid (nbsp is preserved in name)
+comp_label.html#126  button with leading nbsp char in aria-label is valid (and uses aria-label)
+comp_label.html#85  label valid on img element
+comp_labelledby.html#1  div group explicitly labelledby self and heading
+comp_name_from_content.html#10  heading with alt counter on ::before
+comp_name_from_content.html#11  link with alt counter on ::before
+comp_name_from_content.html#12  button with multiple alt counters and counter increments
+comp_name_from_content.html#13  heading with multiple alt counters and counter increments
+comp_name_from_content.html#14  link with multiple alt counters and counter increments
+comp_name_from_content.html#15  button name from content with ::before
+comp_name_from_content.html#16  heading name from content with ::before
+comp_name_from_content.html#17  link name from content with ::before
+comp_name_from_content.html#18  button name from content with ::after
+comp_name_from_content.html#19  heading name from content with ::after
+comp_name_from_content.html#20  link name from content with ::after
+comp_name_from_content.html#21  button name from content with ::before and ::after
+comp_name_from_content.html#22  heading name from content with ::before and ::after
+comp_name_from_content.html#23  link name from content with ::before and ::after
+comp_name_from_content.html#24  button name from content no space joiners ::before and ::after
+comp_name_from_content.html#25  heading name from content no space joiners ::before and ::after
+comp_name_from_content.html#26  link name from content no space joiners ::before and ::after
+comp_name_from_content.html#27  button name from content with ::before and ::after in rtl
+comp_name_from_content.html#28  heading name from content with ::before and ::after in rtl
+comp_name_from_content.html#29  link name from content with ::before and ::after in rtl
+comp_name_from_content.html#30  button name from fallback content with ::before and ::after
+comp_name_from_content.html#31  heading name from fallback content with ::before and ::after
+comp_name_from_content.html#32  link name from fallback content with ::before and ::after
+comp_name_from_content.html#33  button name from fallback content mixing attr() and strings with ::before and ::after
+comp_name_from_content.html#34  heading name from fallback content mixing attr() and strings with ::before and ::after
+comp_name_from_content.html#35  link name from fallback content mixing attr() and strings with ::before and ::after
+comp_name_from_content.html#56  button name from content for each child (no space, display:block)
+comp_name_from_content.html#57  heading name from content for each child (no space, display:block)
+comp_name_from_content.html#58  link name from content for each child (no space, display:block)
+comp_name_from_content.html#59  button name from content for each child (no space, display:inline-block)
+comp_name_from_content.html#60  heading name from content for each child (no space, display:inline-block)
+comp_name_from_content.html#61  link name from content for each child (no space, display:inline-block)
+comp_name_from_content.html#63  heading name from content with text-transform:uppercase
+comp_name_from_content.html#64  heading name from content with text-transform:capitalize
+comp_name_from_content.html#65  heading name from content with text-transform:lowercase
+comp_name_from_content.html#9  button with alt counter on ::before
+comp_name_from_content_alt_counter_invalidation.html#0  button with alt counter on ::before
+comp_name_from_content_alt_counter_invalidation.html#1  heading with alt counter on ::before
+comp_name_from_content_alt_counter_invalidation.html#2  link with alt counter on ::before
+comp_name_from_content_alt_counter_multi_instance.html#0  first button
+comp_name_from_content_alt_counter_multi_instance.html#1  heading
+comp_name_from_content_alt_counter_multi_instance.html#2  link
+comp_name_from_heading.tentative.html#0  alertdialog role, name from heading
+comp_name_from_heading.tentative.html#1  article role, name from heading
+comp_name_from_heading.tentative.html#2  dialog role, name from heading
+comp_name_from_heading.tentative.html#4  native dialog element, name from heading
+comp_name_from_heading.tentative.html#5  article role, name from DFS heading
+comp_name_from_pseudo_content_marker.tentative.html#0  name from ul > listitem with default ::marker
+comp_name_from_pseudo_content_marker.tentative.html#1  name from ul > listitem with custom ASCII ::marker
+comp_name_from_pseudo_content_marker.tentative.html#2  name from ul > listitem with custom emoji ::marker
+comp_name_from_pseudo_content_marker.tentative.html#3  name from ul > listitem with custom ::marker with explicit alt text
+comp_name_from_pseudo_content_marker.tentative.html#5  name from ol > listitem with default ::marker
+comp_name_from_pseudo_content_marker.tentative.html#6  name from ol > listitem with custom ASCII ::marker
+comp_name_from_pseudo_content_marker.tentative.html#7  name from ol > listitem with custom emoji ::marker
+comp_name_from_pseudo_content_marker.tentative.html#8  name from ol > listitem with custom ::marker with explicit alt text
+comp_text_node.html#20  span[role=button] with text node, with non-breaking space
+comp_text_node.html#21  div[role=heading] with text node, with non-breaking space
+comp_text_node.html#22  button with text node, with non-breaking space
+comp_text_node.html#23  heading with text node, with non-breaking space
+comp_text_node.html#24  link with text node, with non-breaking space
+comp_text_node.html#25  span[role=button] with text node, with extra non-breaking space
+comp_text_node.html#26  div[role=heading] with text node, with extra non-breaking space
+comp_text_node.html#27  button with text node, with extra non-breaking space
+comp_text_node.html#28  heading with text node, with extra non-breaking space
+comp_text_node.html#29  link with text node, with extra non-breaking space
+comp_text_node.html#30  span[role=button] with text node, with leading/trailing non-breaking space
+comp_text_node.html#31  div[role=heading] with text node, with leading/trailing non-breaking space
+comp_text_node.html#32  button with text node, with leading/trailing non-breaking space
+comp_text_node.html#33  heading with text node, with leading/trailing non-breaking space
+comp_text_node.html#34  link with text node, with leading/trailing non-breaking space
+comp_text_node.html#35  span[role=button] with text node, with mixed space and non-breaking space
+comp_text_node.html#36  div[role=heading] with text node, with mixed space and non-breaking space
+comp_text_node.html#37  button with text node, with mixed space and non-breaking space
+comp_text_node.html#38  heading with text node, with mixed space and non-breaking space
+comp_text_node.html#39  link with text node, with mixed space and non-breaking space
+comp_text_node.html#40  span[role=button] with text node, with deeply nested space
+comp_text_node.html#41  div[role=heading] with text node, with deeply nested space
+comp_text_node.html#42  button with text node, with deeply nested space
+comp_text_node.html#43  heading with text node, with deeply nested space
+comp_text_node.html#44  link with text node, with deeply nested space
+comp_tooltip.html#11  text input with placeholder and tooltip label
+comp_tooltip.html#12  password input with placeholder and tooltip label
+comp_tooltip.html#13  number input with placeholder and tooltip label
+comp_tooltip.html#14  search input with placeholder and tooltip label
+comp_tooltip.html#15  tel input with placeholder and tooltip label
+comp_tooltip.html#16  email input with placeholder and tooltip label
+comp_tooltip.html#17  url input with placeholder and tooltip label
+comp_tooltip.tentative.html#0  img with tooltip label with empty alt
+shadowdom/basic.html#0  aria-labelledby reference to element with text content inside shadow DOM
+shadowdom/basic.html#1  aria-labelledby reference to element with aria-label inside shadow DOM
+shadowdom/slot.html#0  aria-labelledby reference to element with slotted text content
+shadowdom/slot.html#1  aria-labelledby reference to element with default slotted text content
+shadowdom/slot.html#2  aria-labelledby reference to element with slotted text content and aria-label on slot
+shadowdom/slot.html#3  aria-labelledby reference to element with default slotted text content and aria-label on slot

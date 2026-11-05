@@ -60,7 +60,7 @@ runnable version (`cargo run --example validate`), and the `Schema`/
   primitive types, the built-in derived types, and all facets) are
   implemented and registered by default via `DatatypeRegistry::new()`.
   `decimal`/date-time ordering and `duration` comparison have documented,
-  deliberate precision limits — see `plan/DECISIONS.md`'s Phase 06 entry.
+  deliberate precision limits.
 - Any other `datatypeLibrary` (e.g. vnu's own
   `http://whattf.org/datatype-draft`) is **not** implemented by this
   crate — register your own [`DatatypeLibrary`] implementation on the
@@ -113,16 +113,13 @@ libraries are implemented. The vendored official RELAX NG test suite
 passes at 100% for both schema classification (385 cases) and instance
 validation (580 instances), including the multi-file cases, which the test
 harness serves through an in-memory resolver. Not yet published to crates.io; the public
-API may still change before `1.0`. See `plan/00-STATUS.md` for the
-authoritative, up-to-date phase-by-phase status (not tracked in git,
-local working document; see `plan/README.md` for why).
+API may still change before `1.0`.
 
 ## Why this exists
 
 Built for [`html-conform`](https://github.com/casoon/html-conform)'s
 RELAX NG validation layer (schema.rs), after evaluating two existing
-options and rejecting both — see that project's `plan/DECISIONS.md` for
-the full writeup:
+options and rejecting both:
 
 - `xmloxide`'s RelaxNG engine has several confirmed bugs (upstream issues
   [#52](https://github.com/jonwiggins/xmloxide/issues/52)–[#56](https://github.com/jonwiggins/xmloxide/issues/56)),

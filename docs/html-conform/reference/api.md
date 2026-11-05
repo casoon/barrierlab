@@ -38,7 +38,14 @@ Checks a complete HTML document with explicit options. Always uses HTML5 error r
 | Member | Meaning |
 | --- | --- |
 | `findings: Vec<Finding>` | Parser findings first, then the later validation layers |
+| `skipped: Vec<Skipped>` | Unchecked classes that occur in this document (`SkippedClass::StyleElementCss`, `SkippedClass::CspHashSource`); empty for a document without them |
 | `has_errors() -> bool` | Whether any finding has `Severity::Error` |
+| `to_report() -> a11y_report::Report` | The same result in the shared finding model |
+
+`to_report` maps `Error` to `Fail`/`Medium`, `Warning` to `Review`/`Low` and `Info` to
+`Untested`/`Low`, keeps `rule_id` and `message`, and writes the location as `line:column` into
+`source_hint`. Each `Skipped` becomes an `InputKind::DocumentIncomplete` note, so content the
+checker did not look at is not read as passed. `SkippedClass` is `#[non_exhaustive]`.
 
 ### `Finding`
 

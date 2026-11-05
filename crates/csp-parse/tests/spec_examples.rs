@@ -1,11 +1,10 @@
-//! Phase 05 — spec-example and edge-case sweep (see
-//! `plan/05-conformance-sweep.md`).
+//! Phase 05 — spec-example and edge-case sweep.
 //!
 //! No vendored testsuite: web-platform-tests' `content-security-policy/
 //! parsing/` directory was checked before writing this file and confirmed
 //! to test *enforcement* behavior (real image loads / violation events in
 //! a browser), not pure syntax parsing exposed via an API -- not
-//! vendorable here (see `plan/DECISIONS.md`, 2026-08-22). Instead: a
+//! vendorable here. Instead: a
 //! hand-picked set of spec-style example policies plus non-normative
 //! real-world-shaped robustness cases, exercising the full pipeline
 //! (`parse_policy_list` -> `Directive::value()`) across module
@@ -208,9 +207,8 @@ fn host_with_trailing_dot() {
 
 /// Non-normative robustness case, shaped after real-world CSP headers
 /// (not copied from any single site) combining a wide range of directive
-/// categories in one policy, per `plan/05-conformance-sweep.md`'s
-/// "real-world examples as additional robustness cases, not a normative
-/// source" step.
+/// categories in one policy, as an additional robustness case, not a
+/// normative source.
 #[test]
 fn real_world_shaped_robustness_case() {
     let list = parse_policy_list(

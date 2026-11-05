@@ -2,10 +2,8 @@
 //!
 //! Covers `w:iri`, `w:iri-ref`, `w:iri-ref-http-or-https`, `w:mime-type`,
 //! `w:mime-type-list`, `w:charset`, `w:meta-charset`,
-//! `w:integrity-metadata`, and `w:refresh`. See
-//! `plan/05c-datatype-library.md` ("Verbindliches Prinzip: vnu-Parität als
-//! Default") and `plan/05c-research-group-b.md` (items 8-10, 13-16, 18, 19)
-//! for the vnu (`nu.validator.datatype`) research this module is based on.
+//! `w:integrity-metadata`, and `w:refresh`. Based on vnu's
+//! (`nu.validator.datatype`) behavior ("vnu-Parität als Default").
 
 /// vnu's `isWhitespace` character set (see e.g.
 /// `nu.validator.datatype.AbstractDatatype`): exactly these five ASCII
@@ -44,8 +42,7 @@ fn is_vnu_whitespace(c: char) -> bool {
 // WHATWG URL Standard is deliberately designed for browser compatibility
 // (make the best sense of whatever a real webpage throws at it), not for
 // rejecting malformed input, and normalizes away exactly the kinds of
-// errors vnu's corpus expects to be caught (verified directly — see
-// `plan/DECISIONS.md`'s Phase 08 entry): a raw space in the path becomes
+// errors vnu's corpus expects to be caught (verified directly): a raw space in the path becomes
 // percent-encoded rather than rejected (`"http://f:21/ b"` → parses fine),
 // a hex/octal-looking host becomes a resolved IPv4 address
 // (`"http://192.0x00A80001"` → `192.168.0.1`), and a second raw `#`
@@ -628,8 +625,8 @@ pub(crate) fn check_meta_charset(value: &str) -> Result<(), String> {
 
 /// `w:integrity-metadata` (`nu.validator.datatype.IntegrityMetadata`):
 /// whitespace-separated list of SRI hash-with-options tokens. vnu
-/// delegates the base64 check to `htmlunit-csp`'s `Hash.parseHash`; per
-/// `plan/DECISIONS.md` ("Phase 05c"), this crate does not depend on
+/// delegates the base64 check to `htmlunit-csp`'s `Hash.parseHash`; this
+/// crate does not depend on
 /// `csp-parse` for this and instead hand-validates the base64 character
 /// set/padding shape.
 pub(crate) fn check_integrity_metadata(value: &str) -> Result<(), String> {

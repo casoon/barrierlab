@@ -5,6 +5,11 @@ Alle nennenswerten Änderungen an `stylesheet-parse` stehen hier. Das Format fol
 
 ## [Unreleased]
 
+### Changed
+
+- **Abhängigkeiten:** Tokenisiert wird mit `css-tokenize` statt über `media-query-parse`; die
+  Abhängigkeit von `media-query-parse` entfällt (casoon/barrierlab#116).
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

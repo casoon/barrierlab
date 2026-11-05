@@ -1,11 +1,10 @@
 //! The `serialized-source-list` value grammar (CSP3 §2.3.1) shared by
 //! most directives (`default-src`, `script-src`, …, `base-uri`,
-//! `form-action`, and others -- see `plan/04-directive-registry.md` for
-//! which directives use it). Operates on a directive's raw value string
+//! `form-action`, and others). Operates on a directive's raw value string
 //! (e.g. [`crate::Directive::raw_value`]).
 //!
 //! Parsing is infallible and lenient, consistent with
-//! [`crate::parse_policy_list`] (see `plan/DECISIONS.md`, 2026-08-22): a
+//! [`crate::parse_policy_list`]: a
 //! token that doesn't match any `source-expression` alternative is kept
 //! as an unrecognized [`SourceListEntry`] rather than failing the whole
 //! parse.
@@ -97,8 +96,7 @@ pub enum PortPart {
     Wildcard,
 }
 
-/// All `keyword-source` values (CSP3 §2.3.1). See
-/// `plan/03-source-list-grammar.md`: this list was pulled from an
+/// All `keyword-source` values (CSP3 §2.3.1). This list was pulled from an
 /// automated spec fetch, not verified character-for-character against
 /// the current spec text -- re-check before treating it as exhaustive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

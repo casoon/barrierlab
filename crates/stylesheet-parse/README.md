@@ -11,7 +11,7 @@ selectors and their context.
 It takes text, it fetches nothing, and it does not evaluate anything: no
 cascade, no selector matching, no media query evaluation. Tokenizing is
 done by the CSS Syntax Level 3 tokenizer of
-[`media-query-parse`](https://crates.io/crates/media-query-parse).
+[`css-tokenize`](https://crates.io/crates/css-tokenize).
 
 ## Usage
 

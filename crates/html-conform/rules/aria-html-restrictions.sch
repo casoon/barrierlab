@@ -2,7 +2,7 @@
 <!--
   Phase 08: confirmed ARIA-in-HTML restriction rules from
   `html-aria/misc` — the `lang`/`xml:lang` schema-layer bugfix
-  (`plan/DECISIONS.md`) unmasked a large batch of these, previously
+  unmasked a large batch of these, previously
   hidden behind a spurious `schema.html5` error firing on nearly every
   fixture. Every condition below was verified against the actual corpus
   fixture and its expected `messages.json` text before being encoded,

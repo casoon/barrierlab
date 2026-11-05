@@ -11,8 +11,7 @@
 #          source repo's root LICENSE — tests/html and tests/html-aria
 #          have no LICENSE of their own, unlike schema/html5/).
 #
-# Vendored subset (see plan/07-corpus-differential.md and DECISIONS.md for
-# the scope decision): the full `tests/html/` and `tests/html-aria/` trees
+# Vendored subset: the full `tests/html/` and `tests/html-aria/` trees
 # (~4655 .html fixtures) — not the whole vnu repo, and not its `css/`,
 # `xhtml/`, `svg/`, `html-rdfa(lite)/`, `html-math/`, `html-its/`,
 # `langdetect/`, `normalization/`, `schema-validation/` trees, which cover

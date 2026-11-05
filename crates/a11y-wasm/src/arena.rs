@@ -48,6 +48,10 @@ pub struct Arena {
 
 impl Arena {
     /// Baut die Arena aus den Spalten des Collectors.
+    ///
+    /// Prüft vorher die Invarianten der Spalten (`validate_columns`); ein
+    /// Collector mit einem Fehler um eins bekommt eine Meldung statt eines
+    /// Traps im WASM-Modul.
     #[allow(clippy::too_many_arguments)]
     pub fn from_columns(
         tag: &[u32],
@@ -61,7 +65,20 @@ impl Arena {
         blob: Vec<u8>,
         tag_names: Vec<String>,
         attr_names: Vec<String>,
-    ) -> Self {
+    ) -> Result<Self, String> {
+        validate_columns(
+            tag,
+            parent,
+            text_off,
+            text_len,
+            attr_start,
+            &attr_name,
+            &attr_val_off,
+            &attr_val_len,
+            blob.len(),
+            tag_names.len(),
+            attr_names.len(),
+        )?;
         let n = tag.len();
         let mut entries = Vec::with_capacity(n);
         for i in 0..n {
@@ -80,7 +97,7 @@ impl Arena {
             .position(|t| t == TEXT_TAG)
             .map(|i| i as u32);
 
-        Arena {
+        Ok(Arena {
             entries,
             children,
             child_start,
@@ -91,7 +108,7 @@ impl Arena {
             tag_names,
             attr_names,
             text_tag,
-        }
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -106,6 +123,109 @@ impl Arena {
         let (a, b) = (off as usize, (off + len) as usize);
         std::str::from_utf8(&self.blob[a..b]).unwrap_or("")
     }
+}
+
+/// Prüft die elf Spalten des Collectors, bevor die Arena sie indiziert.
+///
+/// Geprüft wird: gleiche Länge der Knotenspalten, `attr_start` mit einem Eintrag
+/// mehr als Knoten, monoton und im Bereich der Attributspalten, Eltern vor dem
+/// Kind, Text- und Attributwerte innerhalb des Blobs, Namensindizes im
+/// Wörterbuch. Reine Rust-Funktion, ohne WASM testbar.
+#[allow(clippy::too_many_arguments)]
+pub fn validate_columns(
+    tag: &[u32],
+    parent: &[i32],
+    text_off: &[u32],
+    text_len: &[u32],
+    attr_start: &[u32],
+    attr_name: &[u32],
+    attr_val_off: &[u32],
+    attr_val_len: &[u32],
+    blob_len: usize,
+    tag_count: usize,
+    attr_name_count: usize,
+) -> Result<(), String> {
+    let n = tag.len();
+    if n == 0 {
+        return Err("tag is empty: the arena needs at least a root node".into());
+    }
+    for (name, len) in [
+        ("parent", parent.len()),
+        ("text_off", text_off.len()),
+        ("text_len", text_len.len()),
+    ] {
+        if len != n {
+            return Err(format!("{name} has {len} entries, tag has {n}"));
+        }
+    }
+    if attr_start.len() != n + 1 {
+        return Err(format!(
+            "attr_start has {} entries, expected {} (node count + 1)",
+            attr_start.len(),
+            n + 1
+        ));
+    }
+    let m = attr_name.len();
+    for (name, len) in [
+        ("attr_val_off", attr_val_off.len()),
+        ("attr_val_len", attr_val_len.len()),
+    ] {
+        if len != m {
+            return Err(format!("{name} has {len} entries, attr_name has {m}"));
+        }
+    }
+    if attr_start[0] != 0 {
+        return Err(format!("attr_start[0] is {}, expected 0", attr_start[0]));
+    }
+    for (i, w) in attr_start.windows(2).enumerate() {
+        if w[1] < w[0] {
+            return Err(format!(
+                "attr_start is not monotonic at {}: {} follows {}",
+                i + 1,
+                w[1],
+                w[0]
+            ));
+        }
+    }
+    if attr_start[n] as usize != m {
+        return Err(format!(
+            "attr_start ends at {}, but there are {m} attributes",
+            attr_start[n]
+        ));
+    }
+    for i in 0..n {
+        if tag[i] as usize >= tag_count {
+            return Err(format!(
+                "tag[{i}] = {} is outside the tag dictionary ({tag_count} names)",
+                tag[i]
+            ));
+        }
+        if parent[i] < -1 || (parent[i] >= 0 && parent[i] as usize >= i) {
+            return Err(format!(
+                "parent[{i}] = {} must be -1 or the index of an earlier node",
+                parent[i]
+            ));
+        }
+        if u64::from(text_off[i]) + u64::from(text_len[i]) > blob_len as u64 {
+            return Err(format!(
+                "text of node {i} reaches beyond the blob ({blob_len} bytes)"
+            ));
+        }
+    }
+    for a in 0..m {
+        if attr_name[a] as usize >= attr_name_count {
+            return Err(format!(
+                "attr_name[{a}] = {} is outside the attribute dictionary ({attr_name_count} names)",
+                attr_name[a]
+            ));
+        }
+        if u64::from(attr_val_off[a]) + u64::from(attr_val_len[a]) > blob_len as u64 {
+            return Err(format!(
+                "value of attribute {a} reaches beyond the blob ({blob_len} bytes)"
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Baut `children`/`child_start` aus der Elternspalte. Zwei Durchläufe, keine
@@ -304,5 +424,166 @@ mod tests {
         });
         assert!(d.text_tag.is_none());
         assert_eq!(elements(&d).count(), 2);
+    }
+
+    /// Gültige Spalten für `<a href="x">t</a>`: Knoten 0 Element, 1 Text.
+    struct Cols {
+        tag: Vec<u32>,
+        parent: Vec<i32>,
+        text_off: Vec<u32>,
+        text_len: Vec<u32>,
+        attr_start: Vec<u32>,
+        attr_name: Vec<u32>,
+        attr_val_off: Vec<u32>,
+        attr_val_len: Vec<u32>,
+        blob: usize,
+        tags: usize,
+        attrs: usize,
+    }
+
+    fn gut() -> Cols {
+        Cols {
+            tag: vec![0, 1],
+            parent: vec![-1, 0],
+            text_off: vec![1, 0],
+            text_len: vec![0, 1],
+            attr_start: vec![0, 1, 1],
+            attr_name: vec![0],
+            attr_val_off: vec![1],
+            attr_val_len: vec![1],
+            blob: 2,
+            tags: 2,
+            attrs: 1,
+        }
+    }
+
+    fn pruefe(c: &Cols) -> Result<(), String> {
+        validate_columns(
+            &c.tag,
+            &c.parent,
+            &c.text_off,
+            &c.text_len,
+            &c.attr_start,
+            &c.attr_name,
+            &c.attr_val_off,
+            &c.attr_val_len,
+            c.blob,
+            c.tags,
+            c.attrs,
+        )
+    }
+
+    fn fehler(c: &Cols) -> String {
+        pruefe(c).expect_err("Spalten müssen abgelehnt werden")
+    }
+
+    #[test]
+    fn gueltige_spalten_werden_angenommen() {
+        assert_eq!(pruefe(&gut()), Ok(()));
+    }
+
+    #[test]
+    fn leere_arena_wird_abgelehnt() {
+        let mut c = gut();
+        c.tag = vec![];
+        c.parent = vec![];
+        c.text_off = vec![];
+        c.text_len = vec![];
+        c.attr_start = vec![0];
+        assert!(fehler(&c).contains("tag is empty"));
+    }
+
+    #[test]
+    fn knotenspalten_muessen_so_lang_sein_wie_tag() {
+        let mut c = gut();
+        c.parent.pop();
+        assert!(fehler(&c).contains("parent has 1 entries, tag has 2"));
+        let mut c = gut();
+        c.text_off.push(0);
+        assert!(fehler(&c).contains("text_off has 3"));
+        let mut c = gut();
+        c.text_len.pop();
+        assert!(fehler(&c).contains("text_len has 1"));
+    }
+
+    #[test]
+    fn attr_start_braucht_knotenzahl_plus_eins() {
+        let mut c = gut();
+        c.attr_start.pop();
+        assert!(fehler(&c).contains("attr_start has 2 entries, expected 3"));
+    }
+
+    #[test]
+    fn attributspalten_muessen_gleich_lang_sein() {
+        let mut c = gut();
+        c.attr_val_off.push(0);
+        assert!(fehler(&c).contains("attr_val_off has 2 entries, attr_name has 1"));
+        let mut c = gut();
+        c.attr_val_len.clear();
+        assert!(fehler(&c).contains("attr_val_len has 0"));
+    }
+
+    #[test]
+    fn attr_start_muss_bei_null_beginnen_monoton_sein_und_bei_der_attributzahl_enden() {
+        let mut c = gut();
+        c.attr_start = vec![1, 1, 1];
+        assert!(fehler(&c).contains("attr_start[0]"));
+        let mut c = gut();
+        c.attr_start = vec![0, 1, 0];
+        assert!(fehler(&c).contains("not monotonic"));
+        let mut c = gut();
+        c.attr_start = vec![0, 1, 5];
+        assert!(fehler(&c).contains("attr_start ends at 5"));
+    }
+
+    #[test]
+    fn indizes_muessen_im_woerterbuch_liegen() {
+        let mut c = gut();
+        c.tag[1] = 2;
+        assert!(fehler(&c).contains("tag[1] = 2"));
+        let mut c = gut();
+        c.attr_name[0] = 1;
+        assert!(fehler(&c).contains("attr_name[0] = 1"));
+    }
+
+    #[test]
+    fn eltern_muessen_vor_dem_kind_stehen() {
+        let mut c = gut();
+        c.parent[1] = 1;
+        assert!(fehler(&c).contains("parent[1] = 1"));
+        let mut c = gut();
+        c.parent[1] = -2;
+        assert!(fehler(&c).contains("parent[1] = -2"));
+        let mut c = gut();
+        c.parent[0] = 0;
+        assert!(fehler(&c).contains("parent[0] = 0"));
+    }
+
+    #[test]
+    fn texte_und_werte_muessen_im_blob_liegen() {
+        let mut c = gut();
+        c.text_len[1] = 3;
+        assert!(fehler(&c).contains("text of node 1"));
+        let mut c = gut();
+        c.attr_val_off[0] = u32::MAX;
+        assert!(fehler(&c).contains("value of attribute 0"));
+    }
+
+    #[test]
+    fn from_columns_meldet_statt_zu_paniken() {
+        let r = Arena::from_columns(
+            &[0],
+            &[-1],
+            &[0],
+            &[0],
+            &[0], // zu kurz: braucht zwei Einträge
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec!["html".into()],
+            vec![],
+        );
+        assert!(r.is_err());
     }
 }

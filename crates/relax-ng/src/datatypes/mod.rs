@@ -4,8 +4,7 @@
 //! using W3C XML Schema Datatypes with RELAX NG"), and the
 //! [`registry::DatatypeLibrary`] plugin trait a caller uses to add its own
 //! non-standard library (e.g. vnu's `http://whattf.org/datatype-draft`,
-//! which this crate deliberately does not implement — see
-//! `plan/DECISIONS.md`).
+//! which this crate deliberately does not implement).
 
 mod builtin;
 mod registry;

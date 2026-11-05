@@ -37,6 +37,17 @@ flowchart LR
 | `role`, `implicit`, `allows_name_from_content`, `name_is_prohibited` | role knowledge the step sequence needs |
 | `IdIndex` | resolution of `aria-labelledby`/`aria-describedby` without repeated tree searches |
 
+## Conformance corpus
+
+The web-platform-tests cases `accname/name/*.html` are vendored under
+`crates/accname/tests/corpus/wpt` (`xtask/vendor-wpt-accname.sh`, BSD-3-Clause,
+origin in `UPSTREAM.md`) and run by `tests/wpt.rs`: every element with
+`data-expectedlabel` is one case. Failures from documented gaps
+(`::before`/`::after`, CSS counters, `text-transform`, `<style>` blocks,
+values set by script, shadow DOM built by script) are listed in
+`tests/wpt_known_failures.txt`; the test fails both for an unlisted failure and
+for a listed case that now passes (`WPT_BLESS=1` regenerates the list).
+
 ## Dependencies
 
 Downward: `a11y-dom`. Upward: `a11y-rules`, hosts with document-based

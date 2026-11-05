@@ -11,21 +11,21 @@ use accname::IdIndex;
 ///
 /// Zeigt zugleich, wie ein Host `accname` in `Semantics` einhängt — der Index
 /// wird einmal gebaut und gehalten, nicht je Aufruf.
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
 }
 
-impl<'a> MitSemantik<'a> {
+impl<'a> WithSemantics<'a> {
     fn new(doc: &'a Arena) -> Self {
-        MitSemantik {
+        WithSemantics {
             ids: IdIndex::build(doc.root()),
             doc,
         }
     }
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -36,7 +36,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         accname::role(node).map(str::to_string)
     }
@@ -51,13 +51,13 @@ impl Semantics for MitSemantik<'_> {
 }
 
 /// Wie viele Befund-Kennungen diese Deklarationen zusammen tragen.
-fn kennungen_in(metas: &'static [a11y_rules::Meta]) -> usize {
+fn ids_in(metas: &'static [a11y_rules::Meta]) -> usize {
     metas.iter().map(|m| m.ids.len()).sum()
 }
 
 /// Ein Dokument, das möglichst viele Regeln auslöst — Grundlage der
 /// Zusicherungen über die Namensmenge.
-fn fehlerhaft() -> Arena {
+fn faulty() -> Arena {
     Arena::builder()
         .open("html")
         .open("head")
@@ -123,12 +123,12 @@ fn ids(r: &Report) -> Vec<&str> {
     r.findings.iter().map(|f| f.rule_id.as_str()).collect()
 }
 
-fn hat(r: &Report, id: &str) -> bool {
+fn has(r: &Report, id: &str) -> bool {
     r.findings.iter().any(|f| f.rule_id == id)
 }
 
 /// Ein minimal korrektes Dokument, von dem die Einzeltests abweichen.
-fn sauber() -> a11y_dom::ArenaBuilder {
+fn clean() -> a11y_dom::ArenaBuilder {
     Arena::builder()
         .open("html")
         .attr("lang", "de")
@@ -149,8 +149,8 @@ fn sauber() -> a11y_dom::ArenaBuilder {
 /// banner und contentinfo sind eigene Erwartungen, der Sprunglink und die
 /// Ortsangabe (`aria-current`) auch. Die Vorlage hält fest, was „vollständig"
 /// heißt.
-fn vollstaendig() -> a11y_dom::ArenaBuilder {
-    sauber()
+fn complete() -> a11y_dom::ArenaBuilder {
+    clean()
         .open("body")
         .open("a")
         .attr("href", "#inhalt")
@@ -179,18 +179,18 @@ fn vollstaendig() -> a11y_dom::ArenaBuilder {
 }
 
 #[test]
-fn vollstaendiges_dokument_erzeugt_keinen_befund() {
-    let doc = vollstaendig().close().build();
+fn complete_document_yields_no_finding() {
+    let doc = complete().close().build();
     let r = run(&doc);
     // Außer der Checkliste: Was keine Maschine entscheiden kann, bleibt als
     // UNTESTED stehen, auch auf einem einwandfreien Dokument.
-    let urteile: Vec<&str> = r
+    let verdicts: Vec<&str> = r
         .findings
         .iter()
         .filter(|f| !f.rule_id.starts_with("manual/"))
         .map(|f| f.rule_id.as_str())
         .collect();
-    assert!(urteile.is_empty(), "unerwartet: {urteile:?}");
+    assert!(verdicts.is_empty(), "unerwartet: {verdicts:?}");
     assert!(
         r.findings
             .iter()
@@ -203,8 +203,8 @@ fn vollstaendiges_dokument_erzeugt_keinen_befund() {
 /// getrennt nach „belegt" und „erwartet": main fehlt nachweislich, eine
 /// Navigation zu erwarten ist dagegen eine Annahme.
 #[test]
-fn minimaldokument_meldet_landmarks_als_review_ausser_main() {
-    let doc = sauber()
+fn minimal_document_reports_landmarks_as_review_except_main() {
+    let doc = clean()
         .open("body")
         .open("h1")
         .text("Titel")
@@ -238,7 +238,7 @@ fn minimaldokument_meldet_landmarks_als_review_ausser_main() {
 }
 
 #[test]
-fn fehlendes_lang_und_title() {
+fn missing_lang_and_title() {
     let doc = Arena::builder()
         .open("html")
         .open("body")
@@ -246,12 +246,12 @@ fn fehlendes_lang_und_title() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "document/lang-missing"));
-    assert!(hat(&r, "document/title-missing"));
+    assert!(has(&r, "document/lang-missing"));
+    assert!(has(&r, "document/title-missing"));
 }
 
 #[test]
-fn unplausibler_sprachcode() {
+fn implausible_language_code() {
     // Ein leeres `lang` ist fehlend, nicht ungültig (ACT b5c3f8, bf051a);
     // das prüft der Korpus (casoon/auditmysite#783).
     for code in ["d", "deutsch-", "1de", "de-abcdefghi"] {
@@ -267,7 +267,7 @@ fn unplausibler_sprachcode() {
             .build();
         let r = run(&doc);
         assert!(
-            hat(&r, "document/lang-invalid"),
+            has(&r, "document/lang-invalid"),
             "Code {code:?} haette auffallen muessen"
         );
     }
@@ -285,15 +285,15 @@ fn unplausibler_sprachcode() {
             .build();
         let r = run(&doc);
         assert!(
-            !hat(&r, "document/lang-invalid"),
+            !has(&r, "document/lang-invalid"),
             "Code {code:?} ist gueltig"
         );
     }
 }
 
 #[test]
-fn bild_ohne_alt_ist_fail_verdaechtiges_alt_ist_review() {
-    let doc = sauber()
+fn image_without_alt_is_fail_suspicious_alt_is_review() {
+    let doc = clean()
         .open("body")
         .open("img")
         .attr("src", "a.png")
@@ -315,20 +315,20 @@ fn bild_ohne_alt_ist_fail_verdaechtiges_alt_ist_review() {
         .build();
     let r = run(&doc);
 
-    let fehlend = r
+    let missing = r
         .findings
         .iter()
         .find(|f| f.rule_id == "images/alt-missing")
         .unwrap();
-    assert_eq!(fehlend.outcome, Outcome::Fail);
+    assert_eq!(missing.outcome, Outcome::Fail);
 
-    let verdaechtig = r
+    let suspicious = r
         .findings
         .iter()
         .find(|f| f.rule_id == "images/alt-suspicious")
         .unwrap();
     assert_eq!(
-        verdaechtig.outcome,
+        suspicious.outcome,
         Outcome::Review,
         "heuristische Regeln liefern Review, nicht Fail"
     );
@@ -344,8 +344,8 @@ fn bild_ohne_alt_ist_fail_verdaechtiges_alt_ist_review() {
 }
 
 #[test]
-fn ueberschriften_luecke_und_leere_ueberschrift() {
-    let doc = sauber()
+fn heading_gap_and_empty_heading() {
+    let doc = clean()
         .open("body")
         .open("h1")
         .text("A")
@@ -359,17 +359,17 @@ fn ueberschriften_luecke_und_leere_ueberschrift() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "headings/skip-level"));
-    assert!(hat(&r, "headings/empty"));
-    assert!(!hat(&r, "headings/h1-missing"));
+    assert!(has(&r, "headings/skip-level"));
+    assert!(has(&r, "headings/empty"));
+    assert!(!has(&r, "headings/h1-missing"));
 }
 
 #[test]
-fn eine_ueberschrift_mit_benanntem_bild_ist_nicht_leer() {
+fn heading_with_named_image_is_not_empty() {
     // Eine Überschrift, die aus einem beschrifteten Logo besteht, trägt einen
     // Namen. Bis 0.10.0 meldete die Regel sie als leer, weil sie nur nach Text
     // und `aria-label` an der Überschrift selbst sah.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("main")
         .open("h1")
@@ -382,12 +382,12 @@ fn eine_ueberschrift_mit_benanntem_bild_ist_nicht_leer() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "headings/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "headings/empty"), "{:?}", r.findings);
 }
 
 #[test]
-fn eine_ueberschrift_mit_aria_labelledby_ist_nicht_leer() {
-    let doc = sauber()
+fn heading_with_aria_labelledby_is_not_empty() {
+    let doc = clean()
         .open("body")
         .open("main")
         .open("span")
@@ -401,13 +401,13 @@ fn eine_ueberschrift_mit_aria_labelledby_ist_nicht_leer() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "headings/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "headings/empty"), "{:?}", r.findings);
 }
 
 #[test]
-fn eine_wirklich_leere_ueberschrift_faellt_weiterhin_auf() {
+fn truly_empty_heading_is_still_flagged() {
     // Die Gegenprobe: ein Bild ohne Alternativtext stiftet keinen Namen.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("main")
         .open("h1")
@@ -419,12 +419,12 @@ fn eine_wirklich_leere_ueberschrift_faellt_weiterhin_auf() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "headings/empty"));
+    assert!(has(&r, "headings/empty"));
 }
 
 #[test]
-fn label_zuordnung_ueber_alle_vier_wege() {
-    let doc = sauber()
+fn label_association_via_all_four_ways() {
+    let doc = clean()
         .open("body")
         // 1. label[for]
         .open("label")
@@ -466,8 +466,8 @@ fn label_zuordnung_ueber_alle_vier_wege() {
 }
 
 #[test]
-fn placeholder_ersetzt_kein_label() {
-    let doc = sauber()
+fn placeholder_does_not_replace_a_label() {
+    let doc = clean()
         .open("body")
         .open("input")
         .attr("id", "a")
@@ -480,13 +480,13 @@ fn placeholder_ersetzt_kein_label() {
     let r = run(&doc);
     // title zaehlt als Label, also kein label-missing - aber der Platzhalter
     // bleibt ein eigener Befund.
-    assert!(!hat(&r, "forms/label-missing"));
-    assert!(hat(&r, "forms/placeholder-as-label"));
+    assert!(!has(&r, "forms/label-missing"));
+    assert!(has(&r, "forms/placeholder-as-label"));
 }
 
 #[test]
-fn versteckte_felder_werden_uebergangen() {
-    let doc = sauber()
+fn hidden_fields_are_skipped() {
+    let doc = clean()
         .open("body")
         .open("input")
         .attr("type", "hidden")
@@ -499,12 +499,12 @@ fn versteckte_felder_werden_uebergangen() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "forms/label-missing"));
+    assert!(!has(&r, "forms/label-missing"));
 }
 
 #[test]
-fn ungueltige_und_abstrakte_rollen() {
-    let doc = sauber()
+fn invalid_and_abstract_roles() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("role", "buton")
@@ -519,8 +519,8 @@ fn ungueltige_und_abstrakte_rollen() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "aria/role-invalid"));
-    assert!(hat(&r, "aria/role-abstract"));
+    assert!(has(&r, "aria/role-invalid"));
+    assert!(has(&r, "aria/role-abstract"));
     assert_eq!(
         r.findings
             .iter()
@@ -531,8 +531,8 @@ fn ungueltige_und_abstrakte_rollen() {
 }
 
 #[test]
-fn aria_verweise_auf_fehlende_ids() {
-    let doc = sauber()
+fn aria_references_to_missing_ids() {
+    let doc = clean()
         .open("body")
         .open("h2")
         .attr("id", "da")
@@ -559,10 +559,10 @@ fn aria_verweise_auf_fehlende_ids() {
 }
 
 #[test]
-fn doppelte_ids_ohne_verweis_melden_nichts() {
+fn duplicate_ids_without_reference_report_nothing() {
     // WCAG 2.2 hat 4.1.1 gestrichen: Eine Dopplung, auf die niemand zeigt,
     // verletzt kein Kriterium mehr.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("id", "x")
@@ -573,12 +573,12 @@ fn doppelte_ids_ohne_verweis_melden_nichts() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "ids/duplicate"));
+    assert!(!has(&run(&doc), "ids/duplicate"));
 }
 
 #[test]
-fn referenzierte_doppelte_ids_melden_nur_den_zweiten_treffer() {
-    let doc = sauber()
+fn referenced_duplicate_ids_report_only_the_second_hit() {
+    let doc = clean()
         .open("body")
         .open("label")
         .attr("for", "x")
@@ -597,19 +597,19 @@ fn referenzierte_doppelte_ids_melden_nur_den_zweiten_treffer() {
         .close()
         .build();
     let r = run(&doc);
-    let treffer: Vec<_> = r
+    let hit: Vec<_> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "ids/duplicate")
         .collect();
-    assert_eq!(treffer.len(), 1);
-    assert_eq!(treffer[0].wcag, vec!["4.1.2".to_string()]);
+    assert_eq!(hit.len(), 1);
+    assert_eq!(hit[0].wcag, vec!["4.1.2".to_string()]);
 }
 
 #[cfg(feature = "de")]
 #[test]
-fn texte_folgen_der_gewaehlten_sprache() {
-    let doc = fehlerhaft();
+fn texts_follow_the_chosen_language() {
+    let doc = faulty();
     let en = run(&doc);
     let de = run_in(&doc, Locale::De);
 
@@ -629,19 +629,19 @@ fn texte_folgen_der_gewaehlten_sprache() {
     assert_eq!(alt(&de).as_deref(), Some("Das Bild hat kein alt-Attribut."));
 
     // Auch der Grund eines nicht gelaufenen Vermerks.
-    let grund = de
+    let reason = de
         .rule_runs
         .iter()
         .find_map(|r| r.reason.clone())
         .expect("ohne Semantik laufen Tier-2-Regeln nicht");
-    assert!(grund.starts_with("Host liefert"), "{grund}");
+    assert!(reason.starts_with("Host liefert"), "{reason}");
 }
 
 #[cfg(feature = "de")]
 #[test]
-fn semantikregeln_folgen_der_gewaehlten_sprache() {
-    let arena = fehlerhaft();
-    let doc = MitSemantik::new(&arena);
+fn semantics_rules_follow_the_chosen_language() {
+    let arena = faulty();
+    let doc = WithSemantics::new(&arena);
     let en = run_with_semantics(&doc);
     let de = a11y_rules::run_with_semantics_in(&doc, Locale::De);
     assert_eq!(ids(&en), ids(&de));
@@ -657,12 +657,12 @@ fn semantikregeln_folgen_der_gewaehlten_sprache() {
 
 #[cfg(feature = "de")]
 #[test]
-fn jeder_hinweis_hat_eine_deutsche_fassung() {
-    let alle = a11y_rules::structure_metas()
+fn every_hint_has_a_german_version() {
+    let all = a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
         .chain(a11y_rules::rendering_metas());
-    for meta in alle {
+    for meta in all {
         assert!(!meta.help_de.is_empty(), "{:?}", meta.ids);
         assert_ne!(
             meta.help_in(Locale::En),
@@ -674,8 +674,8 @@ fn jeder_hinweis_hat_eine_deutsche_fassung() {
 }
 
 #[test]
-fn positiver_tabindex_und_verstecktes_fokussierbares() {
-    let doc = sauber()
+fn positive_tabindex_and_hidden_focusable() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("tabindex", "4")
@@ -699,11 +699,11 @@ fn positiver_tabindex_und_verstecktes_fokussierbares() {
             .count(),
         1
     );
-    assert!(hat(&r, "keyboard/hidden-focusable"));
+    assert!(has(&r, "keyboard/hidden-focusable"));
 }
 
 #[test]
-fn viewport_sperre() {
+fn viewport_lock() {
     for content in [
         "width=device-width, user-scalable=no",
         "width=device-width,maximum-scale=1.0",
@@ -722,7 +722,7 @@ fn viewport_sperre() {
             .close()
             .close()
             .build();
-        assert!(hat(&run(&doc), "zoom/viewport-locked"), "{content}");
+        assert!(has(&run(&doc), "zoom/viewport-locked"), "{content}");
     }
     // Erlaubter Viewport
     let doc = Arena::builder()
@@ -739,12 +739,12 @@ fn viewport_sperre() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "zoom/viewport-locked"));
+    assert!(!has(&run(&doc), "zoom/viewport-locked"));
 }
 
 #[test]
-fn listen_und_tabellen() {
-    let doc = sauber()
+fn lists_and_tables() {
+    let doc = clean()
         .open("body")
         .open("ul")
         .open("div")
@@ -770,7 +770,7 @@ fn listen_und_tabellen() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "lists/invalid-structure"));
+    assert!(has(&r, "lists/invalid-structure"));
     assert_eq!(
         r.findings
             .iter()
@@ -784,8 +784,8 @@ fn listen_und_tabellen() {
 // --- Tier-Mechanik --------------------------------------------------------
 
 #[test]
-fn ohne_semantik_werden_tier2_regeln_als_nicht_gelaufen_vermerkt() {
-    let doc = sauber()
+fn without_semantics_tier2_rules_are_recorded_as_not_run() {
+    let doc = clean()
         .open("body")
         .open("a")
         .attr("href", "/x")
@@ -797,33 +797,30 @@ fn ohne_semantik_werden_tier2_regeln_als_nicht_gelaufen_vermerkt() {
 
     assert_eq!(
         r.summary.rules_not_run,
-        kennungen_in(a11y_rules::semantics_metas())
-            + kennungen_in(a11y_rules::rendering_metas())
-            + kennungen_in(a11y_rules::stylesheet_metas())
+        ids_in(a11y_rules::semantics_metas())
+            + ids_in(a11y_rules::rendering_metas())
+            + ids_in(a11y_rules::stylesheet_metas())
     );
     assert!(
-        !hat(&r, "links/name-missing"),
+        !has(&r, "links/name-missing"),
         "ohne Accessible Name darf die Regel nicht raten"
     );
 
     // Der Vermerk laeuft ueber die Befund-Kennung, nicht ueber eine
     // uebergeordnete Regelkennung -- nur so passen rule_runs und findings
     // zusammen.
-    let vermerk = r
+    let record = r
         .rule_runs
         .iter()
         .find(|x| x.rule_id == "links/name-missing")
         .unwrap();
-    assert!(!vermerk.did_run());
-    assert_eq!(
-        vermerk.not_run,
-        Some(a11y_report::NotRun::CapabilityMissing)
-    );
+    assert!(!record.did_run());
+    assert_eq!(record.not_run, Some(a11y_report::NotRun::CapabilityMissing));
 }
 
 #[test]
-fn mit_semantik_laufen_tier2_regeln_mit() {
-    let arena = sauber()
+fn with_semantics_tier2_rules_run_too() {
+    let arena = clean()
         .open("body")
         .open("a")
         .attr("href", "/x")
@@ -837,14 +834,14 @@ fn mit_semantik_laufen_tier2_regeln_mit() {
         .close()
         .close()
         .build();
-    let doc = MitSemantik::new(&arena);
+    let doc = WithSemantics::new(&arena);
     let r = run_with_semantics(&doc);
 
     // Tier 2 laeuft, Tier 3 nicht -- dieser Host liefert keine Darstellung
     // und keine Stylesheets.
     assert_eq!(
         r.summary.rules_not_run,
-        kennungen_in(a11y_rules::rendering_metas()) + kennungen_in(a11y_rules::stylesheet_metas())
+        ids_in(a11y_rules::rendering_metas()) + ids_in(a11y_rules::stylesheet_metas())
     );
     assert_eq!(
         r.findings
@@ -853,12 +850,12 @@ fn mit_semantik_laufen_tier2_regeln_mit() {
             .count(),
         1
     );
-    assert!(hat(&r, "buttons/name-missing"));
+    assert!(has(&r, "buttons/name-missing"));
 }
 
 #[test]
-fn gleicher_linktext_verschiedene_ziele() {
-    let arena = sauber()
+fn same_link_text_different_targets() {
+    let arena = clean()
         .open("body")
         .open("a")
         .attr("href", "/a")
@@ -875,20 +872,20 @@ fn gleicher_linktext_verschiedene_ziele() {
         .close()
         .close()
         .build();
-    let doc = MitSemantik::new(&arena);
+    let doc = WithSemantics::new(&arena);
     let r = run_with_semantics(&doc);
-    let treffer: Vec<_> = r
+    let hit: Vec<_> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "links/ambiguous-name")
         .collect();
-    assert_eq!(treffer.len(), 2, "beide mehrdeutigen Links werden markiert");
-    assert_eq!(treffer[0].outcome, Outcome::Review);
+    assert_eq!(hit.len(), 2, "beide mehrdeutigen Links werden markiert");
+    assert_eq!(hit[0].outcome, Outcome::Review);
 }
 
 #[test]
-fn gleicher_linktext_gleiches_ziel_ist_in_ordnung() {
-    let arena = sauber()
+fn same_link_text_same_target_is_fine() {
+    let arena = clean()
         .open("body")
         .open("a")
         .attr("href", "/a")
@@ -901,13 +898,13 @@ fn gleicher_linktext_gleiches_ziel_ist_in_ordnung() {
         .close()
         .close()
         .build();
-    let doc = MitSemantik::new(&arena);
-    assert!(!hat(&run_with_semantics(&doc), "links/ambiguous-name"));
+    let doc = WithSemantics::new(&arena);
+    assert!(!has(&run_with_semantics(&doc), "links/ambiguous-name"));
 }
 
 #[test]
-fn aria_hidden_elemente_bleiben_bei_tier2_aussen_vor() {
-    let arena = sauber()
+fn aria_hidden_elements_stay_out_of_tier2() {
+    let arena = clean()
         .open("body")
         .open("a")
         .attr("href", "/x")
@@ -916,32 +913,62 @@ fn aria_hidden_elemente_bleiben_bei_tier2_aussen_vor() {
         .close()
         .close()
         .build();
-    let doc = MitSemantik::new(&arena);
-    assert!(!hat(&run_with_semantics(&doc), "links/name-missing"));
+    let doc = WithSemantics::new(&arena);
+    assert!(!has(&run_with_semantics(&doc), "links/name-missing"));
 }
 
 #[test]
-fn jede_kennung_hinterlaesst_genau_einen_ausfuehrungsvermerk() {
-    let doc = sauber().open("body").close().close().build();
+fn every_id_leaves_exactly_one_run_record() {
+    let doc = clean().open("body").close().close().build();
     let r = run(&doc);
-    let mut kennungen: Vec<&str> = r.rule_runs.iter().map(|x| x.rule_id.as_str()).collect();
-    let anzahl = kennungen.len();
-    kennungen.sort_unstable();
-    kennungen.dedup();
-    assert_eq!(kennungen.len(), anzahl, "doppelte Vermerke");
-    let deklariert: usize = a11y_rules::structure_metas()
+    let mut all_ids: Vec<&str> = r.rule_runs.iter().map(|x| x.rule_id.as_str()).collect();
+    let count = all_ids.len();
+    all_ids.sort_unstable();
+    all_ids.dedup();
+    assert_eq!(all_ids.len(), count, "doppelte Vermerke");
+    let declared: usize = a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
         .chain(a11y_rules::rendering_metas())
         .chain(a11y_rules::stylesheet_metas())
         .map(|m| m.ids.len())
         .sum();
-    assert_eq!(anzahl, deklariert, "ein Vermerk je deklarierter Kennung");
+    assert_eq!(count, declared, "ein Vermerk je deklarierter Kennung");
 }
 
 #[test]
-fn befunde_tragen_wcag_kriterien_und_eine_verortung() {
-    let doc = sauber()
+fn every_run_record_carries_its_rules_criteria() {
+    // `run` liefert gelaufene (Tier 1) und nicht gelaufene Vermerke (Tier 2+).
+    let doc = clean().open("body").close().close().build();
+    let r = run(&doc);
+    let metas = a11y_rules::structure_metas()
+        .iter()
+        .chain(a11y_rules::semantics_metas())
+        .chain(a11y_rules::rendering_metas())
+        .chain(a11y_rules::stylesheet_metas());
+    let mut checked = (0, 0);
+    for m in metas {
+        for id in m.ids {
+            let rule_run = r.rule_runs.iter().find(|l| l.rule_id == *id).unwrap();
+            assert_eq!(rule_run.wcag, m.wcag, "{id}: Kriterien im Vermerk");
+            if !m.wcag.is_empty() {
+                if rule_run.did_run() {
+                    checked.0 += 1;
+                } else {
+                    checked.1 += 1;
+                }
+            }
+        }
+    }
+    assert!(
+        checked.0 > 0 && checked.1 > 0,
+        "gelaufen und nicht gelaufen"
+    );
+}
+
+#[test]
+fn findings_carry_wcag_criteria_and_a_location() {
+    let doc = clean()
         .open("body")
         .open("img")
         .attr("src", "a.png")
@@ -960,8 +987,8 @@ fn befunde_tragen_wcag_kriterien_und_eine_verortung() {
 
     // Die Verortung laesst sich zum Knoten zurueckaufloesen.
     let id: u32 = f.location.node.as_ref().unwrap().parse().unwrap();
-    let knoten = doc.get(a11y_dom::NodeId(id)).unwrap();
-    assert_eq!(knoten.local_name(), "img");
+    let node = doc.get(a11y_dom::NodeId(id)).unwrap();
+    assert_eq!(node.local_name(), "img");
     let _ = elements(&doc).count();
 }
 
@@ -972,17 +999,17 @@ fn befunde_tragen_wcag_kriterien_und_eine_verortung() {
 /// der hier einmal drinsteckte: Vermerke trugen `images/alt`, Befunde
 /// `images/alt-missing`.
 #[test]
-fn jeder_befund_hat_einen_passenden_ausfuehrungsvermerk() {
-    let arena = fehlerhaft();
-    let doc = MitSemantik::new(&arena);
+fn every_finding_has_a_matching_run_record() {
+    let arena = faulty();
+    let doc = WithSemantics::new(&arena);
     let r = run_with_semantics(&doc);
 
-    let vermerkt: std::collections::HashSet<&str> =
+    let records: std::collections::HashSet<&str> =
         r.rule_runs.iter().map(|x| x.rule_id.as_str()).collect();
 
     for f in &r.findings {
         assert!(
-            vermerkt.contains(f.rule_id.as_str()),
+            records.contains(f.rule_id.as_str()),
             "Befund {:?} hat keinen Ausfuehrungsvermerk — rule_runs und findings \
              benutzen verschiedene Namensmengen",
             f.rule_id
@@ -994,12 +1021,12 @@ fn jeder_befund_hat_einen_passenden_ausfuehrungsvermerk() {
 /// Jede erzeugte Kennung muss in `Meta::ids` deklariert sein. Fehlt eine, ist
 /// sie im Bericht als „nie gelaufen" unsichtbar.
 #[test]
-fn jede_erzeugte_kennung_ist_deklariert() {
-    let arena = fehlerhaft();
-    let doc = MitSemantik::new(&arena);
+fn every_produced_id_is_declared() {
+    let arena = faulty();
+    let doc = WithSemantics::new(&arena);
     let r = run_with_semantics(&doc);
 
-    let deklariert: std::collections::HashSet<&str> = a11y_rules::structure_metas()
+    let declared: std::collections::HashSet<&str> = a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
         .flat_map(|m| m.ids.iter().copied())
@@ -1007,29 +1034,29 @@ fn jede_erzeugte_kennung_ist_deklariert() {
 
     for f in &r.findings {
         assert!(
-            deklariert.contains(f.rule_id.as_str()),
+            declared.contains(f.rule_id.as_str()),
             "Kennung {:?} wird erzeugt, aber in keinem Meta::ids deklariert",
             f.rule_id
         );
     }
     // Erzeugt von einer Hilfsfunktion der Listenregel, nicht von der Prüfung
     // über die Listen selbst — fehlte deshalb einmal in `Meta::ids`.
-    assert!(hat(&r, "lists/item-outside-list"), "{:?}", ids(&r));
+    assert!(has(&r, "lists/item-outside-list"), "{:?}", ids(&r));
 }
 
 /// Keine Kennung darf doppelt deklariert sein — sonst gäbe es zwei Vermerke
 /// für denselben Befundtyp.
 #[test]
-fn keine_kennung_ist_doppelt_deklariert() {
-    let mut alle: Vec<&str> = a11y_rules::structure_metas()
+fn no_id_is_declared_twice() {
+    let mut all: Vec<&str> = a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
         .flat_map(|m| m.ids.iter().copied())
         .collect();
-    let anzahl = alle.len();
-    alle.sort_unstable();
-    alle.dedup();
-    assert_eq!(alle.len(), anzahl, "doppelt deklarierte Kennung");
+    let count = all.len();
+    all.sort_unstable();
+    all.dedup();
+    assert_eq!(all.len(), count, "doppelt deklarierte Kennung");
 }
 
 // --- Verschaerfungen gegenueber 0.3.0 ------------------------------------
@@ -1038,7 +1065,7 @@ fn keine_kennung_ist_doppelt_deklariert() {
 /// genauso wie die Kleinschreibung -- bis 0.3.0 verglich die Regel den
 /// `content`-Wert unveraendert und sah darueber hinweg.
 #[test]
-fn viewport_sperre_ist_schreibweisenunabhaengig() {
+fn viewport_lock_is_case_insensitive() {
     for content in [
         "width=device-width, user-scalable=NO",
         "width=device-width, User-Scalable=No",
@@ -1058,15 +1085,15 @@ fn viewport_sperre_ist_schreibweisenunabhaengig() {
             .close()
             .close()
             .build();
-        assert!(hat(&run(&doc), "zoom/viewport-locked"), "{content}");
+        assert!(has(&run(&doc), "zoom/viewport-locked"), "{content}");
     }
 }
 
 /// `role="list"` steht im Markup und ist damit Tier-1-entscheidbar. Bis 0.3.0
 /// sah die Regel nur `<ul>`/`<ol>` und war fuer ARIA-Listen blind.
 #[test]
-fn liste_per_rolle_wird_geprueft() {
-    let doc = sauber()
+fn list_by_role_is_checked() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("role", "list")
@@ -1077,13 +1104,13 @@ fn liste_per_rolle_wird_geprueft() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&doc), "lists/invalid-structure"));
+    assert!(has(&run(&doc), "lists/invalid-structure"));
 }
 
 /// ... und eine korrekt ausgezeichnete ARIA-Liste darf nicht auffallen.
 #[test]
-fn korrekte_rollenliste_erzeugt_keinen_befund() {
-    let doc = sauber()
+fn correct_role_list_yields_no_finding() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("role", "list")
@@ -1096,29 +1123,29 @@ fn korrekte_rollenliste_erzeugt_keinen_befund() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/empty"), "{:?}", r.findings);
 }
 
 /// Eine Liste ohne Eintraege kuendigt der Assistenztechnik eine Struktur an,
 /// die es nicht gibt. Neue Kennung `lists/empty`.
 #[test]
-fn leere_liste_wird_gemeldet() {
-    let doc = sauber()
+fn empty_list_is_reported() {
+    let doc = clean()
         .open("body")
         .open("ul")
         .close()
         .close()
         .close()
         .build();
-    assert!(hat(&run(&doc), "lists/empty"));
+    assert!(has(&run(&doc), "lists/empty"));
 }
 
 /// `role="presentation"` sagt ausdruecklich, dass hier keine Liste gemeint
 /// ist -- ein Strukturbefund darauf waere falsch.
 #[test]
-fn praesentationsliste_erzeugt_keinen_strukturbefund() {
-    let doc = sauber()
+fn presentation_list_yields_no_structure_finding() {
+    let doc = clean()
         .open("body")
         .open("ul")
         .attr("role", "presentation")
@@ -1130,16 +1157,16 @@ fn praesentationsliste_erzeugt_keinen_strukturbefund() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/empty"), "{:?}", r.findings);
 }
 
 /// Eine per `role` umgedeutete `<ul>` ist keine Liste mehr. Beleg: gov.uk,
 /// APG-Autocomplete `<ul id="…__listbox" role="listbox">`, leer, bis getippt
 /// wird. Weder leer noch mit `option`-Kindern ist das ein Listenbefund.
 #[test]
-fn umgedeutete_liste_wird_nicht_als_liste_geprueft() {
-    let leer = sauber()
+fn reinterpreted_list_is_not_checked_as_a_list() {
+    let empty = clean()
         .open("body")
         .open("ul")
         .attr("role", "listbox")
@@ -1148,10 +1175,10 @@ fn umgedeutete_liste_wird_nicht_als_liste_geprueft() {
         .close()
         .close()
         .build();
-    let r = run(&leer);
-    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
+    let r = run(&empty);
+    assert!(!has(&r, "lists/empty"), "{:?}", r.findings);
 
-    let gefuellt = sauber()
+    let filled = clean()
         .open("body")
         .open("ul")
         .attr("role", "listbox")
@@ -1165,9 +1192,9 @@ fn umgedeutete_liste_wird_nicht_als_liste_geprueft() {
         .close()
         .close()
         .build();
-    let r = run(&gefuellt);
-    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/item-outside-list"), "{:?}", r.findings);
+    let r = run(&filled);
+    assert!(!has(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/item-outside-list"), "{:?}", r.findings);
 }
 
 /// Shadow DOM kommt als flacher Baum herein: Die Liste steht im Shadow Root
@@ -1178,8 +1205,8 @@ fn umgedeutete_liste_wird_nicht_als_liste_geprueft() {
 /// `<muse-link role="listitem">` als Light-DOM-Kindern. Der `<slot>` selbst
 /// ist `display: contents` und für die Liste unsichtbar.
 #[test]
-fn eintraege_ueber_slot_zaehlen_als_listeneintraege() {
-    let doc = sauber()
+fn entries_via_slot_count_as_list_items() {
+    let doc = clean()
         .open("body")
         .open("muse-link-list")
         .open("ul")
@@ -1205,16 +1232,16 @@ fn eintraege_ueber_slot_zaehlen_als_listeneintraege() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/empty"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/item-outside-list"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/item-outside-list"), "{:?}", r.findings);
 }
 
 /// Ein `<slot>`, dem nichts zugewiesen ist und der keinen Ersatzinhalt hat,
 /// lässt die Liste im flachen Baum leer — das bleibt ein Befund.
 #[test]
-fn liste_mit_leerem_slot_bleibt_leer() {
-    let doc = sauber()
+fn list_with_empty_slot_stays_empty() {
+    let doc = clean()
         .open("body")
         .open("ul")
         .open("slot")
@@ -1224,15 +1251,15 @@ fn liste_mit_leerem_slot_bleibt_leer() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "lists/empty"), "{:?}", r.findings);
-    assert!(!hat(&r, "lists/invalid-structure"), "{:?}", r.findings);
+    assert!(has(&r, "lists/empty"), "{:?}", r.findings);
+    assert!(!has(&r, "lists/invalid-structure"), "{:?}", r.findings);
 }
 
 /// Eine Kopfzelle kann per Rolle ausgezeichnet sein. Bis 0.3.0 suchte die
 /// Regel nur `<th>` und meldete solche Tabellen faelschlich als kopflos.
 #[test]
-fn kopfzelle_per_rolle_zaehlt_als_kopf() {
-    let doc = sauber()
+fn header_cell_by_role_counts_as_header() {
+    let doc = clean()
         .open("body")
         .open("table")
         .open("tr")
@@ -1246,13 +1273,13 @@ fn kopfzelle_per_rolle_zaehlt_als_kopf() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "tables/header-missing"), "{:?}", r.findings);
+    assert!(!has(&r, "tables/header-missing"), "{:?}", r.findings);
 }
 
 /// ... und eine Tabelle, die nur per Rolle eine ist, wird ueberhaupt geprueft.
 #[test]
-fn rollentabelle_ohne_kopf_faellt_auf() {
-    let doc = sauber()
+fn role_table_without_header_is_flagged() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("role", "table")
@@ -1267,14 +1294,14 @@ fn rollentabelle_ohne_kopf_faellt_auf() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&doc), "tables/header-missing"));
+    assert!(has(&run(&doc), "tables/header-missing"));
 }
 
 /// Die Einstufungen, bei denen eine stille Absenkung fachlich etwas kaputt
 /// machen würde. Nicht der ganze Katalog — nur die Fälle, über die schon
 /// einmal entschieden wurde.
 #[test]
-fn einstufungen_bleiben_wo_sie_begruendet_wurden() {
+fn ratings_stay_where_they_were_justified() {
     use a11y_report::Severity;
 
     let metas: Vec<_> = a11y_rules::structure_metas()
@@ -1304,8 +1331,8 @@ fn einstufungen_bleiben_wo_sie_begruendet_wurden() {
 // --- Die Luecken, die beim Abloesen der auditmysite-Regeln auffielen -----
 
 #[test]
-fn begriff_ohne_definition() {
-    let doc = sauber()
+fn term_without_definition() {
+    let doc = clean()
         .open("body")
         .open("dl")
         // Vollstaendig: Begriff mit Definition.
@@ -1328,13 +1355,13 @@ fn begriff_ohne_definition() {
         .close()
         .build();
     let r = run(&doc);
-    let treffer: Vec<_> = r
+    let hit: Vec<_> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "lists/term-without-definition")
         .collect();
     assert_eq!(
-        treffer.len(),
+        hit.len(),
         1,
         "nur der zweite Begriff ist unvollstaendig: {:?}",
         ids(&r)
@@ -1342,10 +1369,10 @@ fn begriff_ohne_definition() {
 }
 
 #[test]
-fn begriff_in_einer_div_gruppe_braucht_seine_definition_dort() {
+fn term_in_a_div_group_needs_its_definition_there() {
     // HTML erlaubt <div>-Gruppen in einer <dl>. Ein <dt> in einer solchen
     // Gruppe braucht sein <dd> dort, nicht irgendwo in der Liste.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("dl")
         .open("div")
@@ -1377,8 +1404,8 @@ fn begriff_in_einer_div_gruppe_braucht_seine_definition_dort() {
 }
 
 #[test]
-fn rollen_zaehlen_auch_bei_begriff_und_definition() {
-    let doc = sauber()
+fn roles_count_for_term_and_definition_too() {
+    let doc = clean()
         .open("body")
         .open("div")
         .open("div")
@@ -1393,12 +1420,12 @@ fn rollen_zaehlen_auch_bei_begriff_und_definition() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "lists/term-without-definition"));
+    assert!(!has(&run(&doc), "lists/term-without-definition"));
 }
 
 #[test]
-fn praesentationale_tabelle_mit_kopfzellen() {
-    let doc = sauber()
+fn presentational_table_with_header_cells() {
+    let doc = clean()
         .open("body")
         // Sauber: Layouttabelle ohne Koepfe.
         .open("table")
@@ -1430,12 +1457,12 @@ fn praesentationale_tabelle_mit_kopfzellen() {
         1
     );
     // Und keine der beiden wird als kopflose Datentabelle gemeldet.
-    assert!(!hat(&r, "tables/header-missing"));
+    assert!(!has(&r, "tables/header-missing"));
 }
 
 #[test]
-fn tabelle_ohne_namen_ist_review_nicht_fail() {
-    let doc = sauber()
+fn table_without_name_is_review_not_fail() {
+    let doc = clean()
         .open("body")
         .open("table")
         .open("caption")
@@ -1466,18 +1493,18 @@ fn tabelle_ohne_namen_ist_review_nicht_fail() {
         .close()
         .build();
     let r = run(&doc);
-    let treffer: Vec<_> = r
+    let hit: Vec<_> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "tables/name-missing")
         .collect();
-    assert_eq!(treffer.len(), 1, "caption und aria-label zaehlen als Name");
+    assert_eq!(hit.len(), 1, "caption und aria-label zaehlen als Name");
     // Ob eine Tabelle einen Namen braucht, ist nicht zwingend entscheidbar.
-    assert_eq!(treffer[0].outcome, Outcome::Review);
+    assert_eq!(hit[0].outcome, Outcome::Review);
 }
 
 #[test]
-fn viewport_unterscheidet_verstoss_von_begrenzung() {
+fn viewport_distinguishes_violation_from_limit() {
     let fall = |content: &str| {
         let doc = Arena::builder()
             .open("html")
@@ -1527,11 +1554,11 @@ fn viewport_unterscheidet_verstoss_von_begrenzung() {
 }
 
 #[test]
-fn viewport_begrenzung_ist_best_practice_ohne_1_4_4() {
+fn viewport_limit_is_best_practice_without_1_4_4() {
     // Zwischen 200 und 500 % ist 1.4.4 erfüllt; der Befund darf das
     // Kriterium nicht tragen, sonst zählen Hosts ihn als Verstoß. Der
     // Verstoß unter 200 % trägt es weiter.
-    let befund = |content: &str, id: &str| {
+    let finding = |content: &str, id: &str| {
         let doc = Arena::builder()
             .open("html")
             .attr("lang", "de")
@@ -1552,19 +1579,19 @@ fn viewport_begrenzung_ist_best_practice_ohne_1_4_4() {
             .find(|f| f.rule_id == id)
             .expect("Befund")
     };
-    let begrenzt = befund("maximum-scale=2", "zoom/viewport-scale-limited");
-    assert!(begrenzt.wcag.is_empty(), "{:?}", begrenzt.wcag);
-    assert_eq!(begrenzt.tags, vec!["best-practice".to_string()]);
+    let limited = finding("maximum-scale=2", "zoom/viewport-scale-limited");
+    assert!(limited.wcag.is_empty(), "{:?}", limited.wcag);
+    assert_eq!(limited.tags, vec!["best-practice".to_string()]);
 
-    let gesperrt = befund("maximum-scale=1", "zoom/viewport-locked");
-    assert_eq!(gesperrt.wcag, vec!["1.4.4".to_string()]);
+    let locked = finding("maximum-scale=1", "zoom/viewport-locked");
+    assert_eq!(locked.wcag, vec!["1.4.4".to_string()]);
 }
 
 #[test]
-fn listeneintrag_ausserhalb_einer_liste() {
+fn list_item_outside_a_list() {
     // Die Listenpruefung laeuft ueber Listen und sieht nur, was darin steht.
     // Ein verwaistes <li> wird dabei nie besucht.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("ul")
         .open("li")
@@ -1592,9 +1619,9 @@ fn listeneintrag_ausserhalb_einer_liste() {
 }
 
 #[test]
-fn ein_verschachtelter_eintrag_gilt_nicht_als_verwaist() {
+fn nested_entry_is_not_orphaned() {
     // <li> in einer Unterliste hat die aeussere Liste als Vorfahren.
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("ul")
         .open("li")
@@ -1609,7 +1636,7 @@ fn ein_verschachtelter_eintrag_gilt_nicht_als_verwaist() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "lists/item-outside-list"));
+    assert!(!has(&run(&doc), "lists/item-outside-list"));
 }
 
 // ===========================================================================
@@ -1621,12 +1648,12 @@ fn ein_verschachtelter_eintrag_gilt_nicht_als_verwaist() {
 /// Die Stile kommen als Tabelle herein, nicht aus einer CSS-Engine — geprüft
 /// wird die Regel, nicht das Auflösen der Kaskade. Genau die Aufteilung gilt
 /// auch in echt: Der Host löst auf, die Regel rechnet.
-struct MitDarstellung<'a> {
+struct WithPresentation<'a> {
     doc: &'a Arena,
-    stile: std::collections::HashMap<u32, a11y_dom::ComputedStyle>,
+    styles: std::collections::HashMap<u32, a11y_dom::ComputedStyle>,
 }
 
-impl a11y_dom::Document for MitDarstellung<'_> {
+impl a11y_dom::Document for WithPresentation<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -1637,9 +1664,9 @@ impl a11y_dom::Document for MitDarstellung<'_> {
     }
 }
 
-impl a11y_dom::Rendering for MitDarstellung<'_> {
+impl a11y_dom::Rendering for WithPresentation<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::ComputedStyle> {
-        self.stile.get(&node.id().0).cloned()
+        self.styles.get(&node.id().0).cloned()
     }
 
     fn bounds<'n>(&'n self, _node: Self::N<'n>) -> Option<a11y_dom::Rect> {
@@ -1647,19 +1674,19 @@ impl a11y_dom::Rendering for MitDarstellung<'_> {
     }
 }
 
-fn farbe(r: u8, g: u8, b: u8) -> a11y_dom::Color {
+fn make_color(r: u8, g: u8, b: u8) -> a11y_dom::Color {
     a11y_dom::Color { r, g, b, a: 255 }
 }
 
 /// Stil für normalen Text in den übergebenen Farben.
-fn stil(
-    vorn: Option<a11y_dom::Color>,
-    hinten: Option<a11y_dom::Color>,
+fn style(
+    front: Option<a11y_dom::Color>,
+    back: Option<a11y_dom::Color>,
     px: f32,
 ) -> a11y_dom::ComputedStyle {
     a11y_dom::ComputedStyle {
-        color: vorn,
-        background_color: hinten,
+        color: front,
+        background_color: back,
         font_size_px: Some(px),
         font_weight: Some(400),
         display: Some("block".into()),
@@ -1669,14 +1696,14 @@ fn stil(
 }
 
 /// Baut ein Dokument mit einem `<p>` im Body und legt dessen Stil fest.
-fn mit_absatz(
+fn with_paragraph(
     text: &str,
     s: a11y_dom::ComputedStyle,
 ) -> (
     Arena,
     std::collections::HashMap<u32, a11y_dom::ComputedStyle>,
 ) {
-    let arena = sauber()
+    let arena = clean()
         .open("body")
         .open("h1")
         .text("Titel")
@@ -1688,69 +1715,78 @@ fn mit_absatz(
         .close()
         .build();
     // Der Absatz ist das einzige Element mit eigenem Text außer h1 und title.
-    let mut stile = std::collections::HashMap::new();
+    let mut styles = std::collections::HashMap::new();
     for n in elements(&arena) {
         if n.is_element("p") {
-            stile.insert(n.id().0, s.clone());
+            styles.insert(n.id().0, s.clone());
         }
     }
-    (arena, stile)
+    (arena, styles)
 }
 
 #[test]
-fn schwacher_kontrast_faellt_auf() {
-    let (arena, stile) = mit_absatz(
+fn weak_contrast_is_flagged() {
+    let (arena, styles) = with_paragraph(
         "Kaum zu lesen",
-        stil(
-            Some(farbe(0x99, 0x99, 0x99)),
-            Some(farbe(255, 255, 255)),
+        style(
+            Some(make_color(0x99, 0x99, 0x99)),
+            Some(make_color(255, 255, 255)),
             16.0,
         ),
     );
-    let doc = MitDarstellung { doc: &arena, stile };
+    let doc = WithPresentation {
+        doc: &arena,
+        styles,
+    };
     let r = a11y_rules::run_with_rendering(&doc);
     assert!(
-        hat(&r, "contrast/text-insufficient"),
+        has(&r, "contrast/text-insufficient"),
         "unerwartet: {:?}",
         ids(&r)
     );
 }
 
 #[test]
-fn ausreichender_kontrast_meldet_nichts() {
-    let (arena, stile) = mit_absatz(
+fn sufficient_contrast_reports_nothing() {
+    let (arena, styles) = with_paragraph(
         "Gut zu lesen",
-        stil(
-            Some(farbe(0x33, 0x33, 0x33)),
-            Some(farbe(255, 255, 255)),
+        style(
+            Some(make_color(0x33, 0x33, 0x33)),
+            Some(make_color(255, 255, 255)),
             16.0,
         ),
     );
-    let doc = MitDarstellung { doc: &arena, stile };
+    let doc = WithPresentation {
+        doc: &arena,
+        styles,
+    };
     let r = a11y_rules::run_with_rendering(&doc);
-    assert!(!hat(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
+    assert!(!has(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
 }
 
 #[test]
-fn grosser_text_darf_schwaecher_sein() {
+fn large_text_may_be_weaker() {
     // 3,5:1 — zu wenig für normalen Text, genug für großen.
-    let grau = farbe(0x8C, 0x8C, 0x8C);
-    let weiss = farbe(255, 255, 255);
+    let gray = make_color(0x8C, 0x8C, 0x8C);
+    let white = make_color(255, 255, 255);
 
-    let (arena, stile) = mit_absatz("Klein", stil(Some(grau), Some(weiss), 16.0));
-    let klein = MitDarstellung { doc: &arena, stile };
-    assert!(hat(
-        &a11y_rules::run_with_rendering(&klein),
+    let (arena, styles) = with_paragraph("Klein", style(Some(gray), Some(white), 16.0));
+    let small = WithPresentation {
+        doc: &arena,
+        styles,
+    };
+    assert!(has(
+        &a11y_rules::run_with_rendering(&small),
         "contrast/text-insufficient"
     ));
 
-    let (arena2, stile2) = mit_absatz("Gross", stil(Some(grau), Some(weiss), 32.0));
-    let gross = MitDarstellung {
+    let (arena2, styles2) = with_paragraph("Gross", style(Some(gray), Some(white), 32.0));
+    let large = WithPresentation {
         doc: &arena2,
-        stile: stile2,
+        styles: styles2,
     };
-    assert!(!hat(
-        &a11y_rules::run_with_rendering(&gross),
+    assert!(!has(
+        &a11y_rules::run_with_rendering(&large),
         "contrast/text-insufficient"
     ));
 }
@@ -1758,53 +1794,59 @@ fn grosser_text_darf_schwaecher_sein() {
 /// Der fachliche Kern: Ein Host, der die Hintergrundfarbe nicht auflösen kann,
 /// bekommt `UNTESTED` — nicht `PASS` und nicht Schweigen.
 #[test]
-fn unbestimmbarer_hintergrund_ist_untested_nicht_bestanden() {
-    let (arena, stile) = mit_absatz("Auf einem Bild", stil(Some(farbe(0, 0, 0)), None, 16.0));
-    let doc = MitDarstellung { doc: &arena, stile };
+fn indeterminable_background_is_untested_not_passed() {
+    let (arena, styles) = with_paragraph(
+        "Auf einem Bild",
+        style(Some(make_color(0, 0, 0)), None, 16.0),
+    );
+    let doc = WithPresentation {
+        doc: &arena,
+        styles,
+    };
     let r = a11y_rules::run_with_rendering(&doc);
 
-    let befund = r
+    let finding = r
         .findings
         .iter()
         .find(|f| f.rule_id == "contrast/text-undetermined")
         .expect("unbestimmbarer Hintergrund muss einen Befund erzeugen");
-    assert_eq!(befund.outcome, Outcome::Untested);
+    assert_eq!(finding.outcome, Outcome::Untested);
     assert!(
-        !hat(&r, "contrast/text-insufficient"),
+        !has(&r, "contrast/text-insufficient"),
         "kein geratenes FAIL"
     );
 }
 
 #[test]
-fn unsichtbarer_text_ist_kein_kontrastproblem() {
-    let mut s = stil(
-        Some(farbe(0xEE, 0xEE, 0xEE)),
-        Some(farbe(255, 255, 255)),
+fn invisible_text_is_no_contrast_problem() {
+    let mut s = style(
+        Some(make_color(0xEE, 0xEE, 0xEE)),
+        Some(make_color(255, 255, 255)),
         16.0,
     );
     s.display = Some("none".into());
-    let (arena, stile) = mit_absatz("Versteckt", s);
-    let doc = MitDarstellung { doc: &arena, stile };
+    let (arena, styles) = with_paragraph("Versteckt", s);
+    let doc = WithPresentation {
+        doc: &arena,
+        styles,
+    };
     let r = a11y_rules::run_with_rendering(&doc);
-    assert!(!hat(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
-    assert!(!hat(&r, "contrast/text-undetermined"), "{:?}", ids(&r));
+    assert!(!has(&r, "contrast/text-insufficient"), "{:?}", ids(&r));
+    assert!(!has(&r, "contrast/text-undetermined"), "{:?}", ids(&r));
 }
 
 /// Ohne Tier 3 liefert die Regel `UNTESTED` als Vermerk, nicht als Schweigen.
 #[test]
-fn ohne_darstellung_wird_kontrast_als_nicht_gelaufen_vermerkt() {
-    let doc = sauber().open("body").close().close().build();
+fn without_rendering_contrast_is_recorded_as_not_run() {
+    let doc = clean().open("body").close().close().build();
     let r = run(&doc);
-    let vermerk = r
+    let record = r
         .rule_runs
         .iter()
         .find(|x| x.rule_id == "contrast/text-insufficient")
         .expect("die Kennung muss im Bericht stehen");
-    assert!(!vermerk.did_run());
-    assert_eq!(
-        vermerk.not_run,
-        Some(a11y_report::NotRun::CapabilityMissing)
-    );
+    assert!(!record.did_run());
+    assert_eq!(record.not_run, Some(a11y_report::NotRun::CapabilityMissing));
 }
 
 // ===========================================================================
@@ -1812,10 +1854,10 @@ fn ohne_darstellung_wird_kontrast_als_nicht_gelaufen_vermerkt() {
 // ===========================================================================
 
 #[test]
-fn rolle_zaehlt_vor_dem_tag_bei_landmarks() {
+fn role_counts_before_the_tag_for_landmarks() {
     // <div role="main"> ist eine main-Landmark, <main role="presentation">
     // ist keine. Wer nur auf den Tagnamen sieht, liegt in beiden Faellen falsch.
-    let mit_rolle = sauber()
+    let with_role = clean()
         .open("body")
         .open("div")
         .attr("role", "main")
@@ -1826,9 +1868,9 @@ fn rolle_zaehlt_vor_dem_tag_bei_landmarks() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&mit_rolle), "landmarks/main-missing"));
+    assert!(!has(&run(&with_role), "landmarks/main-missing"));
 
-    let umdeklariert = sauber()
+    let redeclared = clean()
         .open("body")
         .open("main")
         .attr("role", "presentation")
@@ -1839,26 +1881,26 @@ fn rolle_zaehlt_vor_dem_tag_bei_landmarks() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&umdeklariert), "landmarks/main-missing"));
+    assert!(has(&run(&redeclared), "landmarks/main-missing"));
 }
 
 #[test]
-fn zwei_main_landmarks_fallen_auf() {
-    let doc = vollstaendig()
+fn two_main_landmarks_are_flagged() {
+    let doc = complete()
         .open("main")
         .text("noch eine")
         .close()
         .close()
         .build();
     let r = run(&doc);
-    assert!(hat(&r, "landmarks/main-duplicate"), "{:?}", ids(&r));
+    assert!(has(&r, "landmarks/main-duplicate"), "{:?}", ids(&r));
 }
 
 /// Ein `<footer>` in einem `<article>` gehoert zu diesem Artikel, nicht zum
 /// Dokument. Ein `<div>` dazwischen disqualifiziert dagegen nicht.
 #[test]
-fn footer_im_artikel_ist_keine_contentinfo_landmark() {
-    let im_artikel = sauber()
+fn footer_in_article_is_no_contentinfo_landmark() {
+    let in_article = clean()
         .open("body")
         .open("main")
         .open("h1")
@@ -1873,9 +1915,9 @@ fn footer_im_artikel_ist_keine_contentinfo_landmark() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&im_artikel), "landmarks/contentinfo-missing"));
+    assert!(has(&run(&in_article), "landmarks/contentinfo-missing"));
 
-    let im_div = sauber()
+    let in_div = clean()
         .open("body")
         .open("main")
         .open("h1")
@@ -1890,12 +1932,12 @@ fn footer_im_artikel_ist_keine_contentinfo_landmark() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&im_div), "landmarks/contentinfo-missing"));
+    assert!(!has(&run(&in_div), "landmarks/contentinfo-missing"));
 }
 
 #[test]
-fn sprunglink_wird_an_text_oder_klasse_erkannt() {
-    let ueber_text = sauber()
+fn skip_link_is_detected_by_text_or_class() {
+    let over_text = clean()
         .open("body")
         .open("a")
         .attr("href", "#inhalt")
@@ -1904,10 +1946,10 @@ fn sprunglink_wird_an_text_oder_klasse_erkannt() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&ueber_text), "keyboard/skip-link-missing"));
+    assert!(!has(&run(&over_text), "keyboard/skip-link-missing"));
 
     // Ein gewoehnlicher Anker ist kein Sprunglink.
-    let anker = sauber()
+    let anchor = clean()
         .open("body")
         .open("a")
         .attr("href", "#kapitel-3")
@@ -1916,14 +1958,14 @@ fn sprunglink_wird_an_text_oder_klasse_erkannt() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&anker), "keyboard/skip-link-missing"));
+    assert!(has(&run(&anchor), "keyboard/skip-link-missing"));
 }
 
 /// auditmysite#642: Erkannt am Ziel und an der Stellung, nicht am Wortlaut —
 /// ein Fragmentlink vor dem ersten Link, der die Seite verlässt.
 #[test]
-fn sprunglink_wird_an_ziel_und_stellung_erkannt() {
-    let franzoesisch = sauber()
+fn skip_link_is_detected_by_target_and_position() {
+    let french = clean()
         .open("body")
         .open("a")
         .attr("href", "#contenu")
@@ -1938,10 +1980,10 @@ fn sprunglink_wird_an_ziel_und_stellung_erkannt() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&franzoesisch), "keyboard/skip-link-missing"));
+    assert!(!has(&run(&french), "keyboard/skip-link-missing"));
 
     // Derselbe Anker hinter der Navigation überspringt nichts.
-    let dahinter = sauber()
+    let behind = clean()
         .open("body")
         .open("nav")
         .open("a")
@@ -1956,15 +1998,15 @@ fn sprunglink_wird_an_ziel_und_stellung_erkannt() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&dahinter), "keyboard/skip-link-missing"));
+    assert!(has(&run(&behind), "keyboard/skip-link-missing"));
 }
 
 /// Der Sprunglink ist heuristisch erkannt — der Befund ist deshalb REVIEW.
 #[test]
-fn fehlender_sprunglink_ist_review_nicht_fail() {
+fn missing_skip_link_is_review_not_fail() {
     // Eine Navigation, die sich wiederholen kann — ohne sie ist die Regel
     // nicht anwendbar (casoon/auditmysite#783).
-    let doc = sauber()
+    let doc = clean()
         .open("body")
         .open("nav")
         .open("a")
@@ -1984,8 +2026,8 @@ fn fehlender_sprunglink_ist_review_nicht_fail() {
 }
 
 #[test]
-fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
-    let doc = vollstaendig()
+fn roles_without_their_required_attributes_are_flagged() {
+    let doc = complete()
         .open("div")
         .attr("role", "checkbox")
         .text("Newsletter")
@@ -1997,7 +2039,7 @@ fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
         .close()
         .build();
     let r = run(&doc);
-    let befunde: Vec<&str> = r
+    let findings: Vec<&str> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "aria/required-attribute-missing")
@@ -2005,14 +2047,14 @@ fn rollen_ohne_ihre_pflichtattribute_fallen_auf() {
         .collect();
     // Der Slider hat valuenow; valuemin und valuemax haben seit ARIA 1.2
     // Vorgaben und fehlen deshalb nicht.
-    assert_eq!(befunde.len(), 1, "{:?}", ids(&r));
-    assert!(befunde.iter().any(|m| m.contains("aria-checked")));
+    assert_eq!(findings.len(), 1, "{:?}", ids(&r));
+    assert!(findings.iter().any(|m| m.contains("aria-checked")));
 }
 
 #[test]
-fn nativer_zustand_und_statischer_trenner_brauchen_kein_aria() {
+fn native_state_and_static_separator_need_no_aria() {
     // auditmysite#656: Das native Feld übermittelt Wert bzw. Haken selbst.
-    let doc = vollstaendig()
+    let doc = complete()
         .open("input")
         .attr("type", "range")
         .attr("role", "slider")
@@ -2030,12 +2072,12 @@ fn nativer_zustand_und_statischer_trenner_brauchen_kein_aria() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "aria/required-attribute-missing"));
+    assert!(!has(&run(&doc), "aria/required-attribute-missing"));
 }
 
 #[test]
-fn meter_und_fokussierbarer_trenner_brauchen_valuenow() {
-    let doc = vollstaendig()
+fn meter_and_focusable_separator_need_valuenow() {
+    let doc = complete()
         .open("div")
         .attr("role", "meter")
         .close()
@@ -2055,8 +2097,8 @@ fn meter_und_fokussierbarer_trenner_brauchen_valuenow() {
 }
 
 #[test]
-fn vollstaendige_rolle_meldet_nichts() {
-    let doc = vollstaendig()
+fn complete_role_reports_nothing() {
+    let doc = complete()
         .open("div")
         .attr("role", "checkbox")
         .attr("aria-checked", "false")
@@ -2064,11 +2106,11 @@ fn vollstaendige_rolle_meldet_nichts() {
         .close()
         .close()
         .build();
-    assert!(!hat(&run(&doc), "aria/required-attribute-missing"));
+    assert!(!has(&run(&doc), "aria/required-attribute-missing"));
 }
 
 #[test]
-fn fehlender_viewport_faellt_auf() {
+fn missing_viewport_is_flagged() {
     let doc = Arena::builder()
         .open("html")
         .attr("lang", "de")
@@ -2079,13 +2121,13 @@ fn fehlender_viewport_faellt_auf() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&doc), "zoom/viewport-missing"));
+    assert!(has(&run(&doc), "zoom/viewport-missing"));
 }
 
 /// Mehrere h1 sind in HTML zulaessig — das ist eine Erwartung, kein Verstoss.
 #[test]
-fn mehrere_h1_sind_review_nicht_fail() {
-    let doc = vollstaendig()
+fn several_h1_are_review_not_fail() {
+    let doc = complete()
         .open("h1")
         .text("Noch ein Titel")
         .close()
@@ -2103,8 +2145,8 @@ fn mehrere_h1_sind_review_nicht_fail() {
 /// Regeln. Der eine Befund sagt „dieser Text hilft niemandem", der andere
 /// „zwei Links heißen gleich, führen aber woandershin".
 #[test]
-fn nichtssagender_linktext_ist_eine_eigene_regel() {
-    let arena = vollstaendig()
+fn meaningless_link_text_is_its_own_rule() {
+    let arena = complete()
         .open("a")
         .attr("href", "/eins")
         .text("mehr")
@@ -2115,10 +2157,10 @@ fn nichtssagender_linktext_ist_eine_eigene_regel() {
         .close()
         .close()
         .build();
-    let doc = MitSemantik::new(&arena);
+    let doc = WithSemantics::new(&arena);
     let r = run_with_semantics(&doc);
 
-    let generisch: Vec<&str> = r
+    let generic: Vec<&str> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == "links/generic-name")
@@ -2126,7 +2168,7 @@ fn nichtssagender_linktext_ist_eine_eigene_regel() {
         .collect();
     // Dazu „Start" aus der Navigation der Vorlage: Seit der Übernahme von
     // auditmysites Liste (Plan 98) zählen auch Beschriftungen ohne Ziel.
-    assert_eq!(generisch.len(), 3, "{:?}", ids(&r));
+    assert_eq!(generic.len(), 3, "{:?}", ids(&r));
     // Heuristisch -- die Liste kann einen Namen treffen, der im Zusammenhang
     // doch eindeutig ist.
     assert!(
@@ -2136,14 +2178,14 @@ fn nichtssagender_linktext_ist_eine_eigene_regel() {
             .all(|f| f.outcome == Outcome::Review)
     );
     // Verschiedene Ziele, verschiedene Namen -- nicht mehrdeutig.
-    assert!(!hat(&r, "links/ambiguous-name"));
+    assert!(!has(&r, "links/ambiguous-name"));
 }
 
 /// Ein ausdruecklich dekoratives Bild braucht kein alt. Ihm eins abzuverlangen
 /// hiesse, eine bewusste Angabe des Autors zu ignorieren.
 #[test]
-fn ausdruecklich_dekorative_bilder_brauchen_kein_alt() {
-    let doc = vollstaendig()
+fn explicitly_decorative_images_need_no_alt() {
+    let doc = complete()
         .open("img")
         .attr("src", "spacer.gif")
         .attr("role", "presentation")
@@ -2155,21 +2197,21 @@ fn ausdruecklich_dekorative_bilder_brauchen_kein_alt() {
         .close()
         .build();
     let r = run(&doc);
-    assert!(!hat(&r, "images/alt-missing"), "{:?}", ids(&r));
+    assert!(!has(&r, "images/alt-missing"), "{:?}", ids(&r));
 
     // Ein gewoehnliches Bild ohne alt faellt weiterhin auf.
-    let ohne = vollstaendig()
+    let without = complete()
         .open("img")
         .attr("src", "foto.jpg")
         .close()
         .close()
         .build();
-    assert!(hat(&run(&ohne), "images/alt-missing"));
+    assert!(has(&run(&without), "images/alt-missing"));
 }
 
 #[test]
-fn leerer_oder_verwaister_aktiver_nachfahre_faellt_auf() {
-    let doc = vollstaendig()
+fn empty_or_orphaned_active_descendant_is_flagged() {
+    let doc = complete()
         .open("div")
         .attr("role", "listbox")
         .attr("tabindex", "0")
@@ -2196,9 +2238,9 @@ fn leerer_oder_verwaister_aktiver_nachfahre_faellt_auf() {
 }
 
 #[test]
-fn deaktivierter_link_unter_aria_hidden_bleibt_fokussierbar() {
+fn disabled_link_under_aria_hidden_stays_focusable() {
     // `disabled` wirkt nur an Formularfeldern.
-    let doc = vollstaendig()
+    let doc = complete()
         .open("div")
         .attr("aria-hidden", "true")
         .open("a")
@@ -2223,8 +2265,8 @@ fn deaktivierter_link_unter_aria_hidden_bleibt_fokussierbar() {
 }
 
 #[test]
-fn bild_mit_aria_label_oder_title_braucht_kein_alt() {
-    let doc = vollstaendig()
+fn image_with_aria_label_or_title_needs_no_alt() {
+    let doc = complete()
         .open("img")
         .attr("src", "logo.png")
         .attr("aria-label", "Logo")
@@ -2250,8 +2292,8 @@ fn bild_mit_aria_label_oder_title_braucht_kein_alt() {
 
 /// auditmysite#639: Die Grenze gilt auch über die Rolle des Vorfahren.
 #[test]
-fn header_unter_role_main_ist_kein_banner() {
-    let doc = sauber()
+fn header_under_role_main_is_no_banner() {
+    let doc = clean()
         .open("body")
         .open("div")
         .attr("role", "main")
@@ -2264,14 +2306,14 @@ fn header_unter_role_main_ist_kein_banner() {
         .close()
         .close()
         .build();
-    assert!(hat(&run(&doc), "landmarks/banner-missing"));
+    assert!(has(&run(&doc), "landmarks/banner-missing"));
 }
 
 /// bund.de, sachsen-anhalt.de: Das Menü einer Web-Komponente entsteht erst
 /// beim Öffnen. Eingeklappt darf `aria-controls` ins Leere zeigen (wie axe).
 #[test]
-fn eingeklapptes_aria_controls_darf_auf_spaeteres_ziel_zeigen() {
-    let doc = vollstaendig()
+fn collapsed_aria_controls_may_point_to_later_target() {
+    let doc = complete()
         .open("button")
         .attr("aria-controls", "menue-spaeter")
         .attr("aria-expanded", "false")
@@ -2297,9 +2339,9 @@ fn eingeklapptes_aria_controls_darf_auf_spaeteres_ziel_zeigen() {
 /// Cookie-Banners. Ein Fragmentlink auf den Anfang des Hauptinhalts zählt
 /// trotzdem; ein Anker mitten im Inhalt nicht.
 #[test]
-fn sprunglink_auf_den_hauptinhalt_zaehlt_auch_hinter_anderen_links() {
-    let seite = |ziel: &str| {
-        sauber()
+fn skip_link_to_main_content_counts_behind_other_links_too() {
+    let page = |target: &str| {
+        clean()
             .open("body")
             .open("div")
             .attr("class", "cookie-banner")
@@ -2312,7 +2354,7 @@ fn sprunglink_auf_den_hauptinhalt_zaehlt_auch_hinter_anderen_links() {
             .close()
             .close()
             .open("a")
-            .attr("href", ziel)
+            .attr("href", target)
             .text("Inhalt")
             .close()
             .open("nav")
@@ -2339,19 +2381,16 @@ fn sprunglink_auf_den_hauptinhalt_zaehlt_auch_hinter_anderen_links() {
             .close()
             .build()
     };
-    assert!(!hat(&run(&seite("#main")), "keyboard/skip-link-missing"));
-    assert!(!hat(&run(&seite("#titel")), "keyboard/skip-link-missing"));
-    assert!(hat(
-        &run(&seite("#abschnitt")),
-        "keyboard/skip-link-missing"
-    ));
+    assert!(!has(&run(&page("#main")), "keyboard/skip-link-missing"));
+    assert!(!has(&run(&page("#titel")), "keyboard/skip-link-missing"));
+    assert!(has(&run(&page("#abschnitt")), "keyboard/skip-link-missing"));
 }
 
 /// auditmysite#709: Ein offener Consent-Dialog blendet `<main>` per
 /// `aria-hidden` aus. Das ist korrektes Verhalten, kein fehlendes main.
 #[test]
-fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
-    let doc = sauber()
+fn main_behind_open_modal_is_hint_not_violation() {
+    let doc = clean()
         .open("body")
         .open("main")
         .attr("aria-hidden", "true")
@@ -2378,7 +2417,7 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
     assert_eq!(f.outcome, Outcome::Review);
 
     // Auch ohne aria-modal (administracion.gob.es).
-    let ohne_modal = sauber()
+    let without_modal = clean()
         .open("body")
         .open("main")
         .attr("aria-hidden", "true")
@@ -2394,7 +2433,7 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .close()
         .close()
         .build();
-    let f = run(&ohne_modal)
+    let f = run(&without_modal)
         .findings
         .into_iter()
         .find(|f| f.rule_id == "landmarks/main-missing")
@@ -2402,7 +2441,7 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
     assert_eq!(f.outcome, Outcome::Review);
 
     // Ohne Dialog bleibt es ein Verstoß.
-    let ohne = sauber()
+    let without = clean()
         .open("body")
         .open("div")
         .text("Inhalt")
@@ -2410,7 +2449,7 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
         .close()
         .close()
         .build();
-    let f = run(&ohne)
+    let f = run(&without)
         .findings
         .into_iter()
         .find(|f| f.rule_id == "landmarks/main-missing")
@@ -2422,8 +2461,8 @@ fn main_hinter_offenem_modal_ist_hinweis_nicht_verstoss() {
 /// Dann hat die Liste keine Einträge mehr, die die Assistenztechnik als
 /// solche sieht.
 #[test]
-fn li_mit_anderer_rolle_ist_kein_listeneintrag() {
-    let doc = vollstaendig()
+fn li_with_other_role_is_no_list_item() {
+    let doc = complete()
         .open("ul")
         .attr("class", "swiper-wrapper")
         .open("li")
@@ -2456,8 +2495,8 @@ fn li_mit_anderer_rolle_ist_kein_listeneintrag() {
 // --- Linkzweck aus auditmysites link_purpose (Plan 98, barrierlab#13) ------
 
 /// Ein Dokument aus `<html><body>…</body></html>` mit dem gegebenen Inhalt.
-fn mit_body(inhalt: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
-    inhalt(
+fn with_body(content: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
+    content(
         Arena::builder()
             .open("html")
             .attr("lang", "de")
@@ -2468,14 +2507,14 @@ fn mit_body(inhalt: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilde
     .build()
 }
 
-fn befunde<'r>(r: &'r Report, rule: &str) -> Vec<&'r a11y_report::Finding> {
+fn findings<'r>(r: &'r Report, rule: &str) -> Vec<&'r a11y_report::Finding> {
     r.findings.iter().filter(|f| f.rule_id == rule).collect()
 }
 
 /// Ohne erkennbaren Zusammenhang Medium, auch in fremden Sprachen.
 #[test]
-fn generischer_link_ohne_kontext_ist_medium() {
-    let arena = mit_body(|b| {
+fn generic_link_without_context_is_medium() {
+    let arena = with_body(|b| {
         b.open("a")
             .attr("href", "/a")
             .text("Click here")
@@ -2489,8 +2528,8 @@ fn generischer_link_ohne_kontext_ist_medium() {
             .text("Mehr ›")
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    let g = befunde(&r, "links/generic-name");
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    let g = findings(&r, "links/generic-name");
     assert_eq!(g.len(), 3, "{:?}", ids(&r));
     assert!(
         g.iter()
@@ -2500,8 +2539,8 @@ fn generischer_link_ohne_kontext_ist_medium() {
 
 /// auditmysite #569: „Weiter" hinter beschreibendem Text im selben Absatz.
 #[test]
-fn generischer_link_mit_text_daneben_ist_low() {
-    let arena = mit_body(|b| {
+fn generic_link_with_text_next_to_it_is_low() {
+    let arena = with_body(|b| {
         b.open("p")
             .text("Zum Blogartikel über Barrierefreiheit ")
             .open("a")
@@ -2510,8 +2549,8 @@ fn generischer_link_mit_text_daneben_ist_low() {
             .close()
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    let g = befunde(&r, "links/generic-name");
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    let g = findings(&r, "links/generic-name");
     assert_eq!(g.len(), 1);
     assert_eq!(g[0].severity, a11y_report::Severity::Low);
 }
@@ -2519,11 +2558,11 @@ fn generischer_link_mit_text_daneben_ist_low() {
 /// auditmysite Plan 71 (inros-lackner.de): Teaserkarte, Überschrift zwei
 /// Ebenen über dem Link, davor — Kontext nach H80. Danach zählt sie nicht.
 #[test]
-fn ueberschrift_vor_dem_link_ist_kontext_danach_nicht() {
-    let karte = |vorher: bool| {
-        mit_body(|b| {
+fn heading_before_the_link_is_context_after_it_is_not() {
+    let card = |before: bool| {
+        with_body(|b| {
             let b = b.open("div");
-            let b = if vorher {
+            let b = if before {
                 b.open("h3").text("Building Information Modeling").close()
             } else {
                 b
@@ -2535,7 +2574,7 @@ fn ueberschrift_vor_dem_link_ist_kontext_danach_nicht() {
                 .text("Mehr erfahren")
                 .close()
                 .close();
-            let b = if vorher {
+            let b = if before {
                 b
             } else {
                 b.open("h3").text("Nächster Abschnitt").close()
@@ -2543,24 +2582,24 @@ fn ueberschrift_vor_dem_link_ist_kontext_danach_nicht() {
             b.close()
         })
     };
-    let mit = karte(true);
-    let r = run_with_semantics(&MitSemantik::new(&mit));
+    let with = card(true);
+    let r = run_with_semantics(&WithSemantics::new(&with));
     assert_eq!(
-        befunde(&r, "links/generic-name")[0].severity,
+        findings(&r, "links/generic-name")[0].severity,
         a11y_report::Severity::Low
     );
-    let ohne = karte(false);
-    let r = run_with_semantics(&MitSemantik::new(&ohne));
+    let without = card(false);
+    let r = run_with_semantics(&WithSemantics::new(&without));
     assert_eq!(
-        befunde(&r, "links/generic-name")[0].severity,
+        findings(&r, "links/generic-name")[0].severity,
         a11y_report::Severity::Medium
     );
 }
 
 /// Eine Adresse als Linktext: ohne Kontext gemeldet, mit Text daneben nicht.
 #[test]
-fn adresse_als_linktext() {
-    let arena = mit_body(|b| {
+fn address_as_link_text() {
+    let arena = with_body(|b| {
         b.open("div")
             .open("a")
             .attr("href", "https://example.com/page")
@@ -2576,14 +2615,14 @@ fn adresse_als_linktext() {
             .close()
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(befunde(&r, "links/url-name").len(), 1, "{:?}", ids(&r));
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(findings(&r, "links/url-name").len(), 1, "{:?}", ids(&r));
 }
 
 /// Ein Zeichen ist kein Name; Seitenzahlen einer Blätternavigation schon.
 #[test]
-fn einzelnes_zeichen_aber_keine_seitenzahl() {
-    let arena = mit_body(|b| {
+fn single_character_but_no_page_number() {
+    let arena = with_body(|b| {
         b.open("a")
             .attr("href", "/x")
             .text("x")
@@ -2593,15 +2632,15 @@ fn einzelnes_zeichen_aber_keine_seitenzahl() {
             .text("2")
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(befunde(&r, "links/single-character-name").len(), 1);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(findings(&r, "links/single-character-name").len(), 1);
 }
 
 /// G201: `target="_blank"` ohne Ankündigung. auditmysite prüfte
 /// `aria-haspopup` und traf diesen Fall nie.
 #[test]
-fn neues_fenster_ohne_ankuendigung() {
-    let arena = mit_body(|b| {
+fn new_window_without_announcement() {
+    let arena = with_body(|b| {
         b.open("a")
             .attr("href", "/a")
             .attr("target", "_blank")
@@ -2618,16 +2657,16 @@ fn neues_fenster_ohne_ankuendigung() {
             .text("Menü")
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    let f = befunde(&r, "links/new-window-unannounced");
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    let f = findings(&r, "links/new-window-unannounced");
     assert_eq!(f.len(), 1, "{:?}", ids(&r));
     assert_eq!(f[0].wcag, vec!["3.2.5".to_string()]);
 }
 
 /// 2.4.9 (AAA): Zusammenhang hilft hier nicht.
 #[test]
-fn nur_linktext_ignoriert_kontext() {
-    let arena = mit_body(|b| {
+fn only_link_text_ignores_context() {
+    let arena = with_body(|b| {
         b.open("p")
             .text("Unser Jahresbericht 2026: ")
             .open("a")
@@ -2640,6 +2679,6 @@ fn nur_linktext_ignoriert_kontext() {
             .text("Allgemeine Geschäftsbedingungen")
             .close()
     });
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(befunde(&r, "links/purpose-link-only").len(), 1);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(findings(&r, "links/purpose-link-only").len(), 1);
 }

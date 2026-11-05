@@ -12,6 +12,7 @@ use crate::outcome::{Outcome, Severity};
 /// Kontrastprüfung ohne Rendering-Zugriff wie eine bestandene Prüfung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum NotRun {
     /// Der Host liefert die nötigen Daten nicht — z. B. Rendering-Werte bei
     /// statischer HTML-Analyse. Die Regel ist nicht anwendbar, nicht bestanden.
@@ -27,6 +28,7 @@ pub enum NotRun {
 /// Ein Ausführungsvermerk je Regel. Beantwortet „lief das überhaupt?", während
 /// [`Finding`] beantwortet „was kam dabei heraus?".
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct RuleRun {
     pub rule_id: String,
     /// Der Durchgang, in dem diese Regel lief — etwa `desktop` oder `mobile`.
@@ -100,6 +102,7 @@ impl RuleRun {
 /// Score würde genau die Unterscheidung einebnen, für die es die vier Zustände
 /// gibt.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Summary {
     pub fail: usize,
     pub review: usize,
@@ -121,13 +124,99 @@ impl Summary {
     }
 }
 
+/// Was an den Eingaben eines Laufs unvollständig war.
+///
+/// Serialisiert wie [`NotRun`] in `snake_case`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum InputKind {
+    /// Ein Stylesheet konnte nicht geladen werden.
+    StylesheetUnavailable,
+    /// Ein Stylesheet wird referenziert (etwa ein nicht aufgelöstes `@import`),
+    /// der Host hat es aber nicht geliefert.
+    StylesheetUnresolved,
+    /// Das übergebene Dokument ist bekanntermaßen unvollständig — abgeschnitten
+    /// oder ohne ausgeführte Skripte.
+    DocumentIncomplete,
+    /// Alles andere; Näheres steht in `detail`.
+    Other,
+}
+
+/// Ein Vermerk über unvollständige Eingaben eines Laufs.
+///
+/// Regeln lesen diese Vermerke **nicht** selbst; der Host trägt sie über
+/// [`Report::note_input`] ein. Wer einen Bericht mit
+/// [`InputKind::StylesheetUnavailable`] liest, muss die Kontrastregeln als
+/// ungeprüft behandeln: „keine Befunde" heißt dann nicht „bestanden".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct InputNote {
+    pub kind: InputKind,
+    /// Das Betroffene — eine URL, ein Pfad, die Vorspann-Zeichen eines `@import`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+    /// Lesbarer Grund.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+impl InputNote {
+    pub fn new(kind: InputKind) -> Self {
+        InputNote {
+            kind,
+            subject: None,
+            detail: None,
+        }
+    }
+
+    pub fn with_subject(mut self, s: impl Into<String>) -> Self {
+        self.subject = Some(s.into());
+        self
+    }
+
+    pub fn with_detail(mut self, d: impl Into<String>) -> Self {
+        self.detail = Some(d.into());
+        self
+    }
+}
+
+/// Version des JSON-Vertrags von [`Report`]. Wird bei einer nicht
+/// abwärtskompatiblen Änderung der Serialisierung erhöht.
+pub const SCHEMA_VERSION: u16 = 1;
+
+fn schema_version() -> u16 {
+    SCHEMA_VERSION
+}
+
 /// Das Gesamtergebnis eines Laufs.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Report {
+    /// Version des JSON-Vertrags, siehe [`SCHEMA_VERSION`]. Fehlt das Feld in
+    /// altem JSON, gilt [`SCHEMA_VERSION`].
+    #[serde(default = "schema_version")]
+    pub schema: u16,
     pub findings: Vec<Finding>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rule_runs: Vec<RuleRun>,
+    /// Vermerke über unvollständige Eingaben; vom Host befüllt, von keiner
+    /// Regel gelesen. Siehe [`InputNote`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inputs: Vec<InputNote>,
     pub summary: Summary,
+}
+
+impl Default for Report {
+    fn default() -> Self {
+        Report {
+            schema: SCHEMA_VERSION,
+            findings: Vec::new(),
+            rule_runs: Vec::new(),
+            inputs: Vec::new(),
+            summary: Summary::default(),
+        }
+    }
 }
 
 impl Report {
@@ -145,6 +234,11 @@ impl Report {
 
     pub fn record(&mut self, r: RuleRun) {
         self.rule_runs.push(r);
+    }
+
+    /// Hält fest, dass eine Eingabe unvollständig war.
+    pub fn note_input(&mut self, n: InputNote) {
+        self.inputs.push(n);
     }
 
     /// Nur die Befunde eines Zustands.

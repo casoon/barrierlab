@@ -1,8 +1,7 @@
 //! Phase 03: evaluates a parsed [`Schema`] against a caller-provided
 //! document, producing structured [`Report`]s for fired checks.
 //!
-//! Execution model (see `plan/03-evaluation.md` for the full rationale,
-//! including why this is based on general knowledge of the Schematron
+//! Execution model (based on general knowledge of the Schematron
 //! reference implementation rather than a verbatim ISO 19757-3 quote):
 //!
 //! - Patterns are independent: the same node may be claimed by rules in
@@ -12,30 +11,29 @@
 //!   in the same pattern is not re-evaluated by later rules in that
 //!   pattern ("first matching rule wins" — this is not a Stage-1
 //!   simplification but the actual ISO Schematron conflict-resolution
-//!   rule; `rule` has no `priority` attribute, see `plan/04-let-bindings.md`
-//!   for the grammar check that ruled this out).
+//!   rule; `rule` has no `priority` attribute in the grammar).
 //! - `rule context="X"` is evaluated as the path
 //!   `descendant-or-self::node()/X` from the document root — the usual
 //!   pragmatic reduction of an XSLT-style match pattern to a regular
 //!   location path. When `X` is itself a `|`-union of several alternatives
 //!   (e.g. `context="a | b"`), each top-level alternative gets its own
-//!   `descendant-or-self::node()/` prefix (via [`split_top_level_union`])
-//!   rather than prefixing the whole string once: XPath's `/` binds
+//!   `descendant-or-self::node()/` prefix (on the parsed expression, see
+//!   `context.rs`) rather than prefixing the whole string once: XPath's `/` binds
 //!   tighter than `|`, so a single shared prefix would only apply to the
 //!   first alternative — every later one would be evaluated as a bare
 //!   relative path from the document root instead of "anywhere in the
 //!   document", matching only a direct root child of that name.
 //! - `assert test="X"` fires (produces a `Report`) when `X` evaluates to
 //!   `false`; `report test="X"` fires when `X` evaluates to `true`.
-//! - `<let name="..." value="...">` (Stage 2, `plan/04-let-bindings.md`)
+//! - `<let name="..." value="...">` (Stage 2)
 //!   binds XPath variables visible to `context`/`test` expressions in its
 //!   scope (schema/pattern/rule), evaluated via `extend_lets`.
-//! - `phase` selection (Stage 2, `plan/05-phase-selection.md`) restricts
+//! - `phase` selection (Stage 2) restricts
 //!   evaluation to a subset of patterns via [`evaluate_with_phase`].
 //!   `evaluate` is `evaluate_with_phase` with `schema.default_phase`
 //!   (ISO's `#DEFAULT`); `phase_id: None` in `evaluate_with_phase` means
 //!   "all patterns" (ISO's `#ALL`).
-//! - `diagnostics` (Stage 2, `plan/08-diagnostics.md`): a fired check's
+//! - `diagnostics` (Stage 2): a fired check's
 //!   `diagnostics="id1 id2"` IDREFS are rendered the same way as its own
 //!   message, against the same context node. Unknown ids are skipped, not
 //!   an error (same accepted simplification as `Phase.active`).
@@ -44,9 +42,14 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use xpath_eval::{Document, DocumentCache, EvaluationContext, Expr, Node, QName, Value};
+use xpath_eval::{
+    Document, DocumentCache, EvaluationContext, Expr, Node, NodeKind, NodeTest, QName, Value,
+};
 
-use crate::schema::{Check, CheckKind, Diagnostic, LetBinding, LetValue, MessagePart, Schema};
+use crate::context::Alternative;
+use crate::schema::{
+    Check, CheckKind, Diagnostic, LetBinding, LetValue, MessagePart, Pattern, Schema,
+};
 
 /// One fired check: a failed `assert`, or a true-evaluating `report`.
 /// Checks that do not fire are not represented at all (no `fired: bool`
@@ -59,7 +62,7 @@ pub struct Report<N> {
     pub kind: CheckKind,
     pub message: String,
     /// Rendered messages of this check's `diagnostics` IDREFS, in
-    /// reference order (see `plan/08-diagnostics.md`).
+    /// reference order.
     pub diagnostics: Vec<String>,
     pub node: N,
 }
@@ -109,43 +112,9 @@ impl std::fmt::Display for SchematronEvalError {
 
 impl std::error::Error for SchematronEvalError {}
 
-/// Splits a `context` (or any XPath `UnionExpr`) string on its top-level
-/// `|` operators, i.e. the ones that are not nested inside `[...]`
-/// predicates, `(...)` groups, or `'...'`/`"..."` string literals. A
-/// context with no top-level `|` is returned as a single-element vec
-/// (unchanged, whitespace and all) — the common case.
-fn split_top_level_union(context: &str) -> Vec<&str> {
-    let mut alternatives = Vec::new();
-    let mut depth: i32 = 0;
-    let mut quote: Option<char> = None;
-    let mut start = 0;
-
-    for (byte_offset, ch) in context.char_indices() {
-        match quote {
-            Some(q) => {
-                if ch == q {
-                    quote = None;
-                }
-            }
-            None => match ch {
-                '\'' | '"' => quote = Some(ch),
-                '(' | '[' => depth += 1,
-                ')' | ']' => depth -= 1,
-                '|' if depth == 0 => {
-                    alternatives.push(&context[start..byte_offset]);
-                    start = byte_offset + ch.len_utf8();
-                }
-                _ => {}
-            },
-        }
-    }
-    alternatives.push(&context[start..]);
-    alternatives
-}
-
 /// Evaluates `schema` against `document` under ISO's `#DEFAULT` phase
 /// resolution: `schema.default_phase` if set, otherwise `#ALL` (every
-/// pattern) — see [`evaluate_with_phase`] and `plan/05-phase-selection.md`.
+/// pattern) — see [`evaluate_with_phase`].
 /// Returns one [`Report`] per fired check, in the order patterns/rules/
 /// checks appear in the schema and nodes are visited (document order
 /// within a rule's matches).
@@ -160,7 +129,6 @@ pub fn evaluate<'a, D: Document>(
 /// activated by the phase named `phase_id` — `None` means `#ALL` (every
 /// pattern, ignoring `Schema.phases` entirely). `Some(id)` with no
 /// matching `Schema.phases[_].id` is [`SchematronEvalError::UnknownPhase`].
-/// See `plan/05-phase-selection.md`.
 pub fn evaluate_with_phase<'a, D: Document>(
     schema: &Schema,
     document: &'a D,
@@ -214,6 +182,7 @@ fn evaluate_in<'a, D: Document>(
         cache,
     };
     let mut reports = Vec::new();
+    let mut index = None;
 
     let mut schema_scope = Scope::new(None);
     extend_lets(&mut schema_scope, &schema.lets, document.root(), &env)?;
@@ -237,60 +206,10 @@ fn evaluate_in<'a, D: Document>(
         let mut pattern_scope = Scope::new(Some(&phase_scope));
         extend_lets(&mut pattern_scope, &pattern.lets, document.root(), &env)?;
 
-        // Context nodes already claimed by an earlier rule of this
-        // pattern, kept in document order so membership is a binary
-        // search rather than a scan (barrierlab#69).
-        let mut claimed: Vec<D::N<'a>> = Vec::new();
+        let matched = match_pattern(pattern, document, &env, &mut index)?;
 
-        for rule in &pattern.rules {
-            let path = split_top_level_union(&rule.context)
-                .into_iter()
-                .map(|alternative| {
-                    let alternative = alternative.trim();
-                    // A bare "/" (ISO's root pattern — match only the
-                    // document root) is the one case the general
-                    // `descendant-or-self::node()/` prefix breaks outright
-                    // rather than just loosening: prefixed, it becomes
-                    // `descendant-or-self::node()//`, a trailing `//` with
-                    // no following step — a parse error, not just an
-                    // overly-permissive match (issue #11). `/` alone is
-                    // already exactly "the document root", so it's used
-                    // unprefixed instead.
-                    if alternative == "/" {
-                        "/".to_owned()
-                    } else {
-                        format!("descendant-or-self::node()/{alternative}")
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join(" | ");
-            let expr = xpath_eval::parse(&path).map_err(SchematronEvalError::Parse)?;
-
-            let mut ctx = EvaluationContext::new(document.root());
-            ctx.namespaces = Some(&ns_lookup);
-            ctx.cache = Some(cache);
-            let value = xpath_eval::evaluate(&expr, &ctx).map_err(SchematronEvalError::Eval)?;
-
-            let mut matches = match value {
-                Value::NodeSet(nodes) => nodes,
-                _ => {
-                    return Err(SchematronEvalError::ContextNotNodeSet {
-                        context: rule.context.clone(),
-                    });
-                }
-            };
-            matches.sort_by(|a, b| a.document_order(*b));
-
-            let mut newly_claimed = Vec::new();
-            for node in matches {
-                if claimed
-                    .binary_search_by(|probe| probe.document_order(node))
-                    .is_ok()
-                {
-                    continue;
-                }
-                newly_claimed.push(node);
-
+        for (rule, nodes) in pattern.rules.iter().zip(matched) {
+            for node in nodes {
                 let mut node_scope = Scope::new(Some(&pattern_scope));
                 extend_lets(&mut node_scope, &rule.lets, node, &env)?;
 
@@ -307,11 +226,200 @@ fn evaluate_in<'a, D: Document>(
                     }
                 }
             }
-            claimed = merge_in_document_order(claimed, newly_claimed);
         }
     }
 
     Ok(reports)
+}
+
+/// The nodes a `child::` step can select (everything but the root,
+/// attributes and namespace nodes), in document order, and the elements
+/// among them by expanded name. Built by one walk per document.
+struct NodeIndex<N> {
+    all: Vec<N>,
+    by_name: HashMap<(Option<String>, String), Vec<N>>,
+}
+
+impl<'a, N: Node<'a>> NodeIndex<N> {
+    fn new(root: N) -> Self {
+        let mut index = NodeIndex {
+            all: Vec::new(),
+            by_name: HashMap::new(),
+        };
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node != root {
+                index.all.push(node);
+                if node.kind() == NodeKind::Element
+                    && let Some(name) = node.expanded_name()
+                {
+                    index
+                        .by_name
+                        .entry((name.namespace_uri, name.local_name))
+                        .or_default()
+                        .push(node);
+                }
+            }
+            let start = stack.len();
+            stack.extend(node.children());
+            stack[start..].reverse();
+        }
+        index
+    }
+}
+
+/// A [`Alternative::Node`] with its name test resolved, so most nodes are
+/// rejected on their name without evaluating anything.
+enum NodeMatcher<'c> {
+    /// `*`, or a name test: an element, optionally of this expanded name,
+    /// whose `predicates` all hold.
+    Element {
+        name: Option<(Option<String>, &'c str)>,
+        predicates: &'c [Expr],
+    },
+    /// Any other node test: the whole `self::` step is evaluated.
+    Step(&'c Expr),
+}
+
+impl<'c> NodeMatcher<'c> {
+    fn new(
+        test: &'c NodeTest,
+        predicates: &'c [Expr],
+        step: &'c Expr,
+        ns_lookup: &dyn Fn(&str) -> Option<String>,
+    ) -> Self {
+        match test {
+            NodeTest::AnyName => NodeMatcher::Element {
+                name: None,
+                predicates,
+            },
+            NodeTest::QName(qname) => match qname.prefix.as_deref() {
+                None => NodeMatcher::Element {
+                    name: Some((None, &qname.local)),
+                    predicates,
+                },
+                Some(prefix) => match ns_lookup(prefix) {
+                    Some(uri) => NodeMatcher::Element {
+                        name: Some((Some(uri), &qname.local)),
+                        predicates,
+                    },
+                    // Unbound prefix: left to the evaluator to report.
+                    None => NodeMatcher::Step(step),
+                },
+            },
+            _ => NodeMatcher::Step(step),
+        }
+    }
+
+    fn matches<'a, N: Node<'a>>(
+        &self,
+        node: N,
+        ctx: &EvaluationContext<'a, '_, N>,
+    ) -> Result<bool, SchematronEvalError> {
+        match self {
+            NodeMatcher::Step(step) => {
+                xpath_eval::evaluate_boolean(step, ctx).map_err(SchematronEvalError::Eval)
+            }
+            NodeMatcher::Element { name, predicates } => {
+                if node.kind() != NodeKind::Element {
+                    return Ok(false);
+                }
+                if let Some((uri, local)) = name
+                    && !node.has_expanded_name(uri.as_deref(), local)
+                {
+                    return Ok(false);
+                }
+                for predicate in *predicates {
+                    if !xpath_eval::evaluate_boolean(predicate, ctx)
+                        .map_err(SchematronEvalError::Eval)?
+                    {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+        }
+    }
+}
+
+/// For each rule of `pattern`, the nodes it claims in document order: a
+/// node belongs to the first rule of the pattern whose context matches it.
+fn match_pattern<'a, D: Document>(
+    pattern: &Pattern,
+    document: &'a D,
+    env: &Env<'_, D::N<'a>>,
+    index: &mut Option<NodeIndex<D::N<'a>>>,
+) -> Result<Vec<Vec<D::N<'a>>>, SchematronEvalError> {
+    let root = document.root();
+    let mut ctx = EvaluationContext::new(root);
+    ctx.namespaces = Some(env.ns_lookup);
+    ctx.cache = Some(env.cache);
+
+    let mut compiled = Vec::new();
+    for rule in &pattern.rules {
+        compiled.push(
+            rule.compiled
+                .alternatives(&rule.context)
+                .map_err(SchematronEvalError::Parse)?,
+        );
+    }
+
+    let mut matched = Vec::with_capacity(pattern.rules.len());
+    let mut claimed: Vec<D::N<'a>> = Vec::new();
+    for (rule, alternatives) in pattern.rules.iter().zip(&compiled) {
+        let mut nodes = Vec::new();
+        for alternative in alternatives.iter() {
+            match alternative {
+                Alternative::Node {
+                    test,
+                    predicates,
+                    step,
+                } => {
+                    let index = index.get_or_insert_with(|| NodeIndex::new(root));
+                    let matcher = NodeMatcher::new(test, predicates, step, env.ns_lookup);
+                    let candidates = match &matcher {
+                        NodeMatcher::Element {
+                            name: Some((uri, local)),
+                            ..
+                        } => index
+                            .by_name
+                            .get(&(uri.clone(), (*local).to_owned()))
+                            .map_or(&[][..], Vec::as_slice),
+                        _ => index.all.as_slice(),
+                    };
+                    for &node in candidates {
+                        let mut node_ctx = ctx;
+                        node_ctx.node = node;
+                        if matcher.matches(node, &node_ctx)? {
+                            nodes.push(node);
+                        }
+                    }
+                }
+                Alternative::Set(expr) => {
+                    match xpath_eval::evaluate(expr, &ctx).map_err(SchematronEvalError::Eval)? {
+                        Value::NodeSet(set) => nodes.extend(set),
+                        _ => {
+                            return Err(SchematronEvalError::ContextNotNodeSet {
+                                context: rule.context.clone(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        nodes.sort_by(|a, b| a.document_order(*b));
+        nodes.dedup();
+
+        nodes.retain(|&node| {
+            claimed
+                .binary_search_by(|probe| probe.document_order(node))
+                .is_err()
+        });
+        claimed = merge_in_document_order(claimed, nodes.clone());
+        matched.push(nodes);
+    }
+
+    Ok(matched)
 }
 
 /// Merges two node lists that are each in document order and disjoint.
@@ -456,8 +564,8 @@ fn with_context<'n, N: Node<'n>, T>(
 /// Evaluates `lets` in document order against `context_node`, adding each
 /// binding to `scope` as it goes — so a binding's `value` expression can
 /// reference earlier bindings (both from an enclosing scope and from
-/// earlier in `lets` itself), but not later ones in `lets`. See
-/// `plan/04-let-bindings.md` for the scoping rationale (schema/pattern-level
+/// earlier in `lets` itself), but not later ones in `lets`. Scoping:
+/// (schema/pattern-level
 /// `<let>` evaluate against the document root, rule-level against the
 /// matched context node).
 fn extend_lets<'n, N: Node<'n>>(
@@ -529,8 +637,7 @@ fn evaluate_check<'n, N: Node<'n>>(
 /// (issue #4 — reuses `xpath-eval`'s existing `name()`/`qname_string`
 /// implementation rather than reimplementing qualified-name formatting
 /// here) — then the whole concatenated result is trimmed (leading/trailing
-/// whitespace only, see `plan/06-value-of-interpolation.md` for why
-/// trimming moved here from parse time). Only called for checks that
+/// whitespace only; trimming happens here, not at parse time). Only called for checks that
 /// actually fire (see call site) — a broken `value-of`/`name` in a message
 /// that never fires must not surface as an error.
 fn render_message<'n, N: Node<'n>>(
@@ -864,21 +971,20 @@ mod tests {
     }
 
     #[test]
-    fn split_top_level_union_ignores_nested_pipes() {
-        assert_eq!(split_top_level_union("item"), vec!["item"]);
-        assert_eq!(split_top_level_union("a | b | c"), vec!["a ", " b ", " c"]);
-        // A `|` inside a predicate (e.g. an attribute-value alternation)
-        // is not a context-level union and must not be split on.
-        assert_eq!(
-            split_top_level_union("a[@x = 'p|q']"),
-            vec!["a[@x = 'p|q']"]
-        );
-        assert_eq!(split_top_level_union("a[b | c]"), vec!["a[b | c]"]);
-        assert_eq!(split_top_level_union("(a | b)/c"), vec!["(a | b)/c"]);
-        assert_eq!(
-            split_top_level_union("a[@x = 'p|q'] | b"),
-            vec!["a[@x = 'p|q'] ", " b"]
-        );
+    fn context_unions_split_only_at_the_top_level() {
+        let count = |context: &str| {
+            crate::context::CompiledContext::new(context)
+                .alternatives(context)
+                .unwrap()
+                .len()
+        };
+        assert_eq!(count("item"), 1);
+        assert_eq!(count("a | b | c"), 3);
+        // A `|` inside a predicate is not a context-level union.
+        assert_eq!(count("a[@x = 'p|q']"), 1);
+        assert_eq!(count("a[b | c]"), 1);
+        assert_eq!(count("(a | b)/c"), 1);
+        assert_eq!(count("a[@x = 'p|q'] | b"), 2);
     }
 
     #[test]

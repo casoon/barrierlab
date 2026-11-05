@@ -49,7 +49,7 @@ pub type NamespaceLookup<'a> = dyn Fn(&str) -> Option<String> + 'a;
 ///
 /// `'ctx` is the node/document borrow lifetime (`N: Node<'ctx>`); `'hook` is
 /// an independent lifetime for the `variables`/`namespaces` hook references.
-/// The two are deliberately decoupled (see `plan/05b-decouple-hook-lifetime.md`):
+/// The two are deliberately decoupled:
 /// a hook built locally within a single `evaluate()` call (e.g. a closure
 /// over a temporary namespace-binding table) does not need to live as long
 /// as the document itself, and there is no `'hook: 'ctx` (or reverse) bound
@@ -779,8 +779,7 @@ fn predicate_truth<'a, N: Node<'a>>(val: &Value<N>, position: usize) -> bool {
 /// predicate's context size/position come from the node-set the *previous*
 /// predicate filtered down to, not from the original, unfiltered input —
 /// this is what makes `child::*[1][self::foo]` differ from
-/// `child::*[self::foo][1]` (see `plan/04-evaluation-core.md`'s worked
-/// example and the module-level test of the same shape).
+/// `child::*[self::foo][1]` (see the module-level test of the same shape).
 fn apply_predicates<'ctx, 'hook, N: Node<'ctx>>(
     predicates: &[Expr],
     nodes: Vec<N>,
@@ -2085,8 +2084,7 @@ mod tests {
             idx: 0,
         };
 
-        // This inner block is the point of the test (see
-        // `plan/05b-decouple-hook-lifetime.md`): the namespace-resolution
+        // This inner block is the point of the test: the namespace-resolution
         // hook, and the `EvaluationContext` borrowing it via `'hook`, are
         // both built *and dropped* here — modeling a `schematron-engine`
         // caller that builds its namespace hook locally from a `Schema`'s

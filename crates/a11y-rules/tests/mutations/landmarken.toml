@@ -18,10 +18,10 @@ id = "landmarks/main-missing"
 file = "src/structure.rs"
 kind = "invert"
 find = '''
-        0 if modal_offen(doc) => out.push(
+        0 if modal_open(doc) => out.push(
 '''
 replace = '''
-        0 if !modal_offen(doc) => out.push(
+        0 if !modal_open(doc) => out.push(
 '''
 test = "korpus"
 expect = "killed"
@@ -74,10 +74,10 @@ id = "landmarks/banner-missing"
 file = "src/structure.rs"
 kind = "drop-condition"
 find = '''
-            ist_landmark(n, tag, rolle) && (n.attr("role").is_some() || ist_dokumentweit(n))
+            is_landmark(n, tag, role) && (n.attr("role").is_some() || is_document_wide(n))
 '''
 replace = '''
-            ist_landmark(n, tag, rolle)
+            is_landmark(n, tag, role)
 '''
 test = "korpus"
 expect = "killed"
@@ -102,10 +102,10 @@ id = "landmarks/not-unique"
 file = "src/landmarks.rs"
 kind = "threshold"
 find = '''
-        if anzahl[&(*rolle, name.as_str())] < 2 {
+        if count[&(*role, name.as_str())] < 2 {
 '''
 replace = '''
-        if anzahl[&(*rolle, name.as_str())] < 3 {
+        if count[&(*role, name.as_str())] < 3 {
 '''
 test = "korpus"
 expect = "killed"
@@ -130,10 +130,10 @@ id = "landmarks/not-top-level"
 file = "src/landmarks.rs"
 kind = "early-return"
 find = '''
-        let Some(aussen) = ancestors(*n).find_map(|a| landmark(doc, a)) else {
+        let Some(outside) = ancestors(*n).find_map(|a| landmark(doc, a)) else {
 '''
 replace = '''
-        let Some(aussen) = ancestors(*n).find_map(|a| landmark(doc, a)).filter(|_| false) else {
+        let Some(outside) = ancestors(*n).find_map(|a| landmark(doc, a)).filter(|_| false) else {
 '''
 test = "korpus"
 expect = "killed"
@@ -156,10 +156,10 @@ id = "landmarks/banner-duplicate"
 file = "src/landmarks.rs"
 kind = "threshold"
 find = '''
-        if gleiche.len() < 2 {
+        if same.len() < 2 {
 '''
 replace = '''
-        if gleiche.len() < 3 {
+        if same.len() < 3 {
 '''
 test = "korpus"
 expect = "killed"
@@ -182,10 +182,10 @@ id = "landmarks/content-outside"
 file = "src/landmarks.rs"
 kind = "drop-finding"
 find = '''
-                    } else if hat_inhalt(doc, k, &sprung) {
+                    } else if has_content(doc, k, &jump) {
 '''
 replace = '''
-                    } else if false && hat_inhalt(doc, k, &sprung) {
+                    } else if false && has_content(doc, k, &jump) {
 '''
 test = "korpus"
 expect = "killed"
@@ -221,10 +221,10 @@ id = "keyboard/interactive-not-focusable"
 file = "src/landmarks.rs"
 kind = "invert"
 find = '''
-        let Some(r) = rolle.filter(|r| INTERAKTIV.contains(r)) else {
+        let Some(r) = role.filter(|r| INTERACTIVE.contains(r)) else {
 '''
 replace = '''
-        let Some(r) = rolle.filter(|r| !INTERAKTIV.contains(r)) else {
+        let Some(r) = role.filter(|r| !INTERACTIVE.contains(r)) else {
 '''
 test = "korpus"
 expect = "killed"
@@ -234,10 +234,10 @@ id = "keyboard/interactive-not-focusable"
 file = "src/landmarks.rs"
 kind = "drop-condition"
 find = '''
-        if fokussierbar(n) || deaktiviert(n) || n.is_element("option") || fokus_verwaltet(n) {
+        if focusable(n) || disabled(n) || n.is_element("option") || focus_managed(n) {
 '''
 replace = '''
-        if fokussierbar(n) || deaktiviert(n) || n.is_element("option") {
+        if focusable(n) || disabled(n) || n.is_element("option") {
 '''
 test = "korpus"
 expect = "killed"
@@ -259,12 +259,8 @@ expect = "killed"
 id = "dialog/focusable-missing"
 file = "src/landmarks.rs"
 kind = "drop-condition"
-find = '''
-            .any(|d| d.kind() == NodeKind::Element && fokussierbar(d) && !deaktiviert(d))
-'''
-replace = '''
-            .any(|d| d.kind() == NodeKind::Element && fokussierbar(d))
-'''
+find = '''descendants(n).any(|d| d.kind() == NodeKind::Element && focusable(d) && !disabled(d))'''
+replace = '''descendants(n).any(|d| d.kind() == NodeKind::Element && focusable(d))'''
 test = "korpus"
 expect = "killed"
 
@@ -299,12 +295,12 @@ id = "landmarks/main-missing"
 file = "src/structure.rs"
 kind = "early-return"
 find = '''
-    if !seite_hat_inhalt(doc) {
+    if !page_has_content(doc) {
         return;
     }
 '''
 replace = '''
-    if false && !seite_hat_inhalt(doc) {
+    if false && !page_has_content(doc) {
         return;
     }
 '''

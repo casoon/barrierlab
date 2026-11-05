@@ -33,7 +33,7 @@ states exist for.
 
 ## One record per ID
 
-`Report` has three fields: `findings`, `rule_runs` and `summary`. `RuleRun` answers "did it run
+`Report` has the fields `findings`, `rule_runs`, `inputs` and `summary`, plus `schema`, the version of the JSON contract (`SCHEMA_VERSION`, currently 1). `RuleRun` answers "did it run
 at all?", `Finding` answers "what came out of it?". The records are kept per
 **finding** ID, not per parent rule. This way `rule_runs` and
 `findings` use the same set of names and can be joined via `rule_id`.
@@ -41,6 +41,14 @@ at all?", `Finding` answers "what came out of it?". The records are kept per
 Anyone checking the same page under several conditions keeps one record per run with
 `viewport`; the key is then `(rule_id, viewport)`. A record for a rule that did not run can name
 via `wcag` which criterion remained unchecked.
+
+## Incomplete inputs
+
+`Report::inputs` is an optional list of `InputNote { kind, subject, detail }` (omitted from the
+JSON when empty). `kind` is one of `stylesheet_unavailable`, `stylesheet_unresolved`,
+`document_incomplete`, `other`. The host records them with `Report::note_input`; rules do **not**
+read them. A report with `stylesheet_unavailable` means the contrast rules were effectively
+untested, even if they report no findings.
 
 ## The JSON contract
 

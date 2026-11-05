@@ -78,10 +78,10 @@ file = "src/structure.rs"
 kind = "threshold"
 test = "korpus"
 find = '''
-        if gesperrt || max.is_some_and(|v| v < 2.0) {
+        if locked || max.is_some_and(|v| v < 2.0) {
 '''
 replace = '''
-        if gesperrt || max.is_some_and(|v| v <= 2.0) {
+        if locked || max.is_some_and(|v| v <= 2.0) {
 '''
 expect = "killed"
 
@@ -91,10 +91,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
+        let locked = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
 '''
 replace = '''
-        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no"));
+        let locked = matches!(viewport_value(&c, "user-scalable"), Some("no"));
 '''
 expect = "killed"
 
@@ -135,10 +135,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-    if !gefunden {
+    if !found {
 '''
 replace = '''
-    if gefunden {
+    if found {
 '''
 expect = "killed"
 
@@ -263,10 +263,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        } else if wiederholt {
+        } else if repeated {
 '''
 replace = '''
-        } else if !wiederholt {
+        } else if !repeated {
 '''
 expect = "killed"
 
@@ -276,10 +276,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-    if !ueberschrift && !main && !sprunglink_vorhanden(doc) {
+    if !heading && !main && !skip_link_present(doc) {
 '''
 replace = '''
-    if !ueberschrift && !sprunglink_vorhanden(doc) {
+    if !heading && !skip_link_present(doc) {
 '''
 expect = "killed"
 
@@ -289,10 +289,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        if n.attr("alt").is_none() && alternative_ohne_alt(n) {
+        if n.attr("alt").is_none() && alternative_without_alt(n) {
 '''
 replace = '''
-        if n.attr("alt").is_none() && !alternative_ohne_alt(n) {
+        if n.attr("alt").is_none() && !alternative_without_alt(n) {
 '''
 expect = "killed"
 
@@ -386,10 +386,10 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-    if zu_ueberspringen && !sprunglink_vorhanden(doc) {
+    if to_skip && !skip_link_present(doc) {
 '''
 replace = '''
-    if !sprunglink_vorhanden(doc) {
+    if !skip_link_present(doc) {
 '''
 expect = "killed"
 
@@ -399,7 +399,7 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-            .is_some_and(|ziel| beginnt_hauptinhalt(*ziel))
+            .is_some_and(|target| starts_main_content(*target))
 '''
 replace = '''
             .is_some()
@@ -412,7 +412,7 @@ file = "src/document.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-    if lang.trim().is_empty() || xml.trim().is_empty() || primaer(lang) == primaer(xml) {
+    if lang.trim().is_empty() || xml.trim().is_empty() || primary(lang) == primary(xml) {
 '''
 replace = '''
     if lang.trim().is_empty() || xml.trim().is_empty() || lang == xml {
@@ -425,10 +425,10 @@ file = "src/document.rs"
 kind = "threshold"
 test = "korpus"
 find = '''
-        if text.chars().count() < 100 || woerter.len() < 16 {
+        if text.chars().count() < 100 || words.len() < 16 {
 '''
 replace = '''
-        if text.chars().count() < 101 || woerter.len() < 16 {
+        if text.chars().count() < 101 || words.len() < 16 {
 '''
 expect = "killed"
 
@@ -451,10 +451,10 @@ file = "src/document.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        if erklaert.is_some_and(|l| l != seite) {
+        if explained.is_some_and(|l| l != page) {
 '''
 replace = '''
-        if erklaert.is_some_and(|l| l == seite) {
+        if explained.is_some_and(|l| l == page) {
 '''
 expect = "killed"
 
@@ -464,10 +464,10 @@ file = "src/document.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-    if !matches!(seite.as_str(), "de" | "en") {
+    if !matches!(page.as_str(), "de" | "en") {
 '''
 replace = '''
-    if !matches!(seite.as_str(), "de" | "en" | "fr") {
+    if !matches!(page.as_str(), "de" | "en" | "fr") {
 '''
 expect = "killed"
 
@@ -490,10 +490,10 @@ file = "src/document.rs"
 kind = "threshold"
 test = "korpus"
 find = '''
-        if s == 0 || s > ZWANZIG_STUNDEN {
+        if s == 0 || s > TWENTY_HOURS {
 '''
 replace = '''
-        if s == 0 || s >= ZWANZIG_STUNDEN {
+        if s == 0 || s >= TWENTY_HOURS {
 '''
 expect = "killed"
 
@@ -503,10 +503,10 @@ file = "src/document.rs"
 kind = "threshold"
 test = "korpus"
 find = '''
-        if s == 0 || s > ZWANZIG_STUNDEN {
+        if s == 0 || s > TWENTY_HOURS {
 '''
 replace = '''
-        if s <= 1 || s > ZWANZIG_STUNDEN {
+        if s <= 1 || s > TWENTY_HOURS {
 '''
 expect = "killed"
 
@@ -531,9 +531,9 @@ file = "src/document.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        .filter(|n| ist_abschnitt(*n) && !descendants(*n).any(ist_ueberschrift))
+        .filter(|n| is_section(*n) && !descendants(*n).any(is_heading))
 '''
 replace = '''
-        .filter(|n| ist_abschnitt(*n))
+        .filter(|n| is_section(*n))
 '''
 expect = "killed"

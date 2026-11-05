@@ -1,6 +1,5 @@
 //! Abstract syntax tree for XPath 1.0 expressions (production numbers as in
-//! the [XPath 1.0 grammar](https://www.w3.org/TR/1999/REC-xpath-19991116/#exprlex),
-//! see `plan/02-lexer-parser.md`).
+//! the [XPath 1.0 grammar](https://www.w3.org/TR/1999/REC-xpath-19991116/#exprlex)).
 //!
 //! Abbreviated syntax (`@name`, `.`, `..`, `//`) is desugared during parsing
 //! into its equivalent explicit-axis form — there is no separate

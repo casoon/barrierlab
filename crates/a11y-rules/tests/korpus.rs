@@ -18,27 +18,27 @@
 //! Techniken, WAI-ARIA 1.2, HTML-AAM, accname 1.2, HTML), nicht aus der
 //! aktuellen Ausgabe der Regeln; jeder Fall nennt seine Quelle.
 //!
-//! `gate_jede_kennung_hat_alle_drei_arten` lässt den Lauf scheitern, sobald
+//! `gate_every_id_has_all_three_kinds` lässt den Lauf scheitern, sobald
 //! eine Kennung eine der drei Arten nicht hat — auch eine neu hinzugekommene.
 //!
 //! `KORPUS_ID=<kennung>[,<kennung>…]` beschränkt `korpus_faelle` auf die
 //! Fälle dieser Kennungen; der Mutationslauf (`xtask/mutate.py`) benutzt das.
 
 mod korpus {
+    pub mod catalog;
     pub mod faelle;
     pub mod host;
-    pub mod katalog;
 }
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use a11y_report::{Outcome, Report};
 
-use korpus::faelle::{Art, Fall, Modus, alle};
+use korpus::faelle::{Fall, Kind, Mode, all};
 use korpus::host::Host;
 
 /// Alle deklarierten Kennungen, aus den Registraturen — nicht aus dem Text.
-fn kennungen() -> BTreeSet<&'static str> {
+fn all_ids() -> BTreeSet<&'static str> {
     a11y_rules::structure_metas()
         .iter()
         .chain(a11y_rules::semantics_metas())
@@ -49,52 +49,52 @@ fn kennungen() -> BTreeSet<&'static str> {
 }
 
 /// Führt einen Fall so aus, wie ein Host es täte, der alle Tiers liefert.
-fn bericht(fall: &Fall) -> Report {
-    let doc = korpus::host::dokument(fall.html);
+fn report(fall: &Fall) -> Report {
+    let doc = korpus::host::document(fall.html);
     let host = Host::new(&doc);
     let sheets = host.stylesheets();
-    match fall.modus {
-        Modus::Voll => a11y_rules::run_stylesheets(a11y_rules::run_full(&host), &host, &sheets),
-        Modus::Semantik => {
+    match fall.mode {
+        Mode::Full => a11y_rules::run_stylesheets(a11y_rules::run_full(&host), &host, &sheets),
+        Mode::Semantics => {
             a11y_rules::run_stylesheets(a11y_rules::run_with_semantics(&host), &host, &sheets)
         }
     }
 }
 
 /// Prüft einen Fall; `Err` mit einer lesbaren Begründung, wenn er scheitert.
-fn pruefe(fall: &Fall) -> Result<(), String> {
-    let r = bericht(fall);
-    let lauf = r.rule_runs.iter().find(|l| l.rule_id == fall.id);
-    let Some(lauf) = lauf else {
+fn check(fall: &Fall) -> Result<(), String> {
+    let r = report(fall);
+    let rule_run = r.rule_runs.iter().find(|l| l.rule_id == fall.id);
+    let Some(rule_run) = rule_run else {
         return Err("kein RuleRun für die Kennung".into());
     };
-    let urteile: Vec<Outcome> = r
+    let verdicts: Vec<Outcome> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == fall.id)
         .map(|f| f.outcome)
         .collect();
-    match fall.art {
-        Art::Positiv(erwartet) => {
-            if urteile.is_empty() {
-                return Err(format!("erwartet {erwartet:?}, nichts gemeldet"));
+    match fall.kind {
+        Kind::Positive(expects) => {
+            if verdicts.is_empty() {
+                return Err(format!("erwartet {expects:?}, nichts gemeldet"));
             }
-            if urteile.iter().any(|u| *u != erwartet) {
-                return Err(format!("erwartet nur {erwartet:?}, gemeldet {urteile:?}"));
+            if verdicts.iter().any(|u| *u != expects) {
+                return Err(format!("erwartet nur {expects:?}, gemeldet {verdicts:?}"));
             }
-            if let Some(n) = fall.anzahl
-                && urteile.len() != n
+            if let Some(n) = fall.count
+                && verdicts.len() != n
             {
-                return Err(format!("erwartet {n} Befunde, gemeldet {}", urteile.len()));
+                return Err(format!("erwartet {n} Befunde, gemeldet {}", verdicts.len()));
             }
             Ok(())
         }
-        Art::Negativ | Art::NichtAnwendbar => {
-            if lauf.not_run.is_some() {
-                return Err(format!("Regel lief nicht: {:?}", lauf.not_run));
+        Kind::Negative | Kind::NotApplicable => {
+            if rule_run.not_run.is_some() {
+                return Err(format!("Regel lief nicht: {:?}", rule_run.not_run));
             }
-            if !urteile.is_empty() {
-                return Err(format!("nichts erwartet, gemeldet {urteile:?}"));
+            if !verdicts.is_empty() {
+                return Err(format!("nichts erwartet, gemeldet {verdicts:?}"));
             }
             Ok(())
         }
@@ -103,118 +103,118 @@ fn pruefe(fall: &Fall) -> Result<(), String> {
 
 #[test]
 fn korpus_faelle() {
-    let nur = std::env::var("KORPUS_ID").ok();
-    let auswahl: Option<Vec<&str>> = nur.as_deref().map(|s| s.split(',').collect());
-    let mut fehler = Vec::new();
-    let mut gelaufen = 0;
-    for fall in alle() {
-        if auswahl.as_ref().is_some_and(|ids| !ids.contains(&fall.id)) {
+    let only = std::env::var("KORPUS_ID").ok();
+    let selection: Option<Vec<&str>> = only.as_deref().map(|s| s.split(',').collect());
+    let mut error = Vec::new();
+    let mut run = 0;
+    for fall in all() {
+        if selection
+            .as_ref()
+            .is_some_and(|ids| !ids.contains(&fall.id))
+        {
             continue;
         }
-        gelaufen += 1;
-        if let Err(grund) = pruefe(&fall) {
-            fehler.push(format!(
-                "{} [{}{}]: {grund}\n    Quelle: {}",
+        run += 1;
+        if let Err(reason) = check(&fall) {
+            error.push(format!(
+                "{} [{}{}]: {reason}\n    Quelle: {}",
                 fall.id,
-                fall.art.name(),
-                fall.variante.map(|v| format!(", {v}")).unwrap_or_default(),
-                fall.quelle,
+                fall.kind.name(),
+                fall.variant.map(|v| format!(", {v}")).unwrap_or_default(),
+                fall.source,
             ));
         }
     }
-    assert!(gelaufen > 0, "keine Fälle gelaufen (KORPUS_ID = {nur:?})");
+    assert!(run > 0, "keine Fälle gelaufen (KORPUS_ID = {only:?})");
     assert!(
-        fehler.is_empty(),
-        "{} von {gelaufen} Fällen scheitern:\n{}",
-        fehler.len(),
-        fehler.join("\n")
+        error.is_empty(),
+        "{} von {run} Fällen scheitern:\n{}",
+        error.len(),
+        error.join("\n")
     );
 }
 
 #[test]
-fn gate_jede_kennung_hat_alle_drei_arten() {
-    let ids = kennungen();
-    let mut arten: BTreeMap<&str, [usize; 3]> = ids.iter().map(|id| (*id, [0; 3])).collect();
-    let mut unbekannt = BTreeSet::new();
-    for fall in alle() {
+fn gate_every_id_has_all_three_kinds() {
+    let ids = all_ids();
+    let mut kinds: BTreeMap<&str, [usize; 3]> = ids.iter().map(|id| (*id, [0; 3])).collect();
+    let mut unknown = BTreeSet::new();
+    for fall in all() {
         assert!(
-            !fall.quelle.trim().is_empty(),
+            !fall.source.trim().is_empty(),
             "{}: Fall ohne Quelle",
             fall.id
         );
-        match arten.get_mut(fall.id) {
-            Some(z) => z[fall.art.index()] += 1,
+        match kinds.get_mut(fall.id) {
+            Some(z) => z[fall.kind.index()] += 1,
             None => {
-                unbekannt.insert(fall.id);
+                unknown.insert(fall.id);
             }
         }
     }
     assert!(
-        unbekannt.is_empty(),
-        "Fälle für nicht deklarierte Kennungen: {unbekannt:?}"
+        unknown.is_empty(),
+        "Fälle für nicht deklarierte Kennungen: {unknown:?}"
     );
-    let luecken: Vec<String> = arten
+    let gaps: Vec<String> = kinds
         .iter()
         .filter(|(_, z)| z.contains(&0))
         .map(|(id, z)| format!("{id}: positiv {}, negativ {}, n/a {}", z[0], z[1], z[2]))
         .collect();
     assert!(
-        luecken.is_empty(),
+        gaps.is_empty(),
         "{} von {} Kennungen ohne alle drei Fallarten:\n{}",
-        luecken.len(),
+        gaps.len(),
         ids.len(),
-        luecken.join("\n")
+        gaps.join("\n")
     );
 }
 
 #[test]
-fn gate_mutationskatalog_deckt_jede_kennung() {
-    let ids = kennungen();
-    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let eintraege = korpus::katalog::lade(&wurzel.join("tests/mutations"));
-    let mut gedeckt = BTreeSet::new();
-    let mut fehler = Vec::new();
-    for e in &eintraege {
+fn gate_mutation_catalog_covers_every_id() {
+    let ids = all_ids();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let entries = korpus::catalog::load(&root.join("tests/mutations"));
+    let mut covered = BTreeSet::new();
+    let mut error = Vec::new();
+    for e in &entries {
         if !ids.contains(e.id.as_str()) {
-            fehler.push(format!("{}: Kennung nicht deklariert", e.id));
+            error.push(format!("{}: Kennung nicht deklariert", e.id));
         }
-        gedeckt.insert(e.id.clone());
-        let pfad = wurzel.join(&e.file);
-        let Ok(text) = std::fs::read_to_string(&pfad) else {
-            fehler.push(format!("{}: Datei {} fehlt", e.id, e.file));
+        covered.insert(e.id.clone());
+        let path = root.join(&e.file);
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            error.push(format!("{}: Datei {} fehlt", e.id, e.file));
             continue;
         };
         let n = text.matches(e.find.as_str()).count();
         if n != 1 {
-            fehler.push(format!(
+            error.push(format!(
                 "{}: `find` kommt {n}-mal in {} vor, erwartet genau einmal",
                 e.id, e.file
             ));
         }
         if e.find == e.replace {
-            fehler.push(format!("{}: `find` und `replace` sind gleich", e.id));
+            error.push(format!("{}: `find` und `replace` sind gleich", e.id));
         }
         if !matches!(e.expect.as_str(), "killed" | "equivalent") {
-            fehler.push(format!("{}: expect = {:?}", e.id, e.expect));
+            error.push(format!("{}: expect = {:?}", e.id, e.expect));
         }
         if e.expect == "equivalent" && e.note.trim().is_empty() {
-            fehler.push(format!("{}: äquivalente Mutation ohne Begründung", e.id));
+            error.push(format!("{}: äquivalente Mutation ohne Begründung", e.id));
         }
     }
     for id in &ids {
-        if !gedeckt.contains(*id) {
-            fehler.push(format!("{id}: keine Mutation im Katalog"));
-        } else if !eintraege
-            .iter()
-            .any(|e| e.id == *id && e.expect == "killed")
-        {
-            fehler.push(format!("{id}: keine Mutation, die ein Test töten muss"));
+        if !covered.contains(*id) {
+            error.push(format!("{id}: keine Mutation im Katalog"));
+        } else if !entries.iter().any(|e| e.id == *id && e.expect == "killed") {
+            error.push(format!("{id}: keine Mutation, die ein Test töten muss"));
         }
     }
     assert!(
-        fehler.is_empty(),
+        error.is_empty(),
         "Mutationskatalog unvollständig:\n{}",
-        fehler.join("\n")
+        error.join("\n")
     );
 }
 
@@ -222,27 +222,27 @@ fn gate_mutationskatalog_deckt_jede_kennung() {
 /// `Basis::BestPractice`, nie `Fail` mit Schlagwort. Die Darstellungskonvention
 /// (`viz/*`, `display/*`) ist ausgenommen — sie hängt am Kriterium.
 #[test]
-fn empfehlungen_tragen_die_basis_und_stehen_in_der_liste() {
+fn recommendations_carry_basis_and_are_listed() {
     use a11y_report::Basis;
 
-    let mut gesehen = BTreeSet::new();
-    for fall in alle() {
-        for f in bericht(&fall).findings {
-            let konvention = f.rule_id.starts_with("viz/") || f.rule_id.starts_with("display/");
-            let getaggt = f.tags.iter().any(|t| t == "best-practice");
-            let gelistet = a11y_rules::best_practice_rule(&f.rule_id).is_some();
-            if konvention {
+    let mut seen = BTreeSet::new();
+    for fall in all() {
+        for f in report(&fall).findings {
+            let convention = f.rule_id.starts_with("viz/") || f.rule_id.starts_with("display/");
+            let tagged = f.tags.iter().any(|t| t == "best-practice");
+            let listed = a11y_rules::best_practice_rule(&f.rule_id).is_some();
+            if convention {
                 assert_ne!(f.basis, Basis::BestPractice, "{}", f.rule_id);
                 continue;
             }
             if f.basis == Basis::BestPractice {
                 assert_eq!(f.outcome, Outcome::Review, "{}", f.rule_id);
-                assert!(getaggt, "{}: Schlagwort fehlt", f.rule_id);
-                assert!(gelistet, "{}: nicht in BEST_PRACTICE_RULES", f.rule_id);
-                gesehen.insert(f.rule_id);
+                assert!(tagged, "{}: Schlagwort fehlt", f.rule_id);
+                assert!(listed, "{}: nicht in BEST_PRACTICE_RULES", f.rule_id);
+                seen.insert(f.rule_id);
             } else {
                 assert!(
-                    !getaggt,
+                    !tagged,
                     "{}: Schlagwort ohne Basis (Fail+Tag-Altlast)",
                     f.rule_id
                 );
@@ -250,10 +250,10 @@ fn empfehlungen_tragen_die_basis_und_stehen_in_der_liste() {
         }
     }
     for r in a11y_rules::BEST_PRACTICE_RULES {
-        assert!(kennungen().contains(r.id), "{}: unbekannte Kennung", r.id);
+        assert!(all_ids().contains(r.id), "{}: unbekannte Kennung", r.id);
         assert!(!r.reason.is_empty(), "{}", r.id);
         assert!(
-            gesehen.contains(r.id),
+            seen.contains(r.id),
             "{}: im Korpus nie als Empfehlung gemeldet",
             r.id
         );
@@ -262,13 +262,13 @@ fn empfehlungen_tragen_die_basis_und_stehen_in_der_liste() {
 
 /// auditmysite#779 / barrierlab#81: eine h2 ohne h1 ist Empfehlung, kein Verstoß.
 #[test]
-fn h2_ohne_h1_ist_eine_empfehlung_kein_verstoss() {
+fn h2_without_h1_is_recommendation_not_violation() {
     let fall = korpus::faelle::review(
         "headings/h1-missing",
         "<main><h2>Titel</h2></main>",
         "WCAG 1.3.1: Überschrift bestimmbar, keine Ebene verlangt",
     );
-    let r = bericht(&fall);
+    let r = report(&fall);
     let f: Vec<_> = r
         .findings
         .iter()

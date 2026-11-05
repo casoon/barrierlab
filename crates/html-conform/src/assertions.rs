@@ -174,7 +174,7 @@ impl SchematronEngine for RuleSetEngine {
 }
 
 /// Maps [`AssertionFailure`]s onto this crate's public [`Finding`] model.
-/// `rule_id` is prefixed with `assertion.` (plan/06-assertions-engine.md)
+/// `rule_id` is prefixed with `assertion.`
 /// to namespace it against the `parser.*`/future `schema.*` layers'
 /// findings — e.g. `assertion.aria.hidden-not-focusable`.
 pub(crate) fn findings(failures: &[AssertionFailure]) -> Vec<Finding> {

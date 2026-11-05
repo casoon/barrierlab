@@ -11,9 +11,10 @@ Paket hier liegt.
 | Werkzeug | Repository | benutzt heute | wird benutzen |
 |---|---|---|---|
 | auditmysite | `casoon/auditmysite` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `a11y-perception`, `web-checks` |
-| astro-post-audit | `casoon/astro-post-audit` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `web-checks` |
+| astro-post-audit | `casoon/astro-post-audit` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `web-checks`, `style-cascade` (casoon/astro-post-audit#115) |
 | liveaudit | `casoon/liveaudit` | die vier a11y-Crates direkt (WASM-Adapter im Repo) | `a11y-wasm` als npm-Paket |
 | Relief | `casoon/relief` | `a11y-perception`, `a11y-dom`, `accname`, `a11y-report` | `a11y-rules` |
+| barrierlab-cli | `casoon/barrierlab-cli` (noch nicht veröffentlicht) | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `style-cascade` | — |
 | auditmysite_studio | `casoon/auditmysite_studio` | `auditmysite` als Bibliothek | — |
 
 Regeln, die sich daraus ergeben:

@@ -8,9 +8,9 @@ use a11y_dom::{
 };
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, pick, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, StructureRule};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -310,23 +310,23 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     if !doc.root().is_element("html") {
         return;
     }
-    let mut gefunden = false;
+    let mut found = false;
     for n in elements(doc).filter(|n| n.is_element("meta")) {
         if n.attr("name") != Some("viewport") {
             continue;
         }
-        gefunden = true;
+        found = true;
         let Some(content) = n.attr("content") else {
             continue;
         };
         // Kleinschreiben vor dem Vergleich: HTML-Attributwerte sind nicht
         // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
         let c = content.to_ascii_lowercase();
-        let gesperrt = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
+        let locked = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
         let max = viewport_value(&c, "maximum-scale").and_then(|v| v.parse::<f32>().ok());
 
         // Unter 200 %: verletzt 1.4.4 unmittelbar.
-        if gesperrt || max.is_some_and(|v| v < 2.0) {
+        if locked || max.is_some_and(|v| v < 2.0) {
             out.push(
                 Finding::fail(
                     "zoom/viewport-locked",
@@ -370,7 +370,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // erlaubt (1.4.4), und 1.4.10 wird über die Vergrößerung im Browser
     // geprüft, die die Angabe nicht berührt. Best Practice ohne Kriterium
     // (auditmysite#779).
-    if !gefunden {
+    if !found {
         out.push(
             Finding::best_practice(
                 "zoom/viewport-missing",
@@ -417,8 +417,8 @@ fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
 /// Die Überschriftenebene: `h1`–`h6` nach HTML-AAM, `role="heading"` mit
 /// `aria-level` (WAI-ARIA 1.2: ohne Angabe Ebene 2). Eine andere explizite
 /// Rolle nimmt einem `hN` die Überschrift (`<h2 role="tab">`).
-fn ueberschrift_ebene<'a, N: Node<'a>>(n: N) -> Option<u8> {
-    match explizite_rolle(n) {
+fn heading_level_of<'a, N: Node<'a>>(n: N) -> Option<u8> {
+    match explicit_role(n) {
         Some("heading") => Some(
             n.attr("aria-level")
                 .and_then(|v| v.trim().parse::<u8>().ok())
@@ -437,7 +437,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut h1s: Vec<NodeId> = Vec::new();
 
     for n in elements(doc) {
-        let Some(level) = ueberschrift_ebene(n) else {
+        let Some(level) = heading_level_of(n) else {
             continue;
         };
         any = true;
@@ -490,15 +490,15 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // einzelnes Dokument nicht (auditmysite#779). Gezählt wird auch
     // `role="heading"`. Hinter einem offenen Dialog fehlen die Mechanismen
     // für den Moment der Messung, nicht für die Seite (auditmysite#709).
-    let ueberschrift = any || elements(doc).any(|n| explizite_rolle(n) == Some("heading"));
-    let main = elements(doc).any(|n| ist_landmark(n, "main", "main"));
-    if !ueberschrift && !main && !sprunglink_vorhanden(doc) {
-        let wiederholt = elements(doc).any(|n| {
-            ist_landmark(n, "nav", "navigation")
-                || (ist_landmark(n, "header", "banner")
-                    && (n.attr("role").is_some() || ist_dokumentweit(n)))
+    let heading = any || elements(doc).any(|n| explicit_role(n) == Some("heading"));
+    let main = elements(doc).any(|n| is_landmark(n, "main", "main"));
+    if !heading && !main && !skip_link_present(doc) {
+        let repeated = elements(doc).any(|n| {
+            is_landmark(n, "nav", "navigation")
+                || (is_landmark(n, "header", "banner")
+                    && (n.attr("role").is_some() || is_document_wide(n)))
         });
-        let f = if modal_offen(doc) {
+        let f = if modal_open(doc) {
             Finding::review(
                 "headings/none",
                 pick!(
@@ -508,7 +508,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-        } else if wiederholt {
+        } else if repeated {
             Finding::fail(
                 "headings/none",
                 pick!(
@@ -576,7 +576,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Welche Attribute eine Rolle zwingend braucht, damit ihr Zustand überhaupt
 /// übermittelt wird. Eine Checkbox ohne `aria-checked` wird als Checkbox
 /// angesagt, deren Zustand niemand erfährt.
-const ERFORDERLICH: &[(&str, &[&str])] = &[
+const REQUIRED: &[(&str, &[&str])] = &[
     ("checkbox", &["aria-checked"]),
     ("switch", &["aria-checked"]),
     ("radio", &["aria-checked"]),
@@ -596,7 +596,7 @@ const ERFORDERLICH: &[(&str, &[&str])] = &[
 /// nicht per ARIA braucht: `<input type="range" role="slider">` hat seinen
 /// Wert, `<input type="checkbox" role="switch">` seinen Haken (ARIA in HTML
 /// verbietet dort sogar `aria-checked`). Beleg: auditmysite#656.
-fn zustand_nativ<'a, N: Node<'a>>(n: N) -> bool {
+fn state_native<'a, N: Node<'a>>(n: N) -> bool {
     if n.is_element("meter") || n.is_element("progress") {
         return true;
     }
@@ -610,28 +610,25 @@ fn zustand_nativ<'a, N: Node<'a>>(n: N) -> bool {
 
 fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let Some(rolle) = n.attr("role").map(str::trim) else {
+        let Some(role) = n.attr("role").map(str::trim) else {
             continue;
         };
         // Bei mehreren Rollen gilt die erste, die der Browser kennt.
-        let Some(erste) = rolle.split_whitespace().next() else {
+        let Some(first) = role.split_whitespace().next() else {
             continue;
         };
-        let Some((_, noetig)) = ERFORDERLICH
-            .iter()
-            .find(|(r, _)| r.eq_ignore_ascii_case(erste))
-        else {
+        let Some((_, needed)) = REQUIRED.iter().find(|(r, _)| r.eq_ignore_ascii_case(first)) else {
             continue;
         };
-        if zustand_nativ(n) {
+        if state_native(n) {
             continue;
         }
-        if erste.eq_ignore_ascii_case("separator") && !n.has_attr("tabindex") {
+        if first.eq_ignore_ascii_case("separator") && !n.has_attr("tabindex") {
             continue;
         }
 
-        let fehlend: Vec<&str> = noetig.iter().copied().filter(|a| !n.has_attr(a)).collect();
-        if fehlend.is_empty() {
+        let missing: Vec<&str> = needed.iter().copied().filter(|a| !n.has_attr(a)).collect();
+        if missing.is_empty() {
             continue;
         }
         out.push(
@@ -639,10 +636,10 @@ fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
                 "aria/required-attribute-missing",
                 tr!(
                     locale,
-                    "role=\"{erste}\" requires {}, but {} is missing.",
-                    "role=\"{erste}\" braucht {}, aber {} fehlt.",
-                    noetig.join(", "),
-                    fehlend.join(", ")
+                    "role=\"{first}\" requires {}, but {} is missing.",
+                    "role=\"{first}\" braucht {}, aber {} fehlt.",
+                    needed.join(", "),
+                    missing.join(", ")
                 ),
             )
             .with_severity(Severity::High)
@@ -658,9 +655,9 @@ fn aria_required_attributes<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 ///
 /// Die Rolle zählt vor dem Tag: `<div role="main">` ist eine Main-Landmark,
 /// `<main role="presentation">` ist keine.
-fn ist_landmark<'a, N: Node<'a>>(n: N, tag: &str, rolle: &str) -> bool {
+fn is_landmark<'a, N: Node<'a>>(n: N, tag: &str, role: &str) -> bool {
     match n.attr("role").map(str::trim) {
-        Some(r) => r.split_whitespace().any(|x| x.eq_ignore_ascii_case(rolle)),
+        Some(r) => r.split_whitespace().any(|x| x.eq_ignore_ascii_case(role)),
         None => n.is_element(tag),
     }
 }
@@ -674,15 +671,15 @@ const SECTIONING: &[&str] = &["article", "aside", "main", "nav", "section"];
 /// Dieselbe Grenze über die Rolle (HTML-AAM, `header`/`footer`): Ein
 /// `<div role="main">` schließt ein `<header>` genauso ein wie ein `<main>`.
 /// Beleg: auditmysite#639.
-const SECTIONING_ROLLEN: &[&str] = &["article", "complementary", "main", "navigation", "region"];
+const SECTIONING_ROLES: &[&str] = &["article", "complementary", "main", "navigation", "region"];
 
-pub(crate) fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
+pub(crate) fn is_document_wide<'a, N: Node<'a>>(n: N) -> bool {
     a11y_dom::ancestors(n).all(|a| {
         !SECTIONING.contains(&a.local_name())
             && !a.attr("role").is_some_and(|r| {
                 r.split_whitespace()
                     .next()
-                    .is_some_and(|x| SECTIONING_ROLLEN.iter().any(|s| x.eq_ignore_ascii_case(s)))
+                    .is_some_and(|x| SECTIONING_ROLES.iter().any(|s| x.eq_ignore_ascii_case(s)))
             })
     })
 }
@@ -695,21 +692,21 @@ pub(crate) fn ist_dokumentweit<'a, N: Node<'a>>(n: N) -> bool {
 /// `<main>` trotzdem aus (auditmysite#709). Die Sicht der Regel enthält nur
 /// Dargestelltes; ein per Stil geschlossener Dialog zählt bei Hosts mit
 /// Stilen also nicht.
-fn modal_offen<D: Document>(doc: &D) -> bool {
+fn modal_open<D: Document>(doc: &D) -> bool {
     elements(doc).any(|n| {
-        let dialog_rolle = n.attr("role").is_some_and(|r| {
+        let dialog_role = n.attr("role").is_some_and(|r| {
             r.split_whitespace().next().is_some_and(|x| {
                 x.eq_ignore_ascii_case("dialog") || x.eq_ignore_ascii_case("alertdialog")
             })
         });
-        dialog_rolle || (n.is_element("dialog") && n.has_attr("open"))
+        dialog_role || (n.is_element("dialog") && n.has_attr("open"))
     })
 }
 
 /// Ob im `<body>` etwas steht, das in eine Landmark gehören könnte: Text
 /// oder ein ersetztes bzw. Bedienelement. Die Sicht der Regel enthält nur,
 /// was im Accessibility-Tree steht; Verstecktes zählt also nicht.
-fn seite_hat_inhalt<D: Document>(doc: &D) -> bool {
+fn page_has_content<D: Document>(doc: &D) -> bool {
     elements(doc)
         .filter(|n| n.is_element("body") || a11y_dom::ancestors(*n).any(|a| a.is_element("body")))
         .filter(|n| !matches!(n.local_name(), "script" | "style" | "template" | "noscript"))
@@ -738,12 +735,12 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Landmarks fassen Inhalt (WAI-ARIA 1.2, „landmark“). Eine Seite ohne
     // jeden Inhalt — leer oder alles versteckt — erwartet keine; die fünf
     // Befunde hier wären über nichts.
-    if !seite_hat_inhalt(doc) {
+    if !page_has_content(doc) {
         return;
     }
-    let wurzel = doc.root().id();
+    let root = doc.root().id();
     let mains: Vec<_> = elements(doc)
-        .filter(|n| ist_landmark(*n, "main", "main"))
+        .filter(|n| is_landmark(*n, "main", "main"))
         .collect();
 
     // Fehlende und doppelte main-Landmark sind Best Practice ohne Kriterium
@@ -757,7 +754,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // Befund über die Seite, sondern über den Moment der Messung — ein
         // Hinweis, kein Verstoß. Beleg: fünf von 21 EU-Portalen mit offenem
         // Consent-Dialog (auditmysite#709).
-        0 if modal_offen(doc) => out.push(
+        0 if modal_open(doc) => out.push(
             Finding::best_practice(
                 "landmarks/main-missing",
                 pick!(
@@ -767,7 +764,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-            .at(at(wurzel)),
+            .at(at(root)),
         ),
         0 => out.push(
             Finding::best_practice(
@@ -779,7 +776,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .at(at(wurzel)),
+            .at(at(root)),
         ),
         1 => {}
         n => out.push(
@@ -800,7 +797,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Navigation, banner und contentinfo sind Erwartungen, keine beweisbaren
     // Verstöße: Eine Seite darf ohne Navigation auskommen. Deshalb REVIEW und
     // nicht FAIL -- eine dritte Achse „Gewissheit" gibt es bewusst nicht.
-    for (tag, rolle, kennung, text) in [
+    for (tag, role, id, text) in [
         (
             "nav",
             "navigation",
@@ -832,15 +829,15 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             ),
         ),
     ] {
-        let vorhanden = elements(doc).any(|n| {
-            ist_landmark(n, tag, rolle) && (n.attr("role").is_some() || ist_dokumentweit(n))
+        let present = elements(doc).any(|n| {
+            is_landmark(n, tag, role) && (n.attr("role").is_some() || is_document_wide(n))
         });
-        if !vorhanden {
+        if !present {
             out.push(
-                Finding::review(kennung, text)
+                Finding::review(id, text)
                     .with_severity(Severity::Low)
                     .with_wcag(["1.3.1", "2.4.1"])
-                    .at(at(wurzel)),
+                    .at(at(root)),
             );
         }
     }
@@ -853,7 +850,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Das ist eine Heuristik über Linktext, `class` und `id` — es gibt kein
 /// Merkmal, an dem ein Sprunglink sicher zu erkennen wäre. Der Befund ist
 /// deshalb `REVIEW`, nicht `FAIL`.
-fn sieht_aus_wie_sprunglink<'a, N: Node<'a>>(n: N) -> bool {
+fn looks_like_skip_link<'a, N: Node<'a>>(n: N) -> bool {
     const MARKER: &[&str] = &[
         "skip",
         "sprung",
@@ -873,37 +870,37 @@ fn sieht_aus_wie_sprunglink<'a, N: Node<'a>>(n: N) -> bool {
         .any(|m| text.contains(m) || marker.contains(m))
 }
 
-fn ist_fragmentlink(href: &str) -> bool {
+fn is_fragment_link(href: &str) -> bool {
     href.starts_with('#') && href.len() > 1
 }
 
-/// Ob `ziel` der Anfang des Hauptinhalts ist: die main-Landmark selbst oder
+/// Ob `target` der Anfang des Hauptinhalts ist: die main-Landmark selbst oder
 /// ein Element, das an ihrem Anfang steht (jeder Vorfahre bis zur Landmark
 /// ist das erste Element-Kind). `<main><h1 id="inhalt">` gehört dazu, ein
 /// Abschnitt mitten im Inhalt nicht — ein Inhaltsverzeichnis ist kein
 /// Sprunglink.
-fn beginnt_hauptinhalt<'a, N: Node<'a>>(ziel: N) -> bool {
-    let mut n = ziel;
+fn starts_main_content<'a, N: Node<'a>>(target: N) -> bool {
+    let mut n = target;
     loop {
-        if ist_landmark(n, "main", "main") {
+        if is_landmark(n, "main", "main") {
             return true;
         }
-        let Some(eltern) = n.parent() else {
+        let Some(parent) = n.parent() else {
             return false;
         };
-        let erstes = eltern
+        let first = parent
             .children()
             .find(|k| k.kind() == a11y_dom::NodeKind::Element);
-        if erstes != Some(n) {
+        if first != Some(n) {
             return false;
         }
-        n = eltern;
+        n = parent;
     }
 }
 
 /// Ob die Seite einen Sprunglink hat — am Ziel, an der Lage vor dem ersten
 /// Link, der die Seite verlässt, oder an Text und Klasse erkannt.
-fn sprunglink_vorhanden<D: Document>(doc: &D) -> bool {
+fn skip_link_present<D: Document>(doc: &D) -> bool {
     let links: Vec<_> = elements(doc)
         .filter(|n| n.is_element("a") && n.has_attr("href"))
         .collect();
@@ -913,11 +910,11 @@ fn sprunglink_vorhanden<D: Document>(doc: &D) -> bool {
     let ids: HashMap<ScopedId, _> = elements(doc)
         .filter_map(|n| n.attr("id").map(|id| (scoped_id(n, id), n)))
         .collect();
-    let zum_hauptinhalt = links.iter().any(|n| {
+    let to_the_main_content = links.iter().any(|n| {
         n.attr("href")
-            .filter(|h| ist_fragmentlink(h))
+            .filter(|h| is_fragment_link(h))
             .and_then(|h| ids.get(&scoped_id(*n, &h[1..])))
-            .is_some_and(|ziel| beginnt_hauptinhalt(*ziel))
+            .is_some_and(|target| starts_main_content(*target))
     });
     // Am Ziel erkannt, wie axe `isSkipLink`: Links vor dem ersten, der die
     // Seite verlässt, springen innerhalb der Seite — in jeder Sprache. Nur
@@ -926,20 +923,20 @@ fn sprunglink_vorhanden<D: Document>(doc: &D) -> bool {
     // Beleg: auditmysite#642, „Aller au contenu" auf jeder /fr/-Seite.
     // `href=""` verlässt die Seite nicht; es zählt weder als Sprunglink noch
     // beendet es die Folge davor.
-    let voran = links
+    let ahead = links
         .iter()
         .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
-        .take_while(|n| n.attr("href").is_some_and(ist_fragmentlink))
+        .take_while(|n| n.attr("href").is_some_and(is_fragment_link))
         .count();
-    let echte = links
+    let real = links
         .iter()
         .filter(|n| n.attr("href").is_some_and(|h| !h.trim().is_empty()))
         .count();
-    zum_hauptinhalt
-        || (voran > 0 && voran < echte)
+    to_the_main_content
+        || (ahead > 0 && ahead < real)
         || links
             .iter()
-            .any(|n| n.attr("href").is_some_and(ist_fragmentlink) && sieht_aus_wie_sprunglink(*n))
+            .any(|n| n.attr("href").is_some_and(is_fragment_link) && looks_like_skip_link(*n))
 }
 
 fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
@@ -947,13 +944,13 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // nennt Navigationslinks und Kopfbereiche. Eine Seite ohne Link und ohne
     // Navigations- oder Kopf-Landmark hat nichts, das ein Sprunglink umgehen
     // könnte; dort ist die Regel nicht anwendbar.
-    let zu_ueberspringen = elements(doc).any(|n| {
+    let to_skip = elements(doc).any(|n| {
         (n.is_element("a") && n.attr("href").is_some_and(|h| !h.trim().is_empty()))
-            || ist_landmark(n, "nav", "navigation")
-            || (ist_landmark(n, "header", "banner")
-                && (n.attr("role").is_some() || ist_dokumentweit(n)))
+            || is_landmark(n, "nav", "navigation")
+            || (is_landmark(n, "header", "banner")
+                && (n.attr("role").is_some() || is_document_wide(n)))
     });
-    if zu_ueberspringen && !sprunglink_vorhanden(doc) {
+    if to_skip && !skip_link_present(doc) {
         out.push(
             Finding::review(
                 "keyboard/skip-link-missing",
@@ -978,7 +975,7 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// dekorativ. Ihm ein `alt` abzuverlangen hieße, eine bewusste Angabe des
 /// Autors zu ignorieren und einen Befund zu melden, den niemand beheben kann,
 /// ohne die Angabe zurückzunehmen.
-fn ausdruecklich_dekorativ<'a, N: Node<'a>>(n: N) -> bool {
+fn explicitly_decorative<'a, N: Node<'a>>(n: N) -> bool {
     if n.attr("aria-hidden") == Some("true") {
         return true;
     }
@@ -991,7 +988,7 @@ fn ausdruecklich_dekorativ<'a, N: Node<'a>>(n: N) -> bool {
 /// Ob ein `<img>` ohne `alt` seine Textalternative anders bekommt:
 /// `aria-label`, `aria-labelledby` oder `title` sind nach ARIA6, ARIA10 und
 /// H67 hinreichende Techniken, und die Namensberechnung zieht sie heran.
-fn alternative_ohne_alt<'a, N: Node<'a>>(n: N) -> bool {
+fn alternative_without_alt<'a, N: Node<'a>>(n: N) -> bool {
     ["aria-label", "aria-labelledby", "title"]
         .iter()
         .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()))
@@ -999,10 +996,10 @@ fn alternative_ohne_alt<'a, N: Node<'a>>(n: N) -> bool {
 
 fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc).filter(|n| n.is_element("img")) {
-        if ausdruecklich_dekorativ(n) {
+        if explicitly_decorative(n) {
             continue;
         }
-        if n.attr("alt").is_none() && alternative_ohne_alt(n) {
+        if n.attr("alt").is_none() && alternative_without_alt(n) {
             continue;
         }
         match n.attr("alt") {
@@ -1152,7 +1149,7 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // Weitere Token sind Rückfallrollen (WAI-ARIA 1.2, „Handling Author
         // Errors"): Der Browser nimmt das erste, das er kennt. Ungültig ist
         // die Angabe erst, wenn kein Token eine gültige Rolle ist (ACT 674b10).
-        let hat_gueltige = role
+        let has_valid = role
             .split_whitespace()
             .any(|r| VALID_ROLES.contains(&r) || MODULE_ROLES.contains(&r));
         for r in role.split_whitespace() {
@@ -1170,7 +1167,7 @@ fn aria_roles<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     .with_wcag(["4.1.2"])
                     .at(at(n.id())),
                 );
-            } else if !hat_gueltige && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
+            } else if !has_valid && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {
                 out.push(
                     Finding::fail(
                         "aria/role-invalid",
@@ -1244,11 +1241,11 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             if rel == "aria-controls" && n.attr("aria-expanded") == Some("false") {
                 continue;
             }
-            let fehlend: Vec<&str> = v
+            let missing: Vec<&str> = v
                 .split_whitespace()
                 .filter(|id| !ids.contains(&scoped_id(n, id)))
                 .collect();
-            if !fehlend.is_empty() {
+            if !missing.is_empty() {
                 out.push(
                     Finding::fail(
                         "aria/reference-missing",
@@ -1256,7 +1253,7 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
                             locale,
                             "{rel} references IDs that do not exist: {}",
                             "{rel} verweist auf nicht vorhandene IDs: {}",
-                            fehlend.join(", ")
+                            missing.join(", ")
                         ),
                     )
                     .with_severity(Severity::High)
@@ -1371,7 +1368,7 @@ fn tabindex<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Ob die Tabtaste dieses Element erreicht: nativ fokussierbar oder mit
 /// `tabindex` ≥ 0, und nicht per `tabindex="-1"` oder `disabled` ausgenommen.
 /// `inert` und Nicht-Dargestelltes prüft der Aufrufer.
-pub(crate) fn per_tab_erreichbar<'a, N: Node<'a>>(n: N) -> bool {
+pub(crate) fn per_tab_reachable<'a, N: Node<'a>>(n: N) -> bool {
     let tabindex = n
         .attr("tabindex")
         .and_then(|t| t.trim().parse::<i32>().ok());
@@ -1402,13 +1399,13 @@ pub(crate) fn per_tab_erreichbar<'a, N: Node<'a>>(n: N) -> bool {
 /// fehlt in der Sicht dieser Regel ohnehin (`Scope::Rendered`).
 fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let mit_vorfahren = || std::iter::once(n).chain(ancestors(n));
-        if !mit_vorfahren().any(|a| a.attr("aria-hidden") == Some("true"))
-            || mit_vorfahren().any(|a| a.has_attr("inert"))
+        let with_ancestors = || std::iter::once(n).chain(ancestors(n));
+        if !with_ancestors().any(|a| a.attr("aria-hidden") == Some("true"))
+            || with_ancestors().any(|a| a.has_attr("inert"))
         {
             continue;
         }
-        if per_tab_erreichbar(n) {
+        if per_tab_reachable(n) {
             out.push(
                 Finding::fail(
                     "keyboard/hidden-focusable",
@@ -1433,18 +1430,18 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
 /// Das `role`-Attribut gehoert zu Tier 1: Es steht im Markup und braucht keine
 /// berechnete Semantik. Ohne diese Zeile waere `<div role="list">` fuer die
 /// Regel unsichtbar, obwohl es fuer die Assistenztechnik eine Liste ist.
-fn ist_liste<'a, N: Node<'a>>(n: N) -> bool {
+fn is_list<'a, N: Node<'a>>(n: N) -> bool {
     // `<menu>` ist nach HTML eine Liste aus `<li>` und nach HTML-AAM `list`.
     matches!(n.local_name(), "ul" | "ol" | "menu") || n.attr("role") == Some("list")
 }
 
 /// Ob dieser Knoten als Listeneintrag zaehlt.
-fn ist_listeneintrag<'a, N: Node<'a>>(n: N) -> bool {
+fn is_list_item<'a, N: Node<'a>>(n: N) -> bool {
     n.local_name() == "li" || n.attr("role") == Some("listitem")
 }
 
 /// Die wirksame explizite Rolle: das erste gültige Token aus `role`.
-pub(crate) fn explizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
+pub(crate) fn explicit_role<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
     n.attr("role")?
         .split_whitespace()
         .find(|r| VALID_ROLES.contains(r))
@@ -1457,13 +1454,13 @@ pub(crate) fn explizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
 /// ihm und gilt als Kind der Liste. So baut eine Web-Komponente ihre Liste im
 /// Shadow Root (`<ul><slot></slot></ul>`) und bekommt die Einträge aus dem
 /// Light DOM.
-fn listenkinder<'a, N: Node<'a>>(n: N, out: &mut Vec<N>) {
+fn list_children<'a, N: Node<'a>>(n: N, out: &mut Vec<N>) {
     for c in n.children() {
         if c.kind() != a11y_dom::NodeKind::Element {
             continue;
         }
         if c.local_name() == "slot" {
-            listenkinder(c, out);
+            list_children(c, out);
         } else {
             out.push(c);
         }
@@ -1472,28 +1469,27 @@ fn listenkinder<'a, N: Node<'a>>(n: N, out: &mut Vec<N>) {
 
 fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_liste(n) {
+        if !is_list(n) {
             continue;
         }
         // Eine andere Rolle macht aus `<ul>`/`<ol>` etwas anderes als eine
         // Liste -- `presentation`/`none` ebenso wie `listbox` oder `menu`.
-        if explizite_rolle(n).is_some_and(|r| r != "list") {
+        if explicit_role(n).is_some_and(|r| r != "list") {
             continue;
         }
         let tag = n.local_name();
-        let mut kinder = Vec::new();
-        listenkinder(n, &mut kinder);
+        let mut children = Vec::new();
+        list_children(n, &mut children);
 
         // Ein `<li>` mit einer anderen expliziten Rolle (`role="group"` bei
         // Slidern, `tab`, `menuitem`) ist kein Listeneintrag mehr — die Liste
         // hat dann Kinder, die die Assistenztechnik nicht als Einträge sieht
         // (axe `list`). Beleg: berlin.de, `ul.swiper-wrapper > li[role=group]`.
-        let fremd = kinder.iter().any(|c| {
-            let eintrag =
-                ist_listeneintrag(*c) && explizite_rolle(*c).is_none_or(|r| r == "listitem");
-            !eintrag && !matches!(c.local_name(), "script" | "template")
+        let foreign = children.iter().any(|c| {
+            let entry = is_list_item(*c) && explicit_role(*c).is_none_or(|r| r == "listitem");
+            !entry && !matches!(c.local_name(), "script" | "template")
         });
-        if fremd {
+        if foreign {
             out.push(
                 Finding::fail(
                     "lists/invalid-structure",
@@ -1515,7 +1511,7 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         // (auditmysite#779).
         // Kinder, die keine Einträge sind, meldet schon `lists/invalid-structure`;
         // „leer" wäre eine zweite, falsche Aussage über denselben Mangel.
-        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {
+        if !foreign && !children.iter().any(|c| is_list_item(*c)) {
             out.push(
                 Finding::best_practice(
                     "lists/empty",
@@ -1531,8 +1527,8 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         }
     }
 
-    beschreibungslisten(doc, locale, out);
-    verwaiste_eintraege(doc, locale, out);
+    description_lists(doc, locale, out);
+    orphaned_entries(doc, locale, out);
 }
 
 /// Ein Listeneintrag ohne Liste.
@@ -1541,26 +1537,26 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 /// steht. Ein `<li>`, das gar keine Liste über sich hat, wird dabei nie
 /// besucht — für die Assistenztechnik kündigt es aber eine Aufzählung an, die
 /// es nicht gibt.
-fn verwaiste_eintraege<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn orphaned_entries<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         // Ein `<li>` mit eigener Rolle (`none` im Menü-Muster, `tab`) ist kein
         // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln.
-        if !ist_listeneintrag(n) || explizite_rolle(n).is_some_and(|r| r != "listitem") {
+        if !is_list_item(n) || explicit_role(n).is_some_and(|r| r != "listitem") {
             continue;
         }
         // Die nächste Liste darüber. Ist sie per `role` etwas anderes
         // geworden (`ul[role=tablist]`), steht der Eintrag trotzdem außerhalb
         // einer Liste; ist sie `none`/`presentation`, erbt er das und ist
         // keiner (auditmysite#715, magyarorszag.hu).
-        let in_liste = match a11y_dom::ancestors(n).find(|a| ist_liste(*a)) {
+        let in_list = match a11y_dom::ancestors(n).find(|a| is_list(*a)) {
             None => false,
-            Some(l) => match explizite_rolle(l) {
+            Some(l) => match explicit_role(l) {
                 None | Some("list" | "directory") => true,
                 Some("none" | "presentation") => continue,
                 Some(_) => false,
             },
         };
-        if !in_liste {
+        if !in_list {
             out.push(
                 Finding::fail(
                     "lists/item-outside-list",
@@ -1579,12 +1575,12 @@ fn verwaiste_eintraege<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 }
 
 /// Ob dieser Knoten ein Definitionsbegriff ist — als `<dt>` oder per `role`.
-fn ist_begriff<'a, N: Node<'a>>(n: N) -> bool {
+fn is_term<'a, N: Node<'a>>(n: N) -> bool {
     n.local_name() == "dt" || n.attr("role") == Some("term")
 }
 
 /// Ob dieser Knoten eine Definition ist.
-fn ist_definition<'a, N: Node<'a>>(n: N) -> bool {
+fn is_definition<'a, N: Node<'a>>(n: N) -> bool {
     n.local_name() == "dd" || n.attr("role") == Some("definition")
 }
 
@@ -1600,21 +1596,21 @@ fn ist_definition<'a, N: Node<'a>>(n: N) -> bool {
 /// Inhaltsmodell von `<dl>` *danach*: Auf eine Folge von `<dt>` folgt
 /// mindestens ein `<dd>`. Ein `<dd>` vor dem Begriff gehört zu einer anderen
 /// Gruppe.
-fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn description_lists<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !ist_begriff(n) {
+        if !is_term(n) {
             continue;
         }
-        let Some(eltern) = n.parent() else { continue };
-        let hat_definition = eltern
+        let Some(parent) = n.parent() else { continue };
+        let has_definition = parent
             .children()
             .filter(|c| c.kind() == a11y_dom::NodeKind::Element)
             .skip_while(|c| *c != n)
             .filter(|c| !matches!(c.local_name(), "script" | "template"))
-            .find(|c| !ist_begriff(*c))
-            .is_some_and(ist_definition);
+            .find(|c| !is_term(*c))
+            .is_some_and(is_definition);
 
-        if !hat_definition {
+        if !has_definition {
             out.push(
                 Finding::fail(
                     "lists/term-without-definition",
@@ -1633,7 +1629,7 @@ fn beschreibungslisten<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 }
 
 /// Ob im Teilbaum eine Kopfzelle steckt — als `<th>` oder per Rolle.
-fn hat_kopfzelle<'a, N: Node<'a>>(n: N) -> bool {
+fn has_header_cell<'a, N: Node<'a>>(n: N) -> bool {
     a11y_dom::descendants(n).any(|d| {
         d.is_element("th") || matches!(d.attr("role"), Some("columnheader") | Some("rowheader"))
     })
@@ -1648,7 +1644,7 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // ist keine Tabelle", die Kopfzellen sagen das Gegenteil, und die
         // Assistenztechnik bekommt widersprüchliche Angaben.
         if matches!(n.attr("role"), Some("presentation") | Some("none")) {
-            if hat_kopfzelle(n) {
+            if has_header_cell(n) {
                 out.push(
                     Finding::fail(
                         "tables/presentational-with-headers",
@@ -1668,11 +1664,11 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // — deshalb Review, nicht Fail.
         // Namensquellen nach HTML-AAM („table Element Accessible Name
         // Computation"): aria-labelledby, aria-label, caption, title.
-        let benannt = n.children().any(|c| c.is_element("caption"))
+        let is_named = n.children().any(|c| c.is_element("caption"))
             || ["aria-label", "aria-labelledby", "title"]
                 .iter()
                 .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()));
-        if !benannt {
+        if !is_named {
             out.push(
                 Finding::review(
                     "tables/name-missing",
@@ -1691,7 +1687,7 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // sichtbaren Köpfen (F91); eine Layouttabelle oder eine Tabelle ohne
         // Köpfe ist zulässig. Was davon vorliegt, zeigt das Markup nicht —
         // `REVIEW` (auditmysite#779).
-        if !hat_kopfzelle(n) {
+        if !has_header_cell(n) {
             out.push(
                 Finding::review(
                     "tables/header-missing",
@@ -1720,8 +1716,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::High,
         help: "The <html> element needs a valid lang attribute.",
-        #[cfg(feature = "de")]
-        help_de: "Das <html>-Element braucht ein gültiges lang-Attribut.",
+        help_de: de_text!("Das <html>-Element braucht ein gültiges lang-Attribut."),
     },
     Meta {
         ids: &["document/title-missing", "document/title-empty"],
@@ -1730,8 +1725,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.2"],
         severity: Severity::High,
         help: "Every page needs a meaningful <title>.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Seite braucht einen aussagekräftigen <title>.",
+        help_de: de_text!("Jede Seite braucht einen aussagekräftigen <title>."),
     },
     Meta {
         ids: &[
@@ -1744,8 +1738,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.4"],
         severity: Severity::High,
         help: "A viewport must be present and must not prevent zooming.",
-        #[cfg(feature = "de")]
-        help_de: "Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern.",
+        help_de: de_text!("Der Viewport muss vorhanden sein und darf Zoomen nicht verhindern."),
     },
     Meta {
         ids: &[
@@ -1760,8 +1753,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1", "2.4.6"],
         severity: Severity::Medium,
         help: "Headings form the outline; do not skip levels.",
-        #[cfg(feature = "de")]
-        help_de: "Überschriften bilden die Gliederung; Ebenen nicht überspringen.",
+        help_de: de_text!("Überschriften bilden die Gliederung; Ebenen nicht überspringen."),
     },
     Meta {
         ids: &["images/alt-missing", "images/alt-suspicious"],
@@ -1770,8 +1762,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "Informative images need descriptive alt text.",
-        #[cfg(feature = "de")]
-        help_de: "Informative Bilder brauchen einen beschreibenden Alt-Text.",
+        help_de: de_text!("Informative Bilder brauchen einen beschreibenden Alt-Text."),
     },
     Meta {
         ids: &["forms/label-missing", "forms/placeholder-as-label"],
@@ -1780,8 +1771,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "3.3.2", "4.1.2"],
         severity: Severity::Critical,
         help: "Every input needs an associated label.",
-        #[cfg(feature = "de")]
-        help_de: "Jedes Eingabefeld braucht ein zugeordnetes Label.",
+        help_de: de_text!("Jedes Eingabefeld braucht ein zugeordnetes Label."),
     },
     Meta {
         ids: &["aria/role-invalid", "aria/role-abstract"],
@@ -1790,8 +1780,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only roles from the ARIA specification.",
-        #[cfg(feature = "de")]
-        help_de: "Nur Rollen aus der ARIA-Spezifikation verwenden.",
+        help_de: de_text!("Nur Rollen aus der ARIA-Spezifikation verwenden."),
     },
     Meta {
         ids: &["aria/reference-missing"],
@@ -1800,8 +1789,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "ARIA references must point to IDs that exist.",
-        #[cfg(feature = "de")]
-        help_de: "ARIA-Verweise müssen auf vorhandene IDs zeigen.",
+        help_de: de_text!("ARIA-Verweise müssen auf vorhandene IDs zeigen."),
     },
     Meta {
         ids: &["aria/required-attribute-missing"],
@@ -1810,8 +1798,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "A role that announces a state needs the attribute carrying it.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt.",
+        help_de: de_text!(
+            "Eine Rolle, die einen Zustand ansagt, braucht das Attribut, das ihn trägt."
+        ),
     },
     Meta {
         ids: &["ids/duplicate"],
@@ -1820,8 +1809,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "An ID that another element references must be unique.",
-        #[cfg(feature = "de")]
-        help_de: "Eine ID, auf die ein anderes Element verweist, muss eindeutig sein.",
+        help_de: de_text!("Eine ID, auf die ein anderes Element verweist, muss eindeutig sein."),
     },
     Meta {
         ids: &["keyboard/positive-tabindex"],
@@ -1830,8 +1818,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.3"],
         severity: Severity::High,
         help: "Positive tabindex values break the tab order.",
-        #[cfg(feature = "de")]
-        help_de: "Positive tabindex-Werte brechen die Tabreihenfolge.",
+        help_de: de_text!("Positive tabindex-Werte brechen die Tabreihenfolge."),
     },
     Meta {
         ids: &["keyboard/hidden-focusable"],
@@ -1840,8 +1827,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::High,
         help: "Focusable elements must not be aria-hidden.",
-        #[cfg(feature = "de")]
-        help_de: "Fokussierbare Elemente dürfen nicht aria-hidden sein.",
+        help_de: de_text!("Fokussierbare Elemente dürfen nicht aria-hidden sein."),
     },
     Meta {
         ids: &[
@@ -1856,9 +1842,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "<ul> and <ol> may only have <li> as direct children and must not be empty; \
                a list item must stand inside a list.",
-        #[cfg(feature = "de")]
-        help_de: "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein; \
-                  ein Listeneintrag muss in einer Liste stehen.",
+        help_de: de_text!(
+            "<ul> und <ol> dürfen als direkte Kinder nur <li> haben und nicht leer sein; \
+                  ein Listeneintrag muss in einer Liste stehen."
+        ),
     },
     Meta {
         ids: &[
@@ -1871,8 +1858,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Data tables need <th> header cells.",
-        #[cfg(feature = "de")]
-        help_de: "Datentabellen brauchen <th>-Kopfzellen.",
+        help_de: de_text!("Datentabellen brauchen <th>-Kopfzellen."),
     },
     Meta {
         ids: &[
@@ -1887,8 +1873,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "2.4.1"],
         severity: Severity::High,
         help: "Landmarks structure the page for everyone who cannot see it.",
-        #[cfg(feature = "de")]
-        help_de: "Landmarks gliedern die Seite für alle, die sie nicht sehen können.",
+        help_de: de_text!("Landmarks gliedern die Seite für alle, die sie nicht sehen können."),
     },
     Meta {
         ids: &["keyboard/skip-link-missing"],
@@ -1897,8 +1882,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.1"],
         severity: Severity::Medium,
         help: "A skip link bypasses blocks that repeat before the content.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt.",
+        help_de: de_text!("Ein Sprunglink überspringt wiederkehrende Bereiche vor dem Inhalt."),
     },
     Meta {
         ids: &["aria/attribute-unknown"],
@@ -1907,8 +1891,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "Use only aria-* attributes defined by WAI-ARIA.",
-        #[cfg(feature = "de")]
-        help_de: "Nur aria-*-Attribute verwenden, die WAI-ARIA definiert.",
+        help_de: de_text!("Nur aria-*-Attribute verwenden, die WAI-ARIA definiert."),
     },
     Meta {
         ids: &["aria/attribute-value-invalid"],
@@ -1917,8 +1900,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "ARIA attributes need a value of their type.",
-        #[cfg(feature = "de")]
-        help_de: "ARIA-Attribute brauchen einen Wert ihres Typs.",
+        help_de: de_text!("ARIA-Attribute brauchen einen Wert ihres Typs."),
     },
     Meta {
         ids: &["aria/owns-conflict"],
@@ -1927,8 +1909,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::High,
         help: "An element may be owned by only one aria-owns.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Element darf nur einem aria-owns gehören.",
+        help_de: de_text!("Ein Element darf nur einem aria-owns gehören."),
     },
     Meta {
         ids: &[
@@ -1941,8 +1922,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1", "4.1.2"],
         severity: Severity::Medium,
         help: "Tabs mark the selected tab; an expanded combobox references its popup.",
-        #[cfg(feature = "de")]
-        help_de: "Tabs zeichnen den gewählten Tab aus; eine aufgeklappte Combobox verweist auf ihr Popup.",
+        help_de: de_text!(
+            "Tabs zeichnen den gewählten Tab aus; eine aufgeklappte Combobox verweist auf ihr Popup."
+        ),
     },
     Meta {
         ids: &["popover/target-missing", "popover/target-invalid"],
@@ -1951,8 +1933,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "popovertarget must reference an element with the popover attribute.",
-        #[cfg(feature = "de")]
-        help_de: "popovertarget muss auf ein Element mit popover-Attribut verweisen.",
+        help_de: de_text!("popovertarget muss auf ein Element mit popover-Attribut verweisen."),
     },
     Meta {
         ids: &["inert/dialog-inert"],
@@ -1961,11 +1942,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.1.1", "4.1.2"],
         severity: Severity::High,
         help: "An open dialog must not be inert.",
-        #[cfg(feature = "de")]
-        help_de: "Ein offener Dialog darf nicht inert sein.",
+        help_de: de_text!("Ein offener Dialog darf nicht inert sein."),
     },
-    crate::checkliste::META,
-    crate::checkliste::META_BEWEGUNG,
+    crate::checklist::META,
+    crate::checklist::META_MOTION,
     Meta {
         ids: &["forms/autocomplete-invalid"],
         tier: Tier::Structure,
@@ -1973,8 +1953,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.5"],
         severity: Severity::Low,
         help: "autocomplete must use the autofill tokens of the HTML standard.",
-        #[cfg(feature = "de")]
-        help_de: "autocomplete muss die Autofill-Angaben des HTML-Standards verwenden.",
+        help_de: de_text!("autocomplete muss die Autofill-Angaben des HTML-Standards verwenden."),
     },
     Meta {
         ids: &["forms/error-unidentified"],
@@ -1983,8 +1962,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.1"],
         severity: Severity::Medium,
         help: "A field marked aria-invalid needs an error description via aria-describedby or aria-errormessage.",
-        #[cfg(feature = "de")]
-        help_de: "Ein als aria-invalid ausgezeichnetes Feld braucht eine Fehlerbeschreibung per aria-describedby oder aria-errormessage.",
+        help_de: de_text!(
+            "Ein als aria-invalid ausgezeichnetes Feld braucht eine Fehlerbeschreibung per aria-describedby oder aria-errormessage."
+        ),
     },
     Meta {
         ids: &["forms/group-missing"],
@@ -1993,8 +1973,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Medium,
         help: "Radio buttons and checkboxes sharing a name belong in a fieldset with legend or a named group.",
-        #[cfg(feature = "de")]
-        help_de: "Optionsfelder und gleichnamige Kontrollkästchen gehören in ein fieldset mit legend oder eine benannte Gruppe.",
+        help_de: de_text!(
+            "Optionsfelder und gleichnamige Kontrollkästchen gehören in ein fieldset mit legend oder eine benannte Gruppe."
+        ),
     },
     Meta {
         ids: &["forms/no-submit"],
@@ -2003,8 +1984,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.2"],
         severity: Severity::Medium,
         help: "A form that collects input needs an explicit submit control.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Formular, das Eingaben sammelt, braucht ein ausdrückliches Absende-Element.",
+        help_de: de_text!(
+            "Ein Formular, das Eingaben sammelt, braucht ein ausdrückliches Absende-Element."
+        ),
     },
     Meta {
         ids: &["forms/redundant-entry"],
@@ -2013,8 +1995,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.7"],
         severity: Severity::Medium,
         help: "Information entered once is prefilled, autofillable or selectable when asked again.",
-        #[cfg(feature = "de")]
-        help_de: "Einmal Eingegebenes ist bei erneuter Abfrage vorbelegt, automatisch ausfüllbar oder auswählbar.",
+        help_de: de_text!(
+            "Einmal Eingegebenes ist bei erneuter Abfrage vorbelegt, automatisch ausfüllbar oder auswählbar."
+        ),
     },
     Meta {
         ids: &["context/on-input"],
@@ -2023,8 +2006,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.2"],
         severity: Severity::Medium,
         help: "Changing a selection must not submit, navigate or open a window by itself.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Auswahl zu ändern darf nicht von selbst absenden, navigieren oder ein Fenster öffnen.",
+        help_de: de_text!(
+            "Eine Auswahl zu ändern darf nicht von selbst absenden, navigieren oder ein Fenster öffnen."
+        ),
     },
     Meta {
         ids: &["context/on-focus", "context/autofocus"],
@@ -2033,8 +2017,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.2.1"],
         severity: Severity::High,
         help: "Receiving focus must not change the context.",
-        #[cfg(feature = "de")]
-        help_de: "Der Fokus allein darf den Kontext nicht wechseln.",
+        help_de: de_text!("Der Fokus allein darf den Kontext nicht wechseln."),
     },
     Meta {
         ids: &["auth/captcha"],
@@ -2043,8 +2026,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.3.8"],
         severity: Severity::Medium,
         help: "A CAPTCHA in a sign-in form needs an alternative without a cognitive function test.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test.",
+        help_de: de_text!(
+            "Ein Captcha im Anmeldeformular braucht eine Alternative ohne kognitiven Test."
+        ),
     },
     Meta {
         ids: &["keyboard/click-handler-not-focusable"],
@@ -2054,9 +2038,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "An element with a click handler must be a control: a <button> or <a href>, or a \
                role and tabindex with keyboard handling.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
-                  <a href>, oder Rolle und tabindex mit Tastaturbedienung.",
+        help_de: de_text!(
+            "Ein Element mit Klick-Handler muss ein Bedienelement sein: <button> oder \
+                  <a href>, oder Rolle und tabindex mit Tastaturbedienung."
+        ),
     },
     Meta {
         ids: &["links/used-as-button"],
@@ -2065,8 +2050,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Low,
         help: "A link that triggers an action instead of navigating should be a <button>.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein.",
+        help_de: de_text!(
+            "Ein Link, der eine Aktion auslöst statt zu navigieren, sollte ein <button> sein."
+        ),
     },
     Meta {
         ids: &["navigation/location-missing"],
@@ -2076,9 +2062,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Low,
         help: "Show users where they are: a breadcrumb trail or aria-current=\"page\" in the \
                navigation.",
-        #[cfg(feature = "de")]
-        help_de: "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
-                  der Navigation.",
+        help_de: de_text!(
+            "Zeigen, wo man sich befindet: ein Brotkrumenpfad oder aria-current=\"page\" in \
+                  der Navigation."
+        ),
     },
     Meta {
         ids: &["images/area-alt-missing"],
@@ -2087,8 +2074,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An image map <area> with href needs alt text naming its target.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt.",
+        help_de: de_text!("Ein <area> mit href braucht einen Alt-Text, der sein Ziel nennt."),
     },
     Meta {
         ids: &["images/input-alt-missing"],
@@ -2097,8 +2083,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An <input type=\"image\"> needs alt text describing its action.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt.",
+        help_de: de_text!(
+            "Ein <input type=\"image\"> braucht einen Alt-Text, der seine Aktion beschreibt."
+        ),
     },
     Meta {
         ids: &["images/server-side-map"],
@@ -2107,9 +2094,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.1.1"],
         severity: Severity::Medium,
         help: "Do not use server-side image maps (ismap); use a client-side map or text links.",
-        #[cfg(feature = "de")]
-        help_de: "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
-                  Imagemap oder Textlinks.",
+        help_de: de_text!(
+            "Keine serverseitigen Imagemaps (ismap); stattdessen eine clientseitige \
+                  Imagemap oder Textlinks."
+        ),
     },
     Meta {
         ids: &["objects/alt-missing"],
@@ -2118,8 +2106,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::High,
         help: "An <object> needs a text alternative: fallback content, aria-label or title.",
-        #[cfg(feature = "de")]
-        help_de: "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title.",
+        help_de: de_text!(
+            "Ein <object> braucht eine Textalternative: Ersatzinhalt, aria-label oder title."
+        ),
     },
     Meta {
         ids: &["media/audio-autoplay"],
@@ -2130,8 +2119,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.4.2"],
         severity: Severity::Medium,
         help: "Audio that plays automatically must stop within three seconds or be pausable.",
-        #[cfg(feature = "de")]
-        help_de: "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen.",
+        help_de: de_text!(
+            "Selbststartender Ton muss nach drei Sekunden enden oder sich anhalten lassen."
+        ),
     },
     Meta {
         ids: &["viz/text-missing"],
@@ -2141,9 +2131,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Every visualisation (figure[data-viz]) needs a non-empty text layer \
                [data-viz-text] with its statement.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
-                  [data-viz-text] mit ihrer Aussage.",
+        help_de: de_text!(
+            "Jede Visualisierung (figure[data-viz]) braucht eine nicht leere Textschicht \
+                  [data-viz-text] mit ihrer Aussage."
+        ),
     },
     Meta {
         ids: &["display/text-hidden"],
@@ -2153,9 +2144,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Never put hidden, aria-hidden=\"true\" or inert on [data-viz-text] or its \
                ancestors; hide it visually instead.",
-        #[cfg(feature = "de")]
-        help_de: "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
-                  Vorfahren; die Schicht nur visuell ausblenden.",
+        help_de: de_text!(
+            "Kein hidden, aria-hidden=\"true\" oder inert an [data-viz-text] oder seinen \
+                  Vorfahren; die Schicht nur visuell ausblenden."
+        ),
     },
     Meta {
         ids: &["viz/caption-missing"],
@@ -2164,9 +2156,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.1.1"],
         severity: Severity::Low,
         help: "Every visualisation (figure[data-viz]) needs a <figcaption> that names it.",
-        #[cfg(feature = "de")]
-        help_de: "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
-                  benennt.",
+        help_de: de_text!(
+            "Jede Visualisierung (figure[data-viz]) braucht ein <figcaption>, das sie \
+                  benennt."
+        ),
     },
     Meta {
         ids: &["viz/static-missing"],
@@ -2176,9 +2169,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "A 3d or interactive visualisation needs a still image [data-viz-static] for calm \
                mode.",
-        #[cfg(feature = "de")]
-        help_de: "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
-                  [data-viz-static] für den ruhigen Modus.",
+        help_de: de_text!(
+            "Eine 3D- oder interaktive Visualisierung braucht ein Standbild \
+                  [data-viz-static] für den ruhigen Modus."
+        ),
     },
     Meta {
         ids: &["viz/table-missing"],
@@ -2187,8 +2181,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::Low,
         help: "A chart (data-viz=\"chart\") should give its values as a <table>.",
-        #[cfg(feature = "de")]
-        help_de: "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben.",
+        help_de: de_text!(
+            "Ein Diagramm (data-viz=\"chart\") sollte seine Werte als <table> angeben."
+        ),
     },
     Meta {
         ids: &["display/toggle-missing"],
@@ -2198,9 +2193,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::Medium,
         help: "A page with visualisations needs a display-mode toggle marked \
                [data-display-toggle].",
-        #[cfg(feature = "de")]
-        help_de: "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
-                  markierten Umschalter für den Darstellungsmodus.",
+        help_de: de_text!(
+            "Eine Seite mit Visualisierungen braucht einen mit [data-display-toggle] \
+                  markierten Umschalter für den Darstellungsmodus."
+        ),
     },
     Meta {
         ids: &["display/init-missing"],
@@ -2209,9 +2205,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.2.2"],
         severity: Severity::Low,
         help: "Set html[data-display] in a small blocking script in <head>, before <body>.",
-        #[cfg(feature = "de")]
-        help_de: "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
-                  <body>.",
+        help_de: de_text!(
+            "html[data-display] in einem kleinen blockierenden Skript in <head> setzen, vor \
+                  <body>."
+        ),
     },
     Meta {
         ids: &["tables/header-without-data", "tables/data-undetermined"],
@@ -2220,9 +2217,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["1.3.1"],
         severity: Severity::High,
         help: "Header cells need data cells to label; a table of headers only labels nothing.",
-        #[cfg(feature = "de")]
-        help_de: "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
-                  Kopfzellen beschriftet nichts.",
+        help_de: de_text!(
+            "Kopfzellen brauchen Datenzellen, die sie beschriften; eine Tabelle nur aus \
+                  Kopfzellen beschriftet nichts."
+        ),
     },
     Meta {
         ids: &["tables/headers-attr-invalid"],
@@ -2235,9 +2233,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "The headers attribute of a cell must list the ids of header cells in the same \
                table.",
-        #[cfg(feature = "de")]
-        help_de: "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
-                  nennen.",
+        help_de: de_text!(
+            "Das headers-Attribut einer Zelle muss die IDs von Kopfzellen derselben Tabelle \
+                  nennen."
+        ),
     },
     Meta {
         ids: &["document/lang-mismatch"],
@@ -2246,8 +2245,7 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.1"],
         severity: Severity::Medium,
         help: "lang and xml:lang on <html> must name the same language.",
-        #[cfg(feature = "de")]
-        help_de: "lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen.",
+        help_de: de_text!("lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen."),
     },
     Meta {
         ids: &["language/part-unmarked", "language/part-undetermined"],
@@ -2256,9 +2254,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.2"],
         severity: Severity::Medium,
         help: "A passage in another language than the page needs its own lang attribute.",
-        #[cfg(feature = "de")]
-        help_de: "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
-                  lang-Attribut.",
+        help_de: de_text!(
+            "Eine Passage in einer anderen Sprache als die Seite braucht ein eigenes \
+                  lang-Attribut."
+        ),
     },
     Meta {
         ids: &["language/abbreviation-unexpanded"],
@@ -2267,8 +2266,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["3.1.4"],
         severity: Severity::Low,
         help: "Make the expansion of an abbreviation available, e.g. in the title of <abbr>.",
-        #[cfg(feature = "de")]
-        help_de: "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>.",
+        help_de: de_text!(
+            "Die Langform einer Abkürzung verfügbar machen, etwa im title von <abbr>."
+        ),
     },
     Meta {
         ids: &["timing/meta-refresh"],
@@ -2278,9 +2278,10 @@ pub const METAS: &[Meta] = &[
         severity: Severity::High,
         help: "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\">; redirect \
                on the server or let users trigger it.",
-        #[cfg(feature = "de")]
-        help_de: "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
-                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen.",
+        help_de: de_text!(
+            "Nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
+                  weiterleiten; serverseitig weiterleiten oder Nutzer auslösen lassen."
+        ),
     },
     Meta {
         ids: &["headings/section-without-heading"],
@@ -2289,9 +2290,10 @@ pub const METAS: &[Meta] = &[
         wcag: &["2.4.10"],
         severity: Severity::Low,
         help: "Give articles and named sections a heading so users can find their content.",
-        #[cfg(feature = "de")]
-        help_de: "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
-                  Inhalt findet.",
+        help_de: de_text!(
+            "Artikeln und benannten Abschnitten eine Überschrift geben, damit man ihren \
+                  Inhalt findet."
+        ),
     },
     Meta {
         ids: &["aria/role-redundant"],
@@ -2300,8 +2302,7 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Low,
         help: "Do not set a role the element already has implicitly.",
-        #[cfg(feature = "de")]
-        help_de: "Keine Rolle setzen, die das Element ohnehin implizit hat.",
+        help_de: de_text!("Keine Rolle setzen, die das Element ohnehin implizit hat."),
     },
     Meta {
         ids: &["names/title-only"],
@@ -2310,8 +2311,9 @@ pub const METAS: &[Meta] = &[
         wcag: &["4.1.2"],
         severity: Severity::Medium,
         help: "Do not rely on the title attribute as a control's only name.",
-        #[cfg(feature = "de")]
-        help_de: "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen.",
+        help_de: de_text!(
+            "Das title-Attribut nicht zum einzigen Namen eines Bedienelements machen."
+        ),
     },
     Meta {
         ids: &["patterns/tooltip-unreferenced"],
@@ -2320,14 +2322,15 @@ pub const METAS: &[Meta] = &[
         wcag: &[],
         severity: Severity::Low,
         help: "Reference a role=\"tooltip\" from its trigger with aria-describedby.",
-        #[cfg(feature = "de")]
-        help_de: "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
-                  verweisen.",
+        help_de: de_text!(
+            "Auf ein role=\"tooltip\" vom auslösenden Element aus mit aria-describedby \
+                  verweisen."
+        ),
     },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
+fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
     [
         lang,
         title,
@@ -2351,8 +2354,8 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
         crate::aria::widgets,
         crate::aria::popover,
         crate::aria::inert_dialog,
-        crate::checkliste::checkliste,
-        crate::checkliste::bewegung,
+        crate::checklist::checklist,
+        crate::checklist::motion,
         crate::forms::autocomplete_invalid,
         crate::forms::error_unidentified,
         crate::forms::group_missing,
@@ -2383,17 +2386,19 @@ fn funktionen<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
         crate::document::abbreviations,
         crate::document::meta_refresh,
         crate::document::section_without_heading,
-        crate::rollen::redundant,
-        crate::rollen::title_only,
-        crate::rollen::tooltip,
+        crate::roles::redundant,
+        crate::roles::title_only,
+        crate::roles::tooltip,
     ]
 }
+
+const _: () = assert!(METAS.len() == 57);
 
 /// Alle Tier-1-Regeln.
 pub fn rules<D: Document>() -> Vec<StructureRule<D>> {
     METAS
         .iter()
-        .zip(funktionen::<D>())
+        .zip(functions::<D>())
         .map(|(meta, run)| StructureRule { meta: *meta, run })
         .collect()
 }

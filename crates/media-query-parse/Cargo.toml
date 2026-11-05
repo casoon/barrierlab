@@ -10,3 +10,4 @@ keywords = ["css", "media-queries", "parser", "syntax", "grammar"]
 categories = ["parser-implementations", "web-programming"]
 
 [dependencies]
+css-tokenize = { workspace = true }

@@ -9,8 +9,7 @@ co-constraints; see `assertions.rs` and `CLAUDE.md`.
 
 `src/infoset.rs` gives every plain HTML element the XHTML namespace
 (`http://www.w3.org/1999/xhtml`) — needed so `relax_ng`'s vendored HTML5
-schema validates correctly (see `plan/DECISIONS.md`'s adapter-contract
-entry). XPath 1.0's unprefixed name tests (`th`, `input`, `self::font`, …)
+schema validates correctly. XPath 1.0's unprefixed name tests (`th`, `input`, `self::font`, …)
 only ever match nodes with **no** namespace — the `xmlns` default
 namespace is explicitly excluded from name-test expansion (XPath 1.0 §2.3).
 An unprefixed element name test against this infoset therefore silently
