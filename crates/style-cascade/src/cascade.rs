@@ -7,6 +7,7 @@ use std::rc::Rc;
 use a11y_dom::{Node, NodeId, NodeKind};
 use stylesheet_parse::{Context, Rule as CssRule, Stylesheet, parse_stylesheet};
 
+use crate::layers::{LayerTree, gruppe};
 use crate::media::{Environment, eval};
 use crate::selector::{Key, Match, Mode, Selector, Specificity};
 use crate::shorthand::{Expanded, expand};
@@ -40,6 +41,9 @@ struct Rule {
     selector: Selector,
     spec: Specificity,
     layer: Option<u32>,
+    /// Die Stelle der Ebene in der Reihenfolge ist nicht sicher (siehe
+    /// `layers`): für Vergleiche kann sie überall stehen.
+    layer_unsure: bool,
     /// `Yes` oder `Unknown`; `No` kommt gar nicht erst hinein.
     cond: Match,
     decls: Vec<Decl>,
@@ -182,26 +186,23 @@ impl Cascade {
                 }
             }
         }
-        // Reihenfolge der Ebenen: `@layer a, b;` legt sie vorab fest, sonst
-        // gilt das erste Auftreten.
-        let mut ebenen: Vec<String> = Vec::new();
-        for s in sheets {
-            for r in &s.rules {
-                if let CssRule::Other(a) = r
-                    && a.name == "layer"
-                {
-                    for n in a.prelude.split(',') {
-                        ebene(&mut ebenen, n.trim());
-                    }
-                }
-            }
-        }
+        // Ebenenbaum über alle Blätter, in Dokumentreihenfolge (Cascade 5 §6.4).
+        let baum = LayerTree::build(sheets, &self.env);
+        let mut knoten: Vec<Option<usize>> = Vec::new();
         let mut order = 0u32;
         for s in sheets {
             for scoped in s.style_rules() {
-                let (cond, layer) = kontext(&scoped.context, &self.env, &mut ebenen);
+                let mut cond = kontext(&scoped.context, &self.env);
                 if cond == Match::No {
                     continue;
+                }
+                let (node, layer_unsure) = match baum.node_of(&scoped.context.groups) {
+                    Ok(n) => (n, n.is_some_and(|n| baum.is_unsure(n))),
+                    // Ein ungültiger `@layer`-Block: Rang unbekannt.
+                    Err(()) => (None, true),
+                };
+                if layer_unsure {
+                    cond = cond.und(Match::Unknown);
                 }
                 let decls: Vec<Decl> = scoped
                     .declarations
@@ -240,12 +241,25 @@ impl Cascade {
                     self.rules.push(Rule {
                         spec: selector.specificity(),
                         selector,
-                        layer,
+                        layer: None,
+                        layer_unsure,
                         cond,
                         decls: decls.clone(),
                     });
+                    knoten.push(node);
                 }
             }
+        }
+        // Dichter Rang je Ebene aus dem Baum (Unterebenen vor der Ebene selbst,
+        // Geschwister nach erstem Auftreten); gleiche Ebenen, gleicher Rang.
+        let mut schluessel: Vec<Vec<u32>> = knoten.iter().flatten().map(|&n| baum.key(n)).collect();
+        schluessel.sort();
+        schluessel.dedup();
+        for (r, n) in self.rules.iter_mut().zip(&knoten) {
+            r.layer = n.map(|n| {
+                let k = baum.key(n);
+                schluessel.binary_search(&k).unwrap_or_default() as u32
+            });
         }
     }
 
@@ -326,7 +340,11 @@ impl Cascade {
         for (idx, m) in treffer.iter() {
             let r = &self.rules[*idx];
             for d in r.decls.iter().filter(|d| d.prop == prop) {
-                let w = weight(d.important, true, r.layer, false, r.spec, d.order);
+                let mut w = weight(d.important, true, r.layer, false, r.spec, d.order);
+                if r.layer_unsure {
+                    // Normal: knapp unter „ohne Ebene"; wichtig: ganz oben.
+                    w.layer = if d.important { u32::MAX } else { u32::MAX - 1 };
+                }
                 if *m == Match::Yes {
                     if best.is_none_or(|(b, _)| w > b) {
                         best = Some((w, &d.value));
@@ -548,44 +566,17 @@ fn klammer_ende(s: &str) -> Option<usize> {
     None
 }
 
-fn ebene(ebenen: &mut Vec<String>, name: &str) -> u32 {
-    match ebenen.iter().position(|e| e == name) {
-        Some(i) => i as u32,
-        None => {
-            ebenen.push(name.to_string());
-            (ebenen.len() - 1) as u32
-        }
-    }
-}
-
-/// Gilt der Kontext einer Regel (Medien, `@supports`, Ebene …)?
-fn kontext(ctx: &Context<'_>, env: &Environment, ebenen: &mut Vec<String>) -> (Match, Option<u32>) {
+/// Gilt der Kontext einer Regel (Medien, `@supports` …)? Die Ebene steht im
+/// Ebenenbaum.
+fn kontext(ctx: &Context<'_>, env: &Environment) -> Match {
     let mut cond = Match::Yes;
     for m in &ctx.media {
         cond = cond.und(eval(m, env));
     }
-    let mut layer = None;
     for (name, prelude) in &ctx.groups {
-        match *name {
-            "layer" => {
-                let p = prelude.trim();
-                let name = if p.is_empty() {
-                    format!("\u{0}anon{}", ebenen.len())
-                } else {
-                    p.to_string()
-                };
-                layer = Some(ebene(ebenen, &name));
-            }
-            // Eine Bedingung für Funktionen, die moderne Browser kennen; nur
-            // das Negierte (Ersatz für alte Browser) greift nicht.
-            "supports" => {
-                if prelude.trim_start().to_ascii_lowercase().starts_with("not") {
-                    cond = cond.und(Match::No);
-                }
-            }
-            "starting-style" => cond = cond.und(Match::No),
-            _ => cond = cond.und(Match::Unknown),
+        if *name != "layer" {
+            cond = cond.und(gruppe(name, prelude));
         }
     }
-    (cond, layer)
+    cond
 }
