@@ -198,6 +198,13 @@ fn measure<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Measurement> {
     })
 }
 
+/// A number for the running text of a message: with a comma in German. The
+/// evidence (`Evidence`) stays language-independent with a point.
+fn number(locale: Locale, value: f64, decimals: usize) -> String {
+    let point = format!("{value:.decimals$}");
+    pick!(locale, point, point.replace('.', ","))
+}
+
 fn text_kind(locale: Locale, large: bool) -> &'static str {
     if large {
         pick!(locale, "large text", "großen Text")
@@ -277,16 +284,21 @@ fn borderline(
     locale: Locale,
     n: NodeId,
 ) -> Finding {
+    let (median_s, p40_s, threshold_s) = (
+        number(locale, median, 2),
+        number(locale, p40, 2),
+        number(locale, threshold, 1),
+    );
     Finding::review(
         id,
         tr!(
             locale,
             "The text lies over an image or gradient. Over most of its box the contrast \
-             reaches {median:.2}:1, in darker or lighter parts only {p40:.2}:1 \
-             ({threshold:.1}:1 required). Check it by hand.",
+             reaches {median_s}:1, in darker or lighter parts only {p40_s}:1 \
+             ({threshold_s}:1 required). Check it by hand.",
             "Der Text liegt über einem Bild oder Verlauf. Über den größten Teil seines Kastens \
-             erreicht der Kontrast {median:.2}:1, in helleren oder dunkleren Teilen nur \
-             {p40:.2}:1 (gefordert {threshold:.1}:1). Von Hand prüfen."
+             erreicht der Kontrast {median_s}:1, in helleren oder dunkleren Teilen nur \
+             {p40_s}:1 (gefordert {threshold_s}:1). Von Hand prüfen."
         ),
     )
     .with_severity(Severity::Medium)
@@ -344,10 +356,12 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                     "contrast/text-insufficient",
                     tr!(
                         locale,
-                        "The text reaches a contrast ratio of {value:.2}:1; \
-                         {threshold:.1}:1 is required for {}.",
-                        "Der Text erreicht ein Kontrastverhältnis von {value:.2}:1, \
-                         gefordert sind {threshold:.1}:1 für {}.",
+                        "The text reaches a contrast ratio of {}:1; \
+                         {}:1 is required for {}.",
+                        "Der Text erreicht ein Kontrastverhältnis von {}:1, \
+                         gefordert sind {}:1 für {}.",
+                        number(locale, value, 2),
+                        number(locale, threshold, 1),
                         text_kind(locale, large)
                     ),
                 )
@@ -393,10 +407,12 @@ fn text_contrast_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
                     "contrast/text-enhanced",
                     tr!(
                         locale,
-                        "The text reaches {value:.2}:1; enhanced contrast (AAA) requires \
-                         {aaa:.1}:1 for {}.",
-                        "Der Text erreicht {value:.2}:1; erhöhter Kontrast (AAA) verlangt \
-                         {aaa:.1}:1 für {}.",
+                        "The text reaches {}:1; enhanced contrast (AAA) requires \
+                         {}:1 for {}.",
+                        "Der Text erreicht {}:1; erhöhter Kontrast (AAA) verlangt \
+                         {}:1 für {}.",
+                        number(locale, value, 2),
+                        number(locale, aaa, 1),
                         text_kind(locale, large)
                     ),
                 )
@@ -491,10 +507,11 @@ fn control_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
                 "contrast/control-insufficient",
                 tr!(
                     locale,
-                    "The boundary of this custom control reaches {value:.2}:1 against its \
+                    "The boundary of this custom control reaches {}:1 against its \
                      background; 3:1 is required.",
-                    "Die Grenze dieses selbst gezeichneten Bedienelements erreicht {value:.2}:1 \
+                    "Die Grenze dieses selbst gezeichneten Bedienelements erreicht {}:1 \
                      gegenüber ihrem Hintergrund, gefordert sind 3:1.",
+                    number(locale, value, 2),
                 ),
             )
             .with_severity(Severity::Medium)

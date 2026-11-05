@@ -16,6 +16,7 @@ abweichen, steht je Schritt in
 
 ### Fixed
 
+- **Kontrast:** Die deutschen Meldungen der Kontrastregeln schreiben Verhältnisse mit Dezimalkomma (`1,25:1`, gefordert `4,5:1`) statt mit Punkt. Die Belege (`contrast_ratio`, `required_ratio`) bleiben unverändert mit Punkt (casoon/barrierlab#96).
 - **Ausführungsvermerke:** `RuleRun::wcag` ist jetzt gefüllt, für gelaufene wie für nicht gelaufene Regeln; casoon/barrierlab#101.
 - **Deklarationen:** Die Zuordnung von `METAS` und Regelfunktionen in `structure`, `semantics` und `rendering` prüft die Länge zur Übersetzungszeit; casoon/barrierlab#102.
 

@@ -15,6 +15,11 @@ All notable changes to this project will be documented in this file. The format 
   (`SkippedClass::StyleElementCss`, `SkippedClass::CspHashSource`). `to_report()` turns each into
   an `InputKind::DocumentIncomplete` note. New public field: code that builds `CheckReport` with
   a struct literal must add it.
+- **API:** `Finding::detail: Option<FindingDetail>` carries the structured arguments of a schema finding (`UnexpectedElement`, `UnexpectedText`, `UnexpectedAttribute`, `InvalidAttributeValue`, `MissingContent`) with element and attribute as local names, without the XHTML namespace, so hosts can localize the message without parsing it. `message` stays the unchanged English text. `detail` is `None` for every other layer and left out of the serialized form when `None` (casoon/barrierlab#96).
+
+### Changed
+
+- **API (breaking):** `Finding` has the new public field `detail`; code that builds a `Finding` with a struct literal must set it (`detail: None`).
 
 ### Deprecated
 

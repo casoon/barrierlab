@@ -185,6 +185,7 @@ pub(crate) fn findings(failures: &[AssertionFailure]) -> Vec<Finding> {
             severity: failure.severity,
             message: failure.message.clone(),
             location: failure.location,
+            detail: None,
         })
         .collect()
 }

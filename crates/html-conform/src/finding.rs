@@ -61,6 +61,50 @@ pub struct Finding {
     pub message: String,
     /// Source location when the reporting layer can establish one.
     pub location: Option<SourceLocation>,
+    /// Machine-readable form of `message`, for hosts that localize the text.
+    /// Only schema findings carry one so far; `message` stays the English
+    /// text either way.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<FindingDetail>,
+}
+
+/// The structured arguments behind a schema finding's English message, so a
+/// host can write the message in its own language without parsing prose.
+/// Element and attribute names are local names without the XHTML namespace.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum FindingDetail {
+    /// An element is not allowed at this position.
+    UnexpectedElement {
+        /// Local name of the offending element.
+        element: String,
+    },
+    /// Text is not allowed at this position.
+    UnexpectedText {
+        /// Local name of the element that contains the text.
+        parent: String,
+    },
+    /// An attribute is not allowed on its element.
+    UnexpectedAttribute {
+        /// Local name of the offending attribute.
+        attribute: String,
+        /// Local name of the element carrying it.
+        element: String,
+    },
+    /// An allowed attribute has a value the schema rejects.
+    InvalidAttributeValue {
+        /// Local name of the attribute.
+        attribute: String,
+        /// The rejected value.
+        value: String,
+        /// Local name of the element carrying it.
+        element: String,
+    },
+    /// An element ended while required content was still missing.
+    MissingContent {
+        /// Local name of the incomplete element.
+        element: String,
+    },
 }
 
 /// The result of checking one HTML document.
@@ -215,6 +259,7 @@ mod tests {
             severity,
             message: "m".to_owned(),
             location,
+            detail: None,
         }
     }
 

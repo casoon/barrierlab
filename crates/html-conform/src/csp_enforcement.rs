@@ -295,6 +295,7 @@ fn finding(message: String, severity: Severity, location: Option<SourceLocation>
         severity,
         message,
         location,
+        detail: None,
     }
 }
 

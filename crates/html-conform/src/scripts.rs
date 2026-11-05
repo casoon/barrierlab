@@ -78,6 +78,7 @@ fn collect(document: &Document, id: NodeId, findings: &mut Vec<Finding>) {
                 severity: Severity::Error,
                 message,
                 location,
+                detail: None,
             }));
         }
     }
