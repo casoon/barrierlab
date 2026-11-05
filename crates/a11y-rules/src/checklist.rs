@@ -20,15 +20,15 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick};
 use crate::registry::Meta;
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 /// Ein Punkt der Checkliste.
-struct Punkt {
+struct Point {
     id: &'static str,
     wcag: &'static [&'static str],
     severity: Severity,
     /// Ob es auf der Seite etwas gibt, für das der Punkt gilt.
-    gilt: fn(&Anlass) -> bool,
+    applies: fn(&Trigger) -> bool,
     en: &'static str,
     #[cfg(feature = "de")]
     de: &'static str,
@@ -36,51 +36,51 @@ struct Punkt {
 
 /// Was die Seite enthält, einmal über alle Elemente gezählt.
 #[derive(Default)]
-struct Anlass {
-    medien: bool,
-    bilder: bool,
+struct Trigger {
+    media: bool,
+    images: bool,
     text: bool,
     links: bool,
-    felder: bool,
+    fields: bool,
     auto_refresh: bool,
-    anmeldung: bool,
-    gesten: bool,
-    unterbrechungen: bool,
-    tastenkuerzel: bool,
-    zeigerereignisse: bool,
+    login: bool,
+    gestures: bool,
+    interruptions: bool,
+    shortcut: bool,
+    pointer_events: bool,
 }
 
-impl Anlass {
-    fn erhebe<D: Document>(doc: &D) -> Self {
-        let mut a = Anlass::default();
+impl Trigger {
+    fn survey<D: Document>(doc: &D) -> Self {
+        let mut a = Trigger::default();
         for n in elements(doc) {
             match n.local_name() {
-                "video" | "audio" => a.medien = true,
-                "iframe" if n.attr("src").is_some_and(videoplattform) => a.medien = true,
-                "img" | "area" => a.bilder = true,
+                "video" | "audio" => a.media = true,
+                "iframe" if n.attr("src").is_some_and(video_platform) => a.media = true,
+                "img" | "area" => a.images = true,
                 "a" if n.has_attr("href") => a.links = true,
-                "select" | "textarea" => a.felder = true,
-                "input" => match input_typ(n).as_str() {
+                "select" | "textarea" => a.fields = true,
+                "input" => match input_type(n).as_str() {
                     "hidden" | "submit" | "button" | "reset" => {}
-                    "image" => a.bilder = true,
+                    "image" => a.images = true,
                     "password" => {
-                        a.felder = true;
-                        a.anmeldung = true;
+                        a.fields = true;
+                        a.login = true;
                     }
-                    _ => a.felder = true,
+                    _ => a.fields = true,
                 },
                 "meta"
                     if n.attr("http-equiv")
                         .is_some_and(|h| h.eq_ignore_ascii_case("refresh")) =>
                 {
                     a.auto_refresh = true;
-                    a.unterbrechungen = true;
+                    a.interruptions = true;
                 }
-                "dialog" => a.unterbrechungen = true,
+                "dialog" => a.interruptions = true,
                 _ => {}
             }
             if n.attr("role") == Some("img") {
-                a.bilder = true;
+                a.images = true;
             }
             if matches!(
                 n.attr("role"),
@@ -89,10 +89,10 @@ impl Anlass {
                 .attr("aria-live")
                 .is_some_and(|v| !v.trim().eq_ignore_ascii_case("off"))
             {
-                a.unterbrechungen = true;
+                a.interruptions = true;
             }
-            if sieht_aus_wie_gesten(n) {
-                a.gesten = true;
+            if looks_like_gestures(n) {
+                a.gestures = true;
             }
             if n.has_attr("accesskey")
                 || ["onkeydown", "onkeypress", "onkeyup"]
@@ -106,16 +106,16 @@ impl Anlass {
                                 .any(|e| k.text().contains(e))
                     }))
             {
-                a.tastenkuerzel = true;
+                a.shortcut = true;
             }
             if ["onmousedown", "onpointerdown", "ontouchstart"]
                 .iter()
                 .any(|h| n.has_attr(h))
             {
-                a.zeigerereignisse = true;
+                a.pointer_events = true;
             }
-            if sieht_aus_wie_captcha(n) {
-                a.anmeldung = true;
+            if looks_like_captcha(n) {
+                a.login = true;
             }
             if !a.text
                 && n.children()
@@ -129,7 +129,7 @@ impl Anlass {
     }
 }
 
-fn input_typ<'a, N: Node<'a>>(n: N) -> String {
+fn input_type<'a, N: Node<'a>>(n: N) -> String {
     n.attr("type")
         .map(|t| t.trim().to_ascii_lowercase())
         .unwrap_or_else(|| "text".into())
@@ -139,7 +139,7 @@ fn input_typ<'a, N: Node<'a>>(n: N) -> String {
 /// `VIDEO_EMBED_HOSTS`) kennt. Ihre Untertitel steuert der Player der
 /// Plattform; im Markup der Seite steht davon nichts. Beleg: das
 /// YouTube-Video auf w3.org/WAI.
-fn videoplattform(src: &str) -> bool {
+fn video_platform(src: &str) -> bool {
     const HOSTS: &[&str] = &[
         "youtube.com",
         "youtube-nocookie.com",
@@ -164,7 +164,7 @@ fn videoplattform(src: &str) -> bool {
 /// Die verbreiteten Captcha-Dienste binden sich über Klassen, IDs oder die
 /// Quelle eines Frames ein. Eine Heuristik — sie entscheidet nur, ob der Punkt
 /// auf der Checkliste erscheint, nicht über einen Befund.
-fn sieht_aus_wie_captcha<'a, N: Node<'a>>(n: N) -> bool {
+fn looks_like_captcha<'a, N: Node<'a>>(n: N) -> bool {
     ["class", "id", "src"].iter().any(|a| {
         n.attr(a).is_some_and(|v| {
             let v = v.to_ascii_lowercase();
@@ -177,7 +177,7 @@ fn sieht_aus_wie_captcha<'a, N: Node<'a>>(n: N) -> bool {
 /// und die verbreiteten Karussell- und Kartenbibliotheken, die sich über
 /// Klassen einbinden. Wie beim Captcha entscheidet die Heuristik nur, ob der
 /// Punkt auf der Checkliste erscheint.
-fn sieht_aus_wie_gesten<'a, N: Node<'a>>(n: N) -> bool {
+fn looks_like_gestures<'a, N: Node<'a>>(n: N) -> bool {
     const HANDLER: &[&str] = &[
         "ontouchstart",
         "ontouchmove",
@@ -185,7 +185,7 @@ fn sieht_aus_wie_gesten<'a, N: Node<'a>>(n: N) -> bool {
         "ongesturestart",
         "ondragstart",
     ];
-    const KLASSEN: &[&str] = &[
+    const CLASSES: &[&str] = &[
         "swiper",
         "slick",
         "splide",
@@ -203,95 +203,95 @@ fn sieht_aus_wie_gesten<'a, N: Node<'a>>(n: N) -> bool {
         || n.attr("class").is_some_and(|c| {
             c.split_ascii_whitespace().any(|k| {
                 let k = k.to_ascii_lowercase();
-                KLASSEN
+                CLASSES
                     .iter()
                     .any(|w| k == *w || k.starts_with(&format!("{w}-")))
             })
         })
 }
 
-const PUNKTE: &[Punkt] = &[
-    Punkt {
+const POINTS: &[Point] = &[
+    Point {
         id: "manual/media-alternatives",
         wcag: &["1.2.1", "1.2.2", "1.2.3", "1.2.5"],
         severity: Severity::High,
-        gilt: |a| a.medien,
+        applies: |a| a.media,
         en: "Check by hand: audio and video need captions, a transcript and, where the \
              picture carries information, audio description.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Audio und Video brauchen Untertitel, ein Transkript und, wo \
              das Bild Information trägt, Audiodeskription.",
     },
-    Punkt {
+    Point {
         id: "manual/image-alternatives",
         wcag: &["1.1.1"],
         severity: Severity::High,
-        gilt: |a| a.bilder,
+        applies: |a| a.images,
         en: "Check by hand: every alt text says what the image means in its place, and \
              only purely decorative images have alt=\"\".",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Jeder Alt-Text sagt, was das Bild an seiner Stelle bedeutet, \
              und nur rein dekorative Bilder haben alt=\"\".",
     },
-    Punkt {
+    Point {
         id: "manual/visual-structure",
         wcag: &["1.3.1"],
         severity: Severity::Medium,
-        gilt: |a| a.text,
+        applies: |a| a.text,
         en: "Check by hand: what looks like a heading, list, table or menu is marked up as \
              one — not just styled to look like it.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Was wie eine Überschrift, Liste, Tabelle oder ein Menü \
              aussieht, ist auch so ausgezeichnet — nicht nur so gestaltet.",
     },
-    Punkt {
+    Point {
         id: "manual/use-of-color",
         wcag: &["1.4.1"],
         severity: Severity::Medium,
-        gilt: |a| a.links || a.felder,
+        applies: |a| a.links || a.fields,
         en: "Check by hand: colour is never the only way to tell something — links in \
              text, required fields, errors, states.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Farbe ist nie das einzige Unterscheidungsmerkmal — Links im \
              Text, Pflichtfelder, Fehler, Zustände.",
     },
-    Punkt {
+    Point {
         id: "manual/timing",
         wcag: &["2.2.1"],
         severity: Severity::High,
-        gilt: |a| a.felder || a.auto_refresh,
+        applies: |a| a.fields || a.auto_refresh,
         en: "Check by hand: any time limit can be turned off, adjusted or extended.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Jede Zeitbegrenzung lässt sich abschalten, anpassen oder \
              verlängern.",
     },
-    Punkt {
+    Point {
         id: "manual/error-handling",
         wcag: &["3.3.1", "3.3.3"],
         severity: Severity::High,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
         en: "Check by hand: submit the form with errors — each error is named in text, next \
              to its field, with a suggestion how to fix it.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Formular fehlerhaft absenden — jeder Fehler wird in Textform \
              am Feld benannt, mit einem Vorschlag zur Korrektur.",
     },
-    Punkt {
+    Point {
         id: "manual/authentication",
         wcag: &["3.3.8"],
         severity: Severity::High,
-        gilt: |a| a.anmeldung,
+        applies: |a| a.login,
         en: "Check by hand: signing in needs no cognitive test — no puzzle captcha, paste \
              and password managers work.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Die Anmeldung verlangt keinen kognitiven Test — kein \
              Rätsel-Captcha, Einfügen und Passwortmanager funktionieren.",
     },
-    Punkt {
+    Point {
         id: "manual/pointer-gestures",
         wcag: &["2.5.1"],
         severity: Severity::Medium,
-        gilt: |a| a.gesten,
+        applies: |a| a.gestures,
         en: "Check by hand: everything done by swiping, dragging a path or with two \
              fingers also works with a single tap or click — for example arrow buttons \
              on a carousel, zoom buttons on a map.",
@@ -300,147 +300,147 @@ const PUNKTE: &[Punkt] = &[
              zwei Fingern geht, geht auch mit einem einzelnen Tippen oder Klick — etwa \
              Pfeiltasten am Karussell, Zoomknöpfe an der Karte.",
     },
-    Punkt {
+    Point {
         id: "manual/no-timing",
         wcag: &["2.2.3"],
         severity: Severity::Low,
-        gilt: |a| a.felder || a.auto_refresh,
+        applies: |a| a.fields || a.auto_refresh,
         en: "Check by hand: no task depends on timing at all, except synchronised media \
              and real-time events.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Keine Aufgabe hängt überhaupt von Zeit ab, außer \
              synchronisierte Medien und Echtzeit-Ereignisse.",
     },
-    Punkt {
+    Point {
         id: "manual/interruptions",
         wcag: &["2.2.4"],
         severity: Severity::Low,
-        gilt: |a| a.unterbrechungen,
+        applies: |a| a.interruptions,
         en: "Check by hand: updates, alerts and pop-ups can be postponed or turned off, \
              unless they concern an emergency.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Aktualisierungen, Meldungen und Einblendungen lassen sich \
              aufschieben oder abschalten, außer sie betreffen einen Notfall.",
     },
-    Punkt {
+    Point {
         id: "manual/re-authenticating",
         wcag: &["2.2.5"],
         severity: Severity::Low,
-        gilt: |a| a.anmeldung,
+        applies: |a| a.login,
         en: "Check by hand: when a session expires, signing in again continues without \
              losing entered data.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Läuft die Sitzung ab, geht es nach erneuter Anmeldung ohne \
              Verlust der eingegebenen Daten weiter.",
     },
-    Punkt {
+    Point {
         id: "manual/unusual-words",
         wcag: &["3.1.3"],
         severity: Severity::Low,
-        gilt: |a| a.text,
+        applies: |a| a.text,
         en: "Check by hand: jargon, idioms and unusual words are explained — inline, \
              with <dfn> or in a glossary.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Fachbegriffe, Redewendungen und ungewöhnliche Wörter werden \
              erklärt — im Text, mit <dfn> oder in einem Glossar.",
     },
-    Punkt {
+    Point {
         id: "manual/help",
         wcag: &["3.3.5"],
         severity: Severity::Low,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
         en: "Check by hand: fields that need it have context-sensitive help — \
              instructions, examples or a link to help.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Felder, die es brauchen, haben kontextbezogene Hilfe — \
              Anleitung, Beispiele oder einen Link zur Hilfe.",
     },
-    Punkt {
+    Point {
         id: "manual/dragging-movements",
         wcag: &["2.5.7"],
         severity: Severity::Medium,
-        gilt: |a| a.gesten,
+        applies: |a| a.gestures,
         en: "Check by hand: everything done by dragging also works with a single pointer without dragging — for example buttons to move an item or a slider you can click.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Alles, was per Ziehen geht, geht auch mit einem einzelnen Zeiger ohne Ziehen — etwa Knöpfe zum Verschieben eines Eintrags oder ein Regler, den man anklicken kann.",
     },
-    Punkt {
+    Point {
         id: "manual/consistent-help",
         wcag: &["3.2.6"],
         severity: Severity::Low,
-        gilt: |a| a.text,
+        applies: |a| a.text,
         en: "Check by hand: where help is offered — contact, chat, a help page — it sits in the same place on every page of the set.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Wo Hilfe angeboten wird — Kontakt, Chat, Hilfeseite —, steht sie auf jeder Seite des Angebots an derselben Stelle.",
     },
-    Punkt {
+    Point {
         id: "manual/keyboard-trap",
         wcag: &["2.1.2"],
         severity: Severity::High,
-        gilt: |a| a.links || a.felder || a.unterbrechungen,
+        applies: |a| a.links || a.fields || a.interruptions,
         en: "Check by hand: with the keyboard alone you can move into and out of every control, dialog and embedded widget again.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Mit der Tastatur allein kommt man in jedes Bedienelement, jeden Dialog und jedes eingebettete Widget hinein und wieder heraus.",
     },
-    Punkt {
+    Point {
         id: "manual/character-shortcuts",
         wcag: &["2.1.4"],
         severity: Severity::Medium,
-        gilt: |a| a.tastenkuerzel,
+        applies: |a| a.shortcut,
         en: "Check by hand: a shortcut made of a single character key can be turned off, remapped, or only works while the control has focus.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Ein Tastenkürzel aus einer einzelnen Zeichentaste lässt sich abschalten, umbelegen oder gilt nur, solange das Bedienelement den Fokus hat.",
     },
-    Punkt {
+    Point {
         id: "manual/error-prevention",
         wcag: &["3.3.4"],
         severity: Severity::Medium,
-        gilt: |a| a.felder,
+        applies: |a| a.fields,
         en: "Check by hand: submissions with legal or financial effect, or that change or delete data, can be reversed, are checked for errors, or are confirmed before they are final.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Absendungen mit rechtlicher oder finanzieller Wirkung oder die Daten ändern oder löschen, lassen sich rückgängig machen, werden auf Fehler geprüft oder vor dem Abschluss bestätigt.",
     },
-    Punkt {
+    Point {
         id: "manual/pointer-cancellation",
         wcag: &["2.5.2"],
         severity: Severity::Medium,
-        gilt: |a| a.zeigerereignisse,
+        applies: |a| a.pointer_events,
         en: "Check by hand: a single-pointer action does not fire on the down event alone — it can be aborted or undone, or fires on release.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Eine Aktion mit einem einzelnen Zeiger löst nicht schon beim Herunterdrücken aus — sie lässt sich abbrechen oder rückgängig machen, oder sie löst beim Loslassen aus.",
     },
-    Punkt {
+    Point {
         id: "manual/consistent-navigation",
         wcag: &["3.2.3"],
         severity: Severity::Medium,
-        gilt: |a| a.links,
+        applies: |a| a.links,
         en: "Check by hand: navigation that repeats across the pages of the set keeps the same relative order.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Navigation, die sich auf den Seiten des Angebots wiederholt, behält dieselbe relative Reihenfolge.",
     },
-    Punkt {
+    Point {
         id: "manual/consistent-identification",
         wcag: &["3.2.4"],
         severity: Severity::Medium,
-        gilt: |a| a.links || a.felder,
+        applies: |a| a.links || a.fields,
         en: "Check by hand: components with the same function carry the same name and the same icon on every page of the set.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Komponenten mit gleicher Funktion tragen auf jeder Seite des Angebots denselben Namen und dasselbe Symbol.",
     },
-    Punkt {
+    Point {
         id: "manual/sensory-characteristics",
         wcag: &["1.3.3"],
         severity: Severity::Medium,
-        gilt: |a| a.text,
+        applies: |a| a.text,
         en: "Check by hand: instructions do not rely on shape, size, position or sound alone — not just \"the round button\" or \"the box on the right\".",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Anweisungen verlassen sich nicht allein auf Form, Größe, Lage oder Klang — nicht nur „der runde Knopf“ oder „das Feld rechts“.",
     },
-    Punkt {
+    Point {
         id: "manual/multiple-ways",
         wcag: &["2.4.5"],
         severity: Severity::Medium,
-        gilt: |a| a.links,
+        applies: |a| a.links,
         en: "Check by hand: a page of the set can be reached in more than one way — for example navigation, search, site map or related links.",
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Eine Seite des Angebots ist auf mehr als einem Weg erreichbar — etwa über Navigation, Suche, Seitenübersicht oder verwandte Links.",
@@ -494,15 +494,15 @@ pub(crate) const META: Meta = Meta {
     ),
 };
 
-pub(crate) fn checkliste<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let anlass = Anlass::erhebe(doc);
-    let wurzel = Location::node(doc.root().id().to_string());
-    for p in PUNKTE.iter().filter(|p| (p.gilt)(&anlass)) {
+pub(crate) fn checklist<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let trigger = Trigger::survey(doc);
+    let root = Location::node(doc.root().id().to_string());
+    for p in POINTS.iter().filter(|p| (p.applies)(&trigger)) {
         out.push(
             Finding::untested(p.id, pick!(locale, p.en, p.de))
                 .with_severity(p.severity)
                 .with_wcag(p.wcag.iter().copied())
-                .at(wurzel.clone()),
+                .at(root.clone()),
         );
     }
 }
@@ -512,7 +512,7 @@ pub(crate) fn checkliste<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
 /// `devicemotion` oder `deviceorientation` abonniert. Deshalb ein eigener
 /// Punkt mit [`Scope::Markup`] — `<script>` ist nie dargestellt. Was ein
 /// externes Skript abonniert, sieht keine Prüfung am Dokument.
-pub(crate) const META_BEWEGUNG: Meta = Meta {
+pub(crate) const META_MOTION: Meta = Meta {
     ids: &["manual/motion-actuation"],
     tier: Tier::Structure,
     scope: Scope::Markup,
@@ -526,15 +526,15 @@ pub(crate) const META_BEWEGUNG: Meta = Meta {
     ),
 };
 
-pub(crate) fn bewegung<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let hoert_auf_bewegung = elements(doc).any(|n| {
+pub(crate) fn motion<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let listens_for_motion = elements(doc).any(|n| {
         n.is_element("script")
             && n.children().any(|k| {
                 k.kind() == NodeKind::Text
                     && (k.text().contains("devicemotion") || k.text().contains("deviceorientation"))
             })
     });
-    if hoert_auf_bewegung {
+    if listens_for_motion {
         out.push(
             Finding::untested(
                 "manual/motion-actuation",
@@ -560,8 +560,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn jeder_punkt_ist_deklariert() {
-        let ids: Vec<&str> = PUNKTE.iter().map(|p| p.id).collect();
+    fn every_point_is_declared() {
+        let ids: Vec<&str> = POINTS.iter().map(|p| p.id).collect();
         assert_eq!(ids, META.ids);
     }
 }

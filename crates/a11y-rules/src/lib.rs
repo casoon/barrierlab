@@ -42,31 +42,31 @@
 #![forbid(unsafe_code)]
 
 mod aria;
-mod checkliste;
-mod darstellung;
+mod checklist;
 mod document;
 mod forms;
-mod heuristik;
+mod heuristics;
 mod landmarks;
 mod links;
 mod locale;
 mod media;
 mod names;
+mod presentation;
 mod registry;
 mod rendering;
-mod rollen;
+mod roles;
 mod semantics;
-mod sicht;
-mod stile;
 mod structure;
+mod stylesheet_rules;
 mod tables;
+mod visibility;
 mod viz;
 
 pub use locale::Locale;
 use locale::pick;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule, StylesheetRule};
-pub use sicht::Scope;
-use sicht::{Sicht, Verborgen};
+pub use visibility::Scope;
+use visibility::{Hidden, Visibility};
 
 use a11y_dom::{Document, Rendering, Semantics};
 use a11y_report::{Finding, NotRun, Report, RuleRun};
@@ -105,12 +105,12 @@ pub fn rendering_metas() -> &'static [Meta] {
 /// Siehe [`structure_metas`]. Die Regeln über Stylesheets laufen über
 /// [`run_stylesheets`].
 pub fn stylesheet_metas() -> &'static [Meta] {
-    stile::METAS
+    stylesheet_rules::METAS
 }
 
 /// Alle Regeln über Stylesheets.
 pub fn stylesheet_rules<D: Document>() -> Vec<StylesheetRule<D>> {
-    stile::rules()
+    stylesheet_rules::rules()
 }
 
 /// Vermerkt je deklarierter Kennung, wie viele Befunde darauf entfallen.
@@ -118,10 +118,10 @@ pub fn stylesheet_rules<D: Document>() -> Vec<StylesheetRule<D>> {
 /// Der Vermerk läuft über die **Befund**-Kennungen, nicht über eine
 /// übergeordnete Regelkennung. Nur so benutzen `rule_runs` und `findings`
 /// dieselbe Namensmenge und lassen sich verbinden.
-fn vermerke(meta: &Meta, gefunden: &[Finding], report: &mut Report) {
+fn record_runs(meta: &Meta, found: &[Finding], report: &mut Report) {
     for id in meta.ids {
-        let anzahl = gefunden.iter().filter(|f| f.rule_id == *id).count();
-        report.record(RuleRun::ran(*id, anzahl).with_wcag(meta.wcag.iter().copied()));
+        let count = found.iter().filter(|f| f.rule_id == *id).count();
+        report.record(RuleRun::ran(*id, count).with_wcag(meta.wcag.iter().copied()));
     }
 }
 
@@ -130,19 +130,19 @@ fn vermerke(meta: &Meta, gefunden: &[Finding], report: &mut Report) {
 /// Das ist die Umsetzung von „nicht geprüft ist nicht bestanden": Eine Regel,
 /// deren Tier dieser Host nicht bedient, verschwindet nicht aus dem Bericht,
 /// sondern steht mit `NotRun::CapabilityMissing` darin.
-fn nicht_gelaufen(metas: &'static [Meta], grund: &str, report: &mut Report) {
+fn record_not_run(metas: &'static [Meta], reason: &str, report: &mut Report) {
     for meta in metas {
         for id in meta.ids {
             report.record(
                 RuleRun::not_run(*id, NotRun::CapabilityMissing)
                     .with_wcag(meta.wcag.iter().copied())
-                    .with_reason(grund),
+                    .with_reason(reason),
             );
         }
     }
 }
 
-fn ohne_semantik(locale: Locale) -> &'static str {
+fn without_semantics_reason(locale: Locale) -> &'static str {
     pick!(
         locale,
         "host provides no role and no accessible name",
@@ -150,7 +150,7 @@ fn ohne_semantik(locale: Locale) -> &'static str {
     )
 }
 
-fn ohne_darstellung(locale: Locale) -> &'static str {
+fn without_presentation_reason(locale: Locale) -> &'static str {
     pick!(
         locale,
         "host provides no computed styles and no geometry",
@@ -158,7 +158,7 @@ fn ohne_darstellung(locale: Locale) -> &'static str {
     )
 }
 
-fn ohne_stylesheets(locale: Locale) -> &'static str {
+fn without_stylesheets_reason(locale: Locale) -> &'static str {
     pick!(
         locale,
         "host provides no stylesheets",
@@ -166,11 +166,11 @@ fn ohne_stylesheets(locale: Locale) -> &'static str {
     )
 }
 
-fn run_structure<D: Document>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
-    for rule in structure_rules::<Sicht<'_, D>>() {
+fn run_structure<D: Document>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
+    for rule in structure_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
-        vermerke(&rule.meta, &out, report);
+        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        record_runs(&rule.meta, &out, report);
         report.extend(out);
     }
 }
@@ -185,12 +185,24 @@ pub fn run<D: Document>(doc: &D) -> Report {
 
 /// Wie [`run`], mit Befundtexten in der gewählten Sprache.
 pub fn run_in<D: Document>(doc: &D, locale: Locale) -> Report {
-    let v = Verborgen::nach_attribut(doc);
+    let v = Hidden::by_attribute(doc);
     let mut report = Report::new();
     run_structure(doc, &v, locale, &mut report);
-    nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
-    nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
-    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
+    record_not_run(
+        semantics_metas(),
+        without_semantics_reason(locale),
+        &mut report,
+    );
+    record_not_run(
+        rendering_metas(),
+        without_presentation_reason(locale),
+        &mut report,
+    );
+    record_not_run(
+        stylesheet_metas(),
+        without_stylesheets_reason(locale),
+        &mut report,
+    );
     report.finish()
 }
 
@@ -201,29 +213,37 @@ pub fn run_with_semantics<D: Semantics>(doc: &D) -> Report {
 
 /// Wie [`run_with_semantics`], mit Befundtexten in der gewählten Sprache.
 pub fn run_with_semantics_in<D: Semantics>(doc: &D, locale: Locale) -> Report {
-    let v = Verborgen::nach_attribut(doc);
+    let v = Hidden::by_attribute(doc);
     let mut report = Report::new();
     run_structure(doc, &v, locale, &mut report);
     run_semantics(doc, &v, locale, &mut report);
-    nicht_gelaufen(rendering_metas(), ohne_darstellung(locale), &mut report);
-    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
+    record_not_run(
+        rendering_metas(),
+        without_presentation_reason(locale),
+        &mut report,
+    );
+    record_not_run(
+        stylesheet_metas(),
+        without_stylesheets_reason(locale),
+        &mut report,
+    );
     report.finish()
 }
 
-fn run_semantics<D: Semantics>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
-    for rule in semantics_rules::<Sicht<'_, D>>() {
+fn run_semantics<D: Semantics>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
+    for rule in semantics_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
-        vermerke(&rule.meta, &out, report);
+        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        record_runs(&rule.meta, &out, report);
         report.extend(out);
     }
 }
 
-fn run_rendering<D: Rendering>(doc: &D, v: &Verborgen, locale: Locale, report: &mut Report) {
-    for rule in rendering_rules::<Sicht<'_, D>>() {
+fn run_rendering<D: Rendering>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
+    for rule in rendering_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Sicht::new(doc, v, rule.meta.scope), locale, &mut out);
-        vermerke(&rule.meta, &out, report);
+        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        record_runs(&rule.meta, &out, report);
         report.extend(out);
     }
 }
@@ -239,12 +259,16 @@ pub fn run_full<D: Semantics + Rendering>(doc: &D) -> Report {
 
 /// Wie [`run_full`], mit Befundtexten in der gewählten Sprache.
 pub fn run_full_in<D: Semantics + Rendering>(doc: &D, locale: Locale) -> Report {
-    let v = Verborgen::nach_stil(doc);
+    let v = Hidden::by_style(doc);
     let mut report = Report::new();
     run_structure(doc, &v, locale, &mut report);
     run_semantics(doc, &v, locale, &mut report);
     run_rendering(doc, &v, locale, &mut report);
-    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
+    record_not_run(
+        stylesheet_metas(),
+        without_stylesheets_reason(locale),
+        &mut report,
+    );
     report.finish()
 }
 
@@ -257,12 +281,20 @@ pub fn run_with_rendering<D: Rendering>(doc: &D) -> Report {
 
 /// Wie [`run_with_rendering`], mit Befundtexten in der gewählten Sprache.
 pub fn run_with_rendering_in<D: Rendering>(doc: &D, locale: Locale) -> Report {
-    let v = Verborgen::nach_stil(doc);
+    let v = Hidden::by_style(doc);
     let mut report = Report::new();
     run_structure(doc, &v, locale, &mut report);
-    nicht_gelaufen(semantics_metas(), ohne_semantik(locale), &mut report);
+    record_not_run(
+        semantics_metas(),
+        without_semantics_reason(locale),
+        &mut report,
+    );
     run_rendering(doc, &v, locale, &mut report);
-    nicht_gelaufen(stylesheet_metas(), ohne_stylesheets(locale), &mut report);
+    record_not_run(
+        stylesheet_metas(),
+        without_stylesheets_reason(locale),
+        &mut report,
+    );
     report.finish()
 }
 
@@ -304,16 +336,16 @@ pub fn run_stylesheets_in<D: Document>(
     report
         .rule_runs
         .retain(|r| !ids.contains(&r.rule_id.as_str()));
-    let v = Verborgen::nach_attribut(doc);
-    for rule in stylesheet_rules::<Sicht<'_, D>>() {
+    let v = Hidden::by_attribute(doc);
+    for rule in stylesheet_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
         (rule.run)(
-            &Sicht::new(doc, &v, rule.meta.scope),
+            &Visibility::new(doc, &v, rule.meta.scope),
             sheets,
             locale,
             &mut out,
         );
-        vermerke(&rule.meta, &out, &mut report);
+        record_runs(&rule.meta, &out, &mut report);
         report.extend(out);
     }
     report.finish()

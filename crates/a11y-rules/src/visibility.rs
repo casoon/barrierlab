@@ -7,7 +7,7 @@
 //! damit einen `FAIL`. Gemessen am 29.09.2026 auf barrierlab.eu: vier
 //! kritische Befunde auf jeder der 237 Seiten, alle an Versteckten.
 //!
-//! Die Regeln selbst bleiben davon unberührt. Sie laufen über eine [`Sicht`]
+//! Die Regeln selbst bleiben davon unberührt. Sie laufen über eine [`Visibility`]
 //! auf das Dokument, in der die versteckten Teilbäume schlicht fehlen — so
 //! kann keine Regel sie vergessen, und keine muss sie einzeln ausnehmen.
 
@@ -37,15 +37,15 @@ pub enum Scope {
 ///
 /// Gemerkt werden nur die Wurzeln: Unter einer ausgelassenen Wurzel kommt die
 /// Traversierung nie an, die Nachfahren müssen nicht in der Menge stehen.
-pub(crate) struct Verborgen {
-    nicht_dargestellt: HashSet<NodeId>,
-    ausgelassen: HashSet<NodeId>,
+pub(crate) struct Hidden {
+    not_rendered: HashSet<NodeId>,
+    skipped: HashSet<NodeId>,
 }
 
-impl Verborgen {
+impl Hidden {
     /// Ohne berechnete Stile: versteckt ist, was das `hidden`-Attribut trägt.
-    pub(crate) fn nach_attribut<D: Document>(doc: &D) -> Self {
-        Self::bestimme(doc, |n| n.has_attr("hidden"))
+    pub(crate) fn by_attribute<D: Document>(doc: &D) -> Self {
+        Self::determine(doc, |n| n.has_attr("hidden"))
     }
 
     /// Mit berechneten Stilen: `display: none` und `visibility: hidden`.
@@ -55,25 +55,25 @@ impl Verborgen {
     /// `visibility` vererbt sich und kann an einem Nachfahren wieder
     /// `visible` sein; ein solcher Nachfahre fällt hier mit weg. Das ist
     /// selten und die bewusste Grenze dieser Sicht.
-    pub(crate) fn nach_stil<D: Rendering>(doc: &D) -> Self {
-        Self::bestimme(doc, |n| match doc.computed_style(n) {
-            Some(_) if unsichtbar_nach_ua(n) => n.has_attr("hidden"),
-            Some(stil) => versteckt_per_stil(&stil),
+    pub(crate) fn by_style<D: Rendering>(doc: &D) -> Self {
+        Self::determine(doc, |n| match doc.computed_style(n) {
+            Some(_) if invisible_by_ua(n) => n.has_attr("hidden"),
+            Some(style) => hidden_per_style(&style),
             None => n.has_attr("hidden"),
         })
     }
 
-    fn bestimme<'d, D: Document>(doc: &'d D, versteckt: impl Fn(D::N<'d>) -> bool) -> Self {
-        let wurzel = doc.root();
-        let sammle = |auch: &dyn Fn(D::N<'d>) -> bool| {
-            let mut weg = HashSet::new();
-            let mut stapel: Vec<D::N<'d>> = wurzel.children().collect();
-            while let Some(n) = stapel.pop() {
+    fn determine<'d, D: Document>(doc: &'d D, hidden: impl Fn(D::N<'d>) -> bool) -> Self {
+        let root = doc.root();
+        let collect_where = |also: &dyn Fn(D::N<'d>) -> bool| {
+            let mut away = HashSet::new();
+            let mut stack: Vec<D::N<'d>> = root.children().collect();
+            while let Some(n) = stack.pop() {
                 if n.kind() != NodeKind::Element {
                     continue;
                 }
-                if versteckt(n) || auch(n) {
-                    weg.insert(n.id());
+                if hidden(n) || also(n) {
+                    away.insert(n.id());
                     continue;
                 }
                 // Ein geschlossenes `<details>` stellt nur seine erste
@@ -82,31 +82,31 @@ impl Verborgen {
                 // `display` und `visibility` ihn für sichtbar halten — deshalb
                 // hier aus dem Markup und für jeden Host gleich.
                 if n.is_element("details") && !n.has_attr("open") {
-                    let mut summary_gesehen = false;
+                    let mut summary_seen = false;
                     for kind in n.children().filter(|k| k.kind() == NodeKind::Element) {
-                        if !summary_gesehen && kind.is_element("summary") {
-                            summary_gesehen = true;
-                            stapel.push(kind);
+                        if !summary_seen && kind.is_element("summary") {
+                            summary_seen = true;
+                            stack.push(kind);
                         } else {
-                            weg.insert(kind.id());
+                            away.insert(kind.id());
                         }
                     }
                     continue;
                 }
-                stapel.extend(n.children());
+                stack.extend(n.children());
             }
-            weg
+            away
         };
-        Verborgen {
-            nicht_dargestellt: sammle(&|_| false),
-            ausgelassen: sammle(&|n| n.attr("aria-hidden") == Some("true")),
+        Hidden {
+            not_rendered: collect_where(&|_| false),
+            skipped: collect_where(&|n| n.attr("aria-hidden") == Some("true")),
         }
     }
 
-    fn fuer(&self, scope: Scope) -> Option<&HashSet<NodeId>> {
+    fn for_scope(&self, scope: Scope) -> Option<&HashSet<NodeId>> {
         match scope {
-            Scope::AccessibilityTree => Some(&self.ausgelassen),
-            Scope::Rendered => Some(&self.nicht_dargestellt),
+            Scope::AccessibilityTree => Some(&self.skipped),
+            Scope::Rendered => Some(&self.not_rendered),
             Scope::Markup => None,
         }
     }
@@ -120,58 +120,58 @@ impl Verborgen {
 /// (auditmysite-Korpus `misc_content_checks`, `media_and_visual`). Ebenso der
 /// Ersatzinhalt eines `<object>`: Lädt das Objekt, stellt der Browser ihn
 /// nicht dar, er bleibt aber dessen Textalternative (H53).
-fn unsichtbar_nach_ua<'a, N: Node<'a>>(n: N) -> bool {
+fn invisible_by_ua<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("area")
         || (n.is_element("audio") && !n.has_attr("controls"))
         || n.parent().is_some_and(|p| p.is_element("object"))
 }
 
-fn versteckt_per_stil(stil: &ComputedStyle) -> bool {
-    stil.display.as_deref() == Some("none")
-        || matches!(stil.visibility.as_deref(), Some("hidden" | "collapse"))
+fn hidden_per_style(style: &ComputedStyle) -> bool {
+    style.display.as_deref() == Some("none")
+        || matches!(style.visibility.as_deref(), Some("hidden" | "collapse"))
 }
 
 /// Das Dokument, wie eine Regel mit einem bestimmten [`Scope`] es sieht.
-pub(crate) struct Sicht<'d, D> {
+pub(crate) struct Visibility<'d, D> {
     doc: &'d D,
-    weg: Option<&'d HashSet<NodeId>>,
+    away: Option<&'d HashSet<NodeId>>,
 }
 
-impl<'d, D> Sicht<'d, D> {
-    pub(crate) fn new(doc: &'d D, verborgen: &'d Verborgen, scope: Scope) -> Self {
-        Sicht {
+impl<'d, D> Visibility<'d, D> {
+    pub(crate) fn new(doc: &'d D, hidden: &'d Hidden, scope: Scope) -> Self {
+        Visibility {
             doc,
-            weg: verborgen.fuer(scope),
+            away: hidden.for_scope(scope),
         }
     }
 }
 
-/// Ein Knoten der [`Sicht`]. Seine Kinder sind die des Hosts, ohne die
+/// Ein Knoten der [`Visibility`]. Seine Kinder sind die des Hosts, ohne die
 /// Wurzeln versteckter Teilbäume.
 #[derive(Clone, Copy)]
-pub(crate) struct SichtNode<'a, N> {
+pub(crate) struct VisibilityNode<'a, N> {
     inner: N,
-    weg: Option<&'a HashSet<NodeId>>,
+    away: Option<&'a HashSet<NodeId>>,
 }
 
-impl<N: PartialEq> PartialEq for SichtNode<'_, N> {
+impl<N: PartialEq> PartialEq for VisibilityNode<'_, N> {
     fn eq(&self, other: &Self) -> bool {
         self.inner == other.inner
     }
 }
 
-impl<N: Eq> Eq for SichtNode<'_, N> {}
+impl<N: Eq> Eq for VisibilityNode<'_, N> {}
 
-impl<'a, N: Node<'a>> SichtNode<'a, N> {
-    fn huelle(&self, inner: N) -> Self {
-        SichtNode {
+impl<'a, N: Node<'a>> VisibilityNode<'a, N> {
+    fn wrapper(&self, inner: N) -> Self {
+        VisibilityNode {
             inner,
-            weg: self.weg,
+            away: self.away,
         }
     }
 }
 
-impl<'a, N: Node<'a>> Node<'a> for SichtNode<'a, N> {
+impl<'a, N: Node<'a>> Node<'a> for VisibilityNode<'a, N> {
     fn id(self) -> NodeId {
         self.inner.id()
     }
@@ -183,15 +183,15 @@ impl<'a, N: Node<'a>> Node<'a> for SichtNode<'a, N> {
     /// Über einem sichtbaren Knoten ist nichts versteckt — Verstecktheit
     /// vererbt sich nach unten.
     fn parent(self) -> Option<Self> {
-        self.inner.parent().map(|p| self.huelle(p))
+        self.inner.parent().map(|p| self.wrapper(p))
     }
 
     fn children(self) -> impl Iterator<Item = Self> + 'a {
-        let weg = self.weg;
+        let away = self.away;
         self.inner
             .children()
-            .filter(move |k| weg.is_none_or(|w| !w.contains(&k.id())))
-            .map(move |inner| SichtNode { inner, weg })
+            .filter(move |k| away.is_none_or(|w| !w.contains(&k.id())))
+            .map(move |inner| VisibilityNode { inner, away })
     }
 
     fn local_name(self) -> &'a str {
@@ -219,17 +219,17 @@ impl<'a, N: Node<'a>> Node<'a> for SichtNode<'a, N> {
     }
 }
 
-impl<D: Document> Document for Sicht<'_, D> {
+impl<D: Document> Document for Visibility<'_, D> {
     type N<'a>
-        = SichtNode<'a, D::N<'a>>
+        = VisibilityNode<'a, D::N<'a>>
     where
         Self: 'a;
 
     fn root(&self) -> Self::N<'_> {
         let doc: &D = self.doc;
-        SichtNode {
+        VisibilityNode {
             inner: doc.root(),
-            weg: self.weg,
+            away: self.away,
         }
     }
 
@@ -240,7 +240,7 @@ impl<D: Document> Document for Sicht<'_, D> {
 
 /// Rolle und Name kommen vom Host, über den ganzen Baum: Ein Name darf per
 /// `aria-labelledby` auf versteckten Inhalt zeigen.
-impl<D: Semantics> Semantics for Sicht<'_, D> {
+impl<D: Semantics> Semantics for Visibility<'_, D> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         let doc: &'n D = self.doc;
         doc.role(node.inner)
@@ -262,7 +262,7 @@ impl<D: Semantics> Semantics for Sicht<'_, D> {
     }
 }
 
-impl<D: Rendering> Rendering for Sicht<'_, D> {
+impl<D: Rendering> Rendering for Visibility<'_, D> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
         let doc: &'n D = self.doc;
         doc.computed_style(node.inner)
@@ -309,9 +309,9 @@ mod tests {
     use super::*;
     use a11y_dom::{Arena, ArenaNode, ComputedStyle, Layout, Rect, Rendering};
 
-    struct Voll<'a>(&'a Arena);
+    struct Full<'a>(&'a Arena);
 
-    impl Document for Voll<'_> {
+    impl Document for Full<'_> {
         type N<'n>
             = ArenaNode<'n>
         where
@@ -322,7 +322,7 @@ mod tests {
         }
     }
 
-    impl Rendering for Voll<'_> {
+    impl Rendering for Full<'_> {
         fn computed_style<'n>(&'n self, _: Self::N<'n>) -> Option<ComputedStyle> {
             Some(ComputedStyle::default())
         }
@@ -360,18 +360,18 @@ mod tests {
     }
 
     #[test]
-    fn sicht_reicht_jede_rendering_methode_durch() {
+    fn visibility_forwards_every_rendering_method() {
         let arena = Arena::builder().open("html").close().build();
-        let host = Voll(&arena);
-        let v = Verborgen::nach_attribut(&host);
-        let sicht = Sicht::new(&host, &v, Scope::Markup);
-        let n = sicht.root();
-        assert!(sicht.computed_style(n).is_some());
-        assert!(sicht.bounds(n).is_some());
-        assert!(sicht.is_rendered(n));
-        assert!(sicht.layout(n).is_some());
-        assert_eq!(sicht.scroll_overflow_px(n), Some(7.0));
-        assert_eq!(sicht.visually_hidden(n), Some(true));
-        assert!(sicht.sampled_backdrop(n).is_some());
+        let host = Full(&arena);
+        let v = Hidden::by_attribute(&host);
+        let visibility = Visibility::new(&host, &v, Scope::Markup);
+        let n = visibility.root();
+        assert!(visibility.computed_style(n).is_some());
+        assert!(visibility.bounds(n).is_some());
+        assert!(visibility.is_rendered(n));
+        assert!(visibility.layout(n).is_some());
+        assert_eq!(visibility.scroll_overflow_px(n), Some(7.0));
+        assert_eq!(visibility.visually_hidden(n), Some(true));
+        assert!(visibility.sampled_backdrop(n).is_some());
     }
 }

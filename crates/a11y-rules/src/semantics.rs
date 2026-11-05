@@ -17,7 +17,7 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, SemanticsRule};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -52,10 +52,10 @@ fn link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
 fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let ist_button = n.is_element("button") || doc.role(n).as_deref() == Some("button");
+        let is_button = n.is_element("button") || doc.role(n).as_deref() == Some("button");
         // Eine `<summary>` meldet `summary/name-missing` — `accname` gibt ihr
         // die Rolle `button`, Chrome nicht; so meldet jeder Host sie einmal.
-        if !ist_button || n.is_element("summary") || doc.is_ignored(n) {
+        if !is_button || n.is_element("summary") || doc.is_ignored(n) {
             continue;
         }
         if !named(doc, n) {
@@ -109,7 +109,7 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // dass die Grafik etwas mitteilt. Ein SVG ohne Rolle kann ebenso gut
         // Schmuck neben Text sein — `REVIEW` (auditmysite#779).
         if !named(doc, n) {
-            let bild = n.attr("role").is_some_and(|r| {
+            let image = n.attr("role").is_some_and(|r| {
                 r.split_whitespace().next().is_some_and(|x| {
                     ["img", "graphics-document", "graphics-symbol"]
                         .iter()
@@ -121,7 +121,7 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 "The SVG has no accessible name and is not marked decorative.",
                 "Das SVG hat keinen zugänglichen Namen und ist nicht als dekorativ ausgezeichnet."
             );
-            let f = if bild {
+            let f = if image {
                 Finding::fail("svg/name-missing", text)
             } else {
                 Finding::review("svg/name-missing", text)
@@ -147,8 +147,8 @@ fn svg_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// 15 Sprachen und, anders als die frühere enge Liste, auch Beschriftungen wie
 /// „Start", „Weiter", „Download" oder „Info" — sie benennen eine Handlung,
 /// aber kein Ziel. Ob der Zusammenhang das Ziel klärt, entscheidet
-/// [`hat_kontext`] über die Schwere, nicht über die Meldung.
-const NICHTSSAGEND: &[&str] = &[
+/// [`has_context`] über die Schwere, nicht über die Meldung.
+const MEANINGLESS: &[&str] = &[
     // Englisch
     "click here",
     "click",
@@ -324,7 +324,7 @@ const NICHTSSAGEND: &[&str] = &[
 /// Für 2.4.9 (AAA) reicht der Linktext allein; Zusammenhang zählt nicht.
 /// Deshalb eine weitere Liste: Wörter, die eine Handlung oder Gattung nennen,
 /// aber kein Ziel („Seite", „Artikel", „Öffnen", „Speichern").
-const NUR_LINKTEXT_VAGE: &[&str] = &[
+const ONLY_LINK_TEXT_VAGUE: &[&str] = &[
     "click here",
     "click",
     "here",
@@ -391,19 +391,23 @@ const NUR_LINKTEXT_VAGE: &[&str] = &[
 
 /// Der Vergleichsschlüssel eines Linknamens: getrimmt, kleingeschrieben,
 /// ohne nachgestellte Pfeile und Satzzeichen („Mehr ›", „Weiter →").
-fn schluessel(name: &str) -> String {
+fn key(name: &str) -> String {
     let t = name.trim().to_lowercase();
-    let ohne = t
+    let without = t
         .trim_end_matches(['.', '!', '…', '>', '›', '→', '»'])
         .trim();
     // Reine Zeichenfolgen wie „..." oder „>>" behalten ihre Zeichen.
-    if ohne.is_empty() { t } else { ohne.to_string() }
+    if without.is_empty() {
+        t
+    } else {
+        without.to_string()
+    }
 }
 
 /// Links, die der Baum nicht auslässt, samt Namen: Elemente mit der Rolle
 /// `link`, ohne gemeldete Rolle `a[href]` (2.4.4 und 2.4.9 gelten für jeden
 /// Link, gleich wie die Rolle zustande kommt).
-fn links_mit_namen<'d, D: Semantics>(doc: &'d D) -> Vec<(D::N<'d>, String)> {
+fn links_with_names<'d, D: Semantics>(doc: &'d D) -> Vec<(D::N<'d>, String)> {
     elements(doc)
         .filter(|n| match doc.role(*n) {
             Some(r) => r == "link",
@@ -424,65 +428,65 @@ fn links_mit_namen<'d, D: Semantics>(doc: &'d D) -> Vec<(D::N<'d>, String)> {
 /// selben Baustein (Technik H80) — eine Teaserkarte „Building Information
 /// Modeling … Mehr erfahren" nennt ihren Zweck so. Höchstens vier Ebenen
 /// hinauf: eine ferne Überschrift ist kein Kontext für diesen Link.
-fn hat_kontext<'a, D: Semantics>(doc: &'a D, link: D::N<'a>) -> bool {
+fn has_context<'a, D: Semantics>(doc: &'a D, link: D::N<'a>) -> bool {
     if link
         .attr("aria-describedby")
         .is_some_and(|v| !v.trim().is_empty())
     {
         return true;
     }
-    let mut aktuell = link;
-    for tiefe in 0..4 {
-        let Some(eltern) = aktuell.parent() else {
+    let mut current = link;
+    for depth in 0..4 {
+        let Some(parent) = current.parent() else {
             break;
         };
-        let behaelter = ["p", "li", "td", "th", "dd"]
+        let container = ["p", "li", "td", "th", "dd"]
             .iter()
-            .any(|t| eltern.is_element(t));
-        if (tiefe == 0 && text_daneben(doc, eltern, link))
-            || (behaelter && text_ausser(doc, eltern, link))
-            || ueberschrift_davor(doc, eltern, link)
+            .any(|t| parent.is_element(t));
+        if (depth == 0 && text_next_to(doc, parent, link))
+            || (container && text_except(doc, parent, link))
+            || heading_before(doc, parent, link)
         {
             return true;
         }
-        aktuell = eltern;
+        current = parent;
     }
     false
 }
 
-fn sichtbarer_text<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
+fn visible_text<'a, D: Semantics>(doc: &'a D, n: D::N<'a>) -> bool {
     n.kind() == a11y_dom::NodeKind::Text
         && !n.text().trim().is_empty()
         && !a11y_dom::ancestors(n).any(|a| doc.is_ignored(a))
 }
 
 /// Text als Geschwister des Links, unmittelbar oder in einem `<p>`.
-fn text_daneben<'a, D: Semantics>(doc: &'a D, eltern: D::N<'a>, link: D::N<'a>) -> bool {
-    eltern.children().filter(|k| *k != link).any(|k| {
-        sichtbarer_text(doc, k)
-            || (k.is_element("p") && a11y_dom::descendants(k).any(|t| sichtbarer_text(doc, t)))
+fn text_next_to<'a, D: Semantics>(doc: &'a D, parent: D::N<'a>, link: D::N<'a>) -> bool {
+    parent.children().filter(|k| *k != link).any(|k| {
+        visible_text(doc, k)
+            || (k.is_element("p") && a11y_dom::descendants(k).any(|t| visible_text(doc, t)))
     })
 }
 
-/// Text irgendwo im Teilbaum von `behaelter`, außerhalb des Links.
-fn text_ausser<'a, D: Semantics>(doc: &'a D, behaelter: D::N<'a>, link: D::N<'a>) -> bool {
-    a11y_dom::descendants(behaelter)
+/// Text irgendwo im Teilbaum von `container`, außerhalb des Links.
+fn text_except<'a, D: Semantics>(doc: &'a D, container: D::N<'a>, link: D::N<'a>) -> bool {
+    a11y_dom::descendants(container)
         .filter(|n| *n != link && !a11y_dom::ancestors(*n).any(|a| a == link))
-        .any(|n| sichtbarer_text(doc, n))
+        .any(|n| visible_text(doc, n))
 }
 
-/// Eine benannte Überschrift in `behaelter`, die in Dokumentreihenfolge vor
+/// Eine benannte Überschrift in `container`, die in Dokumentreihenfolge vor
 /// dem Link steht.
-fn ueberschrift_davor<'a, D: Semantics>(doc: &'a D, behaelter: D::N<'a>, link: D::N<'a>) -> bool {
-    for n in a11y_dom::descendants(behaelter) {
+fn heading_before<'a, D: Semantics>(doc: &'a D, container: D::N<'a>, link: D::N<'a>) -> bool {
+    for n in a11y_dom::descendants(container) {
         if n == link {
             return false;
         }
-        let ist_ueberschrift = ["h1", "h2", "h3", "h4", "h5", "h6"]
+        let is_heading = ["h1", "h2", "h3", "h4", "h5", "h6"]
             .iter()
             .any(|t| n.is_element(t))
             || doc.role(n).as_deref() == Some("heading");
-        if ist_ueberschrift && !doc.is_ignored(n) && named(doc, n) {
+        if is_heading && !doc.is_ignored(n) && named(doc, n) {
             return true;
         }
     }
@@ -493,12 +497,12 @@ fn ueberschrift_davor<'a, D: Semantics>(doc: &'a D, behaelter: D::N<'a>, link: D
 /// eindeutig ist. Deshalb `REVIEW`, nicht `FAIL` — mit erkennbarem Kontext
 /// als Low, ohne als Medium.
 fn generic_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for (n, name) in links_mit_namen(doc) {
-        if !NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+    for (n, name) in links_with_names(doc) {
+        if !MEANINGLESS.contains(&key(&name).as_str()) {
             continue;
         }
-        let kontext = hat_kontext(doc, n);
-        let meldung = if kontext {
+        let context = has_context(doc, n);
+        let message = if context {
             tr!(
                 locale,
                 "The link text \"{}\" says nothing about its target; the surrounding text may explain it.",
@@ -514,8 +518,8 @@ fn generic_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Findi
             )
         };
         out.push(
-            Finding::review("links/generic-name", meldung)
-                .with_severity(if kontext {
+            Finding::review("links/generic-name", message)
+                .with_severity(if context {
                     Severity::Low
                 } else {
                     Severity::Medium
@@ -530,8 +534,8 @@ fn generic_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Findi
 /// Zeichensalat, und sie sagt nicht, was dort steht. Mit erkennbarem Kontext
 /// keine Meldung.
 fn url_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for (n, name) in links_mit_namen(doc) {
-        if !sieht_aus_wie_url(&name) || hat_kontext(doc, n) {
+    for (n, name) in links_with_names(doc) {
+        if !looks_like_url(&name) || has_context(doc, n) {
             continue;
         }
         out.push(
@@ -551,7 +555,7 @@ fn url_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
     }
 }
 
-fn sieht_aus_wie_url(text: &str) -> bool {
+fn looks_like_url(text: &str) -> bool {
     let t = text.trim().to_lowercase();
     t.starts_with("http://")
         || t.starts_with("https://")
@@ -561,14 +565,14 @@ fn sieht_aus_wie_url(text: &str) -> bool {
 
 /// Ein einzelnes Zeichen als Linkname („x", „i"). Ziffern bleiben außen vor:
 /// Seitenzahlen einer Blätternavigation sind im Zusammenhang verständlich.
-/// Zeichen aus [`NICHTSSAGEND`] meldet `links/generic-name`.
+/// Zeichen aus [`MEANINGLESS`] meldet `links/generic-name`.
 fn single_character_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for (n, name) in links_mit_namen(doc) {
-        let mut zeichen = name.chars();
-        let (Some(c), None) = (zeichen.next(), zeichen.next()) else {
+    for (n, name) in links_with_names(doc) {
+        let mut character = name.chars();
+        let (Some(c), None) = (character.next(), character.next()) else {
             continue;
         };
-        if c.is_ascii_digit() || NICHTSSAGEND.contains(&schluessel(&name).as_str()) {
+        if c.is_ascii_digit() || MEANINGLESS.contains(&key(&name).as_str()) {
             continue;
         }
         out.push(
@@ -589,7 +593,7 @@ fn single_character_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut 
 }
 
 /// Hinweise im Linknamen, dass ein neues Fenster oder Tab aufgeht.
-const NEUES_FENSTER: &[&str] = &[
+const NEW_WINDOW: &[&str] = &[
     "new window",
     "new tab",
     "opens in",
@@ -610,15 +614,15 @@ const NEUES_FENSTER: &[&str] = &[
 /// auditmysite prüfte hier `aria-haspopup` statt `target` — das traf nie den
 /// gemeinten Fall.
 fn new_window_links<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for (n, name) in links_mit_namen(doc) {
+    for (n, name) in links_with_names(doc) {
         if !n
             .attr("target")
             .is_some_and(|t| t.trim().eq_ignore_ascii_case("_blank"))
         {
             continue;
         }
-        let klein = name.to_lowercase();
-        if NEUES_FENSTER.iter().any(|h| klein.contains(h)) {
+        let small = name.to_lowercase();
+        if NEW_WINDOW.iter().any(|h| small.contains(h)) {
             continue;
         }
         out.push(
@@ -641,8 +645,8 @@ fn new_window_links<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding
 /// 2.4.9 (AAA): Der Linktext allein muss den Zweck nennen; Zusammenhang zählt
 /// hier nicht.
 fn purpose_link_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for (n, name) in links_mit_namen(doc) {
-        if !NUR_LINKTEXT_VAGE.contains(&schluessel(&name).as_str()) {
+    for (n, name) in links_with_names(doc) {
+        if !ONLY_LINK_TEXT_VAGUE.contains(&key(&name).as_str()) {
             continue;
         }
         out.push(
@@ -664,7 +668,7 @@ fn purpose_link_only<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Findin
 
 fn ambiguous_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     use std::collections::HashMap;
-    let mut nach_name: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
+    let mut by_name: HashMap<String, Vec<(NodeId, String)>> = HashMap::new();
 
     for n in elements(doc) {
         if !n.is_element("a") || doc.is_ignored(n) {
@@ -677,22 +681,22 @@ fn ambiguous_link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Fin
         if key.is_empty() {
             continue;
         }
-        nach_name
+        by_name
             .entry(key)
             .or_default()
             .push((n.id(), href.to_string()));
     }
 
-    for (name, treffer) in nach_name {
-        if treffer.len() < 2 {
+    for (name, hit) in by_name {
+        if hit.len() < 2 {
             continue;
         }
-        let ziele: std::collections::HashSet<&str> =
-            treffer.iter().map(|(_, h)| h.as_str()).collect();
-        if ziele.len() < 2 {
+        let targets: std::collections::HashSet<&str> =
+            hit.iter().map(|(_, h)| h.as_str()).collect();
+        if targets.len() < 2 {
             continue; // gleicher Text, gleiches Ziel: unproblematisch
         }
-        for (id, _) in &treffer {
+        for (id, _) in &hit {
             out.push(
                 Finding::review(
                     "links/ambiguous-name",
@@ -1013,7 +1017,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn funktionen<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
+fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
     [
         link_names,
         button_names,
@@ -1053,7 +1057,7 @@ const _: () = assert!(METAS.len() == 29);
 pub fn rules<D: Semantics>() -> Vec<SemanticsRule<D>> {
     METAS
         .iter()
-        .zip(funktionen::<D>())
+        .zip(functions::<D>())
         .map(|(meta, run)| SemanticsRule { meta: *meta, run })
         .collect()
 }

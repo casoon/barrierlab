@@ -16,13 +16,13 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick};
 use crate::semantics::named;
-use crate::structure::explizite_rolle;
+use crate::structure::explicit_role;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
-fn gefuellt<'a, N: Node<'a>>(n: N, attr: &str) -> bool {
+fn filled<'a, N: Node<'a>>(n: N, attr: &str) -> bool {
     n.attr(attr).is_some_and(|v| !v.trim().is_empty())
 }
 
@@ -30,8 +30,8 @@ fn gefuellt<'a, N: Node<'a>>(n: N, attr: &str) -> bool {
 /// dem `alt` vor. auditmysite zählt nur `aria-label` (und an `<area>` gar
 /// nichts außer `alt`); ein Element, das per `aria-labelledby` benannt ist,
 /// meldet es zu Unrecht.
-fn aria_benannt<'a, N: Node<'a>>(n: N) -> bool {
-    gefuellt(n, "aria-label") || gefuellt(n, "aria-labelledby")
+fn aria_named<'a, N: Node<'a>>(n: N) -> bool {
+    filled(n, "aria-label") || filled(n, "aria-labelledby")
 }
 
 // --- images/area-alt-missing ------------------------------------------------
@@ -42,7 +42,7 @@ fn aria_benannt<'a, N: Node<'a>>(n: N) -> bool {
 /// Beleg: auditmysite-Korpus `misc_content_checks`.
 pub(crate) fn area_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if n.is_element("area") && n.has_attr("href") && !gefuellt(n, "alt") && !aria_benannt(n) {
+        if n.is_element("area") && n.has_attr("href") && !filled(n, "alt") && !aria_named(n) {
             out.push(
                 Finding::fail(
                     "images/area-alt-missing",
@@ -70,10 +70,10 @@ pub(crate) fn area_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 /// Beleg: auditmysite-Korpus `misc_content_checks`.
 pub(crate) fn input_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let grafik_button = n.is_element("input")
+        let graphic_button = n.is_element("input")
             && n.attr("type")
                 .is_some_and(|t| t.trim().eq_ignore_ascii_case("image"));
-        if grafik_button && !gefuellt(n, "alt") && !aria_benannt(n) {
+        if graphic_button && !filled(n, "alt") && !aria_named(n) {
             out.push(
                 Finding::fail(
                     "images/input-alt-missing",
@@ -103,8 +103,8 @@ pub(crate) fn server_side_map<D: Document>(doc: &D, locale: Locale, out: &mut Ve
     for n in elements(doc) {
         // `ismap` wirkt nur an einem Nachfahren eines `a` mit `href` (HTML,
         // „The img element"); sonst gibt es keine serverseitige Imagemap.
-        let im_link = ancestors(n).any(|a| a.is_element("a") && a.has_attr("href"));
-        if n.is_element("img") && n.has_attr("ismap") && im_link {
+        let in_link = ancestors(n).any(|a| a.is_element("a") && a.has_attr("href"));
+        if n.is_element("img") && n.has_attr("ismap") && in_link {
             out.push(
                 Finding::review(
                     "images/server-side-map",
@@ -141,9 +141,9 @@ pub(crate) fn object_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
         if !n.is_element("object") {
             continue;
         }
-        let ersatztext =
+        let replacement_text =
             descendants(n).any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty());
-        if !ersatztext && !aria_benannt(n) && !gefuellt(n, "title") {
+        if !replacement_text && !aria_named(n) && !filled(n, "title") {
             out.push(
                 Finding::fail(
                     "objects/alt-missing",
@@ -201,21 +201,21 @@ pub(crate) fn audio_autoplay<D: Document>(doc: &D, locale: Locale, out: &mut Vec
 /// Höhe als Attribut 0 oder 1 (wie in auditmysite) oder ein Inline-Stil
 /// `display: none`. Ohne berechnete Stile ist das der einzige Hinweis darauf;
 /// craigslist.org lädt so einen Speicherrahmen, duckduckgo.com einen leeren.
-fn unsichtbarer_rahmen<'a, N: Node<'a>>(n: N) -> bool {
-    let winzig = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1"));
-    let ausgeblendet = n.attr("style").is_some_and(|s| {
+fn invisible_frame<'a, N: Node<'a>>(n: N) -> bool {
+    let tiny = |a: &str| n.attr(a).is_some_and(|v| matches!(v.trim(), "0" | "1"));
+    let hidden = n.attr("style").is_some_and(|s| {
         s.split(';').any(|d| {
-            let mut teile = d.splitn(2, ':');
-            let name = teile.next().unwrap_or("").trim();
-            let wert = teile.next().unwrap_or("").trim();
+            let mut parts = d.splitn(2, ':');
+            let name = parts.next().unwrap_or("").trim();
+            let value = parts.next().unwrap_or("").trim();
             name.eq_ignore_ascii_case("display")
-                && wert
+                && value
                     .trim_end_matches("!important")
                     .trim()
                     .eq_ignore_ascii_case("none")
         })
     });
-    (winzig("width") && winzig("height")) || ausgeblendet
+    (tiny("width") && tiny("height")) || hidden
 }
 
 /// 4.1.2 (ACT cae760): Ein `<iframe>` ohne Namen. Für 2.4.1 ist der Titel
@@ -223,7 +223,7 @@ fn unsichtbarer_rahmen<'a, N: Node<'a>>(n: N) -> bool {
 /// des Rahmens dessen Namen; ohne ihn bleibt offen, was darin steckt.
 ///
 /// Ausgenommen sind Rahmen mit `role="none"`/`"presentation"` und solche, die
-/// nie zu sehen sind ([`unsichtbarer_rahmen`]). Der Teil von auditmysites
+/// nie zu sehen sind ([`invisible_frame`]). Der Teil von auditmysites
 /// `media_rules`, der fremde Rahmen als ungeprüft meldet (`frame-tested`),
 /// bleibt im Host — ob ein Rahmen fremd ist, weiß nur der Browser.
 ///
@@ -233,8 +233,8 @@ pub(crate) fn frame_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<F
     for n in elements(doc) {
         if !n.is_element("iframe")
             || doc.is_ignored(n)
-            || explizite_rolle(n).is_some_and(|r| matches!(r, "none" | "presentation"))
-            || unsichtbarer_rahmen(n)
+            || explicit_role(n).is_some_and(|r| matches!(r, "none" | "presentation"))
+            || invisible_frame(n)
             || named(doc, n)
         {
             continue;

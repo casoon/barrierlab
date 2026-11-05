@@ -19,23 +19,19 @@ use html5_parser::NodeKind as H;
 
 // --- Hilfen ---------------------------------------------------------------
 
-fn seite(body: &str) -> Arena {
+fn page(body: &str) -> Arena {
     let doc = html5_parser::parse(&format!(
         "<!DOCTYPE html><html lang=\"en\"><head><title>T</title></head><body>{body}</body></html>"
     ))
     .document;
-    let wurzel = doc
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .unwrap();
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -45,7 +41,7 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
@@ -58,15 +54,15 @@ struct Host<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
     /// Ob der Host die neuen Felder liefert.
-    voll: bool,
+    full: bool,
 }
 
 impl<'a> Host<'a> {
-    fn new(doc: &'a Arena, voll: bool) -> Self {
+    fn new(doc: &'a Arena, full: bool) -> Self {
         Host {
             ids: IdIndex::build(doc.root()),
             doc,
-            voll,
+            full,
         }
     }
 }
@@ -104,7 +100,7 @@ fn ua_display(n: ArenaNode<'_>) -> &'static str {
 
 impl Rendering for Host<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
-        let mut stil = ComputedStyle {
+        let mut style = ComputedStyle {
             color: Some(Color {
                 r: 34,
                 g: 34,
@@ -118,8 +114,8 @@ impl Rendering for Host<'_> {
             visibility: Some("visible".into()),
             ..Default::default()
         };
-        if self.voll {
-            stil.list_style_type = Some(
+        if self.full {
+            style.list_style_type = Some(
                 node.attr("data-list-style")
                     .unwrap_or(match node.local_name() {
                         "ol" => "decimal",
@@ -127,15 +123,15 @@ impl Rendering for Host<'_> {
                     })
                     .into(),
             );
-            stil.text_decoration_line = Some(node.attr("data-deco").unwrap_or("none").into());
-            stil.font_style = Some("normal".into());
-            stil.font_family = Some("sans-serif".into());
-            stil.border_bottom_style = Some("none".into());
+            style.text_decoration_line = Some(node.attr("data-deco").unwrap_or("none").into());
+            style.font_style = Some("normal".into());
+            style.font_family = Some("sans-serif".into());
+            style.border_bottom_style = Some("none".into());
             if let Some(w) = node.attr("data-weight") {
-                stil.font_weight = Some(w.parse().unwrap());
+                style.font_weight = Some(w.parse().unwrap());
             }
         }
-        Some(stil)
+        Some(style)
     }
 
     fn bounds<'n>(&'n self, _node: Self::N<'n>) -> Option<Rect> {
@@ -155,32 +151,32 @@ impl Rendering for Host<'_> {
     }
 
     fn scroll_overflow_px<'n>(&'n self, node: Self::N<'n>) -> Option<f32> {
-        self.voll
+        self.full
             .then(|| node.attr("data-scroll").map_or(0.0, |s| s.parse().unwrap()))
     }
 }
 
-fn pruefe(body: &str, voll: bool) -> (Arena, Report) {
-    let doc = seite(body);
-    let r = run_full(&Host::new(&doc, voll));
+fn check(body: &str, full: bool) -> (Arena, Report) {
+    let doc = page(body);
+    let r = run_full(&Host::new(&doc, full));
     (doc, r)
 }
 
 /// Die `id`-Attribute der Elemente, an denen `rule` meldet.
-fn an(doc: &Arena, r: &Report, rule: &str) -> Vec<String> {
-    let knoten: Vec<String> = r
+fn findings_at(doc: &Arena, r: &Report, rule: &str) -> Vec<String> {
+    let node: Vec<String> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == rule && f.outcome != Outcome::Untested)
         .filter_map(|f| f.location.node.clone())
         .collect();
     elements(doc)
-        .filter(|n| knoten.contains(&n.id().to_string()))
+        .filter(|n| node.contains(&n.id().to_string()))
         .map(|n| n.attr("id").unwrap_or("?").to_string())
         .collect()
 }
 
-fn urteile(r: &Report, rule: &str) -> Vec<(Outcome, Severity)> {
+fn verdicts(r: &Report, rule: &str) -> Vec<(Outcome, Severity)> {
     r.findings
         .iter()
         .filter(|f| f.rule_id == rule)
@@ -190,17 +186,20 @@ fn urteile(r: &Report, rule: &str) -> Vec<(Outcome, Severity)> {
 
 // --- lists/role-redundant ---------------------------------------------------
 
-const LISTEN: &str = r#"<main>
+const LISTS: &str = r#"<main>
     <ul role="list" class="plain" id="plain-list" data-list-style="none"><li>First</li><li>Second</li></ul>
     <ol role="list" id="numbered-list"><li>One</li><li>Two</li></ol>
     <button type="button" role="button" id="send-button">Send</button></main>"#;
 
 #[test]
-fn korpus_redundant_role_list_style_auditmysite_644() {
-    let (doc, r) = pruefe(LISTEN, true);
-    assert_eq!(an(&doc, &r, "lists/role-redundant"), ["numbered-list"]);
+fn corpus_redundant_role_list_style_auditmysite_644() {
+    let (doc, r) = check(LISTS, true);
     assert_eq!(
-        urteile(&r, "lists/role-redundant"),
+        findings_at(&doc, &r, "lists/role-redundant"),
+        ["numbered-list"]
+    );
+    assert_eq!(
+        verdicts(&r, "lists/role-redundant"),
         [(Outcome::Fail, Severity::Low)]
     );
     // Die Rolle stimmt, sie ist nur überflüssig: Best Practice ohne 4.1.2
@@ -215,10 +214,10 @@ fn korpus_redundant_role_list_style_auditmysite_644() {
 }
 
 #[test]
-fn ohne_list_style_type_ungeprueft() {
-    let (_, r) = pruefe(LISTEN, false);
+fn without_list_style_type_unchecked() {
+    let (_, r) = check(LISTS, false);
     assert_eq!(
-        urteile(&r, "lists/role-redundant"),
+        verdicts(&r, "lists/role-redundant"),
         [(Outcome::Untested, Severity::Low)]
     );
 }
@@ -244,35 +243,38 @@ const LINKS: &str = r#"
     </footer>"#;
 
 #[test]
-fn korpus_link_in_text_block_context_auditmysite_710() {
-    let (doc, r) = pruefe(LINKS, true);
-    assert_eq!(an(&doc, &r, "color/link-indistinct"), ["inline-link"]);
+fn corpus_link_in_text_block_context_auditmysite_710() {
+    let (doc, r) = check(LINKS, true);
     assert_eq!(
-        urteile(&r, "color/link-indistinct"),
+        findings_at(&doc, &r, "color/link-indistinct"),
+        ["inline-link"]
+    );
+    assert_eq!(
+        verdicts(&r, "color/link-indistinct"),
         [(Outcome::Fail, Severity::Medium)]
     );
 }
 
 #[test]
-fn unterstreichung_oder_gewicht_heben_ab() {
+fn underline_or_weight_set_apart() {
     let body = r#"<p>Please read our <a id="u" href="/p" data-deco="underline">policy</a> and the
         <a id="b" href="/t" data-weight="700">terms</a> before you go.</p>"#;
-    let (doc, r) = pruefe(body, true);
-    assert!(an(&doc, &r, "color/link-indistinct").is_empty());
+    let (doc, r) = check(body, true);
+    assert!(findings_at(&doc, &r, "color/link-indistinct").is_empty());
 }
 
 #[test]
-fn link_als_block_ist_kein_fliesstext() {
+fn link_as_block_is_not_running_text() {
     let body = r#"<p>Some running text here <a id="card" href="/c" data-display="block">card</a> more words.</p>"#;
-    let (doc, r) = pruefe(body, true);
-    assert!(an(&doc, &r, "color/link-indistinct").is_empty());
+    let (doc, r) = check(body, true);
+    assert!(findings_at(&doc, &r, "color/link-indistinct").is_empty());
 }
 
 #[test]
-fn ohne_textauszeichnung_ungeprueft() {
-    let (_, r) = pruefe(LINKS, false);
+fn without_text_markup_unchecked() {
+    let (_, r) = check(LINKS, false);
     assert_eq!(
-        urteile(&r, "color/link-indistinct"),
+        verdicts(&r, "color/link-indistinct"),
         [(Outcome::Untested, Severity::Medium)]
     );
 }
@@ -282,7 +284,7 @@ fn ohne_textauszeichnung_ungeprueft() {
 /// Korpusfall `scrollable_region_focusable` (auditmysite#717, gov.si
 /// `div.menus`): `.box { height: 60px; overflow: auto }`, `.tall { height:
 /// 400px }` — 340 px Überhang.
-const BEREICHE: &str = r##"<main><h1>Scrollable regions</h1>
+const AREAS: &str = r##"<main><h1>Scrollable regions</h1>
     <div class="box menus" id="menus" data-scroll="340"><div class="tall">Only text that needs scrolling to read.</div></div>
     <div class="box" id="terms" tabindex="0" role="region" aria-label="Terms" data-scroll="340"><div class="tall">Terms text.</div></div>
     <div class="box" id="links" data-scroll="340"><div class="tall">Links: <a href="#a">first link</a></div></div>
@@ -293,23 +295,23 @@ const BEREICHE: &str = r##"<main><h1>Scrollable regions</h1>
     <div inert><div class="box" id="inert" data-scroll="340">Inert text.</div></div></main>"##;
 
 #[test]
-fn korpus_scrollable_region_focusable_auditmysite_717() {
-    let (doc, r) = pruefe(BEREICHE, true);
+fn corpus_scrollable_region_focusable_auditmysite_717() {
+    let (doc, r) = check(AREAS, true);
     assert_eq!(
-        an(&doc, &r, "keyboard/scrollable-region-not-focusable"),
+        findings_at(&doc, &r, "keyboard/scrollable-region-not-focusable"),
         ["menus"]
     );
     assert_eq!(
-        urteile(&r, "keyboard/scrollable-region-not-focusable"),
+        verdicts(&r, "keyboard/scrollable-region-not-focusable"),
         [(Outcome::Fail, Severity::High)]
     );
 }
 
 #[test]
-fn ohne_scroll_ueberhang_ungeprueft() {
-    let (_, r) = pruefe(BEREICHE, false);
+fn without_scroll_overhang_unchecked() {
+    let (_, r) = check(AREAS, false);
     assert_eq!(
-        urteile(&r, "keyboard/scrollable-region-not-focusable"),
+        verdicts(&r, "keyboard/scrollable-region-not-focusable"),
         [(Outcome::Untested, Severity::High)]
     );
 }

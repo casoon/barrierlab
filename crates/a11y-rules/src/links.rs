@@ -15,7 +15,7 @@ use a11y_dom::{Document, Node, NodeId, ancestors, descendants, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick};
-use crate::structure::{explizite_rolle, per_tab_erreichbar};
+use crate::structure::{explicit_role, per_tab_reachable};
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -23,7 +23,7 @@ fn at(id: NodeId) -> Location {
 
 /// Rollen, die ein Element bedienbar machen. Dieselbe Menge wie in
 /// auditmysite.
-const INTERAKTIVE_ROLLEN: &[&str] = &[
+const INTERACTIVE_ROLES: &[&str] = &[
     "button",
     "link",
     "checkbox",
@@ -37,7 +37,7 @@ const INTERAKTIVE_ROLLEN: &[&str] = &[
     "treeitem",
 ];
 
-fn in_tabfolge<'a, N: Node<'a>>(n: N) -> bool {
+fn in_tab_order<'a, N: Node<'a>>(n: N) -> bool {
     n.attr("tabindex")
         .and_then(|t| t.trim().parse::<i64>().ok())
         .is_some_and(|t| t >= 0)
@@ -52,15 +52,15 @@ fn in_tabfolge<'a, N: Node<'a>>(n: N) -> bool {
 /// HTML-Standard ist das kein Link, sondern ein Platzhalter — nicht
 /// fokussierbar, ohne Rolle. auditmysite meldet es als
 /// `fake_navigation_link`, obwohl es gar nicht als Link angesagt wird.
-pub(crate) fn klick_ohne_tastatur<'a, N: Node<'a>>(n: N) -> bool {
-    let nicht_interaktiv = matches!(
+pub(crate) fn click_without_keyboard<'a, N: Node<'a>>(n: N) -> bool {
+    let not_interactive = matches!(
         n.local_name(),
         "div" | "span" | "p" | "li" | "section" | "article"
     ) || (n.is_element("a") && !n.has_attr("href"));
     n.has_attr("onclick")
-        && nicht_interaktiv
-        && !explizite_rolle(n).is_some_and(|r| INTERAKTIVE_ROLLEN.contains(&r))
-        && !in_tabfolge(n)
+        && not_interactive
+        && !explicit_role(n).is_some_and(|r| INTERACTIVE_ROLES.contains(&r))
+        && !in_tab_order(n)
 }
 
 /// 2.1.1: Klickbar, aber per Tastatur weder erreichbar noch auslösbar.
@@ -69,7 +69,7 @@ pub(crate) fn klick_ohne_tastatur<'a, N: Node<'a>>(n: N) -> bool {
 /// nur dessen Klick ab (eine Karte um ihren Link) — dann ist die Funktion per
 /// Tastatur da, und der Befund ist `REVIEW` statt Verstoß (auditmysite#779).
 pub(crate) fn click_handler<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for n in elements(doc).filter(|n| klick_ohne_tastatur(*n)) {
+    for n in elements(doc).filter(|n| click_without_keyboard(*n)) {
         let text = pick!(
             locale,
             "This element has an onclick handler but is neither a control nor in the tab \
@@ -77,7 +77,7 @@ pub(crate) fn click_handler<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
             "Das Element hat einen onclick-Handler, ist aber weder Bedienelement noch in \
              der Tabfolge; per Tastatur lässt es sich nicht auslösen.",
         );
-        let f = if descendants(n).any(per_tab_erreichbar) {
+        let f = if descendants(n).any(per_tab_reachable) {
             Finding::review("keyboard/click-handler-not-focusable", text)
         } else {
             Finding::fail("keyboard/click-handler-not-focusable", text)
@@ -94,7 +94,7 @@ pub(crate) fn click_handler<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 
 /// Ein `href`, das nirgendwohin führt: leer, nur `#` oder eine
 /// `javascript:`-Adresse.
-fn fuehrt_nirgendwohin(href: &str) -> bool {
+fn leads_nowhere(href: &str) -> bool {
     let href = href.trim();
     href.is_empty()
         || href == "#"
@@ -117,8 +117,8 @@ pub(crate) fn used_as_button<D: Document>(doc: &D, locale: Locale, out: &mut Vec
         };
         if n.is_element("a")
             && n.has_attr("onclick")
-            && fuehrt_nirgendwohin(href)
-            && explizite_rolle(n) != Some("button")
+            && leads_nowhere(href)
+            && explicit_role(n) != Some("button")
         {
             out.push(
                 Finding::review(
@@ -143,8 +143,8 @@ pub(crate) fn used_as_button<D: Document>(doc: &D, locale: Locale, out: &mut Vec
 
 // --- navigation/location-missing --------------------------------------------
 
-fn ist_navigation<'a, N: Node<'a>>(n: N) -> bool {
-    n.is_element("nav") || explizite_rolle(n) == Some("navigation")
+fn is_navigation<'a, N: Node<'a>>(n: N) -> bool {
+    n.is_element("nav") || explicit_role(n) == Some("navigation")
 }
 
 /// 2.4.8 (AAA): Die Seite hat eine Navigation, zeigt aber weder einen
@@ -158,15 +158,15 @@ fn ist_navigation<'a, N: Node<'a>>(n: N) -> bool {
 /// von spiegel.de, zeit.de und tagesschau.de lösen den Hinweis aus, die
 /// Unterseiten von gov.uk und bundesregierung.de mit Brotkrumenpfad nicht.
 pub(crate) fn location<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mit_navigation =
-        elements(doc).any(|n| n.is_element("a") && ancestors(n).any(ist_navigation));
-    let ort_angezeigt = elements(doc).any(|n| {
+    let with_navigation =
+        elements(doc).any(|n| n.is_element("a") && ancestors(n).any(is_navigation));
+    let place_shown = elements(doc).any(|n| {
         n.attr("aria-current")
             .is_some_and(|v| v.trim().eq_ignore_ascii_case("page"))
             || n.attr("aria-label")
                 .is_some_and(|l| l.to_ascii_lowercase().contains("breadcrumb"))
     });
-    if mit_navigation && !ort_angezeigt {
+    if with_navigation && !place_shown {
         out.push(
             Finding::review(
                 "navigation/location-missing",

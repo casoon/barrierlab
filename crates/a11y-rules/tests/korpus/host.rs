@@ -32,7 +32,7 @@ use html5_parser::NodeKind as H;
 /// Ein Fall als Dokument. Ein Fragment kommt in ein vollständiges Gerüst
 /// (Sprache, Titel, Viewport), ein ganzes Dokument (`<!DOCTYPE` oder
 /// `<html`) bleibt, wie es ist.
-pub fn dokument(src: &str) -> Arena {
+pub fn document(src: &str) -> Arena {
     let s = src.trim_start();
     // Ein Fremddokument (`<?xml …?>` vorweg, etwa ein SVG-Dokument): Wurzel ist
     // sein erstes Element, nicht ein `<html>` — für Regeln, die nur auf
@@ -40,7 +40,7 @@ pub fn dokument(src: &str) -> Arena {
     if let Some(rest) = s.strip_prefix("<?xml") {
         let rest = rest.split_once("?>").map_or(rest, |(_, r)| r);
         let doc = html5_parser::parse(rest).document;
-        fn erstes(
+        fn first(
             d: &html5_parser::Document,
             id: html5_parser::NodeId,
         ) -> Option<html5_parser::NodeId> {
@@ -48,13 +48,13 @@ pub fn dokument(src: &str) -> Arena {
                 H::Element { name, .. } if !matches!(name.as_str(), "html" | "head" | "body") => {
                     Some(c)
                 }
-                _ => erstes(d, c),
+                _ => first(d, c),
             })
         }
-        let wurzel = erstes(&doc, doc.root()).expect("Fremddokument ohne Element");
-        return uebernehmen(&doc, wurzel, Arena::builder()).build();
+        let root = first(&doc, doc.root()).expect("Fremddokument ohne Element");
+        return adopt(&doc, root, Arena::builder()).build();
     }
-    let quelle =
+    let source =
         if s.starts_with("<!DOCTYPE") || s.starts_with("<!doctype") || s.starts_with("<html") {
             src.to_string()
         } else {
@@ -64,19 +64,15 @@ pub fn dokument(src: &str) -> Arena {
              <body>{src}</body></html>"
             )
         };
-    let doc = html5_parser::parse(&quelle).document;
-    let wurzel = doc
+    let doc = html5_parser::parse(&source).document;
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .expect("Dokument ohne Wurzelelement");
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -85,7 +81,7 @@ fn uebernehmen(
             for k in doc.children(id) {
                 // Der Inhalt eines `template` hängt unter einem Fragment.
                 for kk in doc.children(k) {
-                    b = uebernehmen(doc, kk, b);
+                    b = adopt(doc, kk, b);
                 }
             }
             b.end_scope()
@@ -93,7 +89,7 @@ fn uebernehmen(
         H::Element { name, .. } if name == "x-slotted" => {
             let mut b = b.slotted();
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.end_scope()
         }
@@ -105,14 +101,14 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
         H::DocumentFragment => {
             let mut b = b;
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b
         }
@@ -124,12 +120,12 @@ fn uebernehmen(
 pub struct Host<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
-    ungemessen: Vec<String>,
+    unmeasured: Vec<String>,
 }
 
 impl<'a> Host<'a> {
     pub fn new(doc: &'a Arena) -> Self {
-        let ungemessen = deklarationen(doc.root())
+        let unmeasured = declarations(doc.root())
             .into_iter()
             .find(|(k, _)| k == "--unmeasured")
             .map(|(_, v)| v.split_whitespace().map(str::to_string).collect())
@@ -137,12 +133,12 @@ impl<'a> Host<'a> {
         Host {
             ids: IdIndex::build(doc.root()),
             doc,
-            ungemessen,
+            unmeasured,
         }
     }
 
-    fn misst(&self, feld: &str) -> bool {
-        !self.ungemessen.iter().any(|u| u == feld)
+    fn measures(&self, field: &str) -> bool {
+        !self.unmeasured.iter().any(|u| u == field)
     }
 
     /// Die Stylesheets der Seite: der Text jedes `<style>`.
@@ -193,7 +189,7 @@ impl Semantics for Host<'_> {
 // --- CSS aus dem style-Attribut ---------------------------------------------
 
 /// Die Deklarationen des `style`-Attributs, Namen klein geschrieben.
-fn deklarationen<'a>(n: ArenaNode<'a>) -> Vec<(String, String)> {
+fn declarations<'a>(n: ArenaNode<'a>) -> Vec<(String, String)> {
     n.attr("style")
         .unwrap_or("")
         .split(';')
@@ -205,8 +201,8 @@ fn deklarationen<'a>(n: ArenaNode<'a>) -> Vec<(String, String)> {
 }
 
 /// Der Wert einer Eigenschaft am Element selbst.
-fn eigen(n: ArenaNode<'_>, prop: &str) -> Option<String> {
-    deklarationen(n)
+fn own(n: ArenaNode<'_>, prop: &str) -> Option<String> {
+    declarations(n)
         .into_iter()
         .rev()
         .find(|(k, _)| k == prop)
@@ -214,17 +210,17 @@ fn eigen(n: ArenaNode<'_>, prop: &str) -> Option<String> {
 }
 
 /// Der Wert einer vererbten Eigenschaft: am Element oder am nächsten Vorfahren.
-fn geerbt(n: ArenaNode<'_>, prop: &str) -> Option<String> {
+fn inherited(n: ArenaNode<'_>, prop: &str) -> Option<String> {
     std::iter::once(n)
         .chain(ancestors(n))
-        .find_map(|a| eigen(a, prop))
+        .find_map(|a| own(a, prop))
 }
 
-fn schalter(n: ArenaNode<'_>, prop: &str) -> bool {
-    eigen(n, prop).is_some_and(|v| v == "1" || v == "true")
+fn switch(n: ArenaNode<'_>, prop: &str) -> bool {
+    own(n, prop).is_some_and(|v| v == "1" || v == "true")
 }
 
-fn zahl(v: &str) -> Option<f32> {
+fn number(v: &str) -> Option<f32> {
     let v = v.trim();
     if let Some(p) = v.strip_suffix("px") {
         return p.trim().parse().ok();
@@ -235,7 +231,7 @@ fn zahl(v: &str) -> Option<f32> {
     v.parse().ok()
 }
 
-pub fn farbe(v: &str) -> Option<Color> {
+pub fn make_color(v: &str) -> Option<Color> {
     let v = v.trim().to_ascii_lowercase();
     let c = |r, g, b, a| Some(Color { r, g, b, a });
     match v.as_str() {
@@ -264,29 +260,34 @@ pub fn farbe(v: &str) -> Option<Color> {
             _ => None,
         };
     }
-    let innen = v
+    let inside = v
         .strip_prefix("rgba(")
         .or_else(|| v.strip_prefix("rgb("))?
         .strip_suffix(')')?;
-    let teile: Vec<&str> = innen
+    let parts: Vec<&str> = inside
         .split([',', ' ', '/'])
         .filter(|s| !s.is_empty())
         .collect();
-    let kanal = |s: &str| s.trim().parse::<u8>().ok();
-    let alpha = match teile.get(3) {
+    let channel = |s: &str| s.trim().parse::<u8>().ok();
+    let alpha = match parts.get(3) {
         Some(a) => (a.trim().parse::<f32>().ok()? * 255.0).round() as u8,
         None => 255,
     };
-    c(kanal(teile[0])?, kanal(teile[1])?, kanal(teile[2])?, alpha)
+    c(
+        channel(parts[0])?,
+        channel(parts[1])?,
+        channel(parts[2])?,
+        alpha,
+    )
 }
 
-fn ueber(vorn: Color, hinten: Color) -> Color {
-    let a = f32::from(vorn.a) / 255.0;
+fn over(front: Color, back: Color) -> Color {
+    let a = f32::from(front.a) / 255.0;
     let m = |v: u8, h: u8| (f32::from(v) * a + f32::from(h) * (1.0 - a)).round() as u8;
     Color {
-        r: m(vorn.r, hinten.r),
-        g: m(vorn.g, hinten.g),
-        b: m(vorn.b, hinten.b),
+        r: m(front.r, back.r),
+        g: m(front.g, back.g),
+        b: m(front.b, back.b),
         a: 255,
     }
 }
@@ -323,17 +324,17 @@ impl Host<'_> {
     /// Der effektive Hintergrund: Farben vom Element nach oben übereinander
     /// gelegt bis zur ersten deckenden, darunter Weiß. `None`, wenn ein
     /// Hintergrundbild oder `--bg-unknown` im Weg ist.
-    fn hintergrund(&self, n: ArenaNode<'_>) -> Option<Color> {
-        let mut schichten = Vec::new();
+    fn background(&self, n: ArenaNode<'_>) -> Option<Color> {
+        let mut layers = Vec::new();
         for a in std::iter::once(n).chain(ancestors(n)) {
-            if schalter(a, "--bg-unknown") || eigen(a, "background-image").is_some() {
+            if switch(a, "--bg-unknown") || own(a, "background-image").is_some() {
                 return None;
             }
-            if let Some(c) = eigen(a, "background-color")
-                .or_else(|| eigen(a, "background"))
-                .and_then(|v| farbe(&v))
+            if let Some(c) = own(a, "background-color")
+                .or_else(|| own(a, "background"))
+                .and_then(|v| make_color(&v))
             {
-                schichten.push(c);
+                layers.push(c);
                 if c.a == 255 {
                     break;
                 }
@@ -345,8 +346,8 @@ impl Host<'_> {
             b: 255,
             a: 255,
         };
-        for s in schichten.into_iter().rev() {
-            c = ueber(s, c);
+        for s in layers.into_iter().rev() {
+            c = over(s, c);
         }
         Some(c)
     }
@@ -354,26 +355,26 @@ impl Host<'_> {
 
 impl Rendering for Host<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
-        if !self.misst("style") {
+        if !self.measures("style") {
             return None;
         }
         // Ein Host aus einem Layout-Schnappschuss kennt für nicht Dargestelltes
         // keinen Stil.
-        let nicht_dargestellt =
-            eigen(node, "display").unwrap_or_else(|| ua_display(node).into()) == "none";
-        if !self.misst("unrendered") && nicht_dargestellt {
+        let not_rendered =
+            own(node, "display").unwrap_or_else(|| ua_display(node).into()) == "none";
+        if !self.measures("unrendered") && not_rendered {
             return None;
         }
         // Wie auditmysite: für nicht Dargestelltes nur `display: none`, alle
         // übrigen Felder ungemessen.
-        if !self.misst("unrendered-fields") && nicht_dargestellt {
+        if !self.measures("unrendered-fields") && not_rendered {
             return Some(ComputedStyle {
                 display: Some("none".into()),
                 ..Default::default()
             });
         }
-        let deko = eigen(node, "text-decoration-line")
-            .or_else(|| eigen(node, "text-decoration"))
+        let decor = own(node, "text-decoration-line")
+            .or_else(|| own(node, "text-decoration"))
             .unwrap_or_else(|| {
                 if node.is_element("a") && node.has_attr("href") {
                     "underline".into()
@@ -381,19 +382,19 @@ impl Rendering for Host<'_> {
                     "none".into()
                 }
             });
-        let gewicht = geerbt(node, "font-weight").map(|w| match w.as_str() {
+        let weight = inherited(node, "font-weight").map(|w| match w.as_str() {
             "bold" => 700,
             "normal" => 400,
             w => w.parse().unwrap_or(400),
         });
-        let fett_nach_ua = matches!(
+        let bold_by_ua = matches!(
             node.local_name(),
             "b" | "strong" | "th" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
         );
         Some(ComputedStyle {
             color: Some(
-                geerbt(node, "color")
-                    .and_then(|v| farbe(&v))
+                inherited(node, "color")
+                    .and_then(|v| make_color(&v))
                     .unwrap_or(Color {
                         r: 0,
                         g: 0,
@@ -401,39 +402,37 @@ impl Rendering for Host<'_> {
                         a: 255,
                     }),
             ),
-            background_color: self.hintergrund(node),
+            background_color: self.background(node),
             font_size_px: Some(
-                geerbt(node, "font-size")
-                    .and_then(|v| zahl(&v))
+                inherited(node, "font-size")
+                    .and_then(|v| number(&v))
                     .unwrap_or(16.0),
             ),
-            font_weight: Some(gewicht.unwrap_or(if fett_nach_ua { 700 } else { 400 })),
-            display: Some(eigen(node, "display").unwrap_or_else(|| ua_display(node).into())),
-            visibility: Some(geerbt(node, "visibility").unwrap_or_else(|| "visible".into())),
-            list_style_type: Some(geerbt(node, "list-style-type").unwrap_or_else(|| {
+            font_weight: Some(weight.unwrap_or(if bold_by_ua { 700 } else { 400 })),
+            display: Some(own(node, "display").unwrap_or_else(|| ua_display(node).into())),
+            visibility: Some(inherited(node, "visibility").unwrap_or_else(|| "visible".into())),
+            list_style_type: Some(inherited(node, "list-style-type").unwrap_or_else(|| {
                 if ancestors(node).any(|a| a.is_element("ol")) || node.is_element("ol") {
                     "decimal".into()
                 } else {
                     "disc".into()
                 }
             })),
-            text_decoration_line: Some(deko),
-            font_style: Some(geerbt(node, "font-style").unwrap_or_else(|| "normal".into())),
-            font_family: Some(geerbt(node, "font-family").unwrap_or_else(|| "serif".into())),
+            text_decoration_line: Some(decor),
+            font_style: Some(inherited(node, "font-style").unwrap_or_else(|| "normal".into())),
+            font_family: Some(inherited(node, "font-family").unwrap_or_else(|| "serif".into())),
             border_bottom_style: Some(
-                eigen(node, "border-bottom-style").unwrap_or_else(|| "none".into()),
+                own(node, "border-bottom-style").unwrap_or_else(|| "none".into()),
             ),
-            appearance: Some(eigen(node, "appearance").unwrap_or_else(|| "auto".into())),
-            border_top_style: Some(
-                eigen(node, "border-top-style").unwrap_or_else(|| "none".into()),
-            ),
+            appearance: Some(own(node, "appearance").unwrap_or_else(|| "auto".into())),
+            border_top_style: Some(own(node, "border-top-style").unwrap_or_else(|| "none".into())),
             border_top_width_px: Some(
-                eigen(node, "border-top-width")
-                    .and_then(|v| zahl(&v))
+                own(node, "border-top-width")
+                    .and_then(|v| number(&v))
                     .unwrap_or(0.0),
             ),
-            border_top_color: eigen(node, "border-top-color")
-                .and_then(|v| farbe(&v))
+            border_top_color: own(node, "border-top-color")
+                .and_then(|v| make_color(&v))
                 .or(Some(Color {
                     r: 0,
                     g: 0,
@@ -441,8 +440,8 @@ impl Rendering for Host<'_> {
                     a: 255,
                 })),
             own_background_color: Some(
-                eigen(node, "background-color")
-                    .and_then(|v| farbe(&v))
+                own(node, "background-color")
+                    .and_then(|v| make_color(&v))
                     .unwrap_or(Color {
                         r: 0,
                         g: 0,
@@ -454,10 +453,10 @@ impl Rendering for Host<'_> {
     }
 
     fn bounds<'n>(&'n self, node: Self::N<'n>) -> Option<Rect> {
-        if !self.misst("bounds") {
+        if !self.measures("bounds") {
             return None;
         }
-        let w = |p: &str, d: f32| eigen(node, p).and_then(|v| zahl(&v)).unwrap_or(d);
+        let w = |p: &str, d: f32| own(node, p).and_then(|v| number(&v)).unwrap_or(d);
         Some(Rect {
             x: w("--x", 0.0),
             y: w("--y", 0.0),
@@ -467,76 +466,74 @@ impl Rendering for Host<'_> {
     }
 
     fn layout<'n>(&'n self, node: Self::N<'n>) -> Option<Layout> {
-        if !self.misst("layout") {
+        if !self.measures("layout") {
             return None;
         }
-        let feld = |name: &str, wert: bool| self.misst(name).then_some(wert);
-        let focus_visible = match eigen(node, "--focus-visible").as_deref() {
+        let field = |name: &str, value: bool| self.measures(name).then_some(value);
+        let focus_visible = match own(node, "--focus-visible").as_deref() {
             Some("unmeasured") => None,
             Some(v) => Some(v == "1" || v == "true"),
             None => Some(true),
         };
         Some(Layout {
-            flex_reversed: feld(
+            flex_reversed: field(
                 "flex-reversed",
-                schalter(node, "--flex-reversed")
-                    || eigen(node, "flex-direction").is_some_and(|v| v.ends_with("-reverse")),
+                switch(node, "--flex-reversed")
+                    || own(node, "flex-direction").is_some_and(|v| v.ends_with("-reverse")),
             ),
-            order: self.misst("order").then(|| {
-                eigen(node, "order")
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(0)
-            }),
-            min_width_px: self.misst("min-width").then(|| {
-                eigen(node, "min-width")
-                    .and_then(|v| zahl(&v))
+            order: self
+                .measures("order")
+                .then(|| own(node, "order").and_then(|v| v.parse().ok()).unwrap_or(0)),
+            min_width_px: self.measures("min-width").then(|| {
+                own(node, "min-width")
+                    .and_then(|v| number(&v))
                     .unwrap_or(0.0)
             }),
-            cursor_pointer: feld(
+            cursor_pointer: field(
                 "cursor",
-                geerbt(node, "cursor").is_some_and(|v| v == "pointer"),
+                inherited(node, "cursor").is_some_and(|v| v == "pointer"),
             ),
-            infinite_animation: feld(
+            infinite_animation: field(
                 "animation",
-                schalter(node, "--infinite-animation")
-                    || eigen(node, "animation-iteration-count").is_some_and(|v| v == "infinite"),
+                switch(node, "--infinite-animation")
+                    || own(node, "animation-iteration-count").is_some_and(|v| v == "infinite"),
             ),
-            obscured: feld("obscured", schalter(node, "--obscured")),
-            hides_focus: feld("hides-focus", schalter(node, "--hides-focus")),
-            focus_visible: if self.misst("focus-visible") {
+            obscured: field("obscured", switch(node, "--obscured")),
+            hides_focus: field("hides-focus", switch(node, "--hides-focus")),
+            focus_visible: if self.measures("focus-visible") {
                 focus_visible
             } else {
                 None
             },
-            pointer_events_none: feld(
+            pointer_events_none: field(
                 "pointer-events",
-                geerbt(node, "pointer-events").is_some_and(|v| v == "none"),
+                inherited(node, "pointer-events").is_some_and(|v| v == "none"),
             ),
-            animating: feld("animation", schalter(node, "--animating")),
+            animating: field("animation", switch(node, "--animating")),
         })
     }
 
     fn scroll_overflow_px<'n>(&'n self, node: Self::N<'n>) -> Option<f32> {
         // Was nicht dargestellt wird (`head`, `display: none`), hat keinen
         // Kasten und damit keinen gemessenen Überhang — wie in Chrome.
-        let anzeige = eigen(node, "display").unwrap_or_else(|| ua_display(node).into());
-        if anzeige == "none" {
+        let display = own(node, "display").unwrap_or_else(|| ua_display(node).into());
+        if display == "none" {
             return None;
         }
-        self.misst("scroll").then(|| {
-            eigen(node, "--scroll-overflow")
-                .and_then(|v| zahl(&v))
+        self.measures("scroll").then(|| {
+            own(node, "--scroll-overflow")
+                .and_then(|v| number(&v))
                 .unwrap_or(0.0)
         })
     }
 
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
-        self.misst("visually-hidden")
-            .then(|| schalter(node, "--visually-hidden"))
+        self.measures("visually-hidden")
+            .then(|| switch(node, "--visually-hidden"))
     }
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
-        eigen(node, "--backdrop").map(|v| Backdrop {
+        own(node, "--backdrop").map(|v| Backdrop {
             luminance: v.split(',').filter_map(|s| s.trim().parse().ok()).collect(),
         })
     }

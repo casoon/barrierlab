@@ -16,41 +16,41 @@ mod gruppen {
 
 /// Welche Art von Fall.
 #[derive(Debug, Clone, Copy)]
-pub enum Art {
+pub enum Kind {
     /// Die Kennung wird gemeldet, jeder Befund mit genau diesem Ergebnis.
-    Positiv(Outcome),
+    Positive(Outcome),
     /// Ähnlich aussehend, aber konform: die Kennung lief und meldet nichts.
-    Negativ,
+    Negative,
     /// Nichts, worauf die Regel zielt: die Kennung lief und meldet nichts.
-    NichtAnwendbar,
+    NotApplicable,
 }
 
-impl Art {
+impl Kind {
     pub fn index(self) -> usize {
         match self {
-            Art::Positiv(_) => 0,
-            Art::Negativ => 1,
-            Art::NichtAnwendbar => 2,
+            Kind::Positive(_) => 0,
+            Kind::Negative => 1,
+            Kind::NotApplicable => 2,
         }
     }
 
     pub fn name(self) -> &'static str {
         match self {
-            Art::Positiv(_) => "positiv",
-            Art::Negativ => "negativ",
-            Art::NichtAnwendbar => "n/a",
+            Kind::Positive(_) => "positiv",
+            Kind::Negative => "negativ",
+            Kind::NotApplicable => "n/a",
         }
     }
 }
 
 /// Welche Tiers der Host für den Fall liefert.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Modus {
+pub enum Mode {
     /// Struktur, Semantik, Darstellung und Stylesheets (`run_full` +
     /// `run_stylesheets`). Vorgabe.
-    Voll,
+    Full,
     /// Struktur und Semantik, wie auditmysite (`run_with_semantics`).
-    Semantik,
+    Semantics,
 }
 
 /// Ein Fall: Kennung, Art, Dokument und die Norm, aus der die Erwartung
@@ -58,81 +58,81 @@ pub enum Modus {
 #[derive(Debug, Clone)]
 pub struct Fall {
     pub id: &'static str,
-    pub art: Art,
+    pub kind: Kind,
     pub html: &'static str,
-    pub quelle: &'static str,
+    pub source: &'static str,
     /// Grenzwert oder Variante, etwa „4,49:1" oder „aria-labelledby".
-    pub variante: Option<&'static str>,
-    pub modus: Modus,
+    pub variant: Option<&'static str>,
+    pub mode: Mode,
     /// Nur bei positiven Fällen: genau so viele Befunde.
-    pub anzahl: Option<usize>,
+    pub count: Option<usize>,
 }
 
 impl Fall {
-    pub fn variante(mut self, v: &'static str) -> Self {
-        self.variante = Some(v);
+    pub fn variant(mut self, v: &'static str) -> Self {
+        self.variant = Some(v);
         self
     }
 
-    pub fn modus(mut self, m: Modus) -> Self {
-        self.modus = m;
+    pub fn mode(mut self, m: Mode) -> Self {
+        self.mode = m;
         self
     }
 
-    pub fn anzahl(mut self, n: usize) -> Self {
-        self.anzahl = Some(n);
+    pub fn count(mut self, n: usize) -> Self {
+        self.count = Some(n);
         self
     }
 }
 
-fn fall(id: &'static str, art: Art, html: &'static str, quelle: &'static str) -> Fall {
+fn fall(id: &'static str, kind: Kind, html: &'static str, source: &'static str) -> Fall {
     Fall {
         id,
-        art,
+        kind,
         html,
-        quelle,
-        variante: None,
-        modus: Modus::Voll,
-        anzahl: None,
+        source,
+        variant: None,
+        mode: Mode::Full,
+        count: None,
     }
 }
 
 /// Die Kennung wird mit `Fail` gemeldet.
-pub fn fail(id: &'static str, html: &'static str, quelle: &'static str) -> Fall {
-    fall(id, Art::Positiv(Outcome::Fail), html, quelle)
+pub fn fail(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::Positive(Outcome::Fail), html, source)
 }
 
 /// Die Kennung wird mit `Review` gemeldet.
-pub fn review(id: &'static str, html: &'static str, quelle: &'static str) -> Fall {
-    fall(id, Art::Positiv(Outcome::Review), html, quelle)
+pub fn review(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::Positive(Outcome::Review), html, source)
 }
 
 /// Die Kennung wird mit `Untested` gemeldet.
-pub fn untested(id: &'static str, html: &'static str, quelle: &'static str) -> Fall {
-    fall(id, Art::Positiv(Outcome::Untested), html, quelle)
+pub fn untested(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::Positive(Outcome::Untested), html, source)
 }
 
 /// Ähnlich, aber konform: nichts gemeldet.
-pub fn negativ(id: &'static str, html: &'static str, quelle: &'static str) -> Fall {
-    fall(id, Art::Negativ, html, quelle)
+pub fn negative(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::Negative, html, source)
 }
 
 /// Nichts, worauf die Regel zielt: nichts gemeldet.
-pub fn na(id: &'static str, html: &'static str, quelle: &'static str) -> Fall {
-    fall(id, Art::NichtAnwendbar, html, quelle)
+pub fn na(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::NotApplicable, html, source)
 }
 
-pub fn alle() -> Vec<Fall> {
+pub fn all() -> Vec<Fall> {
     [
-        gruppen::aria::faelle(),
-        gruppen::checkliste::faelle(),
-        gruppen::darstellung::faelle(),
-        gruppen::dokument::faelle(),
-        gruppen::formulare::faelle(),
-        gruppen::landmarken::faelle(),
-        gruppen::namen::faelle(),
-        gruppen::regressionen::faelle(),
-        gruppen::struktur::faelle(),
+        gruppen::aria::cases(),
+        gruppen::checkliste::cases(),
+        gruppen::darstellung::cases(),
+        gruppen::dokument::cases(),
+        gruppen::formulare::cases(),
+        gruppen::landmarken::cases(),
+        gruppen::namen::cases(),
+        gruppen::regressionen::cases(),
+        gruppen::struktur::cases(),
     ]
     .into_iter()
     .flatten()

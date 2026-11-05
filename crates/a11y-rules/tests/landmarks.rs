@@ -24,18 +24,14 @@ fn html(body: &str) -> Arena {
         "<!DOCTYPE html><html lang=\"en\"><head><title>T</title></head><body>{body}</body></html>"
     ))
     .document;
-    let wurzel = doc
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .unwrap();
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -45,23 +41,23 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
         H::Text { content } => b.text(content),
-        H::DocumentFragment => doc.children(id).fold(b, |b, k| uebernehmen(doc, k, b)),
+        H::DocumentFragment => doc.children(id).fold(b, |b, k| adopt(doc, k, b)),
         _ => b,
     }
 }
 
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
     chrome: bool,
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -72,7 +68,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         if self.chrome && !node.has_attr("role") {
             match node.local_name() {
@@ -101,11 +97,11 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
-fn beide_in(src: &str, locale: a11y_rules::Locale) -> [Report; 2] {
+fn both_in(src: &str, locale: a11y_rules::Locale) -> [Report; 2] {
     let a = html(src);
     [false, true].map(|chrome| {
         run_with_semantics_in(
-            &MitSemantik {
+            &WithSemantics {
                 doc: &a,
                 ids: IdIndex::build(a.root()),
                 chrome,
@@ -115,15 +111,15 @@ fn beide_in(src: &str, locale: a11y_rules::Locale) -> [Report; 2] {
     })
 }
 
-fn beide(src: &str) -> [Report; 2] {
-    beide_in(src, a11y_rules::Locale::En)
+fn both(src: &str) -> [Report; 2] {
+    both_in(src, a11y_rules::Locale::En)
 }
 
-fn anzahl(r: &Report, id: &str) -> usize {
+fn count(r: &Report, id: &str) -> usize {
     r.findings.iter().filter(|f| f.rule_id == id).count()
 }
 
-fn urteile(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
+fn verdicts(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
     r.findings
         .iter()
         .filter(|f| f.rule_id == id)
@@ -132,16 +128,16 @@ fn urteile(r: &Report, id: &str) -> Vec<(Outcome, Severity)> {
 }
 
 /// Die Befunde einer Kennung, verortet an der `id` des Elements.
-fn an(src: &str, r: &Report, rule: &str) -> Vec<String> {
+fn findings_at(src: &str, r: &Report, rule: &str) -> Vec<String> {
     let a = html(src);
     let mut v: Vec<String> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == rule)
         .filter_map(|f| {
-            let knoten = f.location.node.as_deref()?;
+            let node = f.location.node.as_deref()?;
             a11y_dom::self_and_descendants(a.root())
-                .find(|n| n.id().to_string() == knoten)
+                .find(|n| n.id().to_string() == node)
                 .map(|n| n.attr("id").unwrap_or(n.local_name()).to_string())
         })
         .collect();
@@ -167,29 +163,32 @@ const LANDMARK_GRANULAR: &str = r#"
     <nav id="navB">Unnamed nav B</nav>"#;
 
 #[test]
-fn korpus_landmark_granular() {
+fn corpus_landmark_granular() {
     let src = LANDMARK_GRANULAR;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "landmarks/not-top-level"),
+            findings_at(src, &r, "landmarks/not-top-level"),
             ["b-nested", "m-nested"]
         );
         assert_eq!(
-            urteile(&r, "landmarks/not-top-level")[0],
+            verdicts(&r, "landmarks/not-top-level")[0],
             (Outcome::Fail, Severity::Medium)
         );
         // Die drei banner: die verschachtelte und zwei <header>.
-        assert_eq!(an(src, &r, "landmarks/banner-duplicate"), ["h1"]);
+        assert_eq!(findings_at(src, &r, "landmarks/banner-duplicate"), ["h1"]);
         assert_eq!(
-            urteile(&r, "landmarks/banner-duplicate"),
+            verdicts(&r, "landmarks/banner-duplicate"),
             [(Outcome::Fail, Severity::Medium)]
         );
-        assert_eq!(an(src, &r, "landmarks/contentinfo-duplicate"), ["f2"]);
-        assert_eq!(anzahl(&r, "landmarks/main-duplicate"), 1);
+        assert_eq!(
+            findings_at(src, &r, "landmarks/contentinfo-duplicate"),
+            ["f2"]
+        );
+        assert_eq!(count(&r, "landmarks/main-duplicate"), 1);
         // auditmysite: 11 (3 navigation, 3 banner, 3 main, 2 contentinfo).
-        assert_eq!(anzahl(&r, "landmarks/not-unique"), 11);
+        assert_eq!(count(&r, "landmarks/not-unique"), 11);
         assert!(
-            urteile(&r, "landmarks/not-unique")
+            verdicts(&r, "landmarks/not-unique")
                 .iter()
                 .all(|u| *u == (Outcome::Review, Severity::Medium))
         );
@@ -220,8 +219,8 @@ const HEADER_IN_MAIN: &str = r#"
     <footer class="site-footer">Site footer</footer>"#;
 
 #[test]
-fn korpus_landmark_header_in_main_issue_639() {
-    for r in beide(HEADER_IN_MAIN) {
+fn corpus_landmark_header_in_main_issue_639() {
+    for r in both(HEADER_IN_MAIN) {
         for id in [
             "landmarks/not-unique",
             "landmarks/banner-duplicate",
@@ -229,7 +228,7 @@ fn korpus_landmark_header_in_main_issue_639() {
             "landmarks/not-top-level",
             "landmarks/content-outside",
         ] {
-            assert_eq!(anzahl(&r, id), 0, "{id}: {:?}", r.findings);
+            assert_eq!(count(&r, id), 0, "{id}: {:?}", r.findings);
         }
     }
 }
@@ -237,7 +236,7 @@ fn korpus_landmark_header_in_main_issue_639() {
 /// auditmysite#639, zweiter Fall (barrierlab.eu/experience/): `<header>` und
 /// `<footer>` in einem Muster-`div` in `main`; ebenso unter `role="main"`.
 #[test]
-fn header_footer_im_muster_div_issue_639() {
+fn header_footer_in_div_pattern_issue_639() {
     let src = r#"
         <header>Site</header>
         <main><h1>Experience</h1>
@@ -245,15 +244,15 @@ fn header_footer_im_muster_div_issue_639() {
         </main>
         <div role="main" id="zweite"><header>In role=main</header></div>
         <footer>Site footer</footer>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            anzahl(&r, "landmarks/banner-duplicate"),
+            count(&r, "landmarks/banner-duplicate"),
             0,
             "{:?}",
             r.findings
         );
-        assert_eq!(anzahl(&r, "landmarks/contentinfo-duplicate"), 0);
-        assert_eq!(anzahl(&r, "landmarks/not-top-level"), 0);
+        assert_eq!(count(&r, "landmarks/contentinfo-duplicate"), 0);
+        assert_eq!(count(&r, "landmarks/not-top-level"), 0);
     }
 }
 
@@ -261,7 +260,7 @@ fn header_footer_im_muster_div_issue_639() {
 /// oder `section` ist `generic`; es bleiben zwei `complementary` mit
 /// verschiedenen Namen.
 #[test]
-fn korpus_landmark_aside_scoping() {
+fn corpus_landmark_aside_scoping() {
     let src = r#"
         <main>
             <h1>Aside scoping</h1>
@@ -277,15 +276,15 @@ fn korpus_landmark_aside_scoping() {
             </section>
         </main>
         <aside>Unnamed top-level aside (complementary)</aside>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "landmarks/not-unique"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "landmarks/not-unique"), 0, "{:?}", r.findings);
     }
 }
 
 /// Korpus `landmark_aside_named_duplicate`: ein benanntes `<aside>` bleibt
 /// auch im Artikel `complementary`, `title` zählt als Name.
 #[test]
-fn korpus_landmark_aside_named_duplicate() {
+fn corpus_landmark_aside_named_duplicate() {
     let src = r#"
         <main>
             <h1>Two articles</h1>
@@ -296,15 +295,15 @@ fn korpus_landmark_aside_named_duplicate() {
                 <aside id="a2" title="Related">Related to the second article</aside>
             </article>
         </main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/not-unique"), ["a1", "a2"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/not-unique"), ["a1", "a2"]);
     }
 }
 
 /// Korpus `landmark_unique_one_per_element`: vier betroffene Elemente, vier
 /// Befunde.
 #[test]
-fn korpus_landmark_unique_one_per_element() {
+fn corpus_landmark_unique_one_per_element() {
     let src = r#"
         <header><nav id="n1" aria-label="Primary"><a href="/">Home</a></nav></header>
         <main>
@@ -314,9 +313,9 @@ fn korpus_landmark_unique_one_per_element() {
             <section id="s2" aria-label="Details"><p>Second details block.</p></section>
         </main>
         <footer><nav aria-label="Legal"><a href="/imprint">Imprint</a></nav></footer>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "landmarks/not-unique"),
+            findings_at(src, &r, "landmarks/not-unique"),
             ["n1", "n2", "s1", "s2"]
         );
     }
@@ -324,21 +323,21 @@ fn korpus_landmark_unique_one_per_element() {
 
 /// Korpus `landmarks_and_lists`: ein `<footer role="contentinfo">` in `main`.
 #[test]
-fn korpus_landmarks_and_lists() {
+fn corpus_landmarks_and_lists() {
     let src = r#"
         <header>Site header</header>
         <main>
             <h1>Landmark nesting and list structure</h1>
             <footer role="contentinfo" id="nested">Nested footer</footer>
         </main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/not-top-level"), ["nested"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/not-top-level"), ["nested"]);
     }
 }
 
 /// auditmysite#727: `<form>` und `<section>` sind nur mit Namen Landmarks.
 #[test]
-fn unbenannte_formulare_sind_keine_landmarks_issue_727() {
+fn unnamed_forms_are_not_landmarks_issue_727() {
     let src = r#"
         <main><h1>Experience</h1>
             <form class="demo__controls"><button>Go</button></form>
@@ -347,9 +346,9 @@ fn unbenannte_formulare_sind_keine_landmarks_issue_727() {
             <section><p>Two</p></section>
         </main>
         <form><div role="banner" id="b">Banner in an unnamed form</div></form>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "landmarks/not-unique"), 0, "{:?}", r.findings);
-        assert_eq!(anzahl(&r, "landmarks/not-top-level"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "landmarks/not-unique"), 0, "{:?}", r.findings);
+        assert_eq!(count(&r, "landmarks/not-top-level"), 0);
     }
 
     // Gegenprobe: benannt sind es Landmarks — gleichnamig nicht
@@ -360,20 +359,20 @@ fn unbenannte_formulare_sind_keine_landmarks_issue_727() {
             <form id="f2" aria-label="Search"><button>Go</button></form>
         </main>
         <form aria-label="Outer"><div role="banner" id="b">Banner</div></form>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/not-unique"), ["f1", "f2"]);
-        assert_eq!(an(src, &r, "landmarks/not-top-level"), ["b"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/not-unique"), ["f1", "f2"]);
+        assert_eq!(findings_at(src, &r, "landmarks/not-top-level"), ["b"]);
     }
 }
 
 #[test]
-fn verschiedene_namen_sind_unterscheidbar() {
+fn different_names_are_distinguishable() {
     let src = r#"
         <nav aria-label="Primary"><a href="/">Home</a></nav>
         <main><h1>X</h1></main>
         <nav aria-label="Footer"><a href="/i">Imprint</a></nav>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "landmarks/not-unique"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "landmarks/not-unique"), 0);
     }
 }
 
@@ -382,19 +381,22 @@ fn verschiedene_namen_sind_unterscheidbar() {
 /// Korpus `missing_main_landmark`: ohne jede Landmark steht aller Inhalt
 /// außerhalb; Überschriften gibt es (`bypass` besteht).
 #[test]
-fn korpus_missing_main_landmark() {
+fn corpus_missing_main_landmark() {
     let src = r#"
         <div id="wrapper">
             <h1>Page without a main landmark</h1>
             <p>No main element or role="main" anywhere on this page.</p>
         </div>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/content-outside"), ["wrapper"]);
+    for r in both(src) {
         assert_eq!(
-            urteile(&r, "landmarks/content-outside"),
+            findings_at(src, &r, "landmarks/content-outside"),
+            ["wrapper"]
+        );
+        assert_eq!(
+            verdicts(&r, "landmarks/content-outside"),
             [(Outcome::Fail, Severity::Medium)]
         );
-        assert_eq!(anzahl(&r, "headings/none"), 0);
+        assert_eq!(count(&r, "headings/none"), 0);
     }
 }
 
@@ -402,7 +404,7 @@ fn korpus_missing_main_landmark() {
 /// erkannt, nicht am (französischen) Text. Derselbe Link nach den regulären
 /// Links ist gewöhnlicher Inhalt.
 #[test]
-fn korpus_skip_link_language_issue_642() {
+fn corpus_skip_link_language_issue_642() {
     let src = r##"
         <a href="#main" class="skip-link" id="skip">Aller au contenu</a>
         <header><a href="/">Accueil</a></header>
@@ -412,9 +414,9 @@ fn korpus_skip_link_language_issue_642() {
         <main id="main"><h1>L'accessibilité numérique</h1><p>Le contenu principal de la page.</p></main>
         <div id="stray"><a href="#main" id="stray-link">Aller au contenu</a></div>
         <footer><p>Pied de page</p></footer>"##;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/content-outside"), ["stray"]);
-        assert_eq!(anzahl(&r, "keyboard/skip-link-missing"), 0);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/content-outside"), ["stray"]);
+        assert_eq!(count(&r, "keyboard/skip-link-missing"), 0);
     }
 
     // Eingepackt in einen Container gilt dasselbe.
@@ -422,9 +424,9 @@ fn korpus_skip_link_language_issue_642() {
         <div class="skip"><a href="#main">Aller au contenu</a><a href="#nav">Aller à la navigation</a></div>
         <nav id="nav" aria-label="Site"><a href="/">Accueil</a></nav>
         <main id="main"><h1>Titre</h1></main>"##;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            anzahl(&r, "landmarks/content-outside"),
+            count(&r, "landmarks/content-outside"),
             0,
             "{:?}",
             r.findings
@@ -436,18 +438,21 @@ fn korpus_skip_link_language_issue_642() {
 /// selbst wird nicht gemeldet, ein Fragmentlink nach einem regulären Link
 /// schon.
 #[test]
-fn region_einzelfaelle() {
+fn region_edge_cases() {
     let src = "<main><h1>Inside</h1></main><nav aria-label=\"Site\"></nav>";
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "landmarks/content-outside"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "landmarks/content-outside"), 0);
     }
 
     let src = r##"
         <a href="/start" id="home">Home</a>
         <a href="#top" id="top">Skip to content</a>
         <main><h1>X</h1></main>"##;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/content-outside"), ["home", "top"]);
+    for r in both(src) {
+        assert_eq!(
+            findings_at(src, &r, "landmarks/content-outside"),
+            ["home", "top"]
+        );
     }
 
     // Text unmittelbar neben einer Landmark: der Container trägt den Befund,
@@ -458,8 +463,8 @@ fn region_einzelfaelle() {
         <div aria-hidden="true">Decorative</div>
         <div id="leer"><span> </span></div>
         <script>var x = 1;</script>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/content-outside"), ["page"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/content-outside"), ["page"]);
     }
 
     // Ein benanntes Bild zählt als Inhalt, ein dekoratives nicht.
@@ -467,8 +472,8 @@ fn region_einzelfaelle() {
         <div id="logo"><img src="l.png" alt="Logo"></div>
         <div><img src="d.png" alt=""></div>
         <main><h1>X</h1></main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "landmarks/content-outside"), ["logo"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "landmarks/content-outside"), ["logo"]);
     }
 }
 
@@ -476,7 +481,7 @@ fn region_einzelfaelle() {
 
 /// Korpus `keyboard_and_targets`: ein `div` mit `tabindex="0"`.
 #[test]
-fn korpus_keyboard_and_targets() {
+fn corpus_keyboard_and_targets() {
     let src = r#"
         <main>
             <h1>Keyboard access and target size issues</h1>
@@ -485,20 +490,23 @@ fn korpus_keyboard_and_targets() {
             <p><button id="tight-a">X</button><button id="tight-b">Y</button></p>
             <p>Read the <a id="inline" href="/terms">terms of use</a> before you continue.</p>
         </main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "keyboard/focusable-no-role"), ["fokus"]);
+    for r in both(src) {
         assert_eq!(
-            urteile(&r, "keyboard/focusable-no-role"),
+            findings_at(src, &r, "keyboard/focusable-no-role"),
+            ["fokus"]
+        );
+        assert_eq!(
+            verdicts(&r, "keyboard/focusable-no-role"),
             [(Outcome::Review, Severity::Low)]
         );
-        assert_eq!(anzahl(&r, "keyboard/interactive-not-focusable"), 0);
+        assert_eq!(count(&r, "keyboard/interactive-not-focusable"), 0);
     }
 }
 
 /// Korpus `patterns_disclosure` und `widget_patterns`: interaktive Rollen
 /// ohne Fokus.
 #[test]
-fn korpus_interaktiv_ohne_fokus() {
+fn corpus_interactive_without_focus() {
     let src = r#"
         <main>
             <h1>Accordion, disclosure menu, and focus order</h1>
@@ -509,17 +517,17 @@ fn korpus_interaktiv_ohne_fokus() {
             </div>
             <ul id="listbox1" role="listbox"><li role="option" id="apple">Apple</li></ul>
         </main>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "keyboard/interactive-not-focusable"),
+            findings_at(src, &r, "keyboard/interactive-not-focusable"),
             ["apple", "span-link", "tab1"]
         );
         assert!(
-            urteile(&r, "keyboard/interactive-not-focusable")
+            verdicts(&r, "keyboard/interactive-not-focusable")
                 .iter()
                 .all(|u| *u == (Outcome::Review, Severity::High))
         );
-        assert_eq!(anzahl(&r, "keyboard/focusable-no-role"), 0);
+        assert_eq!(count(&r, "keyboard/focusable-no-role"), 0);
     }
 }
 
@@ -528,7 +536,7 @@ fn korpus_interaktiv_ohne_fokus() {
 /// Tabs mit rovingem `tabindex`, Optionen unter `aria-activedescendant`,
 /// deaktivierte Felder, native `<option>`, Inertes.
 #[test]
-fn keyboard_ausnahmen() {
+fn keyboard_exceptions() {
     let src = r#"
         <main id="main" tabindex="-1">
             <h1>X</h1>
@@ -546,15 +554,15 @@ fn keyboard_ausnahmen() {
             <div inert><div role="button">Inert</div><div tabindex="0">Inert</div></div>
             <div contenteditable="true">Edit</div>
         </main>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            anzahl(&r, "keyboard/focusable-no-role"),
+            count(&r, "keyboard/focusable-no-role"),
             0,
             "{:?}",
             r.findings
         );
         assert_eq!(
-            anzahl(&r, "keyboard/interactive-not-focusable"),
+            count(&r, "keyboard/interactive-not-focusable"),
             0,
             "{:?}",
             r.findings
@@ -566,12 +574,12 @@ fn keyboard_ausnahmen() {
 
 /// Korpus `aria_naming_roles`: ein leerer `role="dialog"`.
 #[test]
-fn korpus_dialog_ohne_fokussierbares() {
+fn corpus_dialog_without_focusable() {
     let src = r#"<main><h1>X</h1><div role="dialog" id="leer"></div></main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "dialog/focusable-missing"), ["leer"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "dialog/focusable-missing"), ["leer"]);
         assert_eq!(
-            urteile(&r, "dialog/focusable-missing"),
+            verdicts(&r, "dialog/focusable-missing"),
             [(Outcome::Review, Severity::Medium)]
         );
     }
@@ -584,8 +592,8 @@ fn korpus_dialog_ohne_fokussierbares() {
             <dialog aria-label="B"><p>Closed</p></dialog>
             <dialog open aria-label="C" id="aus"><button disabled>OK</button></dialog>
         </main>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "dialog/focusable-missing"), ["aus"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "dialog/focusable-missing"), ["aus"]);
     }
 }
 
@@ -594,7 +602,7 @@ fn korpus_dialog_ohne_fokussierbares() {
 /// Korpus `patterns_disclosure` und `widget_patterns`: aufgeklappter Button
 /// ohne `aria-controls`; zugeklappt nicht.
 #[test]
-fn korpus_accordion_ohne_controls() {
+fn corpus_accordion_without_controls() {
     let src = r#"
         <main><h1>X</h1>
             <button aria-expanded="true" id="offen">Accordion trigger without controls</button>
@@ -604,13 +612,13 @@ fn korpus_accordion_ohne_controls() {
         </main>
         <nav aria-label="Site"><button aria-expanded="true">Menu</button><ul><li><a href="/">Home</a></li></ul></nav>
         <header><button aria-expanded="true">Search</button></header>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "patterns/accordion-controls-missing"),
+            findings_at(src, &r, "patterns/accordion-controls-missing"),
             ["offen"]
         );
         assert_eq!(
-            urteile(&r, "patterns/accordion-controls-missing"),
+            verdicts(&r, "patterns/accordion-controls-missing"),
             [(Outcome::Review, Severity::Low)]
         );
     }
@@ -622,12 +630,12 @@ fn korpus_accordion_ohne_controls() {
 /// auch die anderen Mechanismen fehlen — main-Landmark (ARIA11) und
 /// Sprunglink (G1) überspringen wiederholte Blöcke genauso.
 #[test]
-fn seite_ohne_ueberschriften_mit_main_issue_779() {
+fn page_without_headings_with_main_issue_779() {
     // Der Fall aus dem Issue: einfache Seite, keine Navigation, aber main.
     let src = "<main><p>Some text</p></main>";
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "headings/none"), 0, "{:?}", r.findings);
-        assert_eq!(anzahl(&r, "headings/h1-missing"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "headings/none"), 0, "{:?}", r.findings);
+        assert_eq!(count(&r, "headings/h1-missing"), 0);
         assert!(
             r.findings
                 .iter()
@@ -639,8 +647,8 @@ fn seite_ohne_ueberschriften_mit_main_issue_779() {
 
     // Ein Sprunglink genügt ebenso.
     let src = r##"<a href="#inhalt">Skip</a><nav><a href="/a">A</a></nav><div id="inhalt"><p>Text</p></div>"##;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "headings/none"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "headings/none"), 0, "{:?}", r.findings);
     }
 }
 
@@ -648,7 +656,7 @@ fn seite_ohne_ueberschriften_mit_main_issue_779() {
 /// ausgezeichnet ist, sonst ein Hinweis — ob sich Blöcke über Seiten
 /// wiederholen, zeigt ein Dokument allein nicht.
 #[test]
-fn seite_ohne_jeden_mechanismus() {
+fn page_without_any_mechanism() {
     let wcag = |r: &Report| {
         r.findings
             .iter()
@@ -658,17 +666,17 @@ fn seite_ohne_jeden_mechanismus() {
             .clone()
     };
     let src = r#"<nav><a href="/a">A</a><a href="/b">B</a></nav><div><p>Text</p></div>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            urteile(&r, "headings/none"),
+            verdicts(&r, "headings/none"),
             [(Outcome::Fail, Severity::Medium)]
         );
         assert_eq!(wcag(&r), ["2.4.1"]);
     }
     let src = "<div><p>Some text</p></div>";
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            urteile(&r, "headings/none"),
+            verdicts(&r, "headings/none"),
             [(Outcome::Review, Severity::Low)]
         );
         assert_eq!(wcag(&r), ["2.4.1"]);
@@ -676,25 +684,25 @@ fn seite_ohne_jeden_mechanismus() {
 
     // role="heading" zählt; versteckte Überschriften nicht.
     let src = r#"<nav><a href="/a">A</a></nav><div role="heading" aria-level="1">Title</div>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "headings/none"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "headings/none"), 0);
     }
     let src = r#"<nav><a href="/a">A</a></nav><h1 hidden>Hidden</h1><p>Text</p>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "headings/none"), 1);
+    for r in both(src) {
+        assert_eq!(count(&r, "headings/none"), 1);
     }
 }
 
 /// auditmysite#709: Hinter einem offenen Dialog fehlen die Überschriften für
 /// den Moment der Messung — ein Hinweis, kein Verstoß.
 #[test]
-fn ohne_ueberschriften_hinter_offenem_dialog_issue_709() {
+fn without_headings_behind_open_dialog_issue_709() {
     let src = r#"
         <div role="dialog" aria-label="Cookies"><button>Accept</button></div>
         <main aria-hidden="true"><h1>Behind the dialog</h1></main>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            urteile(&r, "headings/none"),
+            verdicts(&r, "headings/none"),
             [(Outcome::Review, Severity::Low)]
         );
     }
@@ -704,18 +712,18 @@ fn ohne_ueberschriften_hinter_offenem_dialog_issue_709() {
 
 #[cfg(feature = "de")]
 #[test]
-fn texte_auf_deutsch() {
+fn texts_in_german() {
     let src = LANDMARK_GRANULAR;
-    let [en, _] = beide(src);
-    let [de, _] = beide_in(src, a11y_rules::Locale::De);
-    let texte = |r: &Report| -> Vec<String> {
+    let [en, _] = both(src);
+    let [de, _] = both_in(src, a11y_rules::Locale::De);
+    let texts = |r: &Report| -> Vec<String> {
         r.findings
             .iter()
             .filter(|f| f.rule_id.starts_with("landmarks/"))
             .map(|f| f.message.clone())
             .collect()
     };
-    let (en, de) = (texte(&en), texte(&de));
+    let (en, de) = (texts(&en), texts(&de));
     assert_eq!(en.len(), de.len());
     assert!(de.iter().any(|t| t.contains("Landmark")));
     assert!(en.iter().zip(&de).all(|(e, d)| e != d));
@@ -726,9 +734,9 @@ fn texte_auf_deutsch() {
 /// Wie Chromes Accessibility-Tree: Ein `div` oder `span` ohne Rolle ist selbst
 /// ausgelassen („generic", rein präsentational), sein Inhalt aber nicht;
 /// unter `inert` fehlt der ganze Teilbaum.
-struct ChromeIgnoriert<'a>(MitSemantik<'a>);
+struct ChromeIgnored<'a>(WithSemantics<'a>);
 
-impl Document for ChromeIgnoriert<'_> {
+impl Document for ChromeIgnored<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -739,7 +747,7 @@ impl Document for ChromeIgnoriert<'_> {
     }
 }
 
-impl Semantics for ChromeIgnoriert<'_> {
+impl Semantics for ChromeIgnored<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         self.0.role(node)
     }
@@ -754,15 +762,15 @@ impl Semantics for ChromeIgnoriert<'_> {
             .chain(a11y_dom::ancestors(node))
             .take_while(|n| !(n.is_element("dialog") && n.has_attr("open")))
             .any(|n| n.has_attr("inert") || n.attr("aria-hidden") == Some("true"));
-        let generisch = matches!(node.local_name(), "div" | "span") && !node.has_attr("role");
-        inert || generisch
+        let generic = matches!(node.local_name(), "div" | "span") && !node.has_attr("role");
+        inert || generic
     }
 }
 
-fn mit_chrome_ignoriert(src: &str) -> Report {
+fn with_chrome_ignored(src: &str) -> Report {
     let a = html(src);
     run_with_semantics_in(
-        &ChromeIgnoriert(MitSemantik {
+        &ChromeIgnored(WithSemantics {
             doc: &a,
             ids: IdIndex::build(a.root()),
             chrome: true,
@@ -774,20 +782,20 @@ fn mit_chrome_ignoriert(src: &str) -> Report {
 /// Ein generisches `div` lässt Chrome aus, seinen Text nicht: Der Text steht
 /// weiter außerhalb jeder Landmark (casoon/auditmysite#783).
 #[test]
-fn chrome_ignoriert_inhalt_in_generischem_div_bleibt_ausserhalb() {
+fn chrome_ignores_content_in_generic_div_stays_outside() {
     let src = r#"<header><p>Shop</p></header><div class="note" id="note"><p>Outside</p></div><main><h1>Main</h1></main>"#;
-    let r = mit_chrome_ignoriert(src);
-    assert_eq!(an(src, &r, "landmarks/content-outside"), ["note"]);
+    let r = with_chrome_ignored(src);
+    assert_eq!(findings_at(src, &r, "landmarks/content-outside"), ["note"]);
 }
 
 /// Hinter einem modalen Dialog ist alles außer dem Dialog inert und fehlt im
 /// Baum — samt den Landmarks, die ihre Rolle dabei nicht verlieren.
 #[test]
-fn chrome_ignoriert_inert_hinter_modalem_dialog_ist_nicht_ausserhalb() {
+fn chrome_ignores_inert_behind_modal_dialog_is_not_outside() {
     let src = r#"<header inert><p>Shop</p></header><div inert class="promo"><p>Sale</p></div><main inert><p>Offers</p><dialog open aria-label="Newsletter"><button>Close</button></dialog></main>"#;
-    let r = mit_chrome_ignoriert(src);
+    let r = with_chrome_ignored(src);
     assert_eq!(
-        anzahl(&r, "landmarks/content-outside"),
+        count(&r, "landmarks/content-outside"),
         0,
         "{:?}",
         r.findings

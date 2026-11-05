@@ -16,17 +16,17 @@ use a11y_dom::{
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
-use crate::structure::explizite_rolle;
+use crate::structure::explicit_role;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
-fn nicht_leer(v: Option<&str>) -> bool {
+fn not_empty(v: Option<&str>) -> bool {
     v.is_some_and(|v| !v.trim().is_empty())
 }
 
-fn input_typ<'a, N: Node<'a>>(n: N) -> String {
+fn input_type<'a, N: Node<'a>>(n: N) -> String {
     n.attr("type")
         .map(|t| t.trim().to_ascii_lowercase())
         .unwrap_or_default()
@@ -44,12 +44,12 @@ fn input_typ<'a, N: Node<'a>>(n: N) -> String {
 /// ist, steht im berechneten Stil, und den liefert `a11y-dom` nicht
 /// (`ComputedStyle` kennt kein `list-style-type`). Das Paar wird deshalb gar
 /// nicht geprüft, statt geraten.
-fn implizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
+fn implicit_role<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
     Some(match n.local_name() {
         "button" => "button",
         "a" if n.has_attr("href") => "link",
         "textarea" => "textbox",
-        "input" => match input_typ(n).as_str() {
+        "input" => match input_type(n).as_str() {
             "" | "text" if !n.has_attr("list") => "textbox",
             "checkbox" => "checkbox",
             "radio" => "radio",
@@ -68,7 +68,7 @@ fn implizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
             "listitem"
         }
         "table" => "table",
-        "img" if nicht_leer(n.attr("alt")) => "img",
+        "img" if not_empty(n.attr("alt")) => "img",
         _ => return None,
     })
 }
@@ -83,10 +83,10 @@ fn implizite_rolle<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
 /// `redundant_role_list_style` (`button#send-button`).
 pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let Some(rolle) = explizite_rolle(n) else {
+        let Some(role) = explicit_role(n) else {
             continue;
         };
-        if implizite_rolle(n) != Some(rolle) {
+        if implicit_role(n) != Some(role) {
             continue;
         }
         let tag = n.local_name();
@@ -95,8 +95,8 @@ pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
                 "aria/role-redundant",
                 tr!(
                     locale,
-                    "role=\"{rolle}\" only repeats the implicit role of <{tag}>; remove it.",
-                    "role=\"{rolle}\" wiederholt nur die implizite Rolle von <{tag}>; \
+                    "role=\"{role}\" only repeats the implicit role of <{tag}>; remove it.",
+                    "role=\"{role}\" wiederholt nur die implizite Rolle von <{tag}>; \
                      entfernen."
                 ),
             )
@@ -111,19 +111,19 @@ pub(crate) fn redundant<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Find
 
 /// Ob ein Element einen Namen aus einer Quelle vor `title` bekommt: ARIA,
 /// Text, ein `alt` darin. Strukturell genähert, wie `headings/empty`.
-fn name_vor_title<'a, N: Node<'a>>(n: N) -> bool {
-    nicht_leer(n.attr("aria-label"))
-        || nicht_leer(n.attr("aria-labelledby"))
+fn name_before_title<'a, N: Node<'a>>(n: N) -> bool {
+    not_empty(n.attr("aria-label"))
+        || not_empty(n.attr("aria-labelledby"))
         || has_text(n)
         || descendants(n).any(|d| {
-            nicht_leer(d.attr("alt"))
-                || nicht_leer(d.attr("aria-label"))
-                || nicht_leer(d.attr("aria-labelledby"))
+            not_empty(d.attr("alt"))
+                || not_empty(d.attr("aria-label"))
+                || not_empty(d.attr("aria-labelledby"))
         })
 }
 
 /// Ein Eingabefeld mit zugeordnetem `<label>` — umschließend oder über `for`.
-fn hat_label<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
+fn has_label<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
     ancestors(n).any(|a| a.is_element("label"))
         || n.attr("id")
             .is_some_and(|id| label_for.contains(&scoped_id(n, id)))
@@ -131,14 +131,14 @@ fn hat_label<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
 
 /// Bedienelemente, deren Name nur aus `title` stammen kann. Textfelder meldet
 /// `forms/title-only-label`; `submit` und `reset` haben einen Vorgabenamen.
-fn kandidat<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
+fn candidate<'a, N: Node<'a>>(n: N, label_for: &HashSet<ScopedId>) -> bool {
     match n.local_name() {
-        "button" => !name_vor_title(n),
-        "a" => n.has_attr("href") && !name_vor_title(n),
-        "input" => match input_typ(n).as_str() {
-            "button" => !nicht_leer(n.attr("value")) && !name_vor_title(n),
-            "image" => !nicht_leer(n.attr("alt")) && !name_vor_title(n),
-            "checkbox" | "radio" => !hat_label(n, label_for) && !name_vor_title(n),
+        "button" => !name_before_title(n),
+        "a" => n.has_attr("href") && !name_before_title(n),
+        "input" => match input_type(n).as_str() {
+            "button" => !not_empty(n.attr("value")) && !name_before_title(n),
+            "image" => !not_empty(n.attr("alt")) && !name_before_title(n),
+            "checkbox" | "radio" => !has_label(n, label_for) && !name_before_title(n),
             _ => false,
         },
         _ => false,
@@ -160,7 +160,7 @@ pub(crate) fn title_only<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
         .filter_map(|n| n.attr("for").map(|f| scoped_id(n, f)))
         .collect();
     for n in elements(doc) {
-        if !nicht_leer(n.attr("title")) || !kandidat(n, &label_for) {
+        if !not_empty(n.attr("title")) || !candidate(n, &label_for) {
             continue;
         }
         out.push(
@@ -196,7 +196,7 @@ pub(crate) fn title_only<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
 /// erst beim Überfahren. Beleg: auditmysite-Korpus `forms_and_misc`
 /// (`<div role="tooltip" id="orphan-tip">`).
 pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let verwiesen: HashSet<ScopedId> = elements(doc)
+    let referenced: HashSet<ScopedId> = elements(doc)
         .flat_map(|n| {
             ["aria-describedby", "aria-labelledby"]
                 .into_iter()
@@ -206,9 +206,9 @@ pub(crate) fn tooltip<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
         })
         .collect();
     for n in elements(doc) {
-        if explizite_rolle(n) != Some("tooltip")
+        if explicit_role(n) != Some("tooltip")
             || n.attr("id")
-                .is_some_and(|id| verwiesen.contains(&scoped_id(n, id)))
+                .is_some_and(|id| referenced.contains(&scoped_id(n, id)))
         {
             continue;
         }

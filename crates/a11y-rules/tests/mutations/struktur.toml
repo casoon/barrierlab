@@ -4,8 +4,8 @@
 id = "aria/role-invalid"
 file = "src/structure.rs"
 kind = "invert"
-find = '''} else if !hat_gueltige && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
-replace = '''} else if !hat_gueltige && VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
+find = '''} else if !has_valid && !VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
+replace = '''} else if !has_valid && VALID_ROLES.contains(&r) && !MODULE_ROLES.contains(&r) {'''
 test = "korpus"
 expect = "killed"
 
@@ -13,7 +13,7 @@ expect = "killed"
 id = "aria/role-invalid"
 file = "src/structure.rs"
 kind = "drop-condition"
-find = '''} else if !hat_gueltige && !VALID_ROLES.contains(&r)'''
+find = '''} else if !has_valid && !VALID_ROLES.contains(&r)'''
 replace = '''} else if !VALID_ROLES.contains(&r)'''
 test = "korpus"
 expect = "killed"
@@ -32,11 +32,11 @@ expect = "killed"
 id = "aria/reference-missing"
 file = "src/structure.rs"
 kind = "invert"
-find = '''            if !fehlend.is_empty() {
+find = '''            if !missing.is_empty() {
                 out.push(
                     Finding::fail(
                         "aria/reference-missing",'''
-replace = '''            if fehlend.is_empty() {
+replace = '''            if missing.is_empty() {
                 out.push(
                     Finding::fail(
                         "aria/reference-missing",'''
@@ -58,8 +58,8 @@ expect = "killed"
 id = "aria/required-attribute-missing"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if fehlend.is_empty() {'''
-replace = '''        if !fehlend.is_empty() {'''
+find = '''        if missing.is_empty() {'''
+replace = '''        if !missing.is_empty() {'''
 test = "korpus"
 expect = "killed"
 
@@ -67,8 +67,8 @@ expect = "killed"
 id = "aria/required-attribute-missing"
 file = "src/structure.rs"
 kind = "drop-condition"
-find = '''        if zustand_nativ(n) {'''
-replace = '''        if false && zustand_nativ(n) {'''
+find = '''        if state_native(n) {'''
+replace = '''        if false && state_native(n) {'''
 test = "korpus"
 expect = "killed"
 
@@ -103,8 +103,8 @@ expect = "killed"
 id = "keyboard/hidden-focusable"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if per_tab_erreichbar(n) {'''
-replace = '''        if !per_tab_erreichbar(n) {'''
+find = '''        if per_tab_reachable(n) {'''
+replace = '''        if !per_tab_reachable(n) {'''
 test = "korpus"
 expect = "killed"
 
@@ -112,8 +112,8 @@ expect = "killed"
 id = "keyboard/hidden-focusable"
 file = "src/structure.rs"
 kind = "drop-condition"
-find = '''            || mit_vorfahren().any(|a| a.has_attr("inert"))'''
-replace = '''            || mit_vorfahren().any(|a| a.has_attr("inert-x"))'''
+find = '''            || with_ancestors().any(|a| a.has_attr("inert"))'''
+replace = '''            || with_ancestors().any(|a| a.has_attr("inert-x"))'''
 test = "korpus"
 expect = "killed"
 
@@ -121,8 +121,8 @@ expect = "killed"
 id = "lists/invalid-structure"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if fremd {'''
-replace = '''        if !fremd {'''
+find = '''        if foreign {'''
+replace = '''        if !foreign {'''
 test = "korpus"
 expect = "killed"
 
@@ -130,8 +130,8 @@ expect = "killed"
 id = "lists/empty"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
-replace = '''        if !fremd && kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+find = '''        if !foreign && !children.iter().any(|c| is_list_item(*c)) {'''
+replace = '''        if !foreign && children.iter().any(|c| is_list_item(*c)) {'''
 test = "korpus"
 expect = "killed"
 
@@ -139,8 +139,8 @@ expect = "killed"
 id = "lists/item-outside-list"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !in_liste {'''
-replace = '''        if in_liste {'''
+find = '''        if !in_list {'''
+replace = '''        if in_list {'''
 test = "korpus"
 expect = "killed"
 
@@ -158,8 +158,8 @@ note = "menu wieder keine Liste (HTML-AAM menu → list)"
 id = "lists/term-without-definition"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !hat_definition {'''
-replace = '''        if hat_definition {'''
+find = '''        if !has_definition {'''
+replace = '''        if has_definition {'''
 test = "korpus"
 expect = "killed"
 
@@ -177,8 +177,8 @@ note = "dd vor dem Begriff zählt wieder (HTML dl-Inhaltsmodell)"
 id = "tables/header-missing"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !hat_kopfzelle(n) {'''
-replace = '''        if hat_kopfzelle(n) {'''
+find = '''        if !has_header_cell(n) {'''
+replace = '''        if has_header_cell(n) {'''
 test = "korpus"
 expect = "killed"
 
@@ -186,8 +186,8 @@ expect = "killed"
 id = "tables/name-missing"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !benannt {'''
-replace = '''        if benannt {'''
+find = '''        if !is_named {'''
+replace = '''        if is_named {'''
 test = "korpus"
 expect = "killed"
 
@@ -205,8 +205,8 @@ note = "title wieder keine Namensquelle (HTML-AAM)"
 id = "tables/presentational-with-headers"
 file = "src/structure.rs"
 kind = "invert"
-find = '''            if hat_kopfzelle(n) {'''
-replace = '''            if !hat_kopfzelle(n) {'''
+find = '''            if has_header_cell(n) {'''
+replace = '''            if !has_header_cell(n) {'''
 test = "korpus"
 expect = "killed"
 
@@ -214,8 +214,8 @@ expect = "killed"
 id = "tables/header-without-data"
 file = "src/tables.rs"
 kind = "threshold"
-find = '''        if z.kopf.is_empty() || z.daten > 0 {'''
-replace = '''        if z.kopf.is_empty() || z.daten > 1 {'''
+find = '''        if z.head.is_empty() || z.data > 0 {'''
+replace = '''        if z.head.is_empty() || z.data > 1 {'''
 test = "korpus"
 expect = "killed"
 
@@ -223,8 +223,8 @@ expect = "killed"
 id = "tables/header-without-data"
 file = "src/tables.rs"
 kind = "drop-finding"
-find = '''        for k in z.kopf {'''
-replace = '''        for k in z.kopf.into_iter().take(0) {'''
+find = '''        for k in z.head {'''
+replace = '''        for k in z.head.into_iter().take(0) {'''
 test = "korpus"
 expect = "killed"
 
@@ -232,8 +232,8 @@ expect = "killed"
 id = "tables/data-undetermined"
 file = "src/tables.rs"
 kind = "disable"
-find = '''        if z.leere_gruppe {'''
-replace = '''        if false && z.leere_gruppe {'''
+find = '''        if z.empty_group {'''
+replace = '''        if false && z.empty_group {'''
 test = "korpus"
 expect = "killed"
 
@@ -241,8 +241,8 @@ expect = "killed"
 id = "tables/headers-attr-invalid"
 file = "src/tables.rs"
 kind = "invert"
-find = '''            ids.get(&scoped_id(zelle, r)).is_none_or(|k| {'''
-replace = '''            ids.get(&scoped_id(zelle, r)).is_some_and(|k| {'''
+find = '''            ids.get(&scoped_id(cell, r)).is_none_or(|k| {'''
+replace = '''            ids.get(&scoped_id(cell, r)).is_some_and(|k| {'''
 test = "korpus"
 expect = "killed"
 
@@ -250,7 +250,7 @@ expect = "killed"
 id = "tables/headers-attr-invalid"
 file = "src/tables.rs"
 kind = "drop-condition"
-find = '''                    || *k == zelle'''
+find = '''|| *k == cell '''
 replace = ''''''
 test = "korpus"
 expect = "killed"

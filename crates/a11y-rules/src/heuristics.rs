@@ -29,8 +29,8 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::Meta;
-use crate::sicht::Scope;
-use crate::structure::per_tab_erreichbar;
+use crate::structure::per_tab_reachable;
+use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -41,11 +41,11 @@ fn at(id: NodeId) -> Location {
 const REFLOW_PX: f32 = 320.0;
 
 /// Mindestgröße eines Ziels nach WCAG 2.5.8.
-const ZIEL_PX: f32 = 24.0;
+const TARGET_PX: f32 = 24.0;
 
 /// Elemente, die von sich aus bedienbar sind oder deren Klick der Browser
 /// weiterreicht. Ein `cursor: pointer` darin ist kein Hinweis auf einen Fake.
-fn ist_bedienelement<'a, N: Node<'a>>(n: N) -> bool {
+fn is_control<'a, N: Node<'a>>(n: N) -> bool {
     matches!(
         n.local_name(),
         "a" | "button"
@@ -65,55 +65,55 @@ fn ist_bedienelement<'a, N: Node<'a>>(n: N) -> bool {
 }
 
 /// Elemente, die nach WCAG 1.4.10 zweidimensional scrollen dürfen.
-fn darf_breit_sein<'a, N: Node<'a>>(n: N) -> bool {
+fn may_be_wide<'a, N: Node<'a>>(n: N) -> bool {
     matches!(
         n.local_name(),
         "table" | "pre" | "code" | "video" | "canvas" | "iframe" | "img" | "svg" | "math"
     )
 }
 
-fn hat_tab_ziel<'a, N: Node<'a>>(n: N) -> bool {
+fn has_tab_target<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n)
         .chain(descendants(n))
-        .any(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(d))
+        .any(|d| d.kind() == NodeKind::Element && per_tab_reachable(d))
 }
 
 /// Ob ein Kind etwas trägt, dessen Reihenfolge zählt: ein Bedienelement oder
 /// Text. 1.3.2 betrifft die Lesereihenfolge, nicht nur die Tabreihenfolge
 /// (auditmysite-Korpus `text_and_layout`, `div.flex-reorder`).
-fn hat_inhalt<'a, N: Node<'a>>(n: N) -> bool {
-    hat_tab_ziel(n) || !subtree_text(n).trim().is_empty()
+fn has_content<'a, N: Node<'a>>(n: N) -> bool {
+    has_tab_target(n) || !subtree_text(n).trim().is_empty()
 }
 
 /// Alle Bedienelemente darin führen zum selben Ziel — die Teaserkarte mit
 /// Bild- und Titellink (spiegel.de: 20 Karten mit `flex-row-reverse`). Die
 /// Reihenfolge ändert dann nicht, wohin man kommt.
-fn ein_ziel<'a, N: Node<'a>>(n: N) -> bool {
-    let mut ziele =
-        descendants(n).filter(|d| d.kind() == NodeKind::Element && per_tab_erreichbar(*d));
-    let Some(erstes) = ziele.next() else {
+fn a_target<'a, N: Node<'a>>(n: N) -> bool {
+    let mut targets =
+        descendants(n).filter(|d| d.kind() == NodeKind::Element && per_tab_reachable(*d));
+    let Some(first) = targets.next() else {
         return false;
     };
     let href = |e: N| e.is_element("a").then(|| e.attr("href")).flatten();
-    let Some(ziel) = href(erstes) else {
+    let Some(target) = href(first) else {
         return false;
     };
-    let rest: Vec<N> = ziele.collect();
-    !rest.is_empty() && rest.into_iter().all(|e| href(e) == Some(ziel))
+    let rest: Vec<N> = targets.collect();
+    !rest.is_empty() && rest.into_iter().all(|e| href(e) == Some(target))
 }
 
 /// Ob irgendein Element dieses Layout-Feld gemessen hat.
-fn gemessen<D: Rendering>(doc: &D, feld: impl Fn(&Layout) -> bool) -> bool {
-    elements(doc).any(|n| doc.layout(n).is_some_and(|l| feld(&l)))
+fn measured<D: Rendering>(doc: &D, field: impl Fn(&Layout) -> bool) -> bool {
+    elements(doc).any(|n| doc.layout(n).is_some_and(|l| field(&l)))
 }
 
 /// Nicht gemessen ist nicht bestanden: ein `UNTESTED` für die Seite, wenn
 /// kein Element das Feld trägt, das die Heuristik braucht.
-fn ungemessen<D: Rendering>(
+fn unmeasured<D: Rendering>(
     doc: &D,
     id: &str,
     wcag: &[&str],
-    feld: &str,
+    field: &str,
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
@@ -122,8 +122,8 @@ fn ungemessen<D: Rendering>(
             id,
             tr!(
                 locale,
-                "The host does not measure {feld}; this heuristic did not run.",
-                "Der Host misst {feld} nicht; diese Heuristik lief nicht."
+                "The host does not measure {field}; this heuristic did not run.",
+                "Der Host misst {field} nicht; diese Heuristik lief nicht."
             ),
         )
         .with_severity(Severity::Low)
@@ -134,14 +134,14 @@ fn ungemessen<D: Rendering>(
 
 /// 1.3.2 / 2.4.3: umgekehrte Flex-Richtung oder `order` über bedienbarem
 /// Inhalt — Tabreihenfolge und sichtbare Reihenfolge laufen auseinander.
-fn reihenfolge<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !gemessen(doc, |l| l.flex_reversed.is_some() || l.order.is_some()) {
-        let feld = "flex-direction / order";
-        return ungemessen(
+fn order<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !measured(doc, |l| l.flex_reversed.is_some() || l.order.is_some()) {
+        let field = "flex-direction / order";
+        return unmeasured(
             doc,
             "order/visual-mismatch",
             &["1.3.2", "2.4.3"],
-            feld,
+            field,
             locale,
             out,
         );
@@ -150,18 +150,18 @@ fn reihenfolge<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         let Some(layout) = doc.layout(n) else {
             continue;
         };
-        let umgekehrt = layout.flex_reversed == Some(true)
+        let reversed = layout.flex_reversed == Some(true)
             && n.children()
-                .filter(|k| k.kind() == NodeKind::Element && hat_inhalt(*k))
+                .filter(|k| k.kind() == NodeKind::Element && has_content(*k))
                 .nth(1)
                 .is_some()
-            && !ein_ziel(n);
-        let umsortiert = n.children().any(|k| {
+            && !a_target(n);
+        let reordered = n.children().any(|k| {
             k.kind() == NodeKind::Element
                 && doc.layout(k).and_then(|l| l.order).is_some_and(|o| o != 0)
-                && hat_inhalt(k)
-        }) && !ein_ziel(n);
-        if umgekehrt || umsortiert {
+                && has_content(k)
+        }) && !a_target(n);
+        if reversed || reordered {
             out.push(
                 Finding::review(
                     "order/visual-mismatch",
@@ -183,17 +183,17 @@ fn reihenfolge<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
 /// Das äußerste Element mit dieser Eigenschaft: Nachfahren eines gemeldeten
 /// Elements werden nicht noch einmal gemeldet.
-fn aeusserste<'a, N: Node<'a>>(
-    kandidaten: impl Iterator<Item = N>,
-    mut trifft: impl FnMut(N) -> bool,
+fn outermost<'a, N: Node<'a>>(
+    candidates: impl Iterator<Item = N>,
+    mut hits: impl FnMut(N) -> bool,
 ) -> Vec<N> {
-    let mut gemeldet: HashSet<NodeId> = HashSet::new();
+    let mut reported: HashSet<NodeId> = HashSet::new();
     let mut out = Vec::new();
-    for n in kandidaten {
-        if !trifft(n) || ancestors(n).any(|a| gemeldet.contains(&a.id())) {
+    for n in candidates {
+        if !hits(n) || ancestors(n).any(|a| reported.contains(&a.id())) {
             continue;
         }
-        gemeldet.insert(n.id());
+        reported.insert(n.id());
         out.push(n);
     }
     out
@@ -201,7 +201,7 @@ fn aeusserste<'a, N: Node<'a>>(
 
 /// Wörter, an denen sich ein Bedienelement zum Anhalten von Bewegung erkennen
 /// lässt. Bewusst nur an Bedienelementen gesucht, nicht an Links.
-const ANHALTEN: &[&str] = &[
+const PAUSE: &[&str] = &[
     // Stämme: „paus" trifft pause, pausar, pausieren, mettre en pause.
     "paus",
     "stop",
@@ -218,7 +218,7 @@ const ANHALTEN: &[&str] = &[
 /// Der sichtbare oder beschriftende Text eines Bedienelements — eine Näherung
 /// ohne Namensberechnung (Tier 3 hat keine Semantik), aber mit den Wegen, auf
 /// denen eine Checkbox „Pause motion" üblicherweise beschriftet ist.
-fn beschriftung<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> String {
+fn label<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> String {
     let mut s = String::new();
     for a in ["aria-label", "title", "value"] {
         if let Some(v) = n.attr(a) {
@@ -238,17 +238,17 @@ fn beschriftung<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> St
     s.to_lowercase()
 }
 
-fn ist_schalter<'a, N: Node<'a>>(n: N) -> bool {
+fn is_switch<'a, N: Node<'a>>(n: N) -> bool {
     matches!(n.local_name(), "button" | "input" | "select")
         || matches!(n.attr("role"), Some("button" | "switch" | "checkbox"))
 }
 
 /// Die `<label for>` des Dokuments, nach Ziel-ID.
-fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<ScopedId<'a>, Vec<D::N<'a>>> {
+fn labels_by_target<'a, D: Rendering>(doc: &'a D) -> HashMap<ScopedId<'a>, Vec<D::N<'a>>> {
     let mut m: HashMap<ScopedId<'a>, Vec<D::N<'a>>> = HashMap::new();
     for l in elements(doc).filter(|n| n.is_element("label")) {
-        if let Some(ziel) = l.attr("for") {
-            m.entry(scoped_id(l, ziel)).or_default().push(l);
+        if let Some(target) = l.attr("for") {
+            m.entry(scoped_id(l, target)).or_default().push(l);
         }
     }
     m
@@ -259,43 +259,43 @@ fn labels_nach_ziel<'a, D: Rendering>(doc: &'a D) -> HashMap<ScopedId<'a>, Vec<D
 /// Gemeldet wird je Gruppe, nicht je Element: Ein animiertes SVG aus zwanzig
 /// Kreisen ist eine Bewegung. Und gar nicht, wenn die Seite ein Bedienelement
 /// zum Anhalten hat — ob es wirkt, sagt diese Heuristik nicht.
-fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn endless_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // `<marquee>` läuft endlos, ohne eigene Pause und unabhängig von
     // `prefers-reduced-motion` — dafür braucht es kein Layout
     // (auditmysite `pause_stop_hide`, Korpus `no_focus_targets`).
-    let mit_layout = gemessen(doc, |l| l.infinite_animation.is_some());
-    if !mit_layout {
-        let feld = "animation-iteration-count";
-        ungemessen(
+    let with_layout = measured(doc, |l| l.infinite_animation.is_some());
+    if !with_layout {
+        let field = "animation-iteration-count";
+        unmeasured(
             doc,
             "motion/infinite-animation",
             &["2.2.2"],
-            feld,
+            field,
             locale,
             out,
         );
     }
-    let treffer = aeusserste(elements(doc), |n| {
+    let hit = outermost(elements(doc), |n| {
         n.is_element("marquee")
-            || (mit_layout && doc.layout(n).and_then(|l| l.infinite_animation) == Some(true))
+            || (with_layout && doc.layout(n).and_then(|l| l.infinite_animation) == Some(true))
     });
-    if treffer.is_empty() {
+    if hit.is_empty() {
         return;
     }
-    let labels = labels_nach_ziel(doc);
-    let hat_pause = elements(doc).any(|n| {
-        ist_schalter(n) && {
-            let text = beschriftung(n, &labels);
-            ANHALTEN.iter().any(|w| text.contains(w))
+    let labels = labels_by_target(doc);
+    let has_pause = elements(doc).any(|n| {
+        is_switch(n) && {
+            let text = label(n, &labels);
+            PAUSE.iter().any(|w| text.contains(w))
         }
     });
-    if hat_pause {
+    if has_pause {
         return;
     }
-    let mut gruppen: HashSet<NodeId> = HashSet::new();
-    for n in treffer {
-        let gruppe = n.parent().unwrap_or(n);
-        if !gruppen.insert(gruppe.id()) {
+    let mut groups: HashSet<NodeId> = HashSet::new();
+    for n in hit {
+        let group = n.parent().unwrap_or(n);
+        if !groups.insert(group.id()) {
             continue;
         }
         let n = if n.parent().is_some_and(|p| {
@@ -304,7 +304,7 @@ fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
                 .nth(1)
                 .is_some()
         }) {
-            gruppe
+            group
         } else {
             n
         };
@@ -328,8 +328,8 @@ fn endlos_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding
 
 /// 1.4.10: ein `min-width`, das bei 320 CSS-px waagerechtes Scrollen erzwingt.
 fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !gemessen(doc, |l| l.min_width_px.is_some()) {
-        return ungemessen(
+    if !measured(doc, |l| l.min_width_px.is_some()) {
+        return unmeasured(
             doc,
             "reflow/min-width",
             &["1.4.10"],
@@ -338,15 +338,15 @@ fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             out,
         );
     }
-    let treffer = aeusserste(elements(doc), |n| {
-        !darf_breit_sein(n)
-            && !ancestors(n).any(darf_breit_sein)
+    let hit = outermost(elements(doc), |n| {
+        !may_be_wide(n)
+            && !ancestors(n).any(may_be_wide)
             && doc
                 .layout(n)
                 .and_then(|l| l.min_width_px)
                 .is_some_and(|px| px > REFLOW_PX)
     });
-    for n in treffer {
+    for n in hit {
         let px = doc.layout(n).and_then(|l| l.min_width_px).unwrap_or(0.0);
         out.push(
             Finding::review(
@@ -371,32 +371,32 @@ fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 ///
 /// Ein Inline-`onclick`, das schon `keyboard/click-handler-not-focusable`
 /// meldet, zählt hier nicht ein zweites Mal.
-fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+fn only_pointer<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Ohne gemessenes `cursor` läuft nur der `onclick`-Teil.
-    if !gemessen(doc, |l| l.cursor_pointer.is_some()) {
+    if !measured(doc, |l| l.cursor_pointer.is_some()) {
         let wcag = &["2.1.1", "4.1.2"];
-        ungemessen(doc, "keyboard/pointer-only", wcag, "cursor", locale, out);
+        unmeasured(doc, "keyboard/pointer-only", wcag, "cursor", locale, out);
     }
     for n in elements(doc) {
         // Kartenmuster: `cursor: pointer` auf einem Kasten, der einen Link oder
         // Knopf enthält — der Klick landet dort (bundesregierung.de: 27
         // Teaserkarten `div.bpa-teaser`).
-        if ist_bedienelement(n)
-            || ancestors(n).any(ist_bedienelement)
-            || descendants(n).any(|d| d.kind() == NodeKind::Element && ist_bedienelement(d))
-            || crate::links::klick_ohne_tastatur(n)
+        if is_control(n)
+            || ancestors(n).any(is_control)
+            || descendants(n).any(|d| d.kind() == NodeKind::Element && is_control(d))
+            || crate::links::click_without_keyboard(n)
         {
             continue;
         }
-        let zeiger = |k| doc.layout(k).and_then(|l| l.cursor_pointer) == Some(true);
-        let klickbar = n.has_attr("onclick") || zeiger(n);
+        let pointer = |k| doc.layout(k).and_then(|l| l.cursor_pointer) == Some(true);
+        let clickable = n.has_attr("onclick") || pointer(n);
         // `cursor` vererbt sich: gemeldet wird nur, wo er beginnt.
-        let geerbt = n
+        let inherited = n
             .parent()
-            .is_some_and(|p| zeiger(p) && !p.has_attr("onclick"));
-        let mit_inhalt = n.has_attr("onclick")
+            .is_some_and(|p| pointer(p) && !p.has_attr("onclick"));
+        let with_content = n.has_attr("onclick")
             || descendants(n).any(|d| d.kind() == NodeKind::Text && !d.text().trim().is_empty());
-        if klickbar && !geerbt && mit_inhalt {
+        if clickable && !inherited && with_content {
             out.push(
                 Finding::review(
                     "keyboard/pointer-only",
@@ -420,16 +420,16 @@ fn nur_zeiger<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// 2.4.11: ein Bedienelement, das eine fixierte Leiste überdeckt — oder eine
 /// Leiste, unter der ein fokussiertes Element verschwinden kann, weil
 /// `scroll-padding-top` sie nicht freihält.
-fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !gemessen(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
-        let feld = "overlap with fixed or sticky elements";
-        return ungemessen(doc, "focus/obscured", &["2.4.11"], feld, locale, out);
+fn covered<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    if !measured(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
+        let field = "overlap with fixed or sticky elements";
+        return unmeasured(doc, "focus/obscured", &["2.4.11"], field, locale, out);
     }
     for n in elements(doc) {
         let Some(layout) = doc.layout(n) else {
             continue;
         };
-        let meldung = if layout.hides_focus == Some(true) {
+        let message = if layout.hides_focus == Some(true) {
             pick!(
                 locale,
                 "This fixed or sticky bar reaches lower than scroll-padding-top. A control \
@@ -439,7 +439,7 @@ fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                  verschwinden.",
             )
         } else if layout.obscured == Some(true)
-            && per_tab_erreichbar(n)
+            && per_tab_reachable(n)
             && doc.visually_hidden(n) != Some(true)
         {
             pick!(
@@ -453,7 +453,7 @@ fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             continue;
         };
         out.push(
-            Finding::review("focus/obscured", meldung)
+            Finding::review("focus/obscured", message)
                 .with_severity(Severity::Medium)
                 .with_wcag(["2.4.11"])
                 .at(at(n.id())),
@@ -462,7 +462,7 @@ fn verdeckt<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 }
 
 /// Ein Link mitten im Fließtext: für ihn gilt die Ausnahme „inline" aus 2.5.8.
-fn im_fliesstext<'a, N: Node<'a>>(n: N) -> bool {
+fn in_running_text<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("a")
         && n.parent().is_some_and(|p| {
             p.children()
@@ -472,7 +472,7 @@ fn im_fliesstext<'a, N: Node<'a>>(n: N) -> bool {
 
 /// Eine Checkbox oder ein Radio mit Label: Das Label ist Teil des Ziels, ein
 /// Klick darauf trifft das Feld.
-fn ziel_durch_label<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> bool {
+fn target_by_label<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -> bool {
     n.is_element("input")
         && n.attr("type")
             .is_some_and(|t| matches!(t.trim().to_ascii_lowercase().as_str(), "checkbox" | "radio"))
@@ -481,19 +481,19 @@ fn ziel_durch_label<'a, N: Node<'a>>(n: N, labels: &HashMap<ScopedId, Vec<N>>) -
                 .is_some_and(|id| labels.contains_key(&scoped_id(n, id))))
 }
 
-fn mitte(r: &Rect) -> (f32, f32) {
+fn centre(r: &Rect) -> (f32, f32) {
     (r.x + r.width / 2.0, r.y + r.height / 2.0)
 }
 
 /// Abstand eines Punkts zu einem Rechteck, 0 innerhalb.
-fn abstand(p: (f32, f32), r: &Rect) -> f32 {
+fn gap(p: (f32, f32), r: &Rect) -> f32 {
     let dx = (r.x - p.0).max(p.0 - (r.x + r.width)).max(0.0);
     let dy = (r.y - p.1).max(p.1 - (r.y + r.height)).max(0.0);
     (dx * dx + dy * dy).sqrt()
 }
 
 /// Mindestgröße eines Ziels nach WCAG 2.5.5 (AAA).
-const ZIEL_ERHOEHT_PX: f32 = 44.0;
+const TARGET_ENHANCED_PX: f32 = 44.0;
 
 fn inert<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n)
@@ -501,7 +501,7 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
         .any(|a| a.has_attr("inert"))
 }
 
-fn aria_versteckt<'a, N: Node<'a>>(n: N) -> bool {
+fn aria_hidden<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n)
         .chain(ancestors(n))
         .any(|a| a.attr("aria-hidden").is_some_and(|v| v.trim() == "true"))
@@ -509,7 +509,7 @@ fn aria_versteckt<'a, N: Node<'a>>(n: N) -> bool {
 
 /// Ein Kasten ganz links oder über dem Dokument — das übliche Verschieben
 /// aus dem Bild (`left: -9999px`).
-fn ausserhalb(r: &Rect) -> bool {
+fn outside_of(r: &Rect) -> bool {
     r.x + r.width <= 0.0 || r.y + r.height <= 0.0
 }
 
@@ -518,14 +518,14 @@ fn ausserhalb(r: &Rect) -> bool {
 /// ein Element der Gruppe `tabindex="0"`, die übrigen `-1` — angeklickt
 /// werden sie trotzdem (bundesregierung.de, `#slick-slide-control00`,
 /// 10 × 10 px).
-fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
+fn is_pointer_target<'a, N: Node<'a>>(n: N) -> bool {
     // Ein eingebettetes Dokument ist ein Behälter, kein Ziel: Zeigeraktionen
     // nehmen die Ziele darin an, und die beurteilt der Durchgang durch den
     // Rahmen (Understanding 2.5.8, „target").
     if matches!(n.local_name(), "iframe" | "frame" | "object" | "embed") {
         return false;
     }
-    let nativ = match n.local_name() {
+    let native = match n.local_name() {
         "a" | "area" => n.has_attr("href"),
         "button" | "select" | "textarea" | "summary" => !n.has_attr("disabled"),
         "input" => {
@@ -536,8 +536,8 @@ fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
         }
         _ => false,
     };
-    nativ
-        || crate::structure::explizite_rolle(n).is_some_and(|r| {
+    native
+        || crate::structure::explicit_role(n).is_some_and(|r| {
             matches!(
                 r,
                 "button"
@@ -555,7 +555,7 @@ fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
                     | "treeitem"
             )
         })
-        || per_tab_erreichbar(n)
+        || per_tab_reachable(n)
 }
 
 /// Der Bereich, der Zeigeraktionen für das Ziel annimmt. Ein Inline-Kasten
@@ -563,7 +563,7 @@ fn ist_zeigerziel<'a, N: Node<'a>>(n: N) -> bool {
 /// das Bild aktiviert aber den Link (Understanding 2.5.8, „target: region of
 /// the display that will accept a pointer action"). Deshalb die Vereinigung
 /// mit den dargestellten ersetzten Nachfahren.
-fn zielkasten<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Rect> {
+fn target_box<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Rect> {
     let mut r = doc.bounds(n).filter(|r| !r.is_empty())?;
     let inline = doc
         .computed_style(n)
@@ -577,10 +577,10 @@ fn zielkasten<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Rect> {
             "img" | "svg" | "video" | "canvas" | "picture" | "object" | "embed"
         )
     }) {
-        let sichtbar = doc
+        let visible = doc
             .computed_style(d)
             .is_none_or(|s| s.display.as_deref() != Some("none"));
-        if let Some(k) = doc.bounds(d).filter(|k| !k.is_empty() && sichtbar) {
+        if let Some(k) = doc.bounds(d).filter(|k| !k.is_empty() && visible) {
             let (x0, y0) = (r.x.min(k.x), r.y.min(k.y));
             let x1 = (r.x + r.width).max(k.x + k.width);
             let y1 = (r.y + r.height).max(k.y + k.height);
@@ -598,53 +598,53 @@ fn zielkasten<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Rect> {
 /// Ob ein Element ein Ziel ist, das man sehen und anklicken kann: nicht
 /// `inert`, kein `pointer-events: none`, nicht optisch verborgen, nicht aus
 /// dem Bild geschoben.
-fn klickbar<'d, D: Rendering>(doc: &'d D, n: D::N<'d>, r: &Rect) -> bool {
+fn clickable<'d, D: Rendering>(doc: &'d D, n: D::N<'d>, r: &Rect) -> bool {
     !inert(n)
         && doc.layout(n).and_then(|l| l.pointer_events_none) != Some(true)
         && doc.visually_hidden(n) != Some(true)
-        && !ausserhalb(r)
+        && !outside_of(r)
 }
 
 /// Das Ziel eines Links ohne Fragment — `None` für Verweise innerhalb der
 /// Seite, bei denen das Fragment die ganze Funktion ist (`#setup`, `#`).
-fn dokument_ziel<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
+fn document_target<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
     if !n.is_element("a") {
         return None;
     }
     let href = n.attr("href")?.trim();
-    let dokument = href.split('#').next().unwrap_or("");
-    (!dokument.is_empty()).then_some(dokument)
+    let document = href.split('#').next().unwrap_or("");
+    (!document.is_empty()).then_some(document)
 }
 
 /// 2.5.8 / 2.5.5, Ausnahme „Equivalent": Ein anderer, sichtbarer Link zum
 /// selben Dokument hat die geforderte Größe. Nach auditmysite#706
 /// (`target_size_equivalent`): Ein Gegenstück unter `aria-hidden`, `inert`,
 /// optisch verborgen oder außerhalb des Bilds zählt nicht.
-fn gleichwertig<'d, D: Rendering>(
+fn equivalent<'d, D: Rendering>(
     doc: &'d D,
     n: D::N<'d>,
-    ziele: &[(D::N<'d>, Rect)],
-    mindest: f32,
+    targets: &[(D::N<'d>, Rect)],
+    minimum: f32,
 ) -> bool {
-    let Some(ziel) = dokument_ziel(n) else {
+    let Some(target) = document_target(n) else {
         return false;
     };
-    ziele.iter().any(|(k, kr)| {
+    targets.iter().any(|(k, kr)| {
         k.id() != n.id()
-            && dokument_ziel(*k) == Some(ziel)
-            && kr.width >= mindest
-            && kr.height >= mindest
-            && !aria_versteckt(*k)
-            && klickbar(doc, *k, kr)
+            && document_target(*k) == Some(target)
+            && kr.width >= minimum
+            && kr.height >= minimum
+            && !aria_hidden(*k)
+            && clickable(doc, *k, kr)
     })
 }
 
 /// Ob die Größe des Ziels noch nicht die endgültige ist.
-fn wachsend<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> bool {
+fn growing<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> bool {
     doc.layout(n).and_then(|l| l.animating) == Some(true)
 }
 
-fn ungemessen_ziel(locale: Locale, id: &str, wcag: &str, n: NodeId) -> Finding {
+fn unmeasured_target(locale: Locale, id: &str, wcag: &str, n: NodeId) -> Finding {
     Finding::untested(
         id,
         pick!(
@@ -666,35 +666,35 @@ fn ungemessen_ziel(locale: Locale, id: &str, wcag: &str, n: NodeId) -> Finding {
 /// Gemessen werden nur Ziele, die man sehen und anklicken kann; Nachbarn unter
 /// `inert` oder mit `pointer-events: none` engen nicht ein (auditmysite#705).
 /// Ein Ziel, das beim Messen noch wächst, bleibt ungemessen (#706).
-fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let labels = labels_nach_ziel(doc);
-    let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
-        .filter(|n| ist_zeigerziel(*n))
-        .filter_map(|n| zielkasten(doc, n).map(|r| (n, r)))
-        .filter(|(n, r)| klickbar(doc, *n, r))
+fn target_size<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let labels = labels_by_target(doc);
+    let targets: Vec<(D::N<'_>, Rect)> = elements(doc)
+        .filter(|n| is_pointer_target(*n))
+        .filter_map(|n| target_box(doc, n).map(|r| (n, r)))
+        .filter(|(n, r)| clickable(doc, *n, r))
         .collect();
-    let zu_klein = |r: &Rect| r.width < ZIEL_PX || r.height < ZIEL_PX;
-    let radius = ZIEL_PX / 2.0;
+    let too_small = |r: &Rect| r.width < TARGET_PX || r.height < TARGET_PX;
+    let radius = TARGET_PX / 2.0;
 
-    for (n, r) in &ziele {
-        if !zu_klein(r) || im_fliesstext(*n) || ziel_durch_label(*n, &labels) {
+    for (n, r) in &targets {
+        if !too_small(r) || in_running_text(*n) || target_by_label(*n, &labels) {
             continue;
         }
-        let m = mitte(r);
-        let bedraengt = ziele.iter().any(|(k, kr)| {
+        let m = centre(r);
+        let crowds = targets.iter().any(|(k, kr)| {
             k != n
-                && if zu_klein(kr) {
-                    let km = mitte(kr);
+                && if too_small(kr) {
+                    let km = centre(kr);
                     ((m.0 - km.0).powi(2) + (m.1 - km.1).powi(2)).sqrt() < 2.0 * radius
                 } else {
-                    abstand(m, kr) < radius
+                    gap(m, kr) < radius
                 }
         });
-        if !bedraengt || gleichwertig(doc, *n, &ziele, ZIEL_PX) {
+        if !crowds || equivalent(doc, *n, &targets, TARGET_PX) {
             continue;
         }
-        if wachsend(doc, *n) {
-            out.push(ungemessen_ziel(locale, "targets/size", "2.5.8", n.id()));
+        if growing(doc, *n) {
+            out.push(unmeasured_target(locale, "targets/size", "2.5.8", n.id()));
             continue;
         }
         let r = *r;
@@ -722,30 +722,30 @@ fn zielgroesse<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// 2.5.5 (AAA): ein Ziel unter 44 × 44 CSS-px. Ohne Abstandsausnahme — die
 /// kennt 2.5.5 nicht —, mit den Ausnahmen „inline" und „Equivalent".
 /// Gemeldet wird nur, was 2.5.8 nicht schon meldet.
-fn zielgroesse_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let labels = labels_nach_ziel(doc);
-    let ziele: Vec<(D::N<'_>, Rect)> = elements(doc)
-        .filter(|n| ist_zeigerziel(*n))
-        .filter_map(|n| zielkasten(doc, n).map(|r| (n, r)))
-        .filter(|(n, r)| klickbar(doc, *n, r))
+fn target_size_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let labels = labels_by_target(doc);
+    let targets: Vec<(D::N<'_>, Rect)> = elements(doc)
+        .filter(|n| is_pointer_target(*n))
+        .filter_map(|n| target_box(doc, n).map(|r| (n, r)))
+        .filter(|(n, r)| clickable(doc, *n, r))
         .collect();
-    let mut schon = Vec::new();
-    zielgroesse(doc, locale, &mut schon);
-    let gemeldet: HashSet<String> = schon
+    let mut already = Vec::new();
+    target_size(doc, locale, &mut already);
+    let reported: HashSet<String> = already
         .iter()
         .filter_map(|f| f.location.node.clone())
         .collect();
-    for (n, r) in &ziele {
-        if (r.width >= ZIEL_ERHOEHT_PX && r.height >= ZIEL_ERHOEHT_PX)
-            || im_fliesstext(*n)
-            || ziel_durch_label(*n, &labels)
-            || gemeldet.contains(&n.id().to_string())
-            || gleichwertig(doc, *n, &ziele, ZIEL_ERHOEHT_PX)
+    for (n, r) in &targets {
+        if (r.width >= TARGET_ENHANCED_PX && r.height >= TARGET_ENHANCED_PX)
+            || in_running_text(*n)
+            || target_by_label(*n, &labels)
+            || reported.contains(&n.id().to_string())
+            || equivalent(doc, *n, &targets, TARGET_ENHANCED_PX)
         {
             continue;
         }
-        if wachsend(doc, *n) {
-            out.push(ungemessen_ziel(
+        if growing(doc, *n) {
+            out.push(unmeasured_target(
                 locale,
                 "targets/size-enhanced",
                 "2.5.5",
@@ -774,19 +774,19 @@ fn zielgroesse_erhoeht<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Find
 }
 
 /// 2.4.7: beim Fokussieren ändert sich kein Stil, der als Indikator taugt.
-fn fokus_sichtbar<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut ziele = 0usize;
-    let mut gemessen = 0usize;
+fn focus_visible<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut targets = 0usize;
+    let mut measured = 0usize;
     for n in elements(doc) {
-        if !per_tab_erreichbar(n) {
+        if !per_tab_reachable(n) {
             continue;
         }
-        ziele += 1;
-        let Some(sichtbar) = doc.layout(n).and_then(|l| l.focus_visible) else {
+        targets += 1;
+        let Some(visible) = doc.layout(n).and_then(|l| l.focus_visible) else {
             continue;
         };
-        gemessen += 1;
-        if !sichtbar {
+        measured += 1;
+        if !visible {
             out.push(
                 Finding::review(
                     "focus/indicator-missing",
@@ -805,7 +805,7 @@ fn fokus_sichtbar<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
         }
     }
     // Nicht gemessen ist nicht bestanden.
-    if ziele > 0 && gemessen == 0 {
+    if targets > 0 && measured == 0 {
         out.push(
             Finding::untested(
                 "focus/indicator-unmeasured",
@@ -924,15 +924,15 @@ pub(crate) const METAS: [Meta; 8] = [
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn funktionen<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 8] {
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 8] {
     [
-        reihenfolge,
-        endlos_animation,
+        order,
+        endless_animation,
         reflow,
-        nur_zeiger,
-        verdeckt,
-        zielgroesse,
-        zielgroesse_erhoeht,
-        fokus_sichtbar,
+        only_pointer,
+        covered,
+        target_size,
+        target_size_enhanced,
+        focus_visible,
     ]
 }

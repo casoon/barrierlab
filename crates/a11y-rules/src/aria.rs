@@ -17,7 +17,7 @@ use a11y_dom::{
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, pick, tr};
-use crate::structure::{VALID_ROLES, explizite_rolle};
+use crate::structure::{VALID_ROLES, explicit_role};
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -26,7 +26,7 @@ fn at(id: NodeId) -> Location {
 // --- Tabellen -------------------------------------------------------------
 
 /// Alle Zustände und Eigenschaften aus WAI-ARIA 1.2, alphabetisch. Der Index
-/// ist die Bitposition in [`GLOBAL`] und [`JE_ROLLE`].
+/// ist die Bitposition in [`GLOBAL`] und [`PER_ROLE`].
 const ATTRIBUTE: [&str; 48] = [
     "aria-activedescendant",
     "aria-atomic",
@@ -82,13 +82,13 @@ const ATTRIBUTE: [&str; 48] = [
 const GLOBAL: u64 = 0x0008423f7f0a;
 
 /// Für Rollen, die WAI-ARIA 1.2 nicht kennt: kein Urteil.
-const UNBEKANNT: u64 = u64::MAX;
+const UNKNOWN: u64 = u64::MAX;
 
 /// Was eine Rolle über [`GLOBAL`] hinaus unterstützt — eigene, geerbte und
 /// erforderliche Attribute, in derselben Reihenfolge wie [`VALID_ROLES`].
 /// In ARIA 1.2 auf einer Rolle als veraltet markierte Attribute zählen als
 /// unterstützt: veraltet ist nicht verboten.
-const JE_ROLLE: [u64; 83] = [
+const PER_ROLE: [u64; 83] = [
     0x002000c00000, // alert
     0x002004c00000, // alertdialog
     0x002000c08001, // application
@@ -126,7 +126,7 @@ const JE_ROLLE: [u64; 83] = [
     0x042101c00000, // listitem
     0x002000c00000, // log
     0x002000c00000, // main
-    UNBEKANNT,      // mark (ARIA 1.3, nicht in 1.2)
+    UNKNOWN,        // mark (ARIA 1.3, nicht in 1.2)
     0x002000c00000, // marquee
     0x002000c00000, // math
     0x002020c00001, // menu
@@ -174,7 +174,7 @@ const JE_ROLLE: [u64; 83] = [
     0x062101c08010, // treeitem
 ];
 
-const _: () = assert!(JE_ROLLE.len() == VALID_ROLES.len());
+const _: () = assert!(PER_ROLE.len() == VALID_ROLES.len());
 
 /// Attribute aus dem Entwurf von WAI-ARIA 1.3, die Browser schon umsetzen.
 /// Sie sind kein Tippfehler; über ihre Zulässigkeit urteilt diese Fassung
@@ -187,17 +187,17 @@ const ARIA_13: &[&str] = &[
     "aria-rowindextext",
 ];
 
-fn ist_aria(name: &str) -> bool {
+fn is_aria(name: &str) -> bool {
     name.get(..5)
         .is_some_and(|p| p.eq_ignore_ascii_case("aria-"))
 }
 
-fn attribut_index(name: &str) -> Option<usize> {
+fn attribute_index(name: &str) -> Option<usize> {
     ATTRIBUTE.iter().position(|a| a.eq_ignore_ascii_case(name))
 }
 
-fn rollen_index(rolle: &str) -> Option<usize> {
-    VALID_ROLES.iter().position(|r| *r == rolle)
+fn roles_index(role: &str) -> Option<usize> {
+    VALID_ROLES.iter().position(|r| *r == role)
 }
 
 // --- aria/attribute-unknown -----------------------------------------------
@@ -209,8 +209,8 @@ fn rollen_index(rolle: &str) -> Option<usize> {
 pub(crate) fn attribute_names<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         for (name, _) in n.attributes() {
-            if !ist_aria(name)
-                || attribut_index(name).is_some()
+            if !is_aria(name)
+                || attribute_index(name).is_some()
                 || ARIA_13.iter().any(|a| a.eq_ignore_ascii_case(name))
             {
                 continue;
@@ -234,17 +234,17 @@ pub(crate) fn attribute_names<D: Document>(doc: &D, locale: Locale, out: &mut Ve
 
 // --- aria/attribute-value-invalid -----------------------------------------
 
-enum Werttyp {
+enum ValueType {
     /// Genau einer der Werte.
-    Eins(&'static [&'static str]),
+    One(&'static [&'static str]),
     /// Eine Liste aus diesen Werten, durch Leerraum getrennt.
-    Liste(&'static [&'static str]),
-    Ganzzahl,
-    Zahl,
+    List(&'static [&'static str]),
+    Integer,
+    Number,
 }
 
-const WAHR_FALSCH: &[&str] = &["true", "false"];
-const WAHR_FALSCH_UNDEF: &[&str] = &["true", "false", "undefined"];
+const TRUE_WRONG: &[&str] = &["true", "false"];
+const TRUE_WRONG_UNDEF: &[&str] = &["true", "false", "undefined"];
 const TRISTATE: &[&str] = &["true", "false", "mixed", "undefined"];
 
 /// Der Werttyp nach WAI-ARIA 1.2, Abschnitt 6.6/6.7.
@@ -253,8 +253,8 @@ const TRISTATE: &[&str] = &["true", "false", "mixed", "undefined"];
 /// und `aria-current`/`aria-invalid` — für diese beiden legt die Spezifikation
 /// fest, dass ein unbekannter Wert als `true` gilt; der Wert tut damit, was
 /// gemeint ist. auditmysite meldet sie; hier bewusst nicht.
-fn werttyp(attr: &str) -> Option<Werttyp> {
-    use Werttyp::*;
+fn value_type(attr: &str) -> Option<ValueType> {
+    use ValueType::*;
     Some(match attr {
         "aria-atomic"
         | "aria-busy"
@@ -263,54 +263,52 @@ fn werttyp(attr: &str) -> Option<Werttyp> {
         | "aria-multiline"
         | "aria-multiselectable"
         | "aria-readonly"
-        | "aria-required" => Eins(WAHR_FALSCH),
-        "aria-expanded" | "aria-grabbed" | "aria-hidden" | "aria-selected" => {
-            Eins(WAHR_FALSCH_UNDEF)
-        }
-        "aria-checked" | "aria-pressed" => Eins(TRISTATE),
-        "aria-autocomplete" => Eins(&["inline", "list", "both", "none"]),
-        "aria-haspopup" => Eins(&["false", "true", "menu", "listbox", "tree", "grid", "dialog"]),
-        "aria-live" => Eins(&["assertive", "off", "polite"]),
-        "aria-orientation" => Eins(&["horizontal", "vertical", "undefined"]),
-        "aria-sort" => Eins(&["ascending", "descending", "none", "other"]),
-        "aria-dropeffect" => Liste(&["copy", "execute", "link", "move", "none", "popup"]),
-        "aria-relevant" => Liste(&["additions", "removals", "text", "all"]),
+        | "aria-required" => One(TRUE_WRONG),
+        "aria-expanded" | "aria-grabbed" | "aria-hidden" | "aria-selected" => One(TRUE_WRONG_UNDEF),
+        "aria-checked" | "aria-pressed" => One(TRISTATE),
+        "aria-autocomplete" => One(&["inline", "list", "both", "none"]),
+        "aria-haspopup" => One(&["false", "true", "menu", "listbox", "tree", "grid", "dialog"]),
+        "aria-live" => One(&["assertive", "off", "polite"]),
+        "aria-orientation" => One(&["horizontal", "vertical", "undefined"]),
+        "aria-sort" => One(&["ascending", "descending", "none", "other"]),
+        "aria-dropeffect" => List(&["copy", "execute", "link", "move", "none", "popup"]),
+        "aria-relevant" => List(&["additions", "removals", "text", "all"]),
         "aria-colcount" | "aria-colindex" | "aria-colspan" | "aria-level" | "aria-posinset"
-        | "aria-rowcount" | "aria-rowindex" | "aria-rowspan" | "aria-setsize" => Ganzzahl,
-        "aria-valuemax" | "aria-valuemin" | "aria-valuenow" => Zahl,
+        | "aria-rowcount" | "aria-rowindex" | "aria-rowspan" | "aria-setsize" => Integer,
+        "aria-valuemax" | "aria-valuemin" | "aria-valuenow" => Number,
         _ => return None,
     })
 }
 
-fn einer_von(liste: &[&str], v: &str) -> bool {
-    liste.iter().any(|t| t.eq_ignore_ascii_case(v))
+fn a_of(list: &[&str], v: &str) -> bool {
+    list.iter().any(|t| t.eq_ignore_ascii_case(v))
 }
 
 /// Eine Dezimalzahl nach dem Muster `-1`, `2.5`, `.5`, `1e3` — ohne
 /// Gleitkomma-Parser, der im WASM-Build mehrere Kilobyte kostet.
-fn ist_zahl(v: &str) -> bool {
+fn is_number(v: &str) -> bool {
     let v = v.strip_prefix(['+', '-']).unwrap_or(v);
-    let (mantisse, exponent) = match v.find(['e', 'E']) {
+    let (mantissa, exponent) = match v.find(['e', 'E']) {
         Some(i) => (&v[..i], Some(&v[i + 1..])),
         None => (v, None),
     };
-    let (ganz, bruch) = mantisse.split_once('.').unwrap_or((mantisse, ""));
-    let ziffern = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
-    (!ganz.is_empty() || !bruch.is_empty())
-        && ziffern(ganz)
-        && ziffern(bruch)
+    let (whole, fraction) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    let digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
+    (!whole.is_empty() || !fraction.is_empty())
+        && digits(whole)
+        && digits(fraction)
         && exponent.is_none_or(|e| {
             let e = e.strip_prefix(['+', '-']).unwrap_or(e);
-            !e.is_empty() && ziffern(e)
+            !e.is_empty() && digits(e)
         })
 }
 
-fn wert_gueltig(typ: &Werttyp, v: &str) -> bool {
-    match typ {
-        Werttyp::Eins(l) => einer_von(l, v),
-        Werttyp::Liste(l) => v.split_whitespace().all(|t| einer_von(l, t)),
-        Werttyp::Ganzzahl => v.parse::<i64>().is_ok(),
-        Werttyp::Zahl => ist_zahl(v),
+fn value_valid(ty: &ValueType, v: &str) -> bool {
+    match ty {
+        ValueType::One(l) => a_of(l, v),
+        ValueType::List(l) => v.split_whitespace().all(|t| a_of(l, t)),
+        ValueType::Integer => v.parse::<i64>().is_ok(),
+        ValueType::Number => is_number(v),
     }
 }
 
@@ -321,26 +319,26 @@ fn wert_gueltig(typ: &Werttyp, v: &str) -> bool {
 /// (`aria-expanded="maybe"`).
 pub(crate) fn attribute_values<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        for (name, wert) in n.attributes() {
-            let Some(typ) = attribut_index(name).and_then(|i| werttyp(ATTRIBUTE[i])) else {
+        for (name, value) in n.attributes() {
+            let Some(ty) = attribute_index(name).and_then(|i| value_type(ATTRIBUTE[i])) else {
                 continue;
             };
-            let v = wert.trim();
-            if v.is_empty() || wert_gueltig(&typ, v) {
+            let v = value.trim();
+            if v.is_empty() || value_valid(&ty, v) {
                 continue;
             }
-            let erwartet = match typ {
-                Werttyp::Eins(l) | Werttyp::Liste(l) => l.join(", "),
-                Werttyp::Ganzzahl => pick!(locale, "an integer", "eine ganze Zahl").to_string(),
-                Werttyp::Zahl => pick!(locale, "a number", "eine Zahl").to_string(),
+            let expects = match ty {
+                ValueType::One(l) | ValueType::List(l) => l.join(", "),
+                ValueType::Integer => pick!(locale, "an integer", "eine ganze Zahl").to_string(),
+                ValueType::Number => pick!(locale, "a number", "eine Zahl").to_string(),
             };
             out.push(
                 Finding::fail(
                     "aria/attribute-value-invalid",
                     tr!(
                         locale,
-                        "{name}=\"{v}\" is not a valid value; expected: {erwartet}.",
-                        "{name}=\"{v}\" ist kein gültiger Wert; erwartet: {erwartet}."
+                        "{name}=\"{v}\" is not a valid value; expected: {expects}.",
+                        "{name}=\"{v}\" ist kein gültiger Wert; erwartet: {expects}."
                     ),
                 )
                 .with_severity(Severity::High)
@@ -362,18 +360,18 @@ pub(crate) fn attribute_values<D: Document>(doc: &D, locale: Locale, out: &mut V
 pub(crate) fn owns_conflict<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Vec statt HashMap: aria-owns ist selten, und jede weitere
     // HashMap-Ausprägung kostet im WASM-Build Platz.
-    let mut erster: Vec<(ScopedId, NodeId)> = Vec::new();
-    let mut gemeldet: Vec<ScopedId> = Vec::new();
+    let mut first: Vec<(ScopedId, NodeId)> = Vec::new();
+    let mut reported: Vec<ScopedId> = Vec::new();
     for n in elements(doc) {
         let Some(v) = n.attr("aria-owns") else {
             continue;
         };
         for id in v.split_whitespace() {
-            let schluessel = scoped_id(n, id);
-            match erster.iter().find(|(i, _)| *i == schluessel) {
-                None => erster.push((schluessel, n.id())),
-                Some((_, e)) if *e != n.id() && !gemeldet.contains(&schluessel) => {
-                    gemeldet.push(schluessel);
+            let key = scoped_id(n, id);
+            match first.iter().find(|(i, _)| *i == key) {
+                None => first.push((key, n.id())),
+                Some((_, e)) if *e != n.id() && !reported.contains(&key) => {
+                    reported.push(key);
                     out.push(
                     Finding::fail(
                         "aria/owns-conflict",
@@ -396,11 +394,11 @@ pub(crate) fn owns_conflict<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 
 // --- Widgets --------------------------------------------------------------
 
-fn ist_wahr(v: Option<&str>) -> bool {
+fn is_true(v: Option<&str>) -> bool {
     v.is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
 }
 
-fn nicht_leer(v: Option<&str>) -> bool {
+fn not_empty(v: Option<&str>) -> bool {
     v.is_some_and(|v| !v.trim().is_empty())
 }
 
@@ -421,17 +419,17 @@ fn nicht_leer(v: Option<&str>) -> bool {
 ///   Ein Popup im eigenen Teilbaum oder per `aria-owns` (das Muster aus ARIA
 ///   1.1) wird noch anerkannt. Beleg: auditmysite-Korpus `widget_patterns`.
 pub(crate) fn widgets<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut tablisten = Vec::new();
+    let mut tab_lists = Vec::new();
     let mut panel = false;
     for n in elements(doc) {
-        match explizite_rolle(n) {
-            Some("tablist") => tablisten.push(n),
+        match explicit_role(n) {
+            Some("tablist") => tab_lists.push(n),
             Some("tabpanel") => panel = true,
             Some("combobox") => combobox(n, locale, out),
             _ => {}
         }
     }
-    for liste in tablisten {
+    for list in tab_lists {
         if !panel {
             out.push(
                 Finding::review(
@@ -444,22 +442,22 @@ pub(crate) fn widgets<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
                 )
                 .with_severity(Severity::Low)
                 .with_wcag(["1.3.1", "4.1.2"])
-                .at(at(liste.id())),
+                .at(at(list.id())),
             );
         }
-        if ist_wahr(liste.attr("aria-multiselectable")) {
+        if is_true(list.attr("aria-multiselectable")) {
             continue;
         }
-        let mut tabs = descendants(liste).filter(|d| {
-            explizite_rolle(*d) == Some("tab")
-                && ancestors(*d).find(|a| explizite_rolle(*a) == Some("tablist")) == Some(liste)
+        let mut tabs = descendants(list).filter(|d| {
+            explicit_role(*d) == Some("tab")
+                && ancestors(*d).find(|a| explicit_role(*a) == Some("tablist")) == Some(list)
         });
-        let Some(erster) = tabs.next() else {
+        let Some(first) = tabs.next() else {
             continue;
         };
-        if !std::iter::once(erster)
+        if !std::iter::once(first)
             .chain(tabs)
-            .any(|t| ist_wahr(t.attr("aria-selected")))
+            .any(|t| is_true(t.attr("aria-selected")))
         {
             out.push(
                 Finding::review(
@@ -472,22 +470,22 @@ pub(crate) fn widgets<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
                 )
                 .with_severity(Severity::Low)
                 .with_wcag(["4.1.2"])
-                .at(at(liste.id())),
+                .at(at(list.id())),
             );
         }
     }
 }
 
 fn combobox<'a, N: Node<'a>>(n: N, locale: Locale, out: &mut Vec<Finding>) {
-    if !ist_wahr(n.attr("aria-expanded"))
-        || nicht_leer(n.attr("aria-controls"))
-        || nicht_leer(n.attr("aria-owns"))
+    if !is_true(n.attr("aria-expanded"))
+        || not_empty(n.attr("aria-controls"))
+        || not_empty(n.attr("aria-owns"))
     {
         return;
     }
     let popup = descendants(n).any(|d| {
         matches!(
-            explizite_rolle(d),
+            explicit_role(d),
             Some("listbox" | "tree" | "grid" | "dialog")
         )
     });
@@ -515,35 +513,35 @@ fn combobox<'a, N: Node<'a>>(n: N, locale: Locale, out: &mut Vec<Finding>) {
 /// Zustand — aufgeklappt oder nicht — wird nie übermittelt. Beleg:
 /// auditmysite `modern_attributes`.
 pub(crate) fn popover<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut ausloeser = elements(doc)
+    let mut triggers = elements(doc)
         .filter(|n| n.has_attr("popovertarget"))
         .peekable();
-    if ausloeser.peek().is_none() {
+    if triggers.peek().is_none() {
         return;
     }
-    for n in ausloeser {
-        let ziel = n.attr("popovertarget").unwrap_or("");
-        let (kennung, text) = match mit_id(doc, n, ziel) {
+    for n in triggers {
+        let target = n.attr("popovertarget").unwrap_or("");
+        let (id, text) = match with_id(doc, n, target) {
             None => (
                 "popover/target-missing",
                 tr!(
                     locale,
-                    "popovertarget references \"{ziel}\", which does not exist.",
-                    "popovertarget verweist auf \"{ziel}\", das es nicht gibt."
+                    "popovertarget references \"{target}\", which does not exist.",
+                    "popovertarget verweist auf \"{target}\", das es nicht gibt."
                 ),
             ),
             Some(z) if !z.has_attr("popover") => (
                 "popover/target-invalid",
                 tr!(
                     locale,
-                    "popovertarget references \"{ziel}\", which has no popover attribute.",
-                    "popovertarget verweist auf \"{ziel}\", das kein popover-Attribut trägt."
+                    "popovertarget references \"{target}\", which has no popover attribute.",
+                    "popovertarget verweist auf \"{target}\", das kein popover-Attribut trägt."
                 ),
             ),
             Some(_) => continue,
         };
         out.push(
-            Finding::fail(kennung, text)
+            Finding::fail(id, text)
                 .with_severity(Severity::Medium)
                 .with_wcag(["4.1.2"])
                 .at(at(n.id())),
@@ -565,8 +563,8 @@ pub(crate) fn popover<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
 /// `inert` genau richtig gebaut ist. Beleg: auditmysite `modern_attributes`.
 pub(crate) fn inert_dialog<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let offen = n.is_element("dialog") && n.has_attr("open");
-        if !offen && !matches!(explizite_rolle(n), Some("dialog" | "alertdialog")) {
+        let open = n.is_element("dialog") && n.has_attr("open");
+        if !open && !matches!(explicit_role(n), Some("dialog" | "alertdialog")) {
             continue;
         }
         if !n.has_attr("inert") && !ancestors(n).any(|a| a.has_attr("inert")) {
@@ -577,7 +575,7 @@ pub(crate) fn inert_dialog<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
             "The dialog is inert: it cannot be focused or operated.",
             "Der Dialog ist inert: Er lässt sich weder fokussieren noch bedienen.",
         );
-        let f = if offen {
+        let f = if open {
             Finding::fail("inert/dialog-inert", text)
         } else {
             Finding::review("inert/dialog-inert", text)
@@ -594,9 +592,9 @@ pub(crate) fn inert_dialog<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
 
 /// Rollen, an denen ARIA 1.2 einen Namen verbietet (`aria-label`,
 /// `aria-labelledby`), dazu `aria-roledescription` an `generic`.
-fn verboten(rolle: &str, attr: &str) -> bool {
+fn forbidden(role: &str, attr: &str) -> bool {
     let name = matches!(attr, "aria-label" | "aria-labelledby");
-    match rolle {
+    match role {
         "generic" => name || attr == "aria-roledescription",
         "caption" | "code" | "deletion" | "emphasis" | "insertion" | "none" | "paragraph"
         | "presentation" | "strong" | "subscript" | "superscript" => name,
@@ -608,8 +606,8 @@ fn verboten(rolle: &str, attr: &str) -> bool {
 /// („Authors MUST NOT …", Abschnitt 3.2): ARIA, das dem nativen Zustand
 /// widersprechen kann. `aria-hidden="true"` an `<body>` gehört auch dazu, ist
 /// in der Sicht dieser Regel aber nie zu sehen (der Teilbaum fehlt darin).
-fn nativ_verboten<'a, N: Node<'a>>(n: N, attr: &str, v: &str) -> bool {
-    let falsch = v.eq_ignore_ascii_case("false");
+fn native_forbidden<'a, N: Node<'a>>(n: N, attr: &str, v: &str) -> bool {
+    let wrong = v.eq_ignore_ascii_case("false");
     match attr {
         "aria-checked" => {
             n.is_element("input")
@@ -618,9 +616,9 @@ fn nativ_verboten<'a, N: Node<'a>>(n: N, attr: &str, v: &str) -> bool {
                     t.eq_ignore_ascii_case("checkbox") || t.eq_ignore_ascii_case("radio")
                 })
         }
-        "aria-disabled" => falsch && n.has_attr("disabled"),
-        "aria-readonly" => falsch && n.has_attr("readonly"),
-        "aria-required" => falsch && n.has_attr("required"),
+        "aria-disabled" => wrong && n.has_attr("disabled"),
+        "aria-readonly" => wrong && n.has_attr("readonly"),
+        "aria-required" => wrong && n.has_attr("required"),
         "aria-placeholder" => n.has_attr("placeholder"),
         "aria-valuemax" => n.has_attr("max"),
         "aria-valuemin" => n.has_attr("min"),
@@ -641,20 +639,20 @@ fn nativ_verboten<'a, N: Node<'a>>(n: N, attr: &str, v: &str) -> bool {
 /// `aria-label` an `role="presentation"`).
 pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if doc.is_ignored(n) || !n.attributes().any(|(k, _)| ist_aria(k)) {
+        if doc.is_ignored(n) || !n.attributes().any(|(k, _)| is_aria(k)) {
             continue;
         }
-        let rolle = doc.role(n).and_then(|r| rollen_index(&r));
-        for (name, wert) in n.attributes() {
-            let v = wert.trim();
-            let Some(ai) = attribut_index(name) else {
+        let role = doc.role(n).and_then(|r| roles_index(&r));
+        for (name, value) in n.attributes() {
+            let v = value.trim();
+            let Some(ai) = attribute_index(name) else {
                 continue;
             };
             let attr = ATTRIBUTE[ai];
             if v.is_empty() {
                 continue;
             }
-            if nativ_verboten(n, attr, v) {
+            if native_forbidden(n, attr, v) {
                 out.push(
                     Finding::fail(
                         "aria/attribute-not-allowed",
@@ -671,11 +669,11 @@ pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mu
                 );
                 continue;
             }
-            let Some(ri) = rolle else {
+            let Some(ri) = role else {
                 continue;
             };
             let r = VALID_ROLES[ri];
-            if verboten(r, attr) {
+            if forbidden(r, attr) {
                 out.push(
                     Finding::fail(
                         "aria/attribute-prohibited",
@@ -689,7 +687,7 @@ pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mu
                     .with_wcag(["4.1.2"])
                     .at(at(n.id())),
                 );
-            } else if (GLOBAL | JE_ROLLE[ri]) & (1 << ai) == 0 {
+            } else if (GLOBAL | PER_ROLE[ri]) & (1 << ai) == 0 {
                 out.push(
                     Finding::fail(
                         "aria/attribute-not-allowed",
@@ -716,7 +714,7 @@ pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mu
 /// native Muster sie tragen und ein Befund dort nicht sicher wäre:
 /// `group` für `listitem` (ARIA 1.1), `combobox` für `option` (`<select>`),
 /// `radiogroup` für `menuitemradio` (eine Unterrolle von `group`).
-const KONTEXT: &[(&str, &[&str])] = &[
+const CONTEXT: &[(&str, &[&str])] = &[
     ("caption", &["figure", "grid", "table", "treegrid"]),
     ("cell", &["row"]),
     ("columnheader", &["row"]),
@@ -735,7 +733,7 @@ const KONTEXT: &[(&str, &[&str])] = &[
 
 /// Erforderliche Bestandteile (WAI-ARIA 1.2, „Required Owned Elements").
 /// `rowgroup → row` und `group → …` sind vereinfacht: die Gruppe selbst zählt.
-const BESTANDTEILE: &[(&str, &[&str])] = &[
+const PARTS: &[(&str, &[&str])] = &[
     ("feed", &["article"]),
     ("grid", &["row", "rowgroup"]),
     ("list", &["listitem"]),
@@ -757,35 +755,35 @@ const BESTANDTEILE: &[(&str, &[&str])] = &[
     ("treegrid", &["row", "rowgroup"]),
 ];
 
-fn nachschlagen(
-    tabelle: &'static [(&str, &'static [&'static str])],
-    rolle: &str,
+fn look_up(
+    table: &'static [(&str, &'static [&'static str])],
+    role: &str,
 ) -> Option<&'static [&'static str]> {
-    tabelle.iter().find(|(r, _)| *r == rolle).map(|(_, l)| *l)
+    table.iter().find(|(r, _)| *r == role).map(|(_, l)| *l)
 }
 
 /// Wie ein Knoten auf dem Weg zwischen Behälter und Bestandteil zählt.
 #[derive(Clone, Copy)]
-enum Wirksam {
+enum Effective {
     /// `generic`, `none`/`presentation`, keine Rolle oder vom Host
     /// ausgeblendet: ARIA 1.2 überspringt solche Zwischenknoten.
-    Durchlaessig,
+    Translucent,
     /// Eine Rolle aus [`VALID_ROLES`].
-    Rolle(usize),
+    Role(usize),
     /// Eine Rolle, die WAI-ARIA 1.2 nicht kennt: kein Urteil möglich.
-    Unbekannt,
+    Unknown,
 }
 
-fn einordnen(rolle: &str) -> Wirksam {
-    match rolle {
-        "generic" | "none" | "presentation" => Wirksam::Durchlaessig,
-        _ => rollen_index(rolle).map_or(Wirksam::Unbekannt, Wirksam::Rolle),
+fn classify(role: &str) -> Effective {
+    match role {
+        "generic" | "none" | "presentation" => Effective::Translucent,
+        _ => roles_index(role).map_or(Effective::Unknown, Effective::Role),
     }
 }
 
 /// Ob `n` ein `<li>` direkt in `<ul>`, `<ol>` oder `<menu>` ist.
-fn li_in_liste<'a, N: Node<'a>>(n: N) -> Option<N> {
-    if !n.is_element("li") || explizite_rolle(n).is_some() {
+fn li_in_list<'a, N: Node<'a>>(n: N) -> Option<N> {
+    if !n.is_element("li") || explicit_role(n).is_some() {
         return None;
     }
     n.parent()
@@ -801,38 +799,38 @@ fn li_in_liste<'a, N: Node<'a>>(n: N) -> Option<N> {
 /// `tablist → tab`, obwohl das `<li>` dazwischen steht (auditmysite#715, axe
 /// meldet es). Nur wenn die Liste `none`/`presentation` ist, erbt der Eintrag
 /// das (ARIA 1.2, `presentation`: „required owned elements").
-fn wirksame_rolle<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Wirksam {
-    if let Some(r) = explizite_rolle(n) {
-        return einordnen(r);
+fn effective_role<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Effective {
+    if let Some(r) = explicit_role(n) {
+        return classify(r);
     }
-    if let Some(liste) = li_in_liste(n) {
-        return match explizite_rolle(liste) {
-            Some("none" | "presentation") => Wirksam::Durchlaessig,
-            _ => Wirksam::Rolle(rollen_index("listitem").unwrap_or_default()),
+    if let Some(list) = li_in_list(n) {
+        return match explicit_role(list) {
+            Some("none" | "presentation") => Effective::Translucent,
+            _ => Effective::Role(roles_index("listitem").unwrap_or_default()),
         };
     }
     if doc.is_ignored(n) {
-        return Wirksam::Durchlaessig;
+        return Effective::Translucent;
     }
     match doc.role(n) {
-        None => Wirksam::Durchlaessig,
-        Some(r) => einordnen(&r),
+        None => Effective::Translucent,
+        Some(r) => classify(&r),
     }
 }
 
-/// Das erste Element mit dieser ID im Bereich von `von`, wie
+/// Das erste Element mit dieser ID im Bereich von `of`, wie
 /// `getElementById` auf dessen Wurzel.
-fn mit_id<'n, D: Document>(doc: &'n D, von: D::N<'n>, id: &str) -> Option<D::N<'n>> {
-    elements(doc).find(|n| n.attr("id") == Some(id) && n.tree_scope() == von.tree_scope())
+fn with_id<'n, D: Document>(doc: &'n D, of: D::N<'n>, id: &str) -> Option<D::N<'n>> {
+    elements(doc).find(|n| n.attr("id") == Some(id) && n.tree_scope() == of.tree_scope())
 }
 
 /// Wem ein Element per `aria-owns` gehört, nach ID. Eine Liste statt einer
 /// HashMap: aria-owns ist selten, und jede HashMap-Ausprägung kostet im
 /// WASM-Build Platz.
-type Besitzer<'n, N> = Vec<(ScopedId<'n>, N)>;
+type Owner<'n, N> = Vec<(ScopedId<'n>, N)>;
 
-fn besitzer<'n, D: Document>(doc: &'n D) -> Besitzer<'n, D::N<'n>> {
-    let mut m: Besitzer<'n, D::N<'n>> = Vec::new();
+fn owner<'n, D: Document>(doc: &'n D) -> Owner<'n, D::N<'n>> {
+    let mut m: Owner<'n, D::N<'n>> = Vec::new();
     for n in elements(doc) {
         if let Some(v) = n.attr("aria-owns") {
             for id in v.split_whitespace().map(|id| scoped_id(n, id)) {
@@ -845,35 +843,35 @@ fn besitzer<'n, D: Document>(doc: &'n D) -> Besitzer<'n, D::N<'n>> {
     m
 }
 
-fn besitzer_von<'n, N: Node<'n>>(besitzer: &Besitzer<'n, N>, n: N) -> Option<N> {
+fn owner_of<'n, N: Node<'n>>(owner: &Owner<'n, N>, n: N) -> Option<N> {
     let id = scoped_id(n, n.attr("id")?);
-    besitzer.iter().find(|(i, _)| *i == id).map(|(_, b)| *b)
+    owner.iter().find(|(i, _)| *i == id).map(|(_, b)| *b)
 }
 
 /// Ob über `n` — durch durchlässige Knoten hindurch — eine der Rollen steht.
 /// `None`: nicht entscheidbar.
-fn im_kontext<'n, D: Semantics>(
+fn in_context<'n, D: Semantics>(
     doc: &'n D,
     n: D::N<'n>,
-    erlaubt: &[&str],
-    besitzer: &Besitzer<'n, D::N<'n>>,
+    allowed: &[&str],
+    owner: &Owner<'n, D::N<'n>>,
 ) -> Option<bool> {
     let mut cur = n;
     // Schranke gegen aria-owns-Zyklen.
     for _ in 0..256 {
-        let eltern = besitzer_von(besitzer, cur)
+        let parent = owner_of(owner, cur)
             .filter(|b| *b != cur)
             .or_else(|| cur.parent());
-        let Some(p) = eltern else {
+        let Some(p) = parent else {
             return Some(false);
         };
         if p.is_element("body") || p.is_element("html") {
             return Some(false);
         }
-        match wirksame_rolle(doc, p) {
-            Wirksam::Durchlaessig => cur = p,
-            Wirksam::Unbekannt => return None,
-            Wirksam::Rolle(i) => return Some(erlaubt.contains(&VALID_ROLES[i])),
+        match effective_role(doc, p) {
+            Effective::Translucent => cur = p,
+            Effective::Unknown => return None,
+            Effective::Role(i) => return Some(allowed.contains(&VALID_ROLES[i])),
         }
     }
     None
@@ -883,41 +881,41 @@ fn im_kontext<'n, D: Semantics>(
 /// durchlässige Knoten hindurch, und was es per `aria-owns` an sich zieht.
 /// Was einem anderen per `aria-owns` gehört, zählt dort, nicht hier.
 /// `None`: nichts besessen oder nicht entscheidbar.
-fn besitzt<'n, D: Semantics>(
+fn owns<'n, D: Semantics>(
     doc: &'n D,
     n: D::N<'n>,
-    noetig: &[&str],
-    besitzer: &Besitzer<'n, D::N<'n>>,
+    needed: &[&str],
+    owner: &Owner<'n, D::N<'n>>,
 ) -> Option<bool> {
-    let fremd = |k: D::N<'n>| besitzer_von(besitzer, k).is_some_and(|b| b != n);
-    let mut stapel: Vec<D::N<'n>> = n
+    let foreign = |k: D::N<'n>| owner_of(owner, k).is_some_and(|b| b != n);
+    let mut stack: Vec<D::N<'n>> = n
         .attr("aria-owns")
         .into_iter()
         .flat_map(str::split_whitespace)
-        .filter_map(|id| mit_id(doc, n, id))
+        .filter_map(|id| with_id(doc, n, id))
         .collect();
-    stapel.extend(n.children());
-    let mut irgendwas = false;
-    let mut unbekannt = false;
-    while let Some(k) = stapel.pop() {
+    stack.extend(n.children());
+    let mut something = false;
+    let mut unknown = false;
+    while let Some(k) = stack.pop() {
         if k.kind() != a11y_dom::NodeKind::Element
             || matches!(k.local_name(), "script" | "style" | "template")
-            || (k.parent() == Some(n) && fremd(k))
+            || (k.parent() == Some(n) && foreign(k))
         {
             continue;
         }
-        match wirksame_rolle(doc, k) {
-            Wirksam::Durchlaessig => stapel.extend(k.children().filter(|c| !fremd(*c))),
-            Wirksam::Unbekannt => unbekannt = true,
-            Wirksam::Rolle(i) => {
-                if noetig.contains(&VALID_ROLES[i]) {
+        match effective_role(doc, k) {
+            Effective::Translucent => stack.extend(k.children().filter(|c| !foreign(*c))),
+            Effective::Unknown => unknown = true,
+            Effective::Role(i) => {
+                if needed.contains(&VALID_ROLES[i]) {
                     return Some(true);
                 }
-                irgendwas = true;
+                something = true;
             }
         }
     }
-    (irgendwas && !unbekannt).then_some(false)
+    (something && !unknown).then_some(false)
 }
 
 /// Kontext und Bestandteile nach WAI-ARIA 1.2, geprüft am DOM.
@@ -941,36 +939,36 @@ fn besitzt<'n, D: Semantics>(
 /// ausblendet. Chrome blendet ein schlichtes `<tbody>` aus; die Zeilen
 /// darunter zählen trotzdem (auditmysite#659).
 pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let besitzer = besitzer(doc);
+    let owner = owner(doc);
     for n in elements(doc) {
-        let rolle = match explizite_rolle(n) {
+        let role = match explicit_role(n) {
             Some(r) => Some(r),
             // Das <li> einer Liste, die per role etwas anderes ist.
-            None => li_in_liste(n).and_then(|l| {
-                explizite_rolle(l)
+            None => li_in_list(n).and_then(|l| {
+                explicit_role(l)
                     .filter(|r| !matches!(*r, "list" | "directory" | "none" | "presentation"))
                     .map(|_| "listitem")
             }),
         };
-        let Some(rolle) = rolle else {
+        let Some(role) = role else {
             continue;
         };
 
         // Der Kontext eines `listitem` ist Sache der Listen-Familie
         // (`lists/item-outside-list`) — sonst meldeten zwei Regeln denselben
         // verwaisten Eintrag (auditmysite-Kalibrierung `invalid_aria.html`).
-        if rolle != "listitem"
-            && let Some(erlaubt) = nachschlagen(KONTEXT, rolle)
-            && im_kontext(doc, n, erlaubt, &besitzer) == Some(false)
+        if role != "listitem"
+            && let Some(allowed) = look_up(CONTEXT, role)
+            && in_context(doc, n, allowed, &owner) == Some(false)
         {
-            let kontext = erlaubt.join(", ");
+            let context = allowed.join(", ");
             out.push(
                 Finding::fail(
                     "aria/required-parent-missing",
                     tr!(
                         locale,
-                        "role=\"{rolle}\" must be contained in or owned by an element with role {kontext}.",
-                        "role=\"{rolle}\" muss in einem Element mit der Rolle {kontext} stehen oder ihm gehören."
+                        "role=\"{role}\" must be contained in or owned by an element with role {context}.",
+                        "role=\"{role}\" muss in einem Element mit der Rolle {context} stehen oder ihm gehören."
                     ),
                 )
                 .with_severity(Severity::Critical)
@@ -979,7 +977,7 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             );
         }
 
-        if let Some(noetig) = nachschlagen(BESTANDTEILE, rolle) {
+        if let Some(needed) = look_up(PARTS, role) {
             if n.attr("aria-expanded")
                 .is_some_and(|v| v.trim().eq_ignore_ascii_case("false"))
             {
@@ -987,19 +985,19 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             }
             if std::iter::once(n)
                 .chain(ancestors(n))
-                .any(|a| ist_wahr(a.attr("aria-busy")))
+                .any(|a| is_true(a.attr("aria-busy")))
             {
                 continue;
             }
-            if besitzt(doc, n, noetig, &besitzer) == Some(false) {
-                let teile = noetig.join(", ");
+            if owns(doc, n, needed, &owner) == Some(false) {
+                let parts = needed.join(", ");
                 out.push(
                     Finding::fail(
                         "aria/required-children-missing",
                         tr!(
                             locale,
-                            "role=\"{rolle}\" must contain or own an element with role {teile}.",
-                            "role=\"{rolle}\" muss ein Element mit der Rolle {teile} enthalten oder besitzen."
+                            "role=\"{role}\" must contain or own an element with role {parts}.",
+                            "role=\"{role}\" muss ein Element mit der Rolle {parts} enthalten oder besitzen."
                         ),
                     )
                     .with_severity(Severity::High)

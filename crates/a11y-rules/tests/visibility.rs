@@ -16,21 +16,21 @@ use accname::IdIndex;
 /// Tier 2 über der Arena, mit echter Namensberechnung und ohne eigenes
 /// `is_ignored` — wie der WASM-Host. Die Sicht darf sich nicht darauf
 /// verlassen, dass ein Host versteckte Knoten selbst meldet.
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
 }
 
-impl<'a> MitSemantik<'a> {
+impl<'a> WithSemantics<'a> {
     fn new(doc: &'a Arena) -> Self {
-        MitSemantik {
+        WithSemantics {
             ids: IdIndex::build(doc.root()),
             doc,
         }
     }
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -41,7 +41,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         accname::role(node).map(str::to_string)
     }
@@ -51,11 +51,11 @@ impl Semantics for MitSemantik<'_> {
     }
 }
 
-/// Wie [`MitSemantik`], dazu Stile: `display` aus `data-display`, sonst
+/// Wie [`WithSemantics`], dazu Stile: `display` aus `data-display`, sonst
 /// `block`. Die Namensberechnung läuft mit Stil.
-struct MitStil<'a>(MitSemantik<'a>);
+struct WithStyle<'a>(WithSemantics<'a>);
 
-impl Document for MitStil<'_> {
+impl Document for WithStyle<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -66,7 +66,7 @@ impl Document for MitStil<'_> {
     }
 }
 
-impl Semantics for MitStil<'_> {
+impl Semantics for WithStyle<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         self.0.role(node)
     }
@@ -76,7 +76,7 @@ impl Semantics for MitStil<'_> {
     }
 }
 
-impl Rendering for MitStil<'_> {
+impl Rendering for WithStyle<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
         Some(ComputedStyle {
             color: None,
@@ -94,13 +94,13 @@ impl Rendering for MitStil<'_> {
     }
 }
 
-fn anzahl(r: &Report, id: &str) -> usize {
+fn count(r: &Report, id: &str) -> usize {
     r.findings.iter().filter(|f| f.rule_id == id).count()
 }
 
 /// Ein Dokument mit allem, was die dokumentweiten Regeln verlangen, und einem
 /// offenen `<body>`: Der Test hängt seinen Inhalt an und schließt zweimal.
-fn seite() -> ArenaBuilder {
+fn page() -> ArenaBuilder {
     Arena::builder()
         .open("html")
         .attr("lang", "de")
@@ -117,8 +117,8 @@ fn seite() -> ArenaBuilder {
 }
 
 #[test]
-fn versteckter_banner_erzeugt_keine_namensbefunde() {
-    let arena = seite()
+fn hidden_banner_yields_no_name_findings() {
+    let arena = page()
         .open("div")
         .attr("hidden", "")
         .open("button")
@@ -135,14 +135,14 @@ fn versteckter_banner_erzeugt_keine_namensbefunde() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "buttons/name-missing"), 1, "{:?}", r.findings);
-    assert_eq!(anzahl(&r, "links/name-missing"), 0, "{:?}", r.findings);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "buttons/name-missing"), 1, "{:?}", r.findings);
+    assert_eq!(count(&r, "links/name-missing"), 0, "{:?}", r.findings);
 }
 
 #[test]
-fn verschachteltes_svg_unter_aria_hidden_braucht_keinen_namen() {
-    let arena = seite()
+fn nested_svg_under_aria_hidden_needs_no_name() {
+    let arena = page()
         .open("svg")
         .attr("aria-hidden", "true")
         .open("svg")
@@ -153,13 +153,13 @@ fn verschachteltes_svg_unter_aria_hidden_braucht_keinen_namen() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "svg/name-missing"), 0, "{:?}", r.findings);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "svg/name-missing"), 0, "{:?}", r.findings);
 }
 
 #[test]
-fn icon_im_benannten_link_braucht_keinen_eigenen_namen() {
-    let arena = seite()
+fn icon_in_named_link_needs_no_name_of_its_own() {
+    let arena = page()
         .open("a")
         .attr("href", "/t")
         .attr("aria-label", "Twitter")
@@ -176,16 +176,16 @@ fn icon_im_benannten_link_braucht_keinen_eigenen_namen() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "svg/name-missing"), 1, "{:?}", r.findings);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "svg/name-missing"), 1, "{:?}", r.findings);
 }
 
 /// geographia.eu: 22 Karten-Links in einem geschlossenen `details.more`.
 /// Chrome stellt sie nicht dar und führt sie nicht im Accessibility-Tree;
 /// die berechneten Stile halten sie trotzdem für sichtbar.
 #[test]
-fn inhalt_eines_geschlossenen_details_ist_nicht_dargestellt() {
-    let arena = seite()
+fn content_of_closed_details_is_not_rendered() {
+    let arena = page()
         .open("details")
         .open("summary")
         .text("Mehr Fragen")
@@ -207,13 +207,13 @@ fn inhalt_eines_geschlossenen_details_ist_nicht_dargestellt() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "links/name-missing"), 1, "{:?}", r.findings);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "links/name-missing"), 1, "{:?}", r.findings);
 }
 
 #[test]
-fn leere_versteckte_liste_ist_kein_befund() {
-    let arena = seite()
+fn empty_hidden_list_is_no_finding() {
+    let arena = page()
         .open("div")
         .attr("hidden", "")
         .open("ol")
@@ -223,15 +223,15 @@ fn leere_versteckte_liste_ist_kein_befund() {
         .close()
         .close()
         .build();
-    assert_eq!(anzahl(&run(&arena), "lists/empty"), 0);
+    assert_eq!(count(&run(&arena), "lists/empty"), 0);
 }
 
 #[test]
-fn per_stil_verstecktes_zaehlt_mit_darstellung() {
+fn hidden_by_style_counts_with_rendering() {
     // `display: none` ist nur mit Stilen erkennbar. Mit ihnen fällt der
     // leere Button weg, ohne sie bleibt er stehen — die Strukturregel sieht
     // ihn dann, und das ist die ehrliche Grenze des statischen Falls.
-    let arena = seite()
+    let arena = page()
         .open("div")
         .attr("data-display", "none")
         .open("button")
@@ -240,22 +240,22 @@ fn per_stil_verstecktes_zaehlt_mit_darstellung() {
         .close()
         .close()
         .build();
-    let ohne = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&ohne, "buttons/name-missing"), 1);
-    let mit = run_full(&MitStil(MitSemantik::new(&arena)));
+    let without = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&without, "buttons/name-missing"), 1);
+    let with = run_full(&WithStyle(WithSemantics::new(&arena)));
     assert_eq!(
-        anzahl(&mit, "buttons/name-missing"),
+        count(&with, "buttons/name-missing"),
         0,
         "{:?}",
-        mit.findings
+        with.findings
     );
 }
 
 #[test]
-fn verweise_auf_versteckte_ids_bleiben_gueltig() {
+fn references_to_hidden_ids_stay_valid() {
     // Ein Name aus verstecktem Text ist per aria-labelledby ausdrücklich
     // erlaubt. Die Verweisprüfung sieht deshalb das ganze Markup.
-    let arena = seite()
+    let arena = page()
         .open("span")
         .attr("id", "l")
         .attr("hidden", "")
@@ -267,14 +267,14 @@ fn verweise_auf_versteckte_ids_bleiben_gueltig() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "aria/reference-missing"), 0, "{:?}", r.findings);
-    assert_eq!(anzahl(&r, "buttons/name-missing"), 0, "{:?}", r.findings);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "aria/reference-missing"), 0, "{:?}", r.findings);
+    assert_eq!(count(&r, "buttons/name-missing"), 0, "{:?}", r.findings);
 }
 
 #[test]
-fn nicht_dargestelltes_label_zaehlt_nicht_als_label() {
-    let arena = seite()
+fn unrendered_label_does_not_count_as_label() {
+    let arena = page()
         .open("label")
         .attr("for", "e")
         .attr("data-display", "none")
@@ -286,17 +286,17 @@ fn nicht_dargestelltes_label_zaehlt_nicht_als_label() {
         .close()
         .close()
         .build();
-    let r = run_full(&MitStil(MitSemantik::new(&arena)));
-    assert_eq!(anzahl(&r, "forms/label-missing"), 1, "{:?}", r.findings);
+    let r = run_full(&WithStyle(WithSemantics::new(&arena)));
+    assert_eq!(count(&r, "forms/label-missing"), 1, "{:?}", r.findings);
 
     // Ohne Stil ist das Label nicht als versteckt erkennbar.
-    let r = run_with_semantics(&MitSemantik::new(&arena));
-    assert_eq!(anzahl(&r, "forms/label-missing"), 0);
+    let r = run_with_semantics(&WithSemantics::new(&arena));
+    assert_eq!(count(&r, "forms/label-missing"), 0);
 }
 
 #[test]
-fn fokussierbares_unter_aria_hidden_vorfahren_faellt_auf() {
-    let arena = seite()
+fn focusable_under_aria_hidden_ancestor_is_flagged() {
+    let arena = page()
         .open("div")
         .attr("aria-hidden", "true")
         .open("a")
@@ -326,22 +326,22 @@ fn fokussierbares_unter_aria_hidden_vorfahren_faellt_auf() {
         .close()
         .close()
         .build();
-    let r = run_with_semantics(&MitSemantik::new(&arena));
+    let r = run_with_semantics(&WithSemantics::new(&arena));
     assert_eq!(
-        anzahl(&r, "keyboard/hidden-focusable"),
+        count(&r, "keyboard/hidden-focusable"),
         2,
         "{:?}",
         r.findings
     );
     // Der Befund gehört zu hidden-focusable, nicht zu den Namensregeln.
-    assert_eq!(anzahl(&r, "links/name-missing"), 0, "{:?}", r.findings);
+    assert_eq!(count(&r, "links/name-missing"), 0, "{:?}", r.findings);
 }
 
 #[test]
-fn nicht_dargestelltes_fokussierbares_unter_aria_hidden_ist_kein_befund() {
+fn unrendered_focusable_under_aria_hidden_is_no_finding() {
     // Ein ausgeblendetes Menü mit aria-hidden: nicht fokussierbar, weil nicht
     // dargestellt.
-    let arena = seite()
+    let arena = page()
         .open("nav")
         .attr("aria-hidden", "true")
         .attr("hidden", "")
@@ -353,12 +353,12 @@ fn nicht_dargestelltes_fokussierbares_unter_aria_hidden_ist_kein_befund() {
         .close()
         .close()
         .build();
-    assert_eq!(anzahl(&run(&arena), "keyboard/hidden-focusable"), 0);
+    assert_eq!(count(&run(&arena), "keyboard/hidden-focusable"), 0);
 }
 
 // --- Checkliste (liveaudit#7) ---------------------------------------------
 
-fn manuell(r: &Report) -> Vec<&str> {
+fn manual(r: &Report) -> Vec<&str> {
     r.findings
         .iter()
         .filter(|f| f.rule_id.starts_with("manual/"))
@@ -367,11 +367,11 @@ fn manuell(r: &Report) -> Vec<&str> {
 }
 
 #[test]
-fn checkliste_erscheint_nur_mit_anlass() {
-    let leer = seite().close().close().build();
-    assert!(manuell(&run(&leer)).is_empty());
+fn checklist_appears_only_with_trigger() {
+    let empty = page().close().close().build();
+    assert!(manual(&run(&empty)).is_empty());
 
-    let arena = seite()
+    let arena = page()
         .open("video")
         .attr("src", "a.mp4")
         .close()
@@ -395,10 +395,10 @@ fn checkliste_erscheint_nur_mit_anlass() {
         .close()
         .build();
     let r = run(&arena);
-    let mut punkte = manuell(&r);
-    punkte.sort_unstable();
+    let mut points = manual(&r);
+    points.sort_unstable();
     assert_eq!(
-        punkte,
+        points,
         [
             "manual/authentication",
             "manual/consistent-help",
@@ -429,8 +429,8 @@ fn checkliste_erscheint_nur_mit_anlass() {
 }
 
 #[test]
-fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
-    let arena = seite()
+fn gestures_interruptions_and_motion_only_with_trigger() {
+    let arena = page()
         .open("div")
         .attr("class", "swiper-container")
         .close()
@@ -444,10 +444,10 @@ fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
         .close()
         .build();
     let r = run(&arena);
-    let mut punkte = manuell(&r);
-    punkte.sort_unstable();
+    let mut points = manual(&r);
+    points.sort_unstable();
     assert_eq!(
-        punkte,
+        points,
         [
             "manual/dragging-movements",
             "manual/interruptions",
@@ -457,7 +457,7 @@ fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
         ]
     );
 
-    let still = seite()
+    let still = page()
         .open("div")
         .attr("class", "swipe")
         .close()
@@ -470,12 +470,12 @@ fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
         .close()
         .close()
         .build();
-    assert!(manuell(&run(&still)).is_empty());
+    assert!(manual(&run(&still)).is_empty());
 }
 
 #[test]
-fn versteckte_medien_setzen_keinen_punkt() {
-    let arena = seite()
+fn hidden_media_set_no_point() {
+    let arena = page()
         .open("div")
         .attr("hidden", "")
         .open("video")
@@ -485,5 +485,5 @@ fn versteckte_medien_setzen_keinen_punkt() {
         .close()
         .close()
         .build();
-    assert!(!manuell(&run(&arena)).contains(&"manual/media-alternatives"));
+    assert!(!manual(&run(&arena)).contains(&"manual/media-alternatives"));
 }

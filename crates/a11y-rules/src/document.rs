@@ -19,7 +19,7 @@ fn at(id: NodeId) -> Location {
 }
 
 /// Die Primärkennung eines Sprach-Tags, klein geschrieben: `de` aus `de-AT`.
-fn primaer(tag: &str) -> String {
+fn primary(tag: &str) -> String {
     tag.trim()
         .split('-')
         .next()
@@ -41,7 +41,7 @@ pub(crate) fn lang_mismatch<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
     let (Some(lang), Some(xml)) = (root.attr("lang"), root.attr("xml:lang")) else {
         return;
     };
-    if lang.trim().is_empty() || xml.trim().is_empty() || primaer(lang) == primaer(xml) {
+    if lang.trim().is_empty() || xml.trim().is_empty() || primary(lang) == primary(xml) {
         return;
     }
     out.push(
@@ -72,13 +72,13 @@ const MARKER_EN: &[&str] = &[
     "have", "has", "your", "our",
 ];
 
-const TEXTBLOECKE: &[&str] = &["p", "li", "dd", "td", "figcaption"];
+const TEXT_BLOCKS: &[&str] = &["p", "li", "dd", "td", "figcaption"];
 
 /// Inhalt, dessen Sprache nicht zählt: Code, Adressen und was ausdrücklich
 /// nicht übersetzt werden soll. Zitate zählen: 3.1.2 nimmt nur Eigennamen,
 /// Fachbegriffe, Wörter unbestimmter Sprache und Lehnwörter aus, und H58
 /// zeigt gerade ein fremdsprachiges Zitat.
-fn ausgenommen<'a, N: Node<'a>>(n: N) -> bool {
+fn exempt<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n).chain(ancestors(n)).any(|a| {
         matches!(a.local_name(), "code" | "pre" | "address") || a.attr("translate") == Some("no")
     })
@@ -87,7 +87,7 @@ fn ausgenommen<'a, N: Node<'a>>(n: N) -> bool {
 /// Der Text eines Teilbaums ohne `<script>`, `<style>` und `<template>`. Ein
 /// eingebettetes `<style>` ist kein Lesetext — sparkasse.de setzt es in
 /// Listeneinträge, und sein CSS las sich sonst als Englisch.
-fn lesetext<'a, N: Node<'a>>(n: N, out: &mut String) {
+fn reading_text<'a, N: Node<'a>>(n: N, out: &mut String) {
     for k in n.children() {
         match k.kind() {
             NodeKind::Text => {
@@ -98,7 +98,7 @@ fn lesetext<'a, N: Node<'a>>(n: N, out: &mut String) {
                 if !matches!(k.local_name(), "script" | "style" | "template")
                     && !k.attr("lang").is_some_and(|lang| !lang.trim().is_empty()) =>
             {
-                lesetext(k, out);
+                reading_text(k, out);
             }
             _ => {}
         }
@@ -107,12 +107,12 @@ fn lesetext<'a, N: Node<'a>>(n: N, out: &mut String) {
 
 /// Die erkannte Sprache eines Textes: mindestens fünf Funktionswörter der
 /// einen und höchstens eines der anderen.
-fn erkannt(woerter: &[String]) -> Option<&'static str> {
-    let de = woerter
+fn detected(words: &[String]) -> Option<&'static str> {
+    let de = words
         .iter()
         .filter(|w| MARKER_DE.contains(&w.as_str()))
         .count();
-    let en = woerter
+    let en = words
         .iter()
         .filter(|w| MARKER_EN.contains(&w.as_str()))
         .count();
@@ -140,21 +140,21 @@ fn erkannt(woerter: &[String]) -> Option<&'static str> {
 /// englischen Seite).
 pub(crate) fn part_unmarked<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let root = doc.root();
-    let Some(seite) = root.attr("lang").map(primaer).filter(|l| !l.is_empty()) else {
+    let Some(page) = root.attr("lang").map(primary).filter(|l| !l.is_empty()) else {
         // Ohne Seitensprache meldet `document/lang-missing`.
         return;
     };
-    if !matches!(seite.as_str(), "de" | "en") {
+    if !matches!(page.as_str(), "de" | "en") {
         out.push(
             Finding::untested(
                 "language/part-undetermined",
                 tr!(
                     locale,
                     "Passages in another language are only recognised on German and English \
-                     pages; this page is \"{seite}\". Check by hand that foreign-language \
+                     pages; this page is \"{page}\". Check by hand that foreign-language \
                      passages carry a lang attribute.",
                     "Anderssprachige Passagen werden nur auf deutschen und englischen Seiten \
-                     erkannt; diese Seite ist \"{seite}\". Von Hand prüfen, ob anderssprachige \
+                     erkannt; diese Seite ist \"{page}\". Von Hand prüfen, ob anderssprachige \
                      Passagen ein lang-Attribut tragen."
                 ),
             )
@@ -165,31 +165,31 @@ pub(crate) fn part_unmarked<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
         return;
     }
     for n in elements(doc) {
-        if !TEXTBLOECKE.contains(&n.local_name())
-            || descendants(n).any(|d| TEXTBLOECKE.contains(&d.local_name()))
-            || ausgenommen(n)
+        if !TEXT_BLOCKS.contains(&n.local_name())
+            || descendants(n).any(|d| TEXT_BLOCKS.contains(&d.local_name()))
+            || exempt(n)
         {
             continue;
         }
         let mut text = String::new();
-        lesetext(n, &mut text);
+        reading_text(n, &mut text);
         let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
-        let woerter: Vec<String> = text
+        let words: Vec<String> = text
             .split(|c: char| !c.is_alphabetic())
             .filter(|w| !w.is_empty())
             .map(str::to_lowercase)
             .collect();
-        if text.chars().count() < 100 || woerter.len() < 16 {
+        if text.chars().count() < 100 || words.len() < 16 {
             continue;
         }
-        let erklaert = std::iter::once(n)
+        let explained = std::iter::once(n)
             .chain(ancestors(n))
             .find_map(|a| a.attr("lang"))
-            .map(primaer);
-        if erklaert.is_some_and(|l| l != seite) {
+            .map(primary);
+        if explained.is_some_and(|l| l != page) {
             continue;
         }
-        let Some(sprache) = erkannt(&woerter).filter(|s| *s != seite) else {
+        let Some(language) = detected(&words).filter(|s| *s != page) else {
             continue;
         };
         out.push(
@@ -197,10 +197,10 @@ pub(crate) fn part_unmarked<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
                 "language/part-unmarked",
                 tr!(
                     locale,
-                    "This passage reads like \"{sprache}\" but inherits the page language \
-                     \"{seite}\". If it is in another language, mark it with lang=\"{sprache}\".",
-                    "Die Passage liest sich wie \"{sprache}\", erbt aber die Seitensprache \
-                     \"{seite}\". Ist sie anderssprachig, mit lang=\"{sprache}\" auszeichnen."
+                    "This passage reads like \"{language}\" but inherits the page language \
+                     \"{page}\". If it is in another language, mark it with lang=\"{language}\".",
+                    "Die Passage liest sich wie \"{language}\", erbt aber die Seitensprache \
+                     \"{page}\". Ist sie anderssprachig, mit lang=\"{language}\" auszeichnen."
                 ),
             )
             .with_severity(Severity::Medium)
@@ -249,18 +249,18 @@ pub(crate) fn abbreviations<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 /// Die Wartezeit einer Refresh-Anweisung in Sekunden, nach HTML („shared
 /// declarative refresh steps"): die führenden Ziffern. Ohne Ziffern ignoriert
 /// der Browser die Anweisung.
-fn wartezeit(content: &str) -> Option<u64> {
+fn wait_time(content: &str) -> Option<u64> {
     let s = content.trim_start();
-    let ziffern: String = s.chars().take_while(char::is_ascii_digit).collect();
-    if ziffern.is_empty() {
+    let digits: String = s.chars().take_while(char::is_ascii_digit).collect();
+    if digits.is_empty() {
         return None;
     }
-    Some(ziffern.parse().unwrap_or(u64::MAX))
+    Some(digits.parse().unwrap_or(u64::MAX))
 }
 
 /// Erst *mehr* als 20 Stunden gelten als ausreichend (2.2.1, „20 Hour
 /// Exception": „longer than 20 hours"; ACT bc659a: „greater than 72000").
-const ZWANZIG_STUNDEN: u64 = 20 * 60 * 60;
+const TWENTY_HOURS: u64 = 20 * 60 * 60;
 
 /// 2.2.1: `<meta http-equiv="refresh">` lädt die Seite nach einer Frist neu
 /// oder leitet weiter; anhalten oder verlängern lässt sich das nicht.
@@ -279,10 +279,10 @@ pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
         {
             continue;
         }
-        let Some(s) = n.attr("content").and_then(wartezeit) else {
+        let Some(s) = n.attr("content").and_then(wait_time) else {
             continue;
         };
-        if s == 0 || s > ZWANZIG_STUNDEN {
+        if s == 0 || s > TWENTY_HOURS {
             continue;
         }
         out.push(
@@ -305,15 +305,15 @@ pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
 
 // --- headings/section-without-heading -------------------------------------
 
-fn ist_ueberschrift<'a, N: Node<'a>>(n: N) -> bool {
+fn is_heading<'a, N: Node<'a>>(n: N) -> bool {
     matches!(n.local_name(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6")
-        || crate::structure::explizite_rolle(n) == Some("heading")
+        || crate::structure::explicit_role(n) == Some("heading")
 }
 
 /// Ein Abschnitt, der eine Überschrift erwarten lässt: `<article>` und ein
 /// benanntes `<section>` (eine `region`). Navigationen nicht — sie werden über
 /// ihren Namen gefunden, eine Überschrift erwartet dort niemand.
-fn ist_abschnitt<'a, N: Node<'a>>(n: N) -> bool {
+fn is_section<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("article")
         || (n.is_element("section")
             && (n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
@@ -334,10 +334,10 @@ pub(crate) fn section_without_heading<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
-    let ohne = elements(doc)
-        .filter(|n| ist_abschnitt(*n) && !descendants(*n).any(ist_ueberschrift))
+    let without = elements(doc)
+        .filter(|n| is_section(*n) && !descendants(*n).any(is_heading))
         .count();
-    if ohne == 0 {
+    if without == 0 {
         return;
     }
     out.push(
@@ -345,9 +345,9 @@ pub(crate) fn section_without_heading<D: Document>(
             "headings/section-without-heading",
             tr!(
                 locale,
-                "Articles or named sections without a heading: {ohne}. Check whether headings \
+                "Articles or named sections without a heading: {without}. Check whether headings \
                  would help users find their content.",
-                "Artikel oder benannte Abschnitte ohne Überschrift: {ohne}. Prüfen, ob \
+                "Artikel oder benannte Abschnitte ohne Überschrift: {without}. Prüfen, ob \
                  Überschriften beim Auffinden des Inhalts helfen würden."
             ),
         )
