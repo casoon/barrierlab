@@ -21,5 +21,6 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ### Fixed
 
+- **Kaskade:** Verschachtelte Ebenen (`@layer a { @layer b {} }`, `@layer a.b`, anonyme Blöcke) werden nach CSS Cascade 5 §6.4 geordnet statt eingeebnet: Unterebenen stehen in ihrer Ebene, deren eigene Regeln schlagen sie (bei `!important` umgekehrt), und die Reihenfolge folgt dem ersten Auftreten in Dokumentreihenfolge, nicht mehr den vorab gelesenen `@layer`-Anweisungen. Eine Ebene, die nur unter einer Bedingung mit unbekanntem Ausgang oder mit ungültigem Namen vorkommt, macht die betroffenen Eigenschaften `Unknown`.
 - **Kaskade:** Das `style`-Attribut steht über allen Ebenen, auch bei `!important`; Darstellungsattribute (`bgcolor` usw.) verlieren gegen jede Autorenregel, auch in einer `@layer` (CSS Cascade 5 §6.1, §6.5).
 - **Kaskade:** Ein unaufgelöstes `@import` wurde stillschweigend ignoriert und ergab sichere Antworten; jetzt ist die Antwort `Unknown`, außer sie kommt aus einem `!important` im `style`-Attribut.
