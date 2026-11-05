@@ -13,6 +13,12 @@ Repository `casoon/a11y-core`.
   `Html5Node`, damit ein Host den Parsebaum nicht in eine `Arena` kopieren muss. Standardmäßig
   aus; ohne das Feature bleibt die Abhängigkeitsliste leer.
 
+## [0.27.0] - 2026-11-03
+
+### Changed
+
+- **Gleichschritt:** mit `a11y-rules` 0.27.0; keine eigene Änderung.
+
 ## [0.26.1] - 2026-10-27
 
 ### Changed

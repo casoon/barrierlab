@@ -351,7 +351,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // `maximum-scale=2`).
         if max.is_some_and(|v| v < 5.0) {
             out.push(
-                Finding::fail(
+                Finding::best_practice(
                     "zoom/viewport-scale-limited",
                     pick!(
                         locale,
@@ -360,7 +360,6 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }
@@ -373,7 +372,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // (auditmysite#779).
     if !found {
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "zoom/viewport-missing",
                 pick!(
                     locale,
@@ -382,7 +381,6 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_tags(["best-practice"])
             .at(at(doc.root().id())),
         );
     }
@@ -467,7 +465,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // `heading-order` Best Practice). Deshalb ohne Kriterium.
         if last > 0 && level > last + 1 {
             out.push(
-                Finding::fail(
+                Finding::best_practice(
                     "headings/skip-level",
                     tr!(
                         locale,
@@ -476,7 +474,6 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     ),
                 )
                 .with_severity(Severity::Medium)
-                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }
@@ -541,7 +538,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // `page-has-heading-one` (auditmysite#779).
     if any && h1s.is_empty() {
         out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "headings/h1-missing",
                 pick!(
                     locale,
@@ -549,8 +546,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                     "Das Dokument hat keine h1-Überschrift.",
                 ),
             )
-            .with_severity(Severity::Medium)
-            .with_tags(["best-practice"]),
+            .with_severity(Severity::Medium),
         );
     }
 
@@ -759,7 +755,7 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // Hinweis, kein Verstoß. Beleg: fünf von 21 EU-Portalen mit offenem
         // Consent-Dialog (auditmysite#709).
         0 if modal_open(doc) => out.push(
-            Finding::review(
+            Finding::best_practice(
                 "landmarks/main-missing",
                 pick!(
                     locale,
@@ -768,11 +764,10 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-            .with_tags(["best-practice"])
             .at(at(root)),
         ),
         0 => out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "landmarks/main-missing",
                 pick!(
                     locale,
@@ -781,12 +776,11 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_tags(["best-practice"])
             .at(at(root)),
         ),
         1 => {}
         n => out.push(
-            Finding::fail(
+            Finding::best_practice(
                 "landmarks/main-duplicate",
                 tr!(
                     locale,
@@ -795,7 +789,6 @@ fn landmarks<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::High)
-            .with_tags(["best-practice"])
             // Die zweite ist die überzählige — dorthin zeigt der Befund.
             .at(at(mains[1].id())),
         ),
@@ -1520,7 +1513,7 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         // „leer" wäre eine zweite, falsche Aussage über denselben Mangel.
         if !foreign && !children.iter().any(|c| is_list_item(*c)) {
             out.push(
-                Finding::fail(
+                Finding::best_practice(
                     "lists/empty",
                     tr!(
                         locale,
@@ -1529,7 +1522,6 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                     ),
                 )
                 .with_severity(Severity::Low)
-                .with_tags(["best-practice"])
                 .at(at(n.id())),
             );
         }

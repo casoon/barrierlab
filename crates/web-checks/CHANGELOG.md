@@ -5,6 +5,23 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03
+
+### Added
+
+- **third_party:** Anbieter `fathom` (cookielos, Host `usefathom.com`), `carbon-ads` (`carbonads.net`, `syndicateads.net`, Werbung) und `mapp-intelligence` (Track-Domains `wt-eu02.net`/`webtrekk.net`, Cookies `wt3_eid`, `wt3_sid`, `wt_rla`, `wteid_*`, `wtsid_*`, `wtstp_*` u. a.), je mit Quelle der Anbieter-Doku. Anbieterliste `RULESET_VERSION` 2026-11-04. Nicht aufgenommen: Google Analytics über Cloudflare Zaraz — Zaraz sendet serverseitig, der Browser sieht nur den First-Party-Pfad `/cdn-cgi/zaraz/i.js`, die Cookie-Namen sind nicht dokumentiert (casoon/auditmysite#873).
+
+## [0.6.1] - 2026-11-03
+
+### Fixed
+
+- **third_party:** Die Meta-Cookies `_fbp` und `_fbc` gelten als Werbung, nicht als Social: Der Werbe-Pixel ist ein eigener Anbieter `meta-pixel` (Pfadregeln `fbevents.js`, `/tr`), das Plugin bleibt `meta`. Entdeckt am Korpus von auditmysite (casoon/auditmysite#873).
+
+## [0.6.0] - 2026-11-03
+### Added
+
+- **third_party:** Familie `third_party` (casoon/barrierlab#91): `classify_host`, `classify_url` und `classify_storage_name` ordnen Host, URL und Cookie-/Storage-Name einem Anbieter mit Kategorie (Analytics, Werbung, Social, Tag-Manager, Schriften, CDN, Video, Karten, Consent-Plattform) und Sitz zu. 23 Anbieter, jeder mit Quelle; Pfadregeln trennen etwa Like-Plugin und Werbe-Pixel auf `facebook.net`. Host-Abgleich an der Punktgrenze, Zugangsdaten-Trick (`https://google-analytics.com@evil.example/`) geht an den echten Host. Daten, kein Urteil; unbekannt ist `None`.
+
 ## [0.5.1] - 2026-10-27
 
 ### Added

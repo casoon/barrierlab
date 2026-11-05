@@ -172,13 +172,13 @@ fn corpus_landmark_granular() {
         );
         assert_eq!(
             verdicts(&r, "landmarks/not-top-level")[0],
-            (Outcome::Fail, Severity::Medium)
+            (Outcome::Review, Severity::Medium)
         );
         // Die drei banner: die verschachtelte und zwei <header>.
         assert_eq!(findings_at(src, &r, "landmarks/banner-duplicate"), ["h1"]);
         assert_eq!(
             verdicts(&r, "landmarks/banner-duplicate"),
-            [(Outcome::Fail, Severity::Medium)]
+            [(Outcome::Review, Severity::Medium)]
         );
         assert_eq!(
             findings_at(src, &r, "landmarks/contentinfo-duplicate"),
@@ -394,7 +394,7 @@ fn corpus_missing_main_landmark() {
         );
         assert_eq!(
             verdicts(&r, "landmarks/content-outside"),
-            [(Outcome::Fail, Severity::Medium)]
+            [(Outcome::Review, Severity::Medium)]
         );
         assert_eq!(count(&r, "headings/none"), 0);
     }

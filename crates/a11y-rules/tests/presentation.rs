@@ -200,7 +200,7 @@ fn corpus_redundant_role_list_style_auditmysite_644() {
     );
     assert_eq!(
         verdicts(&r, "lists/role-redundant"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
     // Die Rolle stimmt, sie ist nur überflüssig: Best Practice ohne 4.1.2
     // (auditmysite#779).

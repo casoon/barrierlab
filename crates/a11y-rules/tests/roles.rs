@@ -86,7 +86,7 @@ fn corpus_redundant_role_list_style_issue_644() {
     );
     assert_eq!(
         verdicts(&r, "aria/role-redundant"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
 }
 
@@ -206,7 +206,7 @@ fn corpus_forms_and_misc() {
     );
     assert_eq!(
         verdicts(&r, "patterns/tooltip-unreferenced"),
-        [(Outcome::Fail, Severity::Low)]
+        [(Outcome::Review, Severity::Low)]
     );
 }
 

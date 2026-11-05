@@ -6,7 +6,7 @@
 //! Schlagwort `best-practice`) bzw. `REVIEW`; die Erwartungen folgen dieser
 //! dokumentierten Entscheidung, die Rollen selbst WAI-ARIA 1.2 und HTML-AAM.
 
-use super::super::{Fall, Mode, fail, na, negative, review};
+use super::super::{Fall, Mode, na, negative, review};
 
 pub fn cases() -> Vec<Fall> {
     let mut v = Vec::new();
@@ -26,25 +26,25 @@ pub fn cases() -> Vec<Fall> {
 fn main_missing() -> Vec<Fall> {
     let id = "landmarks/main-missing";
     vec![
-        fail(
+        review(
             id,
             r#"<header><p>Site</p></header><p>Body text</p>"#,
             "axe landmark-one-main (Best Practice, FAIL mit best-practice); docs/packages/a11y-rules.md, Normative Zuordnung (auditmysite#779)",
         )
         .count(1),
-        fail(
+        review(
             id,
             r#"<main hidden><p>Old</p></main><p>Visible text</p>"#,
             "HTML: ein main mit hidden ist nicht dargestellt und keine Landmark im AX-Baum; axe landmark-one-main",
         )
         .variant("versteckt per hidden"),
-        fail(
+        review(
             id,
             r#"<main aria-hidden="true"><p>Hidden from AT</p></main><p>Visible text</p>"#,
             "WAI-ARIA 1.2 aria-hidden: der Teilbaum fehlt im AX-Baum, damit auch die Landmark",
         )
         .variant("aria-hidden"),
-        fail(
+        review(
             id,
             r#"<main hidden><p>Old</p></main><p>Visible text</p>"#,
             "HTML hidden; Host ohne Stile wertet das Attribut aus",
@@ -98,13 +98,13 @@ fn main_missing() -> Vec<Fall> {
 fn main_duplicate() -> Vec<Fall> {
     let id = "landmarks/main-duplicate";
     vec![
-        fail(
+        review(
             id,
             r#"<main><p>A</p></main><main><p>B</p></main>"#,
             "HTML: höchstens ein main ohne hidden; axe landmark-no-duplicate-main (Best Practice); docs/packages/a11y-rules.md",
         )
         .count(1),
-        fail(
+        review(
             id,
             r#"<main><p>A</p></main><div role="main"><p>B</p></div>"#,
             "WAI-ARIA 1.2 main: ein Dokument SHOULD NOT mehr als eine main-Landmark haben",
@@ -271,13 +271,13 @@ fn not_unique() -> Vec<Fall> {
 fn not_top_level() -> Vec<Fall> {
     let id = "landmarks/not-top-level";
     vec![
-        fail(
+        review(
             id,
             r#"<section aria-label="Intro"><main><p>x</p></main></section>"#,
             "WAI-ARIA 1.2 main: SHOULD top-level; axe landmark-main-is-top-level (Best Practice); benannte section ist region (HTML-AAM)",
         )
         .count(1),
-        fail(
+        review(
             id,
             r#"<main><p>x</p></main><aside><div role="contentinfo"><p>c</p></div></aside>"#,
             "WAI-ARIA 1.2 contentinfo: nicht in einer anderen Landmark; axe landmark-contentinfo-is-top-level",
@@ -306,13 +306,13 @@ fn duplicates() -> Vec<Fall> {
     let banner = "landmarks/banner-duplicate";
     let info = "landmarks/contentinfo-duplicate";
     vec![
-        fail(
+        review(
             banner,
             r#"<header><p>A</p></header><main><p>x</p></main><header><p>B</p></header>"#,
             "WAI-ARIA 1.2 banner: höchstens eine; axe landmark-no-duplicate-banner (Best Practice); docs/packages/a11y-rules.md",
         )
         .count(1),
-        fail(
+        review(
             banner,
             r#"<header><p>A</p></header><div role="banner"><p>B</p></div>"#,
             "WAI-ARIA 1.2 banner per Rolle zählt mit",
@@ -330,13 +330,13 @@ fn duplicates() -> Vec<Fall> {
         )
         .variant("versteckt per hidden"),
         na(banner, r#"<main><p>x</p></main>"#, "Kein banner"),
-        fail(
+        review(
             info,
             r#"<main><p>x</p></main><footer><p>A</p></footer><footer><p>B</p></footer>"#,
             "WAI-ARIA 1.2 contentinfo: höchstens eine; axe landmark-no-duplicate-contentinfo (Best Practice); docs/packages/a11y-rules.md",
         )
         .count(1),
-        fail(
+        review(
             info,
             r#"<footer><p>A</p></footer><div role="contentinfo"><p>B</p></div>"#,
             "WAI-ARIA 1.2 contentinfo per Rolle zählt mit",
@@ -360,13 +360,13 @@ fn duplicates() -> Vec<Fall> {
 fn content_outside() -> Vec<Fall> {
     let id = "landmarks/content-outside";
     vec![
-        fail(
+        review(
             id,
             r#"<main><p>In</p></main><p>Out</p>"#,
             "axe region (Best Practice): Inhalt außerhalb jeder Landmark; docs/packages/a11y-rules.md",
         )
         .count(1),
-        fail(
+        review(
             id,
             r#"<div><img src="chart.png" alt="Sales chart"></div><main><p>In</p></main>"#,
             "axe region: ein benanntes Bild ist Inhalt",

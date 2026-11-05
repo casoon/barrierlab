@@ -496,13 +496,13 @@ pub fn cases() -> Vec<Fall> {
             "Native Tabellen und Listen: Bestandteile durch HTML gegeben (auditmysite#659)",
         ),
         // --- aria/role-redundant --------------------------------------------
-        fail(
+        review(
             "aria/role-redundant",
             r#"<button type="button" role="button">Senden</button>"#,
             ARIA_IN_HTML_ROLE,
         )
         .count(1),
-        fail(
+        review(
             "aria/role-redundant",
             r#"<a href="/" role="link">Start</a>"#,
             ARIA_IN_HTML_ROLE,
@@ -568,19 +568,19 @@ pub fn cases() -> Vec<Fall> {
             TITLE_ONLY,
         ),
         // --- patterns/tooltip-unreferenced ----------------------------------
-        fail(
+        review(
             "patterns/tooltip-unreferenced",
             r#"<div role="tooltip" id="orphan-tip">Hilfe</div>"#,
             TOOLTIP,
         )
         .count(1),
-        fail(
+        review(
             "patterns/tooltip-unreferenced",
             r#"<div role="tooltip" id="tip" hidden>Hilfe</div>"#,
             "Versteckte Tooltips erscheinen erst beim Überfahren; APG Tooltip",
         )
         .variant("versteckt"),
-        fail(
+        review(
             "patterns/tooltip-unreferenced",
             r#"<button aria-describedby="tip">?</button>
                <div><template shadowrootmode="open"><div role="tooltip" id="tip">Hilfe</div></template></div>"#,
