@@ -16,6 +16,12 @@ All notable changes to this project will be documented in this file. The format 
   an `InputKind::DocumentIncomplete` note. New public field: code that builds `CheckReport` with
   a struct literal must add it.
 
+### Deprecated
+
+- **API:** `Finding` and `Severity` (the crate's own types) are `#[deprecated]` in favour of
+  `CheckReport::to_report()` and the `a11y_report` model (barrierlab#106). They keep working;
+  `CheckReport::findings` still carries them.
+
 ### Fixed
 
 - **Check:** `csp.meta-enforcement` no longer flags inline scripts and styles whose `nonce`

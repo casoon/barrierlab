@@ -15,6 +15,9 @@
 //! `colspan`/`rowspan` values needs mutable state carried forward across
 //! cells, which XPath 1.0 has no way to express).
 
+// The old finding types are deprecated for hosts; the crate itself still builds them.
+#![allow(deprecated)]
+
 mod assertions;
 mod csp_enforcement;
 mod datatypes;
