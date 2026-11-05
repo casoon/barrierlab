@@ -22,11 +22,11 @@ use a11y_report::{Finding, Location, Severity};
 use crate::locale::{Locale, de_text, tr};
 use style_cascade::selector::{Match, Mode, Selector, any_match};
 
-fn seite<D: Document>(doc: &D) -> Location {
+fn page<D: Document>(doc: &D) -> Location {
     Location::node(doc.root().id().to_string())
 }
 
-fn wert<'a>(decls: &'a [Declaration], name: &str) -> Option<&'a str> {
+fn value<'a>(decls: &'a [Declaration], name: &str) -> Option<&'a str> {
     // Die letzte Angabe gewinnt, `!important` vor allen anderen
     // (`max_by_key` liefert bei Gleichstand das letzte Element).
     decls
@@ -38,14 +38,14 @@ fn wert<'a>(decls: &'a [Declaration], name: &str) -> Option<&'a str> {
 
 /// Eine kommagetrennte Liste auf oberster Ebene (Kommas in Klammern zählen
 /// nicht).
-fn liste(v: &str) -> Vec<&str> {
+fn list(v: &str) -> Vec<&str> {
     let mut out = Vec::new();
-    let (mut tiefe, mut start) = (0i32, 0usize);
+    let (mut depth, mut start) = (0i32, 0usize);
     for (i, c) in v.char_indices() {
         match c {
-            '(' => tiefe += 1,
-            ')' => tiefe -= 1,
-            ',' if tiefe == 0 => {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            ',' if depth == 0 => {
                 out.push(v[start..i].trim());
                 start = i + 1;
             }
@@ -58,17 +58,17 @@ fn liste(v: &str) -> Vec<&str> {
 }
 
 /// Die Teile einer Angabe, getrennt an Leerraum außerhalb von Klammern.
-fn teile(v: &str) -> Vec<&str> {
+fn parts(v: &str) -> Vec<&str> {
     let mut out = Vec::new();
-    let (mut tiefe, mut start) = (0i32, None::<usize>);
+    let (mut depth, mut start) = (0i32, None::<usize>);
     for (i, c) in v.char_indices() {
         match c {
             '(' => {
-                tiefe += 1;
+                depth += 1;
                 start.get_or_insert(i);
             }
-            ')' => tiefe -= 1,
-            c if c.is_whitespace() && tiefe == 0 => {
+            ')' => depth -= 1,
+            c if c.is_whitespace() && depth == 0 => {
                 if let Some(s) = start.take() {
                     out.push(&v[s..i]);
                 }
@@ -85,7 +85,7 @@ fn teile(v: &str) -> Vec<&str> {
 }
 
 /// Eine Zeitangabe in Millisekunden: `0.3s`, `300ms`, `.01ms`.
-fn zeit_ms(t: &str) -> Option<f64> {
+fn time_ms(t: &str) -> Option<f64> {
     let t = t.trim().to_ascii_lowercase();
     if let Some(n) = t.strip_suffix("ms") {
         n.parse().ok()
@@ -96,7 +96,7 @@ fn zeit_ms(t: &str) -> Option<f64> {
     }
 }
 
-const ZEITFUNKTIONEN: &[&str] = &[
+const TIMING_FUNCTIONS: &[&str] = &[
     "ease",
     "linear",
     "ease-in",
@@ -106,44 +106,44 @@ const ZEITFUNKTIONEN: &[&str] = &[
     "step-end",
 ];
 
-fn ist_funktion(t: &str) -> bool {
+fn is_function(t: &str) -> bool {
     t.contains('(')
 }
 
 // --- Kurzschreibweisen --------------------------------------------------------
 
 /// Je Übergang: Eigenschaft und Dauer.
-fn uebergaenge(decls: &[Declaration]) -> Vec<(String, f64)> {
+fn transitions(decls: &[Declaration]) -> Vec<(String, f64)> {
     let mut out = Vec::new();
-    if let Some(v) = wert(decls, "transition") {
-        for einzel in liste(v) {
-            let mut eigenschaft = None;
-            let mut dauer = None;
-            for t in teile(einzel) {
+    if let Some(v) = value(decls, "transition") {
+        for single in list(v) {
+            let mut property = None;
+            let mut duration = None;
+            for t in parts(single) {
                 let tl = t.to_ascii_lowercase();
-                if let Some(ms) = zeit_ms(&tl) {
-                    dauer.get_or_insert(ms);
-                } else if !ist_funktion(&tl)
-                    && !ZEITFUNKTIONEN.contains(&tl.as_str())
+                if let Some(ms) = time_ms(&tl) {
+                    duration.get_or_insert(ms);
+                } else if !is_function(&tl)
+                    && !TIMING_FUNCTIONS.contains(&tl.as_str())
                     && !matches!(tl.as_str(), "normal" | "allow-discrete")
                 {
-                    eigenschaft.get_or_insert(tl);
+                    property.get_or_insert(tl);
                 }
             }
             out.push((
-                eigenschaft.unwrap_or_else(|| "all".into()),
-                dauer.unwrap_or(0.0),
+                property.unwrap_or_else(|| "all".into()),
+                duration.unwrap_or(0.0),
             ));
         }
     }
-    let eigenschaften = wert(decls, "transition-property").map(liste);
-    let dauern = wert(decls, "transition-duration").map(|d| {
-        liste(d)
+    let properties = value(decls, "transition-property").map(list);
+    let last = value(decls, "transition-duration").map(|d| {
+        list(d)
             .into_iter()
-            .map(|t| zeit_ms(t).unwrap_or(0.0))
+            .map(|t| time_ms(t).unwrap_or(0.0))
             .collect::<Vec<_>>()
     });
-    match (eigenschaften, dauern) {
+    match (properties, last) {
         (Some(p), d) => {
             let d = d.unwrap_or_else(|| out.iter().map(|(_, ms)| *ms).collect());
             out = p
@@ -175,28 +175,28 @@ fn uebergaenge(decls: &[Declaration]) -> Vec<(String, f64)> {
 /// ausschreibt: `2s linear 0s infinite normal none running spin`. Dort ist
 /// `none` der Füllmodus, `spin` der Name. Ohne Rest heißt die Animation
 /// `none`.
-fn kurzname(einzel: &str) -> Option<String> {
-    let (mut zeitfunktion, mut anzahl, mut richtung, mut fuellung, mut zustand) =
+fn short_name(single: &str) -> Option<String> {
+    let (mut timing_function, mut count, mut direction, mut fill, mut state) =
         (false, false, false, false, false);
     let mut name = None;
-    for t in teile(einzel) {
+    for t in parts(single) {
         let tl = t.to_ascii_lowercase();
         let tl = tl.as_str();
-        if zeit_ms(tl).is_some() || matches!(tl, "initial" | "inherit" | "unset" | "revert") {
+        if time_ms(tl).is_some() || matches!(tl, "initial" | "inherit" | "unset" | "revert") {
             continue;
         }
-        if ist_funktion(tl) || (!zeitfunktion && ZEITFUNKTIONEN.contains(&tl)) {
-            zeitfunktion = true;
-        } else if !anzahl && (tl == "infinite" || tl.parse::<f64>().is_ok()) {
-            anzahl = true;
-        } else if !richtung
+        if is_function(tl) || (!timing_function && TIMING_FUNCTIONS.contains(&tl)) {
+            timing_function = true;
+        } else if !count && (tl == "infinite" || tl.parse::<f64>().is_ok()) {
+            count = true;
+        } else if !direction
             && matches!(tl, "normal" | "reverse" | "alternate" | "alternate-reverse")
         {
-            richtung = true;
-        } else if !fuellung && matches!(tl, "none" | "forwards" | "backwards" | "both") {
-            fuellung = true;
-        } else if !zustand && matches!(tl, "running" | "paused") {
-            zustand = true;
+            direction = true;
+        } else if !fill && matches!(tl, "none" | "forwards" | "backwards" | "both") {
+            fill = true;
+        } else if !state && matches!(tl, "running" | "paused") {
+            state = true;
         } else if name.is_none() {
             name = Some(t.trim_matches(['"', '\'']).to_string());
         }
@@ -205,43 +205,43 @@ fn kurzname(einzel: &str) -> Option<String> {
 }
 
 /// Die Animationsnamen einer Regel, ohne `none`.
-fn animationsnamen(decls: &[Declaration]) -> Vec<String> {
-    let mut namen = Vec::new();
-    if let Some(v) = wert(decls, "animation-name") {
-        namen.extend(liste(v).into_iter().map(String::from));
-    } else if let Some(v) = wert(decls, "animation") {
-        namen.extend(liste(v).into_iter().filter_map(kurzname));
+fn animation_names(decls: &[Declaration]) -> Vec<String> {
+    let mut names = Vec::new();
+    if let Some(v) = value(decls, "animation-name") {
+        names.extend(list(v).into_iter().map(String::from));
+    } else if let Some(v) = value(decls, "animation") {
+        names.extend(list(v).into_iter().filter_map(short_name));
     }
-    namen.retain(|n| !n.eq_ignore_ascii_case("none"));
-    namen
+    names.retain(|n| !n.eq_ignore_ascii_case("none"));
+    names
 }
 
 /// Größte Animationsdauer einer Regel in ms, wenn angegeben.
-fn animationsdauer(decls: &[Declaration]) -> Option<f64> {
-    if let Some(v) = wert(decls, "animation-duration") {
-        return liste(v).into_iter().filter_map(zeit_ms).reduce(f64::max);
+fn animation_duration(decls: &[Declaration]) -> Option<f64> {
+    if let Some(v) = value(decls, "animation-duration") {
+        return list(v).into_iter().filter_map(time_ms).reduce(f64::max);
     }
-    let v = wert(decls, "animation")?;
-    liste(v)
+    let v = value(decls, "animation")?;
+    list(v)
         .into_iter()
-        .filter_map(|e| teile(e).into_iter().find_map(zeit_ms))
+        .filter_map(|e| parts(e).into_iter().find_map(time_ms))
         .reduce(f64::max)
 }
 
 // --- focus/outline-removed ----------------------------------------------------
 
-fn ist_null(v: &str) -> bool {
+fn is_zero(v: &str) -> bool {
     matches!(v.trim(), "0" | "0px" | "0em" | "0rem")
 }
 
-fn entfernt_rahmen(decls: &[Declaration]) -> bool {
-    let entfernt = |v: &str| {
+fn removes_frame(decls: &[Declaration]) -> bool {
+    let removed = |v: &str| {
         let v = v.trim().to_ascii_lowercase();
-        v == "none" || ist_null(&v) || v.split_whitespace().any(|t| t == "none")
+        v == "none" || is_zero(&v) || v.split_whitespace().any(|t| t == "none")
     };
-    wert(decls, "outline").is_some_and(entfernt)
-        || wert(decls, "outline-style").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
-        || wert(decls, "outline-width").is_some_and(ist_null)
+    value(decls, "outline").is_some_and(removed)
+        || value(decls, "outline-style").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
+        || value(decls, "outline-width").is_some_and(is_zero)
 }
 
 /// Ein sichtbarer Hinweis in derselben Regel: ein wieder gesetzter
@@ -251,15 +251,15 @@ fn entfernt_rahmen(decls: &[Declaration]) -> bool {
 /// (2026-10-03) entfernt ihn mit `[data-whatinput] *:focus` für alle und
 /// setzt ihn mit `[data-whatintent='keyboard'] *:focus { outline: 2px solid }`
 /// für die Tastatur wieder.
-fn ersetzt_rahmen(decls: &[Declaration]) -> bool {
-    let rahmen_gesetzt = ["outline", "outline-style", "outline-width"]
+fn replaces_frame(decls: &[Declaration]) -> bool {
+    let frame_set = ["outline", "outline-style", "outline-width"]
         .iter()
-        .filter_map(|n| wert(decls, n))
+        .filter_map(|n| value(decls, n))
         .any(|v| !matches!(v.trim(), "initial" | "unset" | "revert" | "inherit"))
-        && !entfernt_rahmen(decls);
-    let gesetzt = |v: &str| {
+        && !removes_frame(decls);
+    let set = |v: &str| {
         let v = v.trim().to_ascii_lowercase();
-        !v.is_empty() && v != "none" && !ist_null(&v) && v != "transparent" && v != "inherit"
+        !v.is_empty() && v != "none" && !is_zero(&v) && v != "transparent" && v != "inherit"
     };
     decls.iter().any(|d| {
         let n = d.name.as_str();
@@ -272,18 +272,18 @@ fn ersetzt_rahmen(decls: &[Declaration]) -> bool {
             || n == "border-bottom"
             || n == "border-color"
             || n == "border-bottom-color")
-            && gesetzt(&d.value)
-    }) || rahmen_gesetzt
+            && set(&d.value)
+    }) || frame_set
 }
 
-fn fokus_selektor(s: &str) -> bool {
+fn focus_selector(s: &str) -> bool {
     let s = s.to_ascii_lowercase();
     s.contains(":focus") && !s.contains(":focus-within") && !s.contains(":focus-visible")
 }
 
 /// `:focus:not(:focus-visible)` trifft nur den Fokus, den der Browser ohnehin
 /// nicht anzeigt (Maus, Berührung); der Hinweis unter `:focus-visible` bleibt.
-fn nur_ohne_tastatur(s: &str) -> bool {
+fn only_without_keyboard(s: &str) -> bool {
     s.to_ascii_lowercase()
         .split_whitespace()
         .collect::<String>()
@@ -293,9 +293,9 @@ fn nur_ohne_tastatur(s: &str) -> bool {
 /// Ein Selector, unter dem das Entfernen des Rahmens den Fokushinweis trifft:
 /// `:focus` und auch `:focus-visible` (F78), nicht aber `:focus-within` und
 /// nicht `:focus:not(:focus-visible)`.
-fn entfernt_fokus(s: &str) -> bool {
+fn removes_focus(s: &str) -> bool {
     let k = s.to_ascii_lowercase();
-    k.contains(":focus") && !k.contains(":focus-within") && !nur_ohne_tastatur(s)
+    k.contains(":focus") && !k.contains(":focus-within") && !only_without_keyboard(s)
 }
 
 /// 2.4.7: Ein Stylesheet entfernt den Fokusrahmen unter `:focus`, ohne dass
@@ -312,31 +312,31 @@ pub(crate) fn outline_removed<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
-    let regeln: Vec<Scoped<'_>> = sheets.iter().flat_map(|s| s.style_rules()).collect();
+    let rules: Vec<Scoped<'_>> = sheets.iter().flat_map(|s| s.style_rules()).collect();
     // Ein `:focus-visible`, das selbst den Rahmen entfernt, ist kein Ersatz,
     // sondern das Entfernen für die Tastatur (F78).
-    let mit_focus_visible = regeln.iter().any(|r| {
-        !entfernt_rahmen(r.declarations)
-            && r.selectors
-                .iter()
-                .any(|s| s.to_ascii_lowercase().contains(":focus-visible") && !nur_ohne_tastatur(s))
+    let with_focus_visible = rules.iter().any(|r| {
+        !removes_frame(r.declarations)
+            && r.selectors.iter().any(|s| {
+                s.to_ascii_lowercase().contains(":focus-visible") && !only_without_keyboard(s)
+            })
     });
-    let mit_ersatz = regeln
+    let with_replacement = rules
         .iter()
-        .any(|r| r.selectors.iter().any(|s| fokus_selektor(s)) && ersetzt_rahmen(r.declarations));
-    if mit_focus_visible || mit_ersatz {
+        .any(|r| r.selectors.iter().any(|s| focus_selector(s)) && replaces_frame(r.declarations));
+    if with_focus_visible || with_replacement {
         return;
     }
-    let entfernt: Vec<&str> = regeln
+    let removed: Vec<&str> = rules
         .iter()
-        .filter(|r| entfernt_rahmen(r.declarations))
-        .flat_map(|r| r.selectors.iter().filter(|s| entfernt_fokus(s)))
+        .filter(|r| removes_frame(r.declarations))
+        .flat_map(|r| r.selectors.iter().filter(|s| removes_focus(s)))
         .map(String::as_str)
         .collect();
-    if entfernt.is_empty() {
+    if removed.is_empty() {
         return;
     }
-    let beispiele = entfernt
+    let examples = removed
         .iter()
         .take(3)
         .copied()
@@ -347,15 +347,15 @@ pub(crate) fn outline_removed<D: Document>(
             "focus/outline-removed",
             tr!(
                 locale,
-                "A stylesheet removes the focus outline ({beispiele}) and no rule replaces it; \
+                "A stylesheet removes the focus outline ({examples}) and no rule replaces it; \
                  keyboard users cannot see where focus is.",
-                "Ein Stylesheet entfernt den Fokusrahmen ({beispiele}), und keine Regel ersetzt \
+                "Ein Stylesheet entfernt den Fokusrahmen ({examples}), und keine Regel ersetzt \
                  ihn; wer mit der Tastatur bedient, sieht nicht, wo der Fokus steht."
             ),
         )
         .with_severity(Severity::High)
         .with_wcag(["2.4.7"])
-        .at(seite(doc)),
+        .at(page(doc)),
     );
 }
 
@@ -363,7 +363,7 @@ pub(crate) fn outline_removed<D: Document>(
 
 /// Bewegung im Sinne von 2.3.3: Lage, Verschiebung, Drehung, Skalierung.
 /// Farbe und Deckkraft gehören nicht dazu.
-fn ist_bewegung(p: &str) -> bool {
+fn is_motion(p: &str) -> bool {
     let p = p.trim().to_ascii_lowercase();
     matches!(
         p.as_str(),
@@ -382,7 +382,7 @@ fn ist_bewegung(p: &str) -> bool {
         || p.starts_with("margin")
 }
 
-const ZUSTAND: &[&str] = &[
+const STATE: &[&str] = &[
     ":hover",
     ":focus",
     ":active",
@@ -393,21 +393,21 @@ const ZUSTAND: &[&str] = &[
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Lage {
+enum Position {
     Normal,
-    Reduziert,
-    Abgeschirmt,
+    Reduced,
+    Shielded,
 }
 
-fn lage(media: &[&str]) -> Lage {
-    let mut l = Lage::Normal;
+fn position(media: &[&str]) -> Position {
+    let mut l = Position::Normal;
     for m in media {
         let m = m.to_ascii_lowercase();
         if m.contains("prefers-reduced-motion") {
             l = if m.contains("no-preference") || m.split_whitespace().any(|w| w == "not") {
-                Lage::Abgeschirmt
+                Position::Shielded
             } else {
-                Lage::Reduziert
+                Position::Reduced
             };
         }
     }
@@ -415,9 +415,9 @@ fn lage(media: &[&str]) -> Lage {
 }
 
 /// Neutralisiert ab dieser Dauer (ms): die üblichen Resets `0.01ms`/`1ms`.
-const NEUTRALISIERT_BIS_MS: f64 = 50.0;
+const NEUTRALISED_UNTIL_MS: f64 = 50.0;
 
-fn selektor_teile(s: &str) -> String {
+fn selector_parts(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -434,113 +434,114 @@ pub(crate) fn reduced_motion_ignored<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
-    let regeln: Vec<Scoped<'_>> = sheets.iter().flat_map(|s| s.style_rules()).collect();
+    let rules: Vec<Scoped<'_>> = sheets.iter().flat_map(|s| s.style_rules()).collect();
     let keyframes: Vec<_> = sheets.iter().flat_map(|s| s.keyframes()).collect();
-    let bewegte_keyframes = |name: &str| -> Option<String> {
+    let moving_keyframes = |name: &str| -> Option<String> {
         keyframes
             .iter()
-            .filter(|(k, ctx)| k.name == name && lage(&ctx.media) != Lage::Abgeschirmt)
+            .filter(|(k, ctx)| k.name == name && position(&ctx.media) != Position::Shielded)
             .flat_map(|(k, _)| k.frames.iter())
             .flat_map(|f| f.declarations.iter())
-            .find(|d| ist_bewegung(&d.name))
+            .find(|d| is_motion(&d.name))
             .map(|d| d.name.clone())
     };
-    let zustand_bewegt = regeln.iter().any(|r| {
-        lage(&r.context.media) == Lage::Normal
+    let state_moving = rules.iter().any(|r| {
+        position(&r.context.media) == Position::Normal
             && r.selectors.iter().any(|s| {
                 let s = s.to_ascii_lowercase();
-                ZUSTAND.iter().any(|z| s.contains(z))
+                STATE.iter().any(|z| s.contains(z))
             })
-            && r.declarations.iter().any(|d| ist_bewegung(&d.name))
+            && r.declarations.iter().any(|d| is_motion(&d.name))
     });
 
     // Abschaltungen im Block `prefers-reduced-motion: reduce`.
-    let abschaltungen: Vec<(Vec<String>, bool, bool)> = regeln
+    let switch_offs: Vec<(Vec<String>, bool, bool)> = rules
         .iter()
-        .filter(|r| lage(&r.context.media) == Lage::Reduziert)
+        .filter(|r| position(&r.context.media) == Position::Reduced)
         .map(|r| {
             let d = r.declarations;
-            let animation_aus = animationsnamen(d).is_empty()
-                && (wert(d, "animation-name")
+            let animation_off = animation_names(d).is_empty()
+                && (value(d, "animation-name")
                     .is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
-                    || wert(d, "animation").is_some_and(|v| v.trim().eq_ignore_ascii_case("none")))
-                || animationsdauer(d).is_some_and(|ms| ms <= NEUTRALISIERT_BIS_MS)
-                || wert(d, "animation-play-state")
+                    || value(d, "animation")
+                        .is_some_and(|v| v.trim().eq_ignore_ascii_case("none")))
+                || animation_duration(d).is_some_and(|ms| ms <= NEUTRALISED_UNTIL_MS)
+                || value(d, "animation-play-state")
                     .is_some_and(|v| v.trim().eq_ignore_ascii_case("paused"));
-            let uebergang_aus = wert(d, "transition-property")
+            let transition_off = value(d, "transition-property")
                 .is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
-                || wert(d, "transition").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
-                || wert(d, "transition-duration").is_some_and(|v| {
-                    liste(v)
+                || value(d, "transition").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
+                || value(d, "transition-duration").is_some_and(|v| {
+                    list(v)
                         .into_iter()
-                        .filter_map(zeit_ms)
+                        .filter_map(time_ms)
                         .reduce(f64::max)
-                        .is_some_and(|ms| ms <= NEUTRALISIERT_BIS_MS)
+                        .is_some_and(|ms| ms <= NEUTRALISED_UNTIL_MS)
                 })
                 || {
-                    let u = uebergaenge(d);
-                    !u.is_empty() && u.iter().all(|(_, ms)| *ms <= NEUTRALISIERT_BIS_MS)
+                    let u = transitions(d);
+                    !u.is_empty() && u.iter().all(|(_, ms)| *ms <= NEUTRALISED_UNTIL_MS)
                 };
             (
-                r.selectors.iter().map(|s| selektor_teile(s)).collect(),
-                animation_aus,
-                uebergang_aus,
+                r.selectors.iter().map(|s| selector_parts(s)).collect(),
+                animation_off,
+                transition_off,
             )
         })
         .collect();
-    let abgeschaltet = |selektor: &str, animation: bool| {
-        let s = selektor_teile(selektor);
-        abschaltungen.iter().any(|(sel, a, u)| {
+    let switched_off = |selector: &str, animation: bool| {
+        let s = selector_parts(selector);
+        switch_offs.iter().any(|(sel, a, u)| {
             (if animation { *a } else { *u }) && sel.iter().any(|x| x.contains('*') || *x == s)
         })
     };
 
-    let mut belege: Vec<String> = Vec::new();
-    for r in regeln
+    let mut evidences: Vec<String> = Vec::new();
+    for r in rules
         .iter()
-        .filter(|r| lage(&r.context.media) == Lage::Normal)
+        .filter(|r| position(&r.context.media) == Position::Normal)
     {
-        for selektor in &r.selectors {
-            let mut beleg = None;
-            for name in animationsnamen(r.declarations) {
-                if let Some(p) = bewegte_keyframes(&name) {
-                    if !abgeschaltet(selektor, true) {
-                        beleg = Some(format!("{selektor}: @keyframes {name} ({p})"));
+        for selector in &r.selectors {
+            let mut evidence = None;
+            for name in animation_names(r.declarations) {
+                if let Some(p) = moving_keyframes(&name) {
+                    if !switched_off(selector, true) {
+                        evidence = Some(format!("{selector}: @keyframes {name} ({p})"));
                     }
                     break;
                 }
             }
-            if beleg.is_none() {
-                let bewegt = uebergaenge(r.declarations)
+            if evidence.is_none() {
+                let moving = transitions(r.declarations)
                     .into_iter()
                     .filter(|(_, ms)| *ms > 0.0)
                     .find_map(|(p, _)| {
-                        if ist_bewegung(&p) {
+                        if is_motion(&p) {
                             Some(p)
-                        } else if p == "all" && zustand_bewegt {
+                        } else if p == "all" && state_moving {
                             Some("all".to_string())
                         } else {
                             None
                         }
                     });
-                if let Some(p) = bewegt
-                    && !abgeschaltet(selektor, false)
+                if let Some(p) = moving
+                    && !switched_off(selector, false)
                 {
-                    beleg = Some(format!("{selektor}: transition {p}"));
+                    evidence = Some(format!("{selector}: transition {p}"));
                 }
             }
-            if let Some(b) = beleg
-                && any_match(doc, selektor, Mode::Possible) != Match::No
+            if let Some(b) = evidence
+                && any_match(doc, selector, Mode::Possible) != Match::No
             {
-                belege.push(b);
+                evidences.push(b);
             }
         }
     }
-    if belege.is_empty() {
+    if evidences.is_empty() {
         return;
     }
-    let anzahl = belege.len();
-    let beispiele = belege
+    let count = evidences.len();
+    let examples = evidences
         .iter()
         .take(3)
         .cloned()
@@ -551,21 +552,21 @@ pub(crate) fn reduced_motion_ignored<D: Document>(
             "motion/reduced-motion-ignored",
             tr!(
                 locale,
-                "{anzahl} style rules move content and are not switched off under \
-                 prefers-reduced-motion: reduce ({beispiele}).",
-                "{anzahl} Stilregeln bewegen Inhalt und werden unter \
-                 prefers-reduced-motion: reduce nicht abgeschaltet ({beispiele})."
+                "{count} style rules move content and are not switched off under \
+                 prefers-reduced-motion: reduce ({examples}).",
+                "{count} Stilregeln bewegen Inhalt und werden unter \
+                 prefers-reduced-motion: reduce nicht abgeschaltet ({examples})."
             ),
         )
         .with_severity(Severity::Medium)
         .with_wcag(["2.3.3"])
-        .at(seite(doc)),
+        .at(page(doc)),
     );
 }
 
 // --- orientation/content-hidden ---------------------------------------------
 
-fn ganzer_inhalt(s: &str) -> bool {
+fn whole_content(s: &str) -> bool {
     matches!(
         s.trim().to_ascii_lowercase().as_str(),
         "html" | "body" | "main" | ":root" | "*" | "body > *"
@@ -592,8 +593,8 @@ pub(crate) fn orientation_content_hidden<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
-    let mut belege: Vec<(String, String)> = Vec::new();
-    let mut ganz = false;
+    let mut evidences: Vec<(String, String)> = Vec::new();
+    let mut whole = false;
     for r in sheets.iter().flat_map(|s| s.style_rules()) {
         let Some(media) = r
             .context
@@ -604,12 +605,12 @@ pub(crate) fn orientation_content_hidden<D: Document>(
             continue;
         };
         let d = r.declarations;
-        let versteckt = wert(d, "display").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
-            || wert(d, "visibility").is_some_and(|v| v.trim().eq_ignore_ascii_case("hidden"));
-        let gedreht = wert(d, "transform")
+        let hidden = value(d, "display").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
+            || value(d, "visibility").is_some_and(|v| v.trim().eq_ignore_ascii_case("hidden"));
+        let rotated = value(d, "transform")
             .is_some_and(|v| v.to_ascii_lowercase().contains("rotate"))
-            || wert(d, "rotate").is_some_and(|v| !v.trim().eq_ignore_ascii_case("none"));
-        if !versteckt && !gedreht {
+            || value(d, "rotate").is_some_and(|v| !v.trim().eq_ignore_ascii_case("none"));
+        if !hidden && !rotated {
             continue;
         }
         for sel in &r.selectors {
@@ -620,15 +621,15 @@ pub(crate) fn orientation_content_hidden<D: Document>(
             {
                 continue;
             }
-            ganz |= ganzer_inhalt(sel);
-            belege.push((sel.clone(), media.to_string()));
+            whole |= whole_content(sel);
+            evidences.push((sel.clone(), media.to_string()));
         }
     }
-    if belege.is_empty() {
+    if evidences.is_empty() {
         return;
     }
-    let anzahl = belege.len();
-    let beispiele = belege
+    let count = evidences.len();
+    let examples = evidences
         .iter()
         .take(3)
         .map(|(s, m)| format!("{s} @media {m}"))
@@ -639,35 +640,35 @@ pub(crate) fn orientation_content_hidden<D: Document>(
             "orientation/content-hidden",
             tr!(
                 locale,
-                "{anzahl} style rules hide or rotate content depending on the orientation \
-                 ({beispiele}). Check that the content is available in portrait and landscape.",
-                "{anzahl} Stilregeln blenden je nach Ausrichtung Inhalt aus oder drehen ihn \
-                 ({beispiele}). Prüfen, ob der Inhalt hoch- und querformatig erreichbar ist."
+                "{count} style rules hide or rotate content depending on the orientation \
+                 ({examples}). Check that the content is available in portrait and landscape.",
+                "{count} Stilregeln blenden je nach Ausrichtung Inhalt aus oder drehen ihn \
+                 ({examples}). Prüfen, ob der Inhalt hoch- und querformatig erreichbar ist."
             ),
         )
-        .with_severity(if ganz {
+        .with_severity(if whole {
             Severity::High
         } else {
             Severity::Medium
         })
         .with_wcag(["1.3.4"])
-        .at(seite(doc)),
+        .at(page(doc)),
     );
 }
 
 // --- text/justified, text/line-height-tight -----------------------------------
 
 /// Die Angabe einer Eigenschaft im `style`-Attribut, samt `!important`.
-fn im_stilattribut<'a, N: Node<'a>>(n: N, eigenschaft: &str) -> Option<(String, bool)> {
+fn in_style_attribute<'a, N: Node<'a>>(n: N, property: &str) -> Option<(String, bool)> {
     n.attr("style")?
         .split(';')
         .rev()
         .filter_map(|d| d.split_once(':'))
-        .filter(|(k, _)| k.trim().eq_ignore_ascii_case(eigenschaft))
+        .filter(|(k, _)| k.trim().eq_ignore_ascii_case(property))
         .map(|(_, v)| {
             let v = v.trim();
             match v.to_ascii_lowercase().strip_suffix("!important") {
-                Some(ohne) => (v[..ohne.len()].trim().to_string(), true),
+                Some(without) => (v[..without.len()].trim().to_string(), true),
                 None => (v.to_string(), false),
             }
         })
@@ -679,18 +680,18 @@ fn im_stilattribut<'a, N: Node<'a>>(n: N, eigenschaft: &str) -> Option<(String, 
 /// Spezifität bleibt außen vor; `!important` gewinnt. Das `style`-Attribut
 /// schlägt jede Regel eines Stylesheets ohne `!important` (CSS Cascade 4,
 /// „Cascade Sorting Order": Stilattribut vor Selektoren).
-fn wirksam<'a, N: Node<'a>>(
+fn effective<'a, N: Node<'a>>(
     n: N,
-    eigenschaft: &str,
-    regeln: &[(Selector, String, bool)],
+    property: &str,
+    rules: &[(Selector, String, bool)],
 ) -> Option<String> {
     for e in std::iter::once(n).chain(a11y_dom::ancestors(n)) {
-        let treffend = regeln
+        let fitting = rules
             .iter()
             .filter(|(sel, _, _)| sel.matches(e, Mode::Possible) == Match::Yes)
-            .max_by_key(|(_, _, wichtig)| *wichtig);
-        let attribut = im_stilattribut(e, eigenschaft);
-        match (attribut, treffend) {
+            .max_by_key(|(_, _, important)| *important);
+        let attribute = in_style_attribute(e, property);
+        match (attribute, fitting) {
             (Some((v, true)), _) => return Some(v),
             (_, Some((_, v, true))) => return Some(v.clone()),
             (Some((v, false)), _) => return Some(v),
@@ -701,7 +702,7 @@ fn wirksam<'a, N: Node<'a>>(
     None
 }
 
-fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selector, String, bool)> {
+fn rules_for(sheets: &[Stylesheet], property: &str) -> Vec<(Selector, String, bool)> {
     sheets
         .iter()
         .flat_map(|s| s.style_rules())
@@ -709,7 +710,7 @@ fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selector, Strin
         .flat_map(|r| {
             r.declarations
                 .iter()
-                .filter(|d| d.name == eigenschaft)
+                .filter(|d| d.name == property)
                 .map(|d| {
                     (
                         Selector::parse(&r.selectors.join(", ")),
@@ -723,7 +724,7 @@ fn regeln_fuer(sheets: &[Stylesheet], eigenschaft: &str) -> Vec<(Selector, Strin
 }
 
 /// Zeilenhöhe als Faktor der Schriftgröße, wenn ohne Schriftgröße bestimmbar.
-fn zeilenfaktor(v: &str) -> Option<f64> {
+fn line_factor(v: &str) -> Option<f64> {
     let v = v.trim().to_ascii_lowercase();
     if let Some(p) = v.strip_suffix('%') {
         return p.parse::<f64>().ok().map(|p| p / 100.0);
@@ -745,57 +746,57 @@ pub(crate) fn visual_presentation<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
-    let absaetze: Vec<_> = a11y_dom::elements(doc)
+    let paragraphs: Vec<_> = a11y_dom::elements(doc)
         .filter(|n| n.is_element("p") && a11y_dom::has_text(*n))
         .collect();
-    if absaetze.is_empty() {
+    if paragraphs.is_empty() {
         return;
     }
-    let ausrichtung = regeln_fuer(sheets, "text-align");
-    let zeilen = regeln_fuer(sheets, "line-height");
-    let blocksatz = absaetze
+    let alignment = rules_for(sheets, "text-align");
+    let rows = rules_for(sheets, "line-height");
+    let justified_text = paragraphs
         .iter()
         .filter(|p| {
-            wirksam(**p, "text-align", &ausrichtung)
+            effective(**p, "text-align", &alignment)
                 .is_some_and(|v| v.trim().eq_ignore_ascii_case("justify"))
         })
         .count();
-    let eng: Vec<String> = absaetze
+    let eng: Vec<String> = paragraphs
         .iter()
-        .filter_map(|p| wirksam(*p, "line-height", &zeilen))
-        .filter(|v| zeilenfaktor(v).is_some_and(|z| z > 0.0 && z < 1.5))
+        .filter_map(|p| effective(*p, "line-height", &rows))
+        .filter(|v| line_factor(v).is_some_and(|z| z > 0.0 && z < 1.5))
         .collect();
-    if blocksatz > 0 {
+    if justified_text > 0 {
         out.push(
             Finding::review(
                 "text/justified",
                 tr!(
                     locale,
-                    "{blocksatz} paragraphs are set justified; uneven word spacing makes them \
+                    "{justified_text} paragraphs are set justified; uneven word spacing makes them \
                      harder to read.",
-                    "{blocksatz} Absätze stehen im Blocksatz; ungleiche Wortabstände erschweren \
+                    "{justified_text} Absätze stehen im Blocksatz; ungleiche Wortabstände erschweren \
                      das Lesen."
                 ),
             )
             .with_severity(Severity::Low)
             .with_wcag(["1.4.8"])
-            .at(seite(doc)),
+            .at(page(doc)),
         );
     }
     if let Some(lh) = eng.first() {
-        let anzahl = eng.len();
+        let count = eng.len();
         out.push(
             Finding::review(
                 "text/line-height-tight",
                 tr!(
                     locale,
-                    "{anzahl} paragraphs have a line height below 1.5 (for example {lh}).",
-                    "{anzahl} Absätze haben eine Zeilenhöhe unter 1,5 (etwa {lh})."
+                    "{count} paragraphs have a line height below 1.5 (for example {lh}).",
+                    "{count} Absätze haben eine Zeilenhöhe unter 1,5 (etwa {lh})."
                 ),
             )
             .with_severity(Severity::Low)
             .with_wcag(["1.4.8"])
-            .at(seite(doc)),
+            .at(page(doc)),
         );
     }
 }
@@ -805,7 +806,7 @@ pub(crate) fn visual_presentation<D: Document>(
 use a11y_dom::Tier;
 
 use crate::registry::{Meta, StylesheetRule};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 /// Die Deklarationen, in derselben Reihenfolge wie [`rules`].
 pub(crate) const METAS: &[Meta] = &[
@@ -857,8 +858,8 @@ pub(crate) const METAS: &[Meta] = &[
 ];
 
 pub(crate) fn rules<D: Document>() -> Vec<StylesheetRule<D>> {
-    type Lauf<D> = fn(&D, &[Stylesheet], Locale, &mut Vec<Finding>);
-    let funktionen: [Lauf<D>; 4] = [
+    type Run<D> = fn(&D, &[Stylesheet], Locale, &mut Vec<Finding>);
+    let functions: [Run<D>; 4] = [
         outline_removed,
         reduced_motion_ignored,
         orientation_content_hidden,
@@ -866,7 +867,7 @@ pub(crate) fn rules<D: Document>() -> Vec<StylesheetRule<D>> {
     ];
     METAS
         .iter()
-        .zip(funktionen)
+        .zip(functions)
         .map(|(meta, run)| StylesheetRule { meta: *meta, run })
         .collect()
 }

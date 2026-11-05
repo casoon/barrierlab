@@ -16,18 +16,14 @@ fn html(body: &str) -> Arena {
         "<!DOCTYPE html><html lang=\"de\"><head><title>T</title></head><body>{body}</body></html>"
     ))
     .document;
-    let wurzel = doc
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .unwrap();
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -37,22 +33,22 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
         H::Text { content } => b.text(content),
-        H::DocumentFragment => doc.children(id).fold(b, |b, k| uebernehmen(doc, k, b)),
+        H::DocumentFragment => doc.children(id).fold(b, |b, k| adopt(doc, k, b)),
         _ => b,
     }
 }
 
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -63,7 +59,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         accname::role(node).map(str::to_string)
     }
@@ -78,17 +74,17 @@ impl Semantics for MitSemantik<'_> {
 }
 
 /// Die Befunde einer Kennung, Tier 1 und 2.
-fn befunde(body: &str, id: &str) -> Vec<Finding> {
+fn findings(body: &str, id: &str) -> Vec<Finding> {
     let a = html(body);
-    let r = run_with_semantics(&MitSemantik {
+    let r = run_with_semantics(&WithSemantics {
         doc: &a,
         ids: IdIndex::build(a.root()),
     });
     r.findings.into_iter().filter(|f| f.rule_id == id).collect()
 }
 
-fn einer(body: &str, id: &str) -> Finding {
-    let mut v = befunde(body, id);
+fn a(body: &str, id: &str) -> Finding {
+    let mut v = findings(body, id);
     assert_eq!(v.len(), 1, "{id} in {body}: {v:?}");
     v.remove(0)
 }
@@ -96,13 +92,13 @@ fn einer(body: &str, id: &str) -> Finding {
 /// Best Practice: `FAIL` bleibt das Urteil über die Empfehlung, aber ohne
 /// Kriterium — wie `zoom/viewport-scale-limited` seit 0.24.1.
 fn best_practice(body: &str, id: &str) {
-    let f = einer(body, id);
+    let f = a(body, id);
     assert!(f.wcag.is_empty(), "{id}: {:?}", f.wcag);
     assert_eq!(f.tags, ["best-practice"], "{id}");
 }
 
 fn review(body: &str, id: &str, wcag: &[&str]) {
-    let f = einer(body, id);
+    let f = a(body, id);
     assert_eq!(f.outcome, Outcome::Review, "{id}");
     assert_eq!(f.wcag, wcag, "{id}");
 }
@@ -112,7 +108,7 @@ fn review(body: &str, id: &str, wcag: &[&str]) {
 /// Der Fall aus dem Issue: eine korrekt ausgezeichnete h2, keine h1. Die h2
 /// ist als Überschrift bestimmbar, 1.3.1 ist erfüllt.
 #[test]
-fn h2_ohne_h1_ist_best_practice() {
+fn h2_without_h1_is_best_practice() {
     best_practice(
         "<main><h2>Abschnitt</h2><p>Text</p></main>",
         "headings/h1-missing",
@@ -120,7 +116,7 @@ fn h2_ohne_h1_ist_best_practice() {
 }
 
 #[test]
-fn uebersprungene_ebene_ist_best_practice() {
+fn skipped_level_is_best_practice() {
     best_practice(
         "<main><h1>Titel</h1><h3>Unterpunkt</h3></main>",
         "headings/skip-level",
@@ -130,14 +126,14 @@ fn uebersprungene_ebene_ist_best_practice() {
 /// Ohne main, aber mit Überschriften: 2.4.1 ist über H69 erfüllt, 1.3.1
 /// verlangt keine Landmarks.
 #[test]
-fn fehlende_main_ist_best_practice() {
+fn missing_main_is_best_practice() {
     let body = "<div><h1>Titel</h1><p>Text</p></div>";
     best_practice(body, "landmarks/main-missing");
-    assert!(befunde(body, "headings/none").is_empty());
+    assert!(findings(body, "headings/none").is_empty());
 }
 
 #[test]
-fn doppelte_main_ist_best_practice() {
+fn duplicate_main_is_best_practice() {
     best_practice(
         "<main><h1>A</h1></main><main><p>B</p></main>",
         "landmarks/main-duplicate",
@@ -145,7 +141,7 @@ fn doppelte_main_ist_best_practice() {
 }
 
 #[test]
-fn verschachtelte_und_doppelte_landmarks_sind_best_practice() {
+fn nested_and_duplicate_landmarks_are_best_practice() {
     best_practice(
         r#"<main><div role="banner">Kopf</div><h1>A</h1></main>"#,
         "landmarks/not-top-level",
@@ -163,14 +159,14 @@ fn verschachtelte_und_doppelte_landmarks_sind_best_practice() {
 /// Ohne Viewport-Angabe bleibt Zoomen erlaubt; 1.4.10 wird über die
 /// Vergrößerung im Browser geprüft.
 #[test]
-fn fehlender_viewport_ist_best_practice() {
+fn missing_viewport_is_best_practice() {
     best_practice("<main><h1>A</h1></main>", "zoom/viewport-missing");
 }
 
 // --- Rollen, Listen, Tabellen -------------------------------------------------
 
 #[test]
-fn ueberfluessige_rolle_ist_best_practice() {
+fn redundant_role_is_best_practice() {
     best_practice(
         r#"<main><h1>A</h1><button role="button">Los</button></main>"#,
         "aria/role-redundant",
@@ -179,7 +175,7 @@ fn ueberfluessige_rolle_ist_best_practice() {
 
 /// 1.4.13 regelt Erscheinen und Verschwinden, nicht die Verknüpfung.
 #[test]
-fn unverknuepfter_tooltip_ist_best_practice() {
+fn unlinked_tooltip_is_best_practice() {
     best_practice(
         r#"<main><h1>A</h1><div role="tooltip" id="t">Hilfe</div></main>"#,
         "patterns/tooltip-unreferenced",
@@ -187,13 +183,13 @@ fn unverknuepfter_tooltip_ist_best_practice() {
 }
 
 #[test]
-fn leere_liste_ist_best_practice() {
+fn empty_list_is_best_practice() {
     best_practice("<main><h1>A</h1><ul></ul></main>", "lists/empty");
 }
 
 /// Layouttabelle oder Datentabelle ohne Köpfe — das Markup sagt es nicht.
 #[test]
-fn tabelle_ohne_th_ist_review() {
+fn table_without_th_is_review() {
     review(
         "<main><h1>A</h1><table><tr><td>a</td><td>b</td></tr></table></main>",
         "tables/header-missing",
@@ -205,7 +201,7 @@ fn tabelle_ohne_th_ist_review() {
 
 /// F44 verlangt ein Urteil über die entstehende Reihenfolge.
 #[test]
-fn positiver_tabindex_ist_review() {
+fn positive_tabindex_is_review() {
     review(
         r#"<main><h1>A</h1><button tabindex="2">Los</button></main>"#,
         "keyboard/positive-tabindex",
@@ -216,7 +212,7 @@ fn positiver_tabindex_ist_review() {
 /// Der Browser nimmt das erste Element; ob das gemeint ist, sagt das Markup
 /// nicht.
 #[test]
-fn doppelte_referenzierte_id_ist_review() {
+fn duplicate_referenced_id_is_review() {
     review(
         r#"<main><h1>A</h1><label for="x">Name</label><input id="x"><input id="x" aria-label="B"></main>"#,
         "ids/duplicate",
@@ -227,13 +223,13 @@ fn doppelte_referenzierte_id_ist_review() {
 /// Eine Karte um ihren Link: Die Funktion ist per Tastatur über den Link da.
 /// Ohne fokussierbares Element darin bleibt es ein Verstoß.
 #[test]
-fn klick_handler_um_fokussierbares_ist_review() {
+fn click_handler_around_focusable_is_review() {
     review(
         r#"<main><h1>A</h1><div id="k" onclick="go()"><a href="/x">Mehr</a></div></main>"#,
         "keyboard/click-handler-not-focusable",
         &["2.1.1"],
     );
-    let f = einer(
+    let f = a(
         r#"<main><h1>A</h1><div id="k" onclick="go()">Mehr</div></main>"#,
         "keyboard/click-handler-not-focusable",
     );
@@ -244,8 +240,8 @@ fn klick_handler_um_fokussierbares_ist_review() {
 /// ACT cae760 führt nur 4.1.2; für 2.4.1 ist der Titel eine Technik unter
 /// mehreren (H64).
 #[test]
-fn rahmen_ohne_namen_nur_4_1_2() {
-    let f = einer(
+fn frame_without_name_only_4_1_2() {
+    let f = a(
         r#"<main><h1>A</h1><iframe src="x.html"></iframe></main>"#,
         "frames/name-missing",
     );
@@ -257,13 +253,13 @@ fn rahmen_ohne_namen_nur_4_1_2() {
 
 /// ACT 7d6734 gilt nur für SVG mit ausdrücklicher Bildrolle.
 #[test]
-fn svg_ohne_rolle_ist_review() {
+fn svg_without_role_is_review() {
     review(
         r#"<main><h1>A</h1><svg><circle r="1"></circle></svg></main>"#,
         "svg/name-missing",
         &["1.1.1"],
     );
-    let f = einer(
+    let f = a(
         r#"<main><h1>A</h1><svg role="img"><circle r="1"></circle></svg></main>"#,
         "svg/name-missing",
     );
@@ -273,15 +269,15 @@ fn svg_ohne_rolle_ist_review() {
 /// Der Platzhalter stiftet den Namen (ACT e086e5 besteht): kein
 /// unbeschriftetes Feld, sondern eine Frage an den Prüfer.
 #[test]
-fn platzhalter_ist_kein_fehlendes_label() {
+fn placeholder_is_no_missing_label() {
     let body = r#"<main><h1>A</h1><input id="p" placeholder="Suche"></main>"#;
-    assert!(befunde(body, "forms/label-missing").is_empty());
+    assert!(findings(body, "forms/label-missing").is_empty());
     review(body, "forms/placeholder-as-label", &["3.3.2"]);
 }
 
 /// Ein `fieldset` kann auch nur gestalten.
 #[test]
-fn fieldset_ohne_legend_ist_review() {
+fn fieldset_without_legend_is_review() {
     review(
         r#"<main><h1>A</h1><fieldset><input type="checkbox" aria-label="Ja"></fieldset></main>"#,
         "forms/group-name-missing",

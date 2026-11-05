@@ -38,21 +38,21 @@ fn at(id: NodeId) -> Location {
 
 /// Die Konventionsregeln haben keine rechtliche Tragweite (auditmysite#704,
 /// dort `is_convention_rule`): Sie sind Best Practice, kein WCAG-Verstoß.
-const SCHLAGWORTE: [&str; 1] = ["best-practice"];
+const KEYWORDS: [&str; 1] = ["best-practice"];
 
-fn ist_viz<'a, N: Node<'a>>(n: N) -> bool {
+fn is_viz<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("figure") && n.has_attr("data-viz")
 }
 
 /// Die Visualisierungen der Seite, ohne die unter einem `hidden`: Was nicht
 /// dargestellt wird, braucht in diesem Zustand weder Beschriftung noch
 /// Standbild (wie `display/text-hidden`, auditmysite#725).
-fn visualisierungen<D: Document>(doc: &D) -> impl Iterator<Item = D::N<'_>> {
-    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))
+fn visualisations<D: Document>(doc: &D) -> impl Iterator<Item = D::N<'_>> {
+    elements(doc).filter(|n| is_viz(*n) && !with_ancestors(*n).any(|a| a.has_attr("hidden")))
 }
 
 /// Die Art der Visualisierung aus `data-viz`, klein geschrieben.
-fn art<'a, N: Node<'a>>(n: N) -> String {
+fn kind<'a, N: Node<'a>>(n: N) -> String {
     n.attr("data-viz")
         .unwrap_or_default()
         .trim()
@@ -79,17 +79,14 @@ fn aria_hidden<'a, N: Node<'a>>(n: N) -> bool {
 /// `space/solar-system/settlement/` hat gar keine Textschicht
 /// (`EarthTwoFigure.astro`).
 pub(crate) fn text<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for fig in visualisierungen(doc) {
-        let schichten: Vec<_> = descendants(fig)
+    for fig in visualisations(doc) {
+        let layers: Vec<_> = descendants(fig)
             .filter(|n| n.has_attr("data-viz-text"))
             .collect();
-        if schichten
-            .iter()
-            .any(|s| !subtree_text(*s).trim().is_empty())
-        {
+        if layers.iter().any(|s| !subtree_text(*s).trim().is_empty()) {
             continue;
         }
-        let message = if schichten.is_empty() {
+        let message = if layers.is_empty() {
             pick!(
                 locale,
                 "This visualisation (figure[data-viz]) has no text layer marked \
@@ -110,7 +107,7 @@ pub(crate) fn text<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             Finding::fail("viz/text-missing", message)
                 .with_severity(Severity::High)
                 .with_wcag(["1.1.1"])
-                .with_tags(SCHLAGWORTE)
+                .with_tags(KEYWORDS)
                 .at(at(fig.id())),
         );
     }
@@ -120,7 +117,7 @@ pub(crate) fn text<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
 
 /// Was ein Element samt Vorfahren vor der Assistenztechnik verbirgt: das
 /// nächstgelegene `hidden`, `aria-hidden="true"` oder `inert`.
-fn verborgen_durch<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
+fn hidden_by<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
     std::iter::once(n).chain(ancestors(n)).find_map(|a| {
         if a.has_attr("hidden") {
             Some("hidden")
@@ -134,14 +131,14 @@ fn verborgen_durch<'a, N: Node<'a>>(n: N) -> Option<&'static str> {
     })
 }
 
-fn mit_vorfahren<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
+fn with_ancestors<'a, N: Node<'a>>(n: N) -> impl Iterator<Item = N> + 'a {
     std::iter::once(n).chain(ancestors(n))
 }
 
 /// Ob ein nicht verborgenes Element derselben Visualisierung (sie selbst
 /// eingeschlossen) die Textschicht per `aria-describedby` oder `aria-details`
 /// referenziert.
-fn beschrieben_in<'a, N: Node<'a>>(fig: N, text: N) -> bool {
+fn described_in<'a, N: Node<'a>>(fig: N, text: N) -> bool {
     let Some(id) = text.attr("id").filter(|i| !i.is_empty()) else {
         return false;
     };
@@ -149,7 +146,7 @@ fn beschrieben_in<'a, N: Node<'a>>(fig: N, text: N) -> bool {
         r != text
             && r.tree_scope() == text.tree_scope()
             && !ancestors(r).any(|a| a == text)
-            && verborgen_durch(r).is_none()
+            && hidden_by(r).is_none()
             && ["aria-describedby", "aria-details"]
                 .iter()
                 .filter_map(|a| r.attr(a))
@@ -182,29 +179,29 @@ fn beschrieben_in<'a, N: Node<'a>>(fig: N, text: N) -> bool {
 /// Schicht nur visuell aus (`.viz-text` in `styles/app.css`); im heutigen
 /// Build gibt es keinen Befund.
 pub(crate) fn text_hidden<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for fig in visualisierungen(doc) {
-        if mit_vorfahren(fig).any(|a| a.has_attr("hidden")) {
+    for fig in visualisations(doc) {
+        if with_ancestors(fig).any(|a| a.has_attr("hidden")) {
             continue;
         }
         for text in descendants(fig).filter(|n| n.has_attr("data-viz-text")) {
-            let Some(grund) = verborgen_durch(text) else {
+            let Some(reason) = hidden_by(text) else {
                 continue;
             };
-            let inert = mit_vorfahren(text).any(|a| a.has_attr("inert"));
-            let finding = if !inert && beschrieben_in(fig, text) {
+            let inert = with_ancestors(text).any(|a| a.has_attr("inert"));
+            let finding = if !inert && described_in(fig, text) {
                 Finding::review(
                     "display/text-hidden",
                     pick!(
                         locale,
                         format!(
-                            "The text layer [data-viz-text] is hidden ({grund}), but an element \
+                            "The text layer [data-viz-text] is hidden ({reason}), but an element \
                              of the visualisation references it by aria-describedby or \
                              aria-details: screen readers get the statement only as a \
                              description, with its structure flattened. Hiding it visually is \
                              recommended."
                         ),
                         format!(
-                            "Die Textschicht [data-viz-text] ist verborgen ({grund}), aber ein \
+                            "Die Textschicht [data-viz-text] ist verborgen ({reason}), aber ein \
                              Element der Visualisierung verweist per aria-describedby oder \
                              aria-details darauf: Screenreader bekommen die Aussage nur als \
                              Beschreibung, ohne ihre Struktur. Empfohlen ist, sie nur visuell \
@@ -220,11 +217,11 @@ pub(crate) fn text_hidden<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fi
                         locale,
                         format!(
                             "The text layer [data-viz-text] is removed from assistive \
-                             technology ({grund}); screen reader users lose the statement."
+                             technology ({reason}); screen reader users lose the statement."
                         ),
                         format!(
                             "Die Textschicht [data-viz-text] ist der Assistenztechnik entzogen \
-                             ({grund}); Screenreader-Nutzer verlieren die Aussage."
+                             ({reason}); Screenreader-Nutzer verlieren die Aussage."
                         ),
                     ),
                 )
@@ -233,7 +230,7 @@ pub(crate) fn text_hidden<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fi
             out.push(
                 finding
                     .with_wcag(["1.1.1"])
-                    .with_tags(SCHLAGWORTE)
+                    .with_tags(KEYWORDS)
                     .at(at(text.id())),
             );
         }
@@ -252,7 +249,7 @@ pub(crate) fn text_hidden<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fi
 /// (`atmosphere/climate-monitor/`) und `GermanyMap.svelte`
 /// (`atmosphere/germany/`) beschriften ihre `figure[data-viz]` nicht.
 pub(crate) fn caption<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for fig in visualisierungen(doc) {
+    for fig in visualisations(doc) {
         if fig.children().any(|k| k.is_element("figcaption")) {
             continue;
         }
@@ -269,7 +266,7 @@ pub(crate) fn caption<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
             )
             .with_severity(Severity::Low)
             .with_wcag(["1.1.1"])
-            .with_tags(SCHLAGWORTE)
+            .with_tags(KEYWORDS)
             .at(at(fig.id())),
         );
     }
@@ -283,9 +280,9 @@ pub(crate) fn caption<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findin
 /// (`data-viz="interactive"`, Geographia `space/solar-system/settlement/`,
 /// `EarthTwoFigure.astro`).
 pub(crate) fn static_layer<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for fig in visualisierungen(doc) {
-        let art = art(fig);
-        if !matches!(art.as_str(), "3d" | "interactive")
+    for fig in visualisations(doc) {
+        let kind = kind(fig);
+        if !matches!(kind.as_str(), "3d" | "interactive")
             || descendants(fig).any(|n| n.has_attr("data-viz-static"))
         {
             continue;
@@ -296,18 +293,18 @@ pub(crate) fn static_layer<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
                 pick!(
                     locale,
                     format!(
-                        "This visualisation (data-viz=\"{art}\") has no still image \
+                        "This visualisation (data-viz=\"{kind}\") has no still image \
                          [data-viz-static]; in calm mode nothing replaces the motion."
                     ),
                     format!(
-                        "Die Visualisierung (data-viz=\"{art}\") hat kein Standbild \
+                        "Die Visualisierung (data-viz=\"{kind}\") hat kein Standbild \
                          [data-viz-static]; im ruhigen Modus ersetzt nichts die Bewegung."
                     ),
                 ),
             )
             .with_severity(Severity::Medium)
             .with_wcag(["2.2.2"])
-            .with_tags(SCHLAGWORTE)
+            .with_tags(KEYWORDS)
             .at(at(fig.id())),
         );
     }
@@ -324,8 +321,8 @@ pub(crate) fn static_layer<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
 /// (`<figure class="spark">`), deren Textschicht Anfang, Ende und Trend in
 /// Worten nennt.
 pub(crate) fn table<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for fig in visualisierungen(doc) {
-        if art(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
+    for fig in visualisations(doc) {
+        if kind(fig) != "chart" || descendants(fig).any(|n| n.is_element("table")) {
             continue;
         }
         out.push(
@@ -341,7 +338,7 @@ pub(crate) fn table<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
             )
             .with_severity(Severity::Low)
             .with_wcag(["1.3.1"])
-            .with_tags(SCHLAGWORTE)
+            .with_tags(KEYWORDS)
             .at(at(fig.id())),
         );
     }
@@ -359,8 +356,8 @@ pub(crate) fn table<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
 /// `atmosphere/labor/klimasystem/` (`noindex`) zeigen Visualisierungen ohne
 /// diese Kopfzeile.
 pub(crate) fn toggle<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let anzahl = visualisierungen(doc).count();
-    if anzahl == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
+    let count = visualisations(doc).count();
+    if count == 0 || elements(doc).any(|n| n.has_attr("data-display-toggle")) {
         return;
     }
     out.push(
@@ -369,18 +366,18 @@ pub(crate) fn toggle<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding
             pick!(
                 locale,
                 format!(
-                    "The page contains {anzahl} visualisation(s) (figure[data-viz]), but no \
+                    "The page contains {count} visualisation(s) (figure[data-viz]), but no \
                      toggle marked [data-display-toggle] was found."
                 ),
                 format!(
-                    "Die Seite enthält {anzahl} Visualisierung(en) (figure[data-viz]), aber es \
+                    "Die Seite enthält {count} Visualisierung(en) (figure[data-viz]), aber es \
                      wurde kein mit [data-display-toggle] markierter Umschalter gefunden."
                 ),
             ),
         )
         .with_severity(Severity::Medium)
         .with_wcag(["2.2.2"])
-        .with_tags(SCHLAGWORTE)
+        .with_tags(KEYWORDS)
         .at(at(doc.root().id())),
     );
 }
@@ -390,13 +387,12 @@ pub(crate) fn toggle<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding
 /// Ob ein `<script>` das Parsen anhält, also vor `<body>` läuft: klassisch
 /// (kein `type="module"`, kein Datenblock) und, wenn extern, ohne `async` und
 /// `defer`. An einem Inline-Skript wirken `async` und `defer` nicht.
-fn blockiert<'a, N: Node<'a>>(script: N) -> bool {
-    let klassisch = script.attr("type").is_none_or(|t| {
+fn blocked<'a, N: Node<'a>>(script: N) -> bool {
+    let classic = script.attr("type").is_none_or(|t| {
         let t = t.trim().to_ascii_lowercase();
         t.is_empty() || t.contains("javascript") || t.contains("ecmascript")
     });
-    klassisch
-        && (!script.has_attr("src") || !(script.has_attr("async") || script.has_attr("defer")))
+    classic && (!script.has_attr("src") || !(script.has_attr("async") || script.has_attr("defer")))
 }
 
 /// 2.2.2: Die Seite benutzt die Konvention, aber `html[data-display]` steht
@@ -411,14 +407,14 @@ fn blockiert<'a, N: Node<'a>>(script: N) -> bool {
 /// gebauten HTML noch kein `data-display`. Alle 371 Seiten erfüllen das, ein
 /// Befund kam dort nicht vor.
 pub(crate) fn init<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let benutzt = elements(doc).any(|n| ist_viz(n) || n.has_attr("data-display-toggle"));
-    if !benutzt || doc.root().has_attr("data-display") {
+    let used = elements(doc).any(|n| is_viz(n) || n.has_attr("data-display-toggle"));
+    if !used || doc.root().has_attr("data-display") {
         return;
     }
-    let skript_vorher = elements(doc).any(|n| {
-        n.is_element("script") && ancestors(n).any(|a| a.is_element("head")) && blockiert(n)
+    let script_before = elements(doc).any(|n| {
+        n.is_element("script") && ancestors(n).any(|a| a.is_element("head")) && blocked(n)
     });
-    if skript_vorher {
+    if script_before {
         return;
     }
     out.push(
@@ -437,7 +433,7 @@ pub(crate) fn init<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
         )
         .with_severity(Severity::Low)
         .with_wcag(["2.2.2"])
-        .with_tags(SCHLAGWORTE)
+        .with_tags(KEYWORDS)
         .at(at(doc.root().id())),
     );
 }

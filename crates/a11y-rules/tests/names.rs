@@ -20,18 +20,14 @@ fn html(src: &str) -> Arena {
         "<!DOCTYPE html><html lang=\"en\"><head><title>T</title></head><body><main>{src}</main></body></html>"
     ))
     .document;
-    let wurzel = doc
+    let root = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, H::Element { .. }))
         .unwrap();
-    uebernehmen(&doc, wurzel, Arena::builder()).build()
+    adopt(&doc, root, Arena::builder()).build()
 }
 
-fn uebernehmen(
-    doc: &html5_parser::Document,
-    id: html5_parser::NodeId,
-    b: ArenaBuilder,
-) -> ArenaBuilder {
+fn adopt(doc: &html5_parser::Document, id: html5_parser::NodeId, b: ArenaBuilder) -> ArenaBuilder {
     match &doc.node(id).kind {
         H::Element {
             name, attributes, ..
@@ -41,18 +37,18 @@ fn uebernehmen(
                 b = b.attr(&a.name, &a.value);
             }
             for k in doc.children(id) {
-                b = uebernehmen(doc, k, b);
+                b = adopt(doc, k, b);
             }
             b.close()
         }
         H::Text { content } => b.text(content),
-        H::DocumentFragment => doc.children(id).fold(b, |b, k| uebernehmen(doc, k, b)),
+        H::DocumentFragment => doc.children(id).fold(b, |b, k| adopt(doc, k, b)),
         _ => b,
     }
 }
 
 /// Tier-2-Host: die Arena mit Rolle und Name aus `accname`.
-struct MitSemantik<'a> {
+struct WithSemantics<'a> {
     doc: &'a Arena,
     ids: IdIndex<'a, ArenaNode<'a>>,
     /// Verhält sich wie Chrome: `<summary>` ist `DisclosureTriangle`, ein
@@ -61,7 +57,7 @@ struct MitSemantik<'a> {
     chrome: bool,
 }
 
-impl Document for MitSemantik<'_> {
+impl Document for WithSemantics<'_> {
     type N<'n>
         = ArenaNode<'n>
     where
@@ -72,7 +68,7 @@ impl Document for MitSemantik<'_> {
     }
 }
 
-impl Semantics for MitSemantik<'_> {
+impl Semantics for WithSemantics<'_> {
     fn role<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
         if self.chrome && node.is_element("summary") {
             return Some("DisclosureTriangle".into());
@@ -110,10 +106,10 @@ impl Semantics for MitSemantik<'_> {
 }
 
 /// Beide Hosts über dasselbe Fragment.
-fn beide(src: &str) -> [Report; 2] {
+fn both(src: &str) -> [Report; 2] {
     let a = html(src);
     [false, true].map(|chrome| {
-        run_with_semantics(&MitSemantik {
+        run_with_semantics(&WithSemantics {
             doc: &a,
             ids: IdIndex::build(a.root()),
             chrome,
@@ -121,7 +117,7 @@ fn beide(src: &str) -> [Report; 2] {
     })
 }
 
-fn anzahl(r: &Report, id: &str) -> usize {
+fn count(r: &Report, id: &str) -> usize {
     r.findings.iter().filter(|f| f.rule_id == id).count()
 }
 
@@ -134,16 +130,16 @@ fn outcomes(r: &Report, id: &str) -> Vec<Outcome> {
 }
 
 /// Die Befunde einer Kennung, verortet an der `id` des Elements.
-fn an(src: &str, r: &Report, rule: &str) -> Vec<String> {
+fn findings_at(src: &str, r: &Report, rule: &str) -> Vec<String> {
     let a = html(src);
     let mut v: Vec<String> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == rule)
         .filter_map(|f| {
-            let knoten = f.location.node.as_deref()?;
+            let node = f.location.node.as_deref()?;
             elements(&a)
-                .find(|n| n.id().to_string() == knoten)
+                .find(|n| n.id().to_string() == node)
                 .map(|n| n.attr("id").unwrap_or(n.local_name()).to_string())
         })
         .collect();
@@ -166,10 +162,10 @@ const ARIA_NAMING_ROLES: &str = r#"
     <div role="dialog" id="dialog"></div>"#;
 
 #[test]
-fn unbenannte_rollen_korpus_aria_naming_roles() {
-    for r in beide(ARIA_NAMING_ROLES) {
+fn unnamed_roles_corpus_aria_naming_roles() {
+    for r in both(ARIA_NAMING_ROLES) {
         assert_eq!(
-            an(ARIA_NAMING_ROLES, &r, "names/required-missing"),
+            findings_at(ARIA_NAMING_ROLES, &r, "names/required-missing"),
             [
                 "menuitem",
                 "meter",
@@ -181,7 +177,10 @@ fn unbenannte_rollen_korpus_aria_naming_roles() {
                 "treeitem"
             ]
         );
-        assert_eq!(an(ARIA_NAMING_ROLES, &r, "dialog/name-missing"), ["dialog"]);
+        assert_eq!(
+            findings_at(ARIA_NAMING_ROLES, &r, "dialog/name-missing"),
+            ["dialog"]
+        );
         let meter = r
             .findings
             .iter()
@@ -191,7 +190,7 @@ fn unbenannte_rollen_korpus_aria_naming_roles() {
 }
 
 #[test]
-fn benannte_rollen_bleiben_still_auditmysite_all_named_elements_pass() {
+fn named_roles_stay_silent_auditmysite_all_named_elements_pass() {
     let src = r#"
         <div role="menuitem" tabindex="0">Öffnen</div>
         <div role="slider" aria-label="Lautstärke" tabindex="0" aria-valuenow="5"></div>
@@ -199,59 +198,59 @@ fn benannte_rollen_bleiben_still_auditmysite_all_named_elements_pass() {
         <div role="progressbar" title="Laden" aria-valuenow="5"></div>
         <div role="radiogroup" aria-label="Optionen"><div role="radio" aria-checked="false">A</div></div>
         <div role="dialog" aria-label="Einstellungen" aria-modal="true"></div>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "names/required-missing"), 0, "{:?}", r.findings);
-        assert_eq!(anzahl(&r, "dialog/name-missing"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
+        assert_eq!(count(&r, "dialog/name-missing"), 0);
     }
 }
 
 #[test]
-fn eigene_familien_melden_nicht_doppelt_korpus_aria_and_widgets() {
+fn own_families_do_not_report_twice_corpus_aria_and_widgets() {
     // `<button aria-label="">` meldet `buttons/name-missing`, ein leerer Link
     // `links/name-missing` — nicht zusätzlich `names/required-missing`.
     let src = r#"<button aria-label=""><svg aria-hidden="true" width="10" height="10"></svg></button>
                  <a href="/x"></a>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "buttons/name-missing"), 1);
-        assert_eq!(anzahl(&r, "links/name-missing"), 1);
-        assert_eq!(anzahl(&r, "names/required-missing"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "buttons/name-missing"), 1);
+        assert_eq!(count(&r, "links/name-missing"), 1);
+        assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
     }
 }
 
 #[test]
-fn natives_feld_ohne_label_meldet_forms_korpus_missing_label() {
+fn native_field_without_label_reports_forms_corpus_missing_label() {
     // Ohne jede Beschriftung: `forms/label-missing`. Mit einem leeren Label:
     // nur die Namensregel sieht, dass es leer ausgeht.
     let src = r#"<form><input type="text" name="email" id="ohne">
                  <label for="leer"></label><input type="text" id="leer">
                  <label for="gut">E-Mail</label><input type="text" id="gut"></form>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "forms/label-missing"), ["ohne"]);
-        assert_eq!(an(src, &r, "names/required-missing"), ["leer"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "forms/label-missing"), ["ohne"]);
+        assert_eq!(findings_at(src, &r, "names/required-missing"), ["leer"]);
     }
 }
 
 #[test]
-fn native_optionen_und_versteckte_rollen_bleiben_still() {
+fn native_options_and_hidden_roles_stay_silent() {
     let src = r#"<label>Land <select><option value=""></option><option>DE</option></select></label>
                  <div hidden><div role="slider" tabindex="0"></div></div>
                  <div role="menuitem" aria-hidden="true"></div>
                  <div role="tab">ohne Pflicht</div><div role="menu"></div>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "names/required-missing"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
     }
 }
 
 // --- names/symbol-only ------------------------------------------------------
 
 #[test]
-fn symbol_als_name_auditmysite_test_icon_only_name_flagged() {
+fn symbol_as_name_auditmysite_test_icon_only_name_flagged() {
     let src = r#"<button aria-label="×" id="x"><svg aria-hidden="true"></svg></button>
                  <button id="inhalt">×</button>
                  <button aria-label="Ä">Ä</button>
                  <button aria-label="Schließen">×</button>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "names/symbol-only"), ["x"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "names/symbol-only"), ["x"]);
         assert_eq!(outcomes(&r, "names/symbol-only"), [Outcome::Review]);
     }
 }
@@ -259,7 +258,7 @@ fn symbol_als_name_auditmysite_test_icon_only_name_flagged() {
 // --- dialog/* ----------------------------------------------------------------
 
 #[test]
-fn dialog_ohne_namen_korpus_iframe_widget_rules() {
+fn dialog_without_name_corpus_iframe_widget_rules() {
     // `consent-dialog` ist sichtbar und namenlos; `hidden-dialog` steckt in
     // einem versteckten Rahmen und wird nicht gemeldet.
     let src = r#"<div role="dialog" id="consent-dialog"><p>Cookies?</p><button>OK</button></div>
@@ -268,23 +267,23 @@ fn dialog_ohne_namen_korpus_iframe_widget_rules() {
                  <dialog id="zu"></dialog>
                  <dialog open id="offen"></dialog>
                  <dialog open aria-labelledby="h"><h2 id="h">Titel</h2></dialog>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "dialog/name-missing"),
+            findings_at(src, &r, "dialog/name-missing"),
             ["alarm", "consent-dialog", "offen"]
         );
-        assert_eq!(anzahl(&r, "names/required-missing"), 0);
+        assert_eq!(count(&r, "names/required-missing"), 0);
     }
 }
 
 #[test]
-fn dialog_ohne_aria_modal_ist_review_auditmysite_dialog_rules() {
+fn dialog_without_aria_modal_is_review_auditmysite_dialog_rules() {
     let src = r#"<div role="dialog" aria-label="A" id="ohne"></div>
                  <div role="dialog" aria-label="B" aria-modal="true"></div>
                  <div role="alertdialog" aria-label="C"></div>
                  <dialog open aria-label="D"></dialog>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "dialog/modal-unmarked"), ["ohne"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "dialog/modal-unmarked"), ["ohne"]);
         assert_eq!(outcomes(&r, "dialog/modal-unmarked"), [Outcome::Review]);
     }
 }
@@ -292,37 +291,37 @@ fn dialog_ohne_aria_modal_ist_review_auditmysite_dialog_rules() {
 // --- summary/name-missing ---------------------------------------------------
 
 #[test]
-fn leere_summary_korpus_summary_empty() {
+fn empty_summary_corpus_summary_empty() {
     let src =
         r#"<details id="d"><summary id="s"></summary><p>Hidden details content.</p></details>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "summary/name-missing"), ["s"]);
+    for r in both(src) {
+        assert_eq!(findings_at(src, &r, "summary/name-missing"), ["s"]);
         // `accname` gibt der summary die Rolle `button`: kein zweiter Befund.
-        assert_eq!(anzahl(&r, "buttons/name-missing"), 0, "{:?}", r.findings);
+        assert_eq!(count(&r, "buttons/name-missing"), 0, "{:?}", r.findings);
     }
 }
 
 #[test]
-fn summary_mit_text_und_zweite_summary_bleiben_still() {
+fn summary_with_text_and_second_summary_stay_silent() {
     let src = r#"<details><summary>Mehr</summary><summary></summary></details>
                  <details open><summary aria-label="Optionen"></summary></details>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "summary/name-missing"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "summary/name-missing"), 0, "{:?}", r.findings);
     }
 }
 
 // --- status/live-overridden -------------------------------------------------
 
 #[test]
-fn alert_mit_polite_korpus_aria_and_widgets() {
+fn alert_with_polite_corpus_aria_and_widgets() {
     let src = r#"<div role="alert" aria-live="polite">A critical error occurred</div>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(outcomes(&r, "status/live-overridden"), [Outcome::Review]);
     }
 }
 
 #[test]
-fn live_off_ist_verstoss_auditmysite_status_messages() {
+fn live_off_is_a_violation_auditmysite_status_messages() {
     let src = r#"<div role="alert" aria-live="off" id="alert"></div>
                  <div role="status" aria-live="assertive" id="status"></div>
                  <div role="log" aria-live="off" id="log"></div>
@@ -331,9 +330,9 @@ fn live_off_ist_verstoss_auditmysite_status_messages() {
                  <div role="status" aria-live="polite"></div>
                  <div role="alert" aria-live="assertive"></div>
                  <div role="timer" aria-live="off"></div>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(
-            an(src, &r, "status/live-overridden"),
+            findings_at(src, &r, "status/live-overridden"),
             ["alert", "log", "output", "status"]
         );
         let fails = outcomes(&r, "status/live-overridden")
@@ -345,13 +344,13 @@ fn live_off_ist_verstoss_auditmysite_status_messages() {
 }
 
 #[test]
-fn leere_status_region_ist_kein_befund_gov_uk() {
+fn empty_status_region_is_no_finding_gov_uk() {
     // auditmysite `dialog_rules`: zwei leere `role="status"` auf www.gov.uk
     // waren kein Mangel — ARIA verlangt für Live-Regionen keinen Namen.
     let src = r#"<div role="status"></div><div role="status" aria-live="polite"></div>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "status/live-overridden"), 0);
-        assert_eq!(anzahl(&r, "names/required-missing"), 0);
+    for r in both(src) {
+        assert_eq!(count(&r, "status/live-overridden"), 0);
+        assert_eq!(count(&r, "names/required-missing"), 0);
     }
 }
 
@@ -372,9 +371,9 @@ const LABEL_IN_NAME: &str = r#"
 
 #[test]
 fn label_in_name_fixture_513() {
-    for r in beide(LABEL_IN_NAME) {
+    for r in both(LABEL_IN_NAME) {
         assert_eq!(
-            an(LABEL_IN_NAME, &r, "label-in-name/mismatch"),
+            findings_at(LABEL_IN_NAME, &r, "label-in-name/mismatch"),
             ["falsch", "karte"]
         );
         let f = |id: &str| {
@@ -398,9 +397,9 @@ fn label_in_name_fixture_513() {
 }
 
 #[test]
-fn label_in_name_korpus_forms_and_misc() {
+fn label_in_name_corpus_forms_and_misc() {
     let src = r#"<form><button aria-label="Submit the entire form now">Send</button></form>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(outcomes(&r, "label-in-name/mismatch"), [Outcome::Fail]);
     }
 }
@@ -409,33 +408,36 @@ fn label_in_name_korpus_forms_and_misc() {
 /// Beschriftung (2.5.3). Bei sehr viel mehr sichtbarem Text bleibt es ein
 /// Hinweis (casoon/auditmysite#783).
 #[test]
-fn label_in_name_name_als_teil_des_sichtbaren() {
+fn label_in_name_name_as_part_of_the_visible() {
     let src = r#"<a href="/q" aria-label="Pricing">Read more about pricing</a>"#;
-    for r in beide(src) {
+    for r in both(src) {
         assert_eq!(outcomes(&r, "label-in-name/mismatch"), [Outcome::Review]);
     }
 }
 
 #[test]
-fn label_in_name_ohne_befund() {
+fn label_in_name_without_finding() {
     let src = r#"<button aria-label="Close dialog"><span aria-hidden="true">×</span></button>
                  <button aria-label="Close"><span aria-hidden="true">✕</span> Close</button>
                  <a href="/p" aria-label="Read more about pricing">Read more</a>
                  <button aria-label="schließen">Schließen</button>
                  <button>Senden</button>
                  <div aria-hidden="true"><button aria-label="Weg">Anders</button></div>"#;
-    for r in beide(src) {
-        assert_eq!(anzahl(&r, "label-in-name/mismatch"), 0, "{:?}", r.findings);
+    for r in both(src) {
+        assert_eq!(count(&r, "label-in-name/mismatch"), 0, "{:?}", r.findings);
     }
 }
 
 #[test]
-fn label_in_name_gilt_auch_fuer_links_und_labelledby() {
+fn label_in_name_also_applies_to_links_and_labelledby() {
     let src = r#"<span id="n">Startseite</span>
                  <a href="/" aria-labelledby="n" id="link">Home</a>
                  <div role="tab" aria-label="Erster" id="tab">Zweiter</div>"#;
-    for r in beide(src) {
-        assert_eq!(an(src, &r, "label-in-name/mismatch"), ["link", "tab"]);
+    for r in both(src) {
+        assert_eq!(
+            findings_at(src, &r, "label-in-name/mismatch"),
+            ["link", "tab"]
+        );
     }
 }
 
@@ -443,7 +445,7 @@ fn label_in_name_gilt_auch_fuer_links_und_labelledby() {
 /// ARIA 1.2 für `tab` kein „Name Required" führt. Beleg: auditmysites
 /// abgelöste `aria-label`-Regel.
 #[test]
-fn leerer_tab_hat_keinen_namen() {
+fn empty_tab_has_no_name() {
     let doc = a11y_dom::Arena::builder()
         .open("html")
         .attr("lang", "de")
@@ -498,7 +500,7 @@ fn leerer_tab_hat_keinen_namen() {
 /// dm.de: Ein Symbol-Label (`¹⁾`) ist von 2.5.3 ausgenommen; gleiche Wörter
 /// in anderer Reihenfolge sind ein Hinweis, kein Verstoß.
 #[test]
-fn label_in_name_symbol_und_umstellung() {
+fn label_in_name_symbol_and_rearrangement() {
     let doc = a11y_dom::Arena::builder()
         .open("html")
         .attr("lang", "de")

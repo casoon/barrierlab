@@ -40,7 +40,7 @@ fn at(id: NodeId) -> Location {
 /// verlangt keinen Namen. Die weiteren Pflichtrollen der Spezifikation
 /// (`region`, `img`, `table`, `grid`, `tree`, …) haben eigene Regeln oder
 /// keinen Beleg im Korpus.
-const NAME_PFLICHT: &[&str] = &[
+const NAME_REQUIRED: &[&str] = &[
     "checkbox",
     "combobox",
     "grid",
@@ -68,7 +68,7 @@ const NAME_PFLICHT: &[&str] = &[
 /// Ob ein natives Formularfeld überhaupt eine Beschriftung behauptet — dieselbe
 /// Prüfung wie `forms/label-missing`. Fehlt sie, meldet jene Regel das Feld;
 /// hier bleibt der Fall, dass die Beschriftung da ist, aber leer ausgeht.
-fn beschriftung_behauptet<'a, N: Node<'a>>(n: N, label_for: &[ScopedId]) -> bool {
+fn label_claims<'a, N: Node<'a>>(n: N, label_for: &[ScopedId]) -> bool {
     n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
         || n.has_attr("aria-labelledby")
         || n.attr("id")
@@ -87,8 +87,8 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if doc.is_ignored(n) {
             continue;
         }
-        let Some(rolle) = doc.role(n) else { continue };
-        if !NAME_PFLICHT.contains(&rolle.as_str()) {
+        let Some(role) = doc.role(n) else { continue };
+        if !NAME_REQUIRED.contains(&role.as_str()) {
             continue;
         }
         // Schon von einer eigenen Regel erfasst: `a[href]` von
@@ -101,8 +101,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if n.is_element("option") {
             continue;
         }
-        if matches!(n.local_name(), "input" | "select" | "textarea")
-            && !beschriftung_behauptet(n, &label_for)
+        if matches!(n.local_name(), "input" | "select" | "textarea") && !label_claims(n, &label_for)
         {
             continue;
         }
@@ -111,7 +110,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         }
         // auditmysite ordnet `meter` und `progressbar` 1.1.1 zu (axe), die
         // übrigen 4.1.2.
-        let wcag: &[&str] = if matches!(rolle.as_str(), "meter" | "progressbar") {
+        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar") {
             &["1.1.1"]
         } else {
             &["4.1.2"]
@@ -120,8 +119,8 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         // (`forms/label-missing`, Critical) — die ARIA-Rolle macht es nicht
         // leichter. auditmysite meldete beide Fälle als Critical (3.3.2);
         // die übrigen Rollen bleiben High.
-        let schwere = if matches!(
-            rolle.as_str(),
+        let severity = if matches!(
+            role.as_str(),
             "textbox"
                 | "searchbox"
                 | "combobox"
@@ -142,11 +141,11 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
                 "names/required-missing",
                 tr!(
                     locale,
-                    "The element with role \"{rolle}\" has no accessible name.",
-                    "Das Element mit der Rolle \"{rolle}\" hat keinen zugänglichen Namen.",
+                    "The element with role \"{role}\" has no accessible name.",
+                    "Das Element mit der Rolle \"{role}\" hat keinen zugänglichen Namen.",
                 ),
             )
-            .with_severity(schwere)
+            .with_severity(severity)
             .with_wcag(wcag.iter().copied())
             .at(at(n.id())),
         );
@@ -156,7 +155,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
 // --- names/symbol-only ----------------------------------------------------
 
 /// Die interaktiven Rollen aus auditmysite `accessible_name`.
-const INTERAKTIV: &[&str] = &[
+const INTERACTIVE: &[&str] = &[
     "button",
     "link",
     "textbox",
@@ -180,7 +179,7 @@ const INTERAKTIV: &[&str] = &[
 /// `aria-labelledby`, `title`). Mit `name_source` vom Host sicher, ohne es aus
 /// den Attributen erschlossen: `aria-labelledby` und `aria-label` schlagen den
 /// Inhalt, `title` zählt nur, wenn er den Namen wörtlich stellt.
-fn name_aus_attribut<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, name: &str) -> bool {
+fn name_from_attribute<'n, D: Semantics>(doc: &'n D, n: D::N<'n>, name: &str) -> bool {
     match doc.name_source(n) {
         Some(q) => matches!(
             q,
@@ -206,18 +205,18 @@ pub(crate) fn symbol_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
         if doc.is_ignored(n) {
             continue;
         }
-        let Some(rolle) = doc.role(n) else { continue };
-        if !INTERAKTIV.contains(&rolle.as_str()) {
+        let Some(role) = doc.role(n) else { continue };
+        if !INTERACTIVE.contains(&role.as_str()) {
             continue;
         }
         let Some(name) = doc.accessible_name(n) else {
             continue;
         };
-        let mut zeichen = name.trim().chars();
-        let (Some(z), None) = (zeichen.next(), zeichen.next()) else {
+        let mut character = name.trim().chars();
+        let (Some(z), None) = (character.next(), character.next()) else {
             continue;
         };
-        if z.is_alphanumeric() || !name_aus_attribut(doc, n, &name) {
+        if z.is_alphanumeric() || !name_from_attribute(doc, n, &name) {
             continue;
         }
         out.push(
@@ -240,7 +239,7 @@ pub(crate) fn symbol_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
 
 /// Ein `<dialog>` ohne `open` ist geschlossen und nicht dargestellt (HTML,
 /// „The dialog element"); er steht nicht im Accessibility-Tree.
-fn geschlossen<'a, N: Node<'a>>(n: N) -> bool {
+fn closed<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("dialog") && !n.has_attr("open")
 }
 
@@ -249,7 +248,7 @@ fn geschlossen<'a, N: Node<'a>>(n: N) -> bool {
 /// `dialog-name`, die denselben Fall doppelt meldeten.
 pub(crate) fn dialog_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if doc.is_ignored(n) || geschlossen(n) {
+        if doc.is_ignored(n) || closed(n) {
             continue;
         }
         if !matches!(doc.role(n).as_deref(), Some("dialog" | "alertdialog")) {
@@ -310,13 +309,13 @@ pub(crate) fn dialog_modal<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
 
 /// Die `<summary>`, die ihr `<details>` bedient: das erste `summary`-Kind
 /// (HTML, „The details element"). Nur sie ist ein Bedienelement.
-fn bedient_details<'a, N: Node<'a>>(n: N) -> bool {
+fn handles_details<'a, N: Node<'a>>(n: N) -> bool {
     n.is_element("summary")
         && n.parent().is_some_and(|p| {
             p.is_element("details")
                 && p.children()
                     .find(|k| k.kind() == NodeKind::Element && k.is_element("summary"))
-                    .is_some_and(|erste| erste == n)
+                    .is_some_and(|first| first == n)
         })
 }
 
@@ -327,7 +326,7 @@ fn bedient_details<'a, N: Node<'a>>(n: N) -> bool {
 /// zweimal.
 pub(crate) fn summary_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if !bedient_details(n) || doc.is_ignored(n) {
+        if !handles_details(n) || doc.is_ignored(n) {
             continue;
         }
         if !named(doc, n) {
@@ -367,8 +366,8 @@ pub(crate) fn live_regions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
             continue;
         };
         let live = live.trim().to_ascii_lowercase();
-        let Some(rolle) = doc.role(n) else { continue };
-        let (vorgabe, severity) = match rolle.as_str() {
+        let Some(role) = doc.role(n) else { continue };
+        let (default, severity) = match role.as_str() {
             "alert" => ("assertive", Severity::High),
             "status" => ("polite", Severity::Medium),
             "log" => ("polite", Severity::Medium),
@@ -379,18 +378,18 @@ pub(crate) fn live_regions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
                 "status/live-overridden",
                 tr!(
                     locale,
-                    "role=\"{rolle}\" has aria-live=\"off\": its updates are not announced.",
-                    "role=\"{rolle}\" hat aria-live=\"off\": Änderungen werden nicht angesagt.",
+                    "role=\"{role}\" has aria-live=\"off\": its updates are not announced.",
+                    "role=\"{role}\" hat aria-live=\"off\": Änderungen werden nicht angesagt.",
                 ),
             ),
             // Die Dringlichkeit von `log` umzustellen bemängelte auditmysite
             // nicht.
-            "polite" | "assertive" if live != vorgabe && rolle != "log" => Finding::review(
+            "polite" | "assertive" if live != default && role != "log" => Finding::review(
                 "status/live-overridden",
                 tr!(
                     locale,
-                    "role=\"{rolle}\" has aria-live=\"{live}\" instead of its default \"{vorgabe}\".",
-                    "role=\"{rolle}\" hat aria-live=\"{live}\" statt der Vorgabe \"{vorgabe}\".",
+                    "role=\"{role}\" has aria-live=\"{live}\" instead of its default \"{default}\".",
+                    "role=\"{role}\" hat aria-live=\"{live}\" statt der Vorgabe \"{default}\".",
                 ),
             ),
             _ => continue,
@@ -408,7 +407,7 @@ pub(crate) fn live_regions<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
 
 /// Rollen, deren sichtbare Beschriftung ihr Inhalt ist (WAI-ARIA 1.2, „Name
 /// From: contents"). auditmysite prüfte nur `button`.
-const NAME_AUS_INHALT: &[&str] = &[
+const NAME_FROM_CONTENT: &[&str] = &[
     "button",
     "checkbox",
     "link",
@@ -425,7 +424,7 @@ const NAME_AUS_INHALT: &[&str] = &[
 /// Kleinbuchstaben, Buchstaben und Ziffern nach Unicode, alles andere fällt
 /// weg — auch die Leerzeichen. So stört weder Satzzeichen noch die fehlende
 /// Trennung zwischen Blockelementen („A.B" statt „A. B", auditmysite#513).
-fn normiert(s: &str) -> String {
+fn normalised(s: &str) -> String {
     s.chars()
         .filter(|c| c.is_alphanumeric())
         .flat_map(char::to_lowercase)
@@ -433,7 +432,7 @@ fn normiert(s: &str) -> String {
 }
 
 /// Ob der Name vom Autor statt aus dem Inhalt kommt.
-fn name_vom_autor<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
+fn name_from_the_author<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
     match doc.name_source(n) {
         Some(q) => matches!(q, NameSource::AriaLabel | NameSource::AriaLabelledBy),
         None => {
@@ -448,7 +447,7 @@ fn name_vom_autor<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> bool {
 /// unter `aria-hidden` — verborgen vor der Assistenztechnik ist nicht
 /// unsichtbar. Visuell versteckter Text (`.sr-only`) ist ohne Stile nicht zu
 /// erkennen und zählt mit.
-fn sichtbarer_text<'a, N: Node<'a>>(n: N) -> String {
+fn visible_text<'a, N: Node<'a>>(n: N) -> String {
     descendants(n)
         .filter(|k| k.kind() == NodeKind::Text)
         .map(|k| k.text())
@@ -459,7 +458,7 @@ fn sichtbarer_text<'a, N: Node<'a>>(n: N) -> String {
 /// Ab diesem Verhältnis von sichtbarem Text zu Name ist das Element
 /// vermutlich ein zusammengesetztes Widget (Karte mit Vorder- und Rückseite),
 /// dessen knapper Name bewusst gewählt ist (auditmysite#513).
-const ZUSAMMENGESETZT: usize = 2;
+const COMPOSED: usize = 2;
 
 /// WCAG 2.5.3: Der Name enthält den sichtbaren Text. Wer per Sprache „Senden"
 /// sagt, trifft den Button mit `aria-label="Formular abschicken"` nicht.
@@ -479,22 +478,22 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
         {
             continue;
         }
-        let Some(rolle) = doc.role(n) else { continue };
-        if !NAME_AUS_INHALT.contains(&rolle.as_str()) || !name_vom_autor(doc, n) {
+        let Some(role) = doc.role(n) else { continue };
+        if !NAME_FROM_CONTENT.contains(&role.as_str()) || !name_from_the_author(doc, n) {
             continue;
         }
         let Some(name) = doc.accessible_name(n) else {
             continue;
         };
-        let sichtbar = sichtbarer_text(n);
+        let visible = visible_text(n);
         // Ein sichtbares Label ohne Buchstaben ist ein Symbol (`¹⁾`, `×`,
         // `→`); 2.5.3 nimmt Symbole ausdrücklich aus (Understanding 2.5.3,
         // „symbolic text characters"). Beleg: dm.de, Fußnote „¹⁾" mit dem
         // Namen „Zur Fußnote 1".
-        if !sichtbar.chars().any(char::is_alphabetic) {
+        if !visible.chars().any(char::is_alphabetic) {
             continue;
         }
-        let (s, m) = (normiert(&sichtbar), normiert(&name));
+        let (s, m) = (normalised(&visible), normalised(&name));
         // Nur wenn der Name das Sichtbare enthält, ist 2.5.3 erfüllt. Ist der
         // Name bloß ein Teil davon („Pricing" zu „Pricing plans"), fehlt
         // ein Teil der Beschriftung im Namen (Understanding 2.5.3).
@@ -505,24 +504,24 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
         // Reihenfolge, spricht die Spracheingabe sie trotzdem — ein Hinweis,
         // kein Verstoß. Beleg: dm.de, Karten-Link mit Titel und Teaser in
         // umgekehrter Folge.
-        let woerter = |t: &str| -> Vec<String> {
+        let words = |t: &str| -> Vec<String> {
             t.split(|c: char| !c.is_alphanumeric())
                 .filter(|w| !w.is_empty())
                 .map(str::to_lowercase)
                 .collect()
         };
-        let im_namen = woerter(&name);
-        let umgestellt = woerter(&sichtbar).iter().all(|w| im_namen.contains(w));
-        let (name, sichtbar) = (
+        let in_names = words(&name);
+        let rearranged = words(&visible).iter().all(|w| in_names.contains(w));
+        let (name, visible) = (
             name.trim(),
-            sichtbar.split_whitespace().collect::<Vec<_>>().join(" "),
+            visible.split_whitespace().collect::<Vec<_>>().join(" "),
         );
         let text = tr!(
             locale,
-            "The accessible name \"{name}\" does not contain the visible label \"{sichtbar}\".",
-            "Der zugängliche Name \"{name}\" enthält die sichtbare Beschriftung \"{sichtbar}\" nicht.",
+            "The accessible name \"{name}\" does not contain the visible label \"{visible}\".",
+            "Der zugängliche Name \"{name}\" enthält die sichtbare Beschriftung \"{visible}\" nicht.",
         );
-        let f = if umgestellt || s.chars().count() > m.chars().count() * ZUSAMMENGESETZT {
+        let f = if rearranged || s.chars().count() > m.chars().count() * COMPOSED {
             Finding::review("label-in-name/mismatch", text)
         } else {
             Finding::fail("label-in-name/mismatch", text)

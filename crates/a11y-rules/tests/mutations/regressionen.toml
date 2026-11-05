@@ -19,9 +19,9 @@ file = "src/viz.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))'''
+    elements(doc).filter(|n| is_viz(*n) && !with_ancestors(*n).any(|a| a.has_attr("hidden")))'''
 replace = '''
-    elements(doc).filter(|n| ist_viz(*n))'''
+    elements(doc).filter(|n| is_viz(*n))'''
 expect = "killed"
 
 [[mutation]]
@@ -30,9 +30,9 @@ file = "src/viz.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-    elements(doc).filter(|n| ist_viz(*n) && !mit_vorfahren(*n).any(|a| a.has_attr("hidden")))'''
+    elements(doc).filter(|n| is_viz(*n) && !with_ancestors(*n).any(|a| a.has_attr("hidden")))'''
 replace = '''
-    elements(doc).filter(|n| ist_viz(*n))'''
+    elements(doc).filter(|n| is_viz(*n))'''
 expect = "killed"
 
 [[mutation]]
@@ -48,24 +48,24 @@ expect = "killed"
 
 [[mutation]]
 id = "text/line-height-tight"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-source"
 test = "korpus"
 find = '''
-        let attribut = im_stilattribut(e, eigenschaft);'''
+        let attribute = in_style_attribute(e, property);'''
 replace = '''
-        let attribut: Option<(String, bool)> = None;'''
+        let attribute: Option<(String, bool)> = None;'''
 expect = "killed"
 
 [[mutation]]
 id = "text/justified"
-file = "src/stile.rs"
+file = "src/stylesheet_rules.rs"
 kind = "drop-source"
 test = "korpus"
 find = '''
-        let attribut = im_stilattribut(e, eigenschaft);'''
+        let attribute = in_style_attribute(e, property);'''
 replace = '''
-        let attribut: Option<(String, bool)> = None;'''
+        let attribute: Option<(String, bool)> = None;'''
 expect = "killed"
 
 [[mutation]]
@@ -96,41 +96,41 @@ expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {'''
+        let finding = if color_distance.is_some_and(|v| v >= 3.0) {'''
 replace = '''
         let finding = if false {'''
 expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "threshold"
 test = "korpus"
 find = '''
-        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {'''
+        let finding = if color_distance.is_some_and(|v| v >= 3.0) {'''
 replace = '''
-        let finding = if farbabstand.is_some_and(|v| v >= 4.5) {'''
+        let finding = if color_distance.is_some_and(|v| v >= 4.5) {'''
 expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "narrow-applicability"
 test = "korpus"
 find = '''
         Some(r) => r == "link",
         None => n.is_element("a") && n.has_attr("href"),
     };
-    for link in elements(doc).filter(ist_link) {'''
+    for link in elements(doc).filter(is_link) {'''
 replace = '''
         Some(_) => false,
         None => n.is_element("a") && n.has_attr("href"),
     };
-    for link in elements(doc).filter(ist_link) {'''
+    for link in elements(doc).filter(is_link) {'''
 expect = "killed"
 
 [[mutation]]
@@ -139,7 +139,7 @@ file = "src/forms.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-        let finding = if wechsel && hingewiesen {'''
+        let finding = if change && pointed_out {'''
 replace = '''
         let finding = if false {'''
 expect = "killed"
@@ -163,9 +163,9 @@ file = "src/structure.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-        if !fremd && !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+        if !foreign && !children.iter().any(|c| is_list_item(*c)) {'''
 replace = '''
-        if !kinder.iter().any(|c| ist_listeneintrag(*c)) {'''
+        if !children.iter().any(|c| is_list_item(*c)) {'''
 expect = "killed"
 
 [[mutation]]
@@ -196,15 +196,15 @@ file = "src/landmarks.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-        let rolle = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {'''
+        let role = if n.is_element("a") && !n.has_attr("href") && n.attr("role").is_none() {'''
 replace = '''
-        let rolle = if false {'''
+        let role = if false {'''
 expect = "equivalent"
 note = "accname::role gibt einem a ohne href schon keine Rolle link; der Wächter schützt vor Hosts (Chrome), die es tun — mit dem Korpus-Host nicht unterscheidbar"
 
 [[mutation]]
 id = "targets/size-enhanced"
-file = "src/heuristik.rs"
+file = "src/heuristics.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
@@ -217,7 +217,7 @@ expect = "killed"
 
 [[mutation]]
 id = "targets/size-enhanced"
-file = "src/heuristik.rs"
+file = "src/heuristics.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
@@ -228,7 +228,7 @@ expect = "killed"
 
 [[mutation]]
 id = "targets/size"
-file = "src/heuristik.rs"
+file = "src/heuristics.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
@@ -239,7 +239,7 @@ expect = "killed"
 
 [[mutation]]
 id = "keyboard/scrollable-region-not-focusable"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
@@ -250,7 +250,7 @@ expect = "killed"
 
 [[mutation]]
 id = "objects/alt-missing"
-file = "src/sicht.rs"
+file = "src/visibility.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
@@ -264,13 +264,9 @@ id = "landmarks/content-outside"
 file = "src/landmarks.rs"
 kind = "drop-condition"
 test = "landmarks"
-filter = "chrome_ignoriert_"
-find = '''
-                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
-'''
-replace = '''
-                    if doc.is_ignored(k) && landmark(doc, k).is_some() => {
-'''
+filter = "chrome_ignores_"
+find = '''if doc.is_ignored(k) && (!reachable(doc, k) || landmark(doc, k).is_some()) => {}'''
+replace = '''if doc.is_ignored(k) && landmark(doc, k).is_some() => {}'''
 expect = "killed"
 
 [[mutation]]
@@ -278,13 +274,9 @@ id = "landmarks/content-outside"
 file = "src/landmarks.rs"
 kind = "drop-condition"
 test = "landmarks"
-filter = "chrome_ignoriert_"
-find = '''
-                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
-'''
-replace = '''
-                    if doc.is_ignored(k) && !erreichbar(doc, k) => {
-'''
+filter = "chrome_ignores_"
+find = '''if doc.is_ignored(k) && (!reachable(doc, k) || landmark(doc, k).is_some()) => {}'''
+replace = '''if doc.is_ignored(k) && !reachable(doc, k) => {}'''
 expect = "killed"
 
 [[mutation]]
@@ -292,26 +284,22 @@ id = "landmarks/content-outside"
 file = "src/landmarks.rs"
 kind = "widen-exemption"
 test = "landmarks"
-filter = "chrome_ignoriert_"
-find = '''
-                    if doc.is_ignored(k) && (!erreichbar(doc, k) || landmark(doc, k).is_some()) => {
-'''
-replace = '''
-                    if doc.is_ignored(k) => {
-'''
+filter = "chrome_ignores_"
+find = '''if doc.is_ignored(k) && (!reachable(doc, k) || landmark(doc, k).is_some()) => {}'''
+replace = '''if doc.is_ignored(k) => {}'''
 expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-            (None, _) if mit_stilen => continue,
+            (None, _) if with_styles => continue,
 '''
 replace = '''
             (None, Some(_)) => {
-                ungemessen = true;
+                unmeasured = true;
                 continue;
             }
 '''
@@ -319,24 +307,24 @@ expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "narrow-condition"
 test = "korpus"
 find = '''
-            (None, _) if mit_stilen => continue,
+            (None, _) if with_styles => continue,
 '''
 replace = '''
-            (None, Some(_)) if mit_stilen => continue,
+            (None, Some(_)) if with_styles => continue,
 '''
 expect = "killed"
 
 [[mutation]]
 id = "color/link-indistinct"
-file = "src/darstellung.rs"
+file = "src/presentation.rs"
 kind = "drop-condition"
 test = "korpus"
 find = '''
-        if anzeige(stil.as_ref()) == "none" {
+        if display(style.as_ref()) == "none" {
 '''
 replace = '''
         if false {

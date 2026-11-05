@@ -69,10 +69,10 @@ impl Rendering for Host<'_> {
 
     /// `data-size="BxH"` oder `"BxH@X,Y"`; ohne Position bei (0, 0).
     fn bounds<'n>(&'n self, node: Self::N<'n>) -> Option<Rect> {
-        let wert = node.attr("data-size")?;
-        let (groesse, ort) = wert.split_once('@').unwrap_or((wert, "0,0"));
-        let (w, h) = groesse.split_once('x')?;
-        let (x, y) = ort.split_once(',')?;
+        let value = node.attr("data-size")?;
+        let (size, place) = value.split_once('@').unwrap_or((value, "0,0"));
+        let (w, h) = size.split_once('x')?;
+        let (x, y) = place.split_once(',')?;
         Some(Rect {
             x: x.parse().ok()?,
             y: y.parse().ok()?,
@@ -103,7 +103,7 @@ impl Rendering for Host<'_> {
     }
 }
 
-fn seite() -> ArenaBuilder {
+fn page() -> ArenaBuilder {
     Arena::builder()
         .open("html")
         .attr("lang", "de")
@@ -115,12 +115,12 @@ fn seite() -> ArenaBuilder {
         .open("body")
 }
 
-fn befunde<'r>(r: &'r Report, id: &str) -> Vec<&'r a11y_report::Finding> {
+fn findings<'r>(r: &'r Report, id: &str) -> Vec<&'r a11y_report::Finding> {
     r.findings.iter().filter(|f| f.rule_id == id).collect()
 }
 
-fn nur_review(r: &Report, id: &str) -> usize {
-    let b = befunde(r, id);
+fn only_review(r: &Report, id: &str) -> usize {
+    let b = findings(r, id);
     assert!(
         b.iter().all(|f| f.outcome == Outcome::Review),
         "{id}: {b:?}"
@@ -129,8 +129,8 @@ fn nur_review(r: &Report, id: &str) -> usize {
 }
 
 #[test]
-fn umgekehrte_reihenfolge_ueber_bedienbarem_inhalt() {
-    let arena = seite()
+fn reversed_order_over_operable_content() {
+    let arena = page()
         .open("div")
         .attr("data-reversed", "")
         .open("a")
@@ -164,14 +164,14 @@ fn umgekehrte_reihenfolge_ueber_bedienbarem_inhalt() {
         .close()
         .build();
     assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "order/visual-mismatch"),
+        only_review(&run_full(&Host::new(&arena)), "order/visual-mismatch"),
         3
     );
 }
 
 #[test]
-fn endlos_animation_nur_am_aeussersten_element() {
-    let arena = seite()
+fn endless_animation_only_on_the_outermost_element() {
+    let arena = page()
         .open("div")
         .attr("data-endlos", "")
         .open("span")
@@ -183,14 +183,14 @@ fn endlos_animation_nur_am_aeussersten_element() {
         .close()
         .build();
     assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
+        only_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
         1
     );
 }
 
 #[test]
-fn min_width_ueber_320_ausser_tabellen() {
-    let arena = seite()
+fn min_width_over_320_except_tables() {
+    let arena = page()
         .open("div")
         .attr("data-min-width", "480")
         .text("Breit")
@@ -206,13 +206,13 @@ fn min_width_ueber_320_ausser_tabellen() {
         .close()
         .build();
     let r = run_full(&Host::new(&arena));
-    assert_eq!(nur_review(&r, "reflow/min-width"), 1);
-    assert!(befunde(&r, "reflow/min-width")[0].message.contains("480"));
+    assert_eq!(only_review(&r, "reflow/min-width"), 1);
+    assert!(findings(&r, "reflow/min-width")[0].message.contains("480"));
 }
 
 #[test]
-fn anklickbares_div_ohne_rolle() {
-    let arena = seite()
+fn clickable_div_without_role() {
+    let arena = page()
         // Das „Suchen" auf barrierlab.eu: sieht aus wie ein Knopf.
         .open("div")
         .attr("data-pointer", "")
@@ -243,13 +243,16 @@ fn anklickbares_div_ohne_rolle() {
         .build();
     let r = run_full(&Host::new(&arena));
     // Das „Ablehnen" mit Inline-onclick meldet die Tier-1-Regel, nicht diese.
-    assert_eq!(nur_review(&r, "keyboard/pointer-only"), 1);
-    assert_eq!(befunde(&r, "keyboard/click-handler-not-focusable").len(), 1);
+    assert_eq!(only_review(&r, "keyboard/pointer-only"), 1);
+    assert_eq!(
+        findings(&r, "keyboard/click-handler-not-focusable").len(),
+        1
+    );
 }
 
 #[test]
-fn verdecktes_bedienelement() {
-    let arena = seite()
+fn covered_control() {
+    let arena = page()
         .open("a")
         .attr("href", "/x")
         .attr("data-verdeckt", "")
@@ -259,14 +262,14 @@ fn verdecktes_bedienelement() {
         .close()
         .build();
     assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "focus/obscured"),
+        only_review(&run_full(&Host::new(&arena)), "focus/obscured"),
         1
     );
 }
 
 #[test]
-fn leiste_ohne_scroll_padding() {
-    let arena = seite()
+fn bar_without_scroll_padding() {
+    let arena = page()
         .open("header")
         .attr("data-leiste", "")
         .text("Leiste")
@@ -275,17 +278,17 @@ fn leiste_ohne_scroll_padding() {
         .close()
         .build();
     let r = run_full(&Host::new(&arena));
-    assert_eq!(nur_review(&r, "focus/obscured"), 1);
+    assert_eq!(only_review(&r, "focus/obscured"), 1);
     assert!(
-        befunde(&r, "focus/obscured")[0]
+        findings(&r, "focus/obscured")[0]
             .message
             .contains("scroll-padding-top")
     );
 }
 
 #[test]
-fn zu_kleine_ziele_ausser_im_fliesstext() {
-    let arena = seite()
+fn targets_too_small_except_in_running_text() {
+    let arena = page()
         .open("button")
         .attr("data-size", "16x16")
         .text("x")
@@ -305,12 +308,15 @@ fn zu_kleine_ziele_ausser_im_fliesstext() {
         .close()
         .close()
         .build();
-    assert_eq!(nur_review(&run_full(&Host::new(&arena)), "targets/size"), 1);
+    assert_eq!(
+        only_review(&run_full(&Host::new(&arena)), "targets/size"),
+        1
+    );
 }
 
 #[test]
-fn fokus_ohne_indikator_und_ungemessen() {
-    let gemessen = seite()
+fn focus_without_indicator_and_unmeasured() {
+    let measured = page()
         .open("button")
         .attr("data-fokus", "unsichtbar")
         .text("A")
@@ -322,20 +328,20 @@ fn fokus_ohne_indikator_und_ungemessen() {
         .close()
         .close()
         .build();
-    let r = run_full(&Host::new(&gemessen));
-    assert_eq!(nur_review(&r, "focus/indicator-missing"), 1);
-    assert!(befunde(&r, "focus/indicator-unmeasured").is_empty());
+    let r = run_full(&Host::new(&measured));
+    assert_eq!(only_review(&r, "focus/indicator-missing"), 1);
+    assert!(findings(&r, "focus/indicator-unmeasured").is_empty());
 
     // Nicht gemessen ist nicht bestanden: ein UNTESTED für die Seite.
-    let ungemessen = seite()
+    let unmeasured = page()
         .open("button")
         .text("A")
         .close()
         .close()
         .close()
         .build();
-    let r = run_full(&Host::new(&ungemessen));
-    let b = befunde(&r, "focus/indicator-unmeasured");
+    let r = run_full(&Host::new(&unmeasured));
+    let b = findings(&r, "focus/indicator-unmeasured");
     assert_eq!(b.len(), 1);
     assert_eq!(b[0].outcome, Outcome::Untested);
 }
@@ -344,8 +350,8 @@ fn fokus_ohne_indikator_und_ungemessen() {
 /// `UNTESTED`-Meldung für die Seite statt eines stillen Nichts. Bis 0.20.0
 /// meldeten sie hier gar nichts, und der Bericht zählte sie als gelaufen.
 #[test]
-fn ohne_layout_melden_die_heuristiken_ungeprueft() {
-    let arena = seite()
+fn without_layout_the_heuristics_report_unchecked() {
+    let arena = page()
         .open("div")
         .attr("data-reversed", "")
         .attr("data-endlos", "")
@@ -365,16 +371,16 @@ fn ohne_layout_melden_die_heuristiken_ungeprueft() {
         "reflow/min-width",
         "keyboard/pointer-only",
     ] {
-        let b = befunde(&r, id);
+        let b = findings(&r, id);
         assert_eq!(b.len(), 1, "{id}: {b:?}");
         assert_eq!(b[0].outcome, Outcome::Untested, "{id}");
     }
 }
 
 #[test]
-fn kleines_ziel_mit_genug_abstand_ist_kein_befund() {
+fn small_target_with_enough_gap_is_no_finding() {
     // Zwei 16-px-Ziele, 40 px Mittenabstand: Die 24-px-Kreise berühren sich nicht.
-    let arena = seite()
+    let arena = page()
         .open("button")
         .attr("data-size", "16x16@0,0")
         .text("a")
@@ -395,12 +401,15 @@ fn kleines_ziel_mit_genug_abstand_ist_kein_befund() {
         .close()
         .close()
         .build();
-    assert_eq!(nur_review(&run_full(&Host::new(&arena)), "targets/size"), 2);
+    assert_eq!(
+        only_review(&run_full(&Host::new(&arena)), "targets/size"),
+        2
+    );
 }
 
 #[test]
-fn checkbox_im_label_hat_das_label_als_ziel() {
-    let arena = seite()
+fn checkbox_in_label_has_the_label_as_target() {
+    let arena = page()
         .open("label")
         .open("input")
         .attr("type", "checkbox")
@@ -415,12 +424,15 @@ fn checkbox_im_label_hat_das_label_als_ziel() {
         .close()
         .close()
         .build();
-    assert_eq!(nur_review(&run_full(&Host::new(&arena)), "targets/size"), 0);
+    assert_eq!(
+        only_review(&run_full(&Host::new(&arena)), "targets/size"),
+        0
+    );
 }
 
 #[test]
-fn animiertes_svg_ist_eine_bewegung() {
-    let arena = seite()
+fn animated_svg_is_a_motion() {
+    let arena = page()
         .open("svg")
         .open("circle")
         .attr("data-endlos", "")
@@ -436,14 +448,14 @@ fn animiertes_svg_ist_eine_bewegung() {
         .close()
         .build();
     assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
+        only_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
         1
     );
 }
 
 #[test]
-fn mit_pause_schalter_keine_bewegungsmeldung() {
-    let arena = seite()
+fn with_pause_switch_no_motion_notice() {
+    let arena = page()
         .open("span")
         .attr("data-endlos", "")
         .text("*")
@@ -458,7 +470,7 @@ fn mit_pause_schalter_keine_bewegungsmeldung() {
         .close()
         .build();
     assert_eq!(
-        nur_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
+        only_review(&run_full(&Host::new(&arena)), "motion/infinite-animation"),
         0
     );
 }
@@ -468,8 +480,8 @@ fn mit_pause_schalter_keine_bewegungsmeldung() {
 /// `display: none` gibt. Korpusfälle `misc_content_checks` und
 /// `media_and_visual`.
 #[test]
-fn ua_display_none_verbirgt_area_und_audio_nicht() {
-    let arena = seite()
+fn ua_display_none_does_not_hide_area_and_audio() {
+    let arena = page()
         .open("img")
         .attr("src", "plan.png")
         .attr("alt", "Plan")
@@ -489,31 +501,31 @@ fn ua_display_none_verbirgt_area_und_audio_nicht() {
         .close()
         .build();
     let r = run_full(&Host::new(&arena));
-    assert_eq!(befunde(&r, "images/area-alt-missing").len(), 1);
-    assert_eq!(befunde(&r, "media/audio-autoplay").len(), 1);
+    assert_eq!(findings(&r, "images/area-alt-missing").len(), 1);
+    assert_eq!(findings(&r, "media/audio-autoplay").len(), 1);
 }
 
 // --- Korpusfälle aus casoon/auditmysite#698 (Vergleich 2026-10-05) ---------
 
 /// Die `id`-Attribute der Elemente, an denen `rule` mit `outcome` meldet.
-fn an_mit(arena: &Arena, r: &Report, rule: &str, outcome: Outcome) -> Vec<String> {
-    let knoten: Vec<String> = r
+fn findings_at_with(arena: &Arena, r: &Report, rule: &str, outcome: Outcome) -> Vec<String> {
+    let node: Vec<String> = r
         .findings
         .iter()
         .filter(|f| f.rule_id == rule && f.outcome == outcome)
         .filter_map(|f| f.location.node.clone())
         .collect();
     a11y_dom::elements(arena)
-        .filter(|n| knoten.contains(&n.id().to_string()))
+        .filter(|n| node.contains(&n.id().to_string()))
         .map(|n| n.attr("id").unwrap_or("?").to_string())
         .collect()
 }
 
-fn link(b: ArenaBuilder, id: &str, href: &str, groesse: &str) -> ArenaBuilder {
+fn link(b: ArenaBuilder, id: &str, href: &str, size: &str) -> ArenaBuilder {
     b.open("a")
         .attr("id", id)
         .attr("href", href)
-        .attr("data-size", groesse)
+        .attr("data-size", size)
         .text(id)
         .close()
 }
@@ -521,8 +533,8 @@ fn link(b: ArenaBuilder, id: &str, href: &str, groesse: &str) -> ArenaBuilder {
 /// `target_size_equivalent`: 16 × 10 px Links dicht an dicht; „Equivalent"
 /// greift nur mit einem sichtbaren, großen Link zum selben Dokument.
 #[test]
-fn korpus_target_size_equivalent() {
-    let mut b = seite();
+fn corpus_target_size_equivalent() {
+    let mut b = page();
     for (i, (id, href)) in [
         ("eq-small", "/home"),
         ("hidden-only", "/about"),
@@ -561,10 +573,10 @@ fn korpus_target_size_equivalent() {
     b = link(b, "about-weg", "/about", "48x48@-9999,0");
     let arena = b.close().close().build();
     let r = run_full(&Host::new(&arena));
-    let mut gemeldet = an_mit(&arena, &r, "targets/size", Outcome::Review);
-    gemeldet.sort();
+    let mut reported = findings_at_with(&arena, &r, "targets/size", Outcome::Review);
+    reported.sort();
     assert_eq!(
-        gemeldet,
+        reported,
         [
             "both-small",
             "hash",
@@ -578,8 +590,8 @@ fn korpus_target_size_equivalent() {
 /// `target_size_hidden_neighbours` (auditmysite#705): Nachbarn unter `inert`
 /// oder mit `pointer-events: none` engen nicht ein.
 #[test]
-fn korpus_target_size_hidden_neighbours() {
-    let mut b = seite();
+fn corpus_target_size_hidden_neighbours() {
+    let mut b = page();
     b = link(b, "control", "/control", "16x16@0,0");
     b = link(b, "control-n", "/control-next", "48x48@16,0");
     b = link(b, "beside-inert", "/inert", "16x16@0,100");
@@ -603,7 +615,7 @@ fn korpus_target_size_hidden_neighbours() {
     let arena = b.close().close().build();
     let r = run_full(&Host::new(&arena));
     assert_eq!(
-        an_mit(&arena, &r, "targets/size", Outcome::Review),
+        findings_at_with(&arena, &r, "targets/size", Outcome::Review),
         ["control"]
     );
 }
@@ -611,8 +623,8 @@ fn korpus_target_size_hidden_neighbours() {
 /// `target_size_animation` (auditmysite#706): Ein Ziel, das beim Messen noch
 /// wächst, bleibt ungemessen statt zu klein.
 #[test]
-fn korpus_target_size_animation() {
-    let mut b = seite();
+fn corpus_target_size_animation() {
+    let mut b = page();
     b = b
         .open("a")
         .attr("id", "slow")
@@ -624,9 +636,9 @@ fn korpus_target_size_animation() {
     b = link(b, "slow-next", "/slow-next", "48x48@16,0");
     let arena = b.close().close().build();
     let r = run_full(&Host::new(&arena));
-    assert!(an_mit(&arena, &r, "targets/size", Outcome::Review).is_empty());
+    assert!(findings_at_with(&arena, &r, "targets/size", Outcome::Review).is_empty());
     assert_eq!(
-        an_mit(&arena, &r, "targets/size", Outcome::Untested),
+        findings_at_with(&arena, &r, "targets/size", Outcome::Untested),
         ["slow"]
     );
 }
@@ -634,8 +646,8 @@ fn korpus_target_size_animation() {
 /// 2.5.5 (AAA): 44 px, ohne Abstandsausnahme; was 2.5.8 schon meldet, nicht
 /// doppelt.
 #[test]
-fn erhoehte_zielgroesse() {
-    let mut b = seite();
+fn enhanced_target_size() {
+    let mut b = page();
     b = link(b, "allein", "/allein", "30x30@0,0");
     b = link(b, "eng-a", "/a", "16x16@0,200");
     b = link(b, "eng-b", "/b", "16x16@16,200");
@@ -643,10 +655,10 @@ fn erhoehte_zielgroesse() {
     let arena = b.close().close().build();
     let r = run_full(&Host::new(&arena));
     assert_eq!(
-        an_mit(&arena, &r, "targets/size-enhanced", Outcome::Review),
+        findings_at_with(&arena, &r, "targets/size-enhanced", Outcome::Review),
         ["allein"]
     );
-    let mut eng = an_mit(&arena, &r, "targets/size", Outcome::Review);
+    let mut eng = findings_at_with(&arena, &r, "targets/size", Outcome::Review);
     eng.sort();
     assert_eq!(eng, ["eng-a", "eng-b"]);
 }
@@ -654,8 +666,8 @@ fn erhoehte_zielgroesse() {
 /// `text_and_layout` (`div.flex-reorder`): umgeordneter Text ohne
 /// Bedienelemente zählt für 1.3.2.
 #[test]
-fn korpus_umgeordneter_text() {
-    let arena = seite()
+fn corpus_reordered_text() {
+    let arena = page()
         .open("div")
         .attr("id", "flex-reorder")
         .open("div")
@@ -672,7 +684,7 @@ fn korpus_umgeordneter_text() {
         .build();
     let r = run_full(&Host::new(&arena));
     assert_eq!(
-        an_mit(&arena, &r, "order/visual-mismatch", Outcome::Review),
+        findings_at_with(&arena, &r, "order/visual-mismatch", Outcome::Review),
         ["flex-reorder"]
     );
 }
@@ -680,8 +692,8 @@ fn korpus_umgeordneter_text() {
 /// spiegel.de: Teaserkarte mit `flex-row-reverse`, Bild- und Titellink zum
 /// selben Artikel — kein Hinweis.
 #[test]
-fn umgekehrte_karte_mit_einem_ziel_spiegel_de() {
-    let arena = seite()
+fn reversed_card_with_one_target_spiegel_de() {
+    let arena = page()
         .open("article")
         .attr("id", "karte")
         .attr("data-reversed", "")
@@ -698,13 +710,13 @@ fn umgekehrte_karte_mit_einem_ziel_spiegel_de() {
         .close()
         .build();
     let r = run_full(&Host::new(&arena));
-    assert!(an_mit(&arena, &r, "order/visual-mismatch", Outcome::Review).is_empty());
+    assert!(findings_at_with(&arena, &r, "order/visual-mismatch", Outcome::Review).is_empty());
 }
 
 /// `no_focus_targets`: `<marquee>` meldet auch ohne gemessenes Layout.
 #[test]
-fn korpus_marquee_ohne_layout() {
-    let arena = seite()
+fn corpus_marquee_without_layout() {
+    let arena = page()
         .open("marquee")
         .attr("id", "laufschrift")
         .text("Breaking news")
@@ -716,7 +728,7 @@ fn korpus_marquee_ohne_layout() {
     host.layout = false;
     let r = run_full(&host);
     assert_eq!(
-        an_mit(&arena, &r, "motion/infinite-animation", Outcome::Review),
+        findings_at_with(&arena, &r, "motion/infinite-animation", Outcome::Review),
         ["laufschrift"]
     );
 }
@@ -724,8 +736,8 @@ fn korpus_marquee_ohne_layout() {
 /// bundesregierung.de: `cursor: pointer` auf einer Teaserkarte mit Link
 /// darin — der Klick landet beim Link.
 #[test]
-fn karte_mit_link_ist_kein_nur_zeiger_bundesregierung_de() {
-    let arena = seite()
+fn card_with_link_is_not_pointer_only_bundesregierung_de() {
+    let arena = page()
         .open("div")
         .attr("id", "teaser")
         .attr("class", "bpa-teaser")
@@ -742,15 +754,15 @@ fn karte_mit_link_ist_kein_nur_zeiger_bundesregierung_de() {
         .close()
         .build();
     let r = run_full(&Host::new(&arena));
-    assert!(an_mit(&arena, &r, "keyboard/pointer-only", Outcome::Review).is_empty());
+    assert!(findings_at_with(&arena, &r, "keyboard/pointer-only", Outcome::Review).is_empty());
 }
 
 /// bundesregierung.de (mobil): Karussellpunkte mit „roving tabindex" — nur
 /// der aktive hat `tabindex="0"`. Die übrigen sind trotzdem Zeigerziele und
 /// engen den aktiven ein; alle drei sind zu klein.
 #[test]
-fn karussellpunkte_mit_roving_tabindex_bundesregierung_de() {
-    let mut b = seite();
+fn carousel_dots_with_roving_tabindex_bundesregierung_de() {
+    let mut b = page();
     for (i, tab) in ["0", "-1", "-1"].iter().enumerate() {
         b = b
             .open("button")
@@ -762,10 +774,10 @@ fn karussellpunkte_mit_roving_tabindex_bundesregierung_de() {
     }
     let arena = b.close().close().build();
     let r = run_full(&Host::new(&arena));
-    let mut gemeldet = an_mit(&arena, &r, "targets/size", Outcome::Review);
-    gemeldet.sort();
+    let mut reported = findings_at_with(&arena, &r, "targets/size", Outcome::Review);
+    reported.sort();
     assert_eq!(
-        gemeldet,
+        reported,
         [
             "slick-slide-control00",
             "slick-slide-control01",

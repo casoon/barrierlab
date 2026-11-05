@@ -20,24 +20,24 @@ pub struct Mutation {
     pub note: String,
 }
 
-pub fn lade(verzeichnis: &Path) -> Vec<Mutation> {
-    let mut dateien: Vec<_> = std::fs::read_dir(verzeichnis)
-        .unwrap_or_else(|e| panic!("{}: {e}", verzeichnis.display()))
+pub fn load(directory: &Path) -> Vec<Mutation> {
+    let mut files: Vec<_> = std::fs::read_dir(directory)
+        .unwrap_or_else(|e| panic!("{}: {e}", directory.display()))
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| p.extension().is_some_and(|x| x == "toml"))
         .collect();
-    dateien.sort();
-    dateien
+    files.sort();
+    files
         .iter()
         .flat_map(|p| {
             let text = std::fs::read_to_string(p).unwrap();
-            lies(&text).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
+            read(&text).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
         })
         .collect()
 }
 
-fn lies(text: &str) -> Result<Vec<Mutation>, String> {
+fn read(text: &str) -> Result<Vec<Mutation>, String> {
     let mut out: Vec<Mutation> = Vec::new();
     let mut rest = text;
     loop {
@@ -54,22 +54,22 @@ fn lies(text: &str) -> Result<Vec<Mutation>, String> {
             rest = r;
             continue;
         }
-        let (schluessel, r) = rest
+        let (key, r) = rest
             .split_once('=')
-            .ok_or_else(|| format!("erwartet `schlüssel = wert` bei {:?}", anfang(rest)))?;
-        let schluessel = schluessel.trim();
+            .ok_or_else(|| format!("erwartet `schlüssel = wert` bei {:?}", start(rest)))?;
+        let key = key.trim();
         let r = r.trim_start_matches([' ', '\t']);
-        let (wert, r) = zeichenkette(r)?;
+        let (value, r) = string(r)?;
         let m = out
             .last_mut()
             .ok_or("Schlüssel vor dem ersten [[mutation]]")?;
-        match schluessel {
-            "id" => m.id = wert,
-            "file" => m.file = wert,
-            "find" => m.find = wert,
-            "replace" => m.replace = wert,
-            "expect" => m.expect = wert,
-            "note" => m.note = wert,
+        match key {
+            "id" => m.id = value,
+            "file" => m.file = value,
+            "find" => m.find = value,
+            "replace" => m.replace = value,
+            "expect" => m.expect = value,
+            "note" => m.note = value,
             // Nur für Leser und den Läufer; der Test braucht sie nicht.
             "kind" | "test" | "filter" => {}
             k => return Err(format!("unbekannter Schlüssel {k:?}")),
@@ -84,51 +84,51 @@ fn lies(text: &str) -> Result<Vec<Mutation>, String> {
     Ok(out)
 }
 
-fn anfang(s: &str) -> &str {
+fn start(s: &str) -> &str {
     &s[..s.len().min(40)]
 }
 
 /// Liest eine Zeichenkette am Anfang von `s`; gibt sie und den Rest zurück.
-fn zeichenkette(s: &str) -> Result<(String, &str), String> {
+fn string(s: &str) -> Result<(String, &str), String> {
     if let Some(r) = s.strip_prefix("'''") {
         // TOML: Ein Zeilenumbruch direkt nach den öffnenden Zeichen gehört
         // nicht zum Wert.
         let r = r.strip_prefix('\n').unwrap_or(r);
-        let ende = r.find("'''").ok_or("''' nicht geschlossen")?;
-        return Ok((r[..ende].to_string(), &r[ende + 3..]));
+        let end = r.find("'''").ok_or("''' nicht geschlossen")?;
+        return Ok((r[..end].to_string(), &r[end + 3..]));
     }
     if let Some(r) = s.strip_prefix('\'') {
-        let ende = r.find('\'').ok_or("' nicht geschlossen")?;
-        if r[..ende].contains('\n') {
+        let end = r.find('\'').ok_or("' nicht geschlossen")?;
+        if r[..end].contains('\n') {
             return Err("Zeilenumbruch in '…'".into());
         }
-        return Ok((r[..ende].to_string(), &r[ende + 1..]));
+        return Ok((r[..end].to_string(), &r[end + 1..]));
     }
     if let Some(r) = s.strip_prefix('"') {
-        let mut wert = String::new();
-        let mut zeichen = r.char_indices();
-        while let Some((i, c)) = zeichen.next() {
+        let mut value = String::new();
+        let mut character = r.char_indices();
+        while let Some((i, c)) = character.next() {
             match c {
-                '"' => return Ok((wert, &r[i + 1..])),
-                '\\' => match zeichen.next() {
-                    Some((_, 'n')) => wert.push('\n'),
-                    Some((_, 't')) => wert.push('\t'),
-                    Some((_, '"')) => wert.push('"'),
-                    Some((_, '\\')) => wert.push('\\'),
+                '"' => return Ok((value, &r[i + 1..])),
+                '\\' => match character.next() {
+                    Some((_, 'n')) => value.push('\n'),
+                    Some((_, 't')) => value.push('\t'),
+                    Some((_, '"')) => value.push('"'),
+                    Some((_, '\\')) => value.push('\\'),
                     other => return Err(format!("Escape {other:?} nicht unterstützt")),
                 },
                 '\n' => return Err("Zeilenumbruch in \"…\"".into()),
-                c => wert.push(c),
+                c => value.push(c),
             }
         }
         return Err("\" nicht geschlossen".into());
     }
-    Err(format!("erwartet eine Zeichenkette bei {:?}", anfang(s)))
+    Err(format!("erwartet eine Zeichenkette bei {:?}", start(s)))
 }
 
 #[test]
-fn liest_die_teilmenge() {
-    let m = lies(
+fn reads_the_subset() {
+    let m = read(
         "# Kommentar\n[[mutation]]\nid = \"a/b\"\nfile = 'src/x.rs'\nfind = '''\nif a {\n'''\nreplace = 'if !a {'\nexpect = \"killed\"\n",
     )
     .unwrap();

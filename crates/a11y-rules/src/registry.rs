@@ -11,7 +11,7 @@ use a11y_dom::{Document, Rendering, Semantics, Tier};
 use a11y_report::{Finding, Severity};
 
 use crate::locale::{Locale, pick};
-use crate::sicht::Scope;
+use crate::visibility::Scope;
 
 /// Was über eine Regel unabhängig vom Host feststeht.
 ///

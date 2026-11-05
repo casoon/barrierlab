@@ -5,7 +5,7 @@
 //!
 //! Portiert aus auditmysite (`redundant_role` für `<ul>`/`<ol>`,
 //! `use_of_color`, `scrollable_region`). Anders als die Heuristiken in
-//! `heuristik.rs` urteilen diese Regeln mit `FAIL`: Was sie brauchen — das
+//! `heuristics.rs` urteilen diese Regeln mit `FAIL`: Was sie brauchen — das
 //! berechnete `list-style-type`, die Textauszeichnung eines Links, der
 //! Überhang eines scrollbaren Kastens —, ist gemessen, nicht vermutet.
 //!
@@ -21,14 +21,14 @@ use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::Meta;
-use crate::sicht::Scope;
-use crate::structure::{explizite_rolle, per_tab_erreichbar};
+use crate::structure::{explicit_role, per_tab_reachable};
+use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
 }
 
-fn seite<D: Rendering>(doc: &D) -> Location {
+fn page<D: Rendering>(doc: &D) -> Location {
     at(doc.root().id())
 }
 
@@ -41,13 +41,13 @@ fn seite<D: Rendering>(doc: &D) -> Location {
 /// VoiceOver nehmen einer solchen Liste ihre Semantik, und die ausdrückliche
 /// Rolle stellt sie wieder her (auditmysite#644). Deshalb braucht die Regel
 /// den berechneten Wert; `aria/role-redundant` (Tier 1) lässt das Paar aus.
-pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut ungemessen = false;
+pub(crate) fn list_role<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut unmeasured = false;
     for n in elements(doc)
-        .filter(|n| matches!(n.local_name(), "ul" | "ol") && explizite_rolle(*n) == Some("list"))
+        .filter(|n| matches!(n.local_name(), "ul" | "ol") && explicit_role(*n) == Some("list"))
     {
         match doc.computed_style(n).and_then(|s| s.list_style_type) {
-            None => ungemessen = true,
+            None => unmeasured = true,
             Some(t) if t.trim().eq_ignore_ascii_case("none") => {}
             Some(_) => out.push(
                 Finding::fail(
@@ -66,7 +66,7 @@ pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
             ),
         }
     }
-    if ungemessen {
+    if unmeasured {
         out.push(
             Finding::untested(
                 "lists/role-redundant",
@@ -80,21 +80,21 @@ pub(crate) fn listenrolle<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
             )
             .with_severity(Severity::Low)
             .with_wcag(["4.1.2"])
-            .at(seite(doc)),
+            .at(page(doc)),
         );
     }
 }
 
 // --- color/link-indistinct ----------------------------------------------------
 
-fn anzeige(stil: Option<&ComputedStyle>) -> &str {
-    stil.and_then(|s| s.display.as_deref()).unwrap_or("")
+fn display(style: Option<&ComputedStyle>) -> &str {
+    style.and_then(|s| s.display.as_deref()).unwrap_or("")
 }
 
 /// Ein Block im Sinne von axe `isInTextBlock`: alles, was nicht `inline`
 /// oder `contents` ist. Ohne berechneten Stil entscheidet der Tag.
-fn ist_block<'a, N: Node<'a>>(n: N, stil: Option<&ComputedStyle>) -> bool {
-    match stil.and_then(|s| s.display.as_deref()) {
+fn is_block<'a, N: Node<'a>>(n: N, style: Option<&ComputedStyle>) -> bool {
+    match style.and_then(|s| s.display.as_deref()) {
         Some(d) => d != "inline" && d != "contents",
         None => !matches!(
             n.local_name(),
@@ -132,10 +132,10 @@ fn ist_block<'a, N: Node<'a>>(n: N, stil: Option<&ComputedStyle>) -> bool {
     }
 }
 
-fn ist_widget<'a, N: Node<'a>>(n: N) -> bool {
+fn is_widget<'a, N: Node<'a>>(n: N) -> bool {
     (n.is_element("a") && n.has_attr("href"))
         || matches!(n.local_name(), "button" | "input" | "select" | "textarea")
-        || explizite_rolle(n).is_some_and(|r| {
+        || explicit_role(n).is_some_and(|r| {
             matches!(
                 r,
                 "link" | "button" | "menuitem" | "tab" | "checkbox" | "radio" | "switch" | "option"
@@ -143,7 +143,7 @@ fn ist_widget<'a, N: Node<'a>>(n: N) -> bool {
         })
 }
 
-fn saeubern(s: &str) -> String {
+fn clean(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -151,37 +151,37 @@ fn saeubern(s: &str) -> String {
 /// selbst, weitere Links und Bedienelemente) und übrigen Text. Ein `<br>` oder
 /// `<hr>` vor dem Link beginnt den Abschnitt neu, eines danach beendet ihn;
 /// verschachtelte Blöcke sind eigene Zeilen.
-fn blocktexte<'d, D: Rendering>(doc: &'d D, link: D::N<'d>) -> Option<(String, String)> {
+fn block_texts<'d, D: Rendering>(doc: &'d D, link: D::N<'d>) -> Option<(String, String)> {
     let block = ancestors(link).find(|b| {
-        let stil = doc.computed_style(*b);
-        b.is_element("body") || ist_block(*b, stil.as_ref())
+        let style = doc.computed_style(*b);
+        b.is_element("body") || is_block(*b, style.as_ref())
     })?;
-    let (mut andere, mut widget) = (String::new(), String::new());
+    let (mut other, mut widget) = (String::new(), String::new());
     // 0 vor dem Link, 1 danach, 2 Abschnitt zu Ende.
-    let mut zustand = 0u8;
-    fn gehe<'d, D: Rendering>(
+    let mut state = 0u8;
+    fn walk<'d, D: Rendering>(
         doc: &'d D,
         n: D::N<'d>,
         link_id: NodeId,
-        andere: &mut String,
+        other: &mut String,
         widget: &mut String,
-        zustand: &mut u8,
+        state: &mut u8,
     ) {
         for kind in n.children() {
-            if *zustand == 2 {
+            if *state == 2 {
                 return;
             }
             if kind.kind() == NodeKind::Text {
-                andere.push_str(kind.text());
+                other.push_str(kind.text());
                 continue;
             }
             match kind.local_name() {
                 "br" | "hr" => {
-                    if *zustand == 0 {
-                        andere.clear();
+                    if *state == 0 {
+                        other.clear();
                         widget.clear();
                     } else {
-                        *zustand = 2;
+                        *state = 2;
                     }
                     continue;
                 }
@@ -189,59 +189,52 @@ fn blocktexte<'d, D: Rendering>(doc: &'d D, link: D::N<'d>) -> Option<(String, S
                 _ => {}
             }
             if kind.id() == link_id {
-                *zustand = 1;
+                *state = 1;
                 widget.push(' ');
                 widget.push_str(&subtree_text(kind));
                 continue;
             }
-            let stil = doc.computed_style(kind);
-            if stil.as_ref().is_some_and(|s| {
+            let style = doc.computed_style(kind);
+            if style.as_ref().is_some_and(|s| {
                 s.display.as_deref() == Some("none")
                     || matches!(s.visibility.as_deref(), Some("hidden" | "collapse"))
             }) {
                 continue;
             }
-            if ist_widget(kind) {
+            if is_widget(kind) {
                 widget.push(' ');
                 widget.push_str(&subtree_text(kind));
                 continue;
             }
-            if ist_block(kind, stil.as_ref()) {
+            if is_block(kind, style.as_ref()) {
                 continue;
             }
-            gehe(doc, kind, link_id, andere, widget, zustand);
+            walk(doc, kind, link_id, other, widget, state);
         }
     }
-    gehe(
-        doc,
-        block,
-        link.id(),
-        &mut andere,
-        &mut widget,
-        &mut zustand,
-    );
-    Some((saeubern(&andere), saeubern(&widget)))
+    walk(doc, block, link.id(), &mut other, &mut widget, &mut state);
+    Some((clean(&other), clean(&widget)))
 }
 
 /// Fließtext nach auditmysite#710: mindestens zwei Wörter neben den Links,
 /// und mehr übriger Text als Widget-Text. Trenner wie `|` oder `·` zwischen
 /// Fußzeilen-Links sind kein Fließtext.
-fn im_fliesstext(andere: &str, widget: &str) -> bool {
-    let woerter = andere
+fn in_running_text(other: &str, widget: &str) -> bool {
+    let words = other
         .split(|c: char| !c.is_alphanumeric())
         .filter(|w| w.chars().any(char::is_alphabetic))
         .count();
-    woerter >= 2 && andere.chars().count() > widget.chars().count()
+    words >= 2 && other.chars().count() > widget.chars().count()
 }
 
 fn in_navigation<'a, N: Node<'a>>(n: N) -> bool {
     ancestors(n).any(|a| {
         a.is_element("nav")
-            || explizite_rolle(a).is_some_and(|r| matches!(r, "navigation" | "menubar" | "menu"))
+            || explicit_role(a).is_some_and(|r| matches!(r, "navigation" | "menubar" | "menu"))
     })
 }
 
-fn ist_logo<'a, N: Node<'a>>(n: N) -> bool {
+fn is_logo<'a, N: Node<'a>>(n: N) -> bool {
     descendants(n).any(|d| matches!(d.local_name(), "img" | "svg"))
         || ancestors(n).chain(std::iter::once(n)).any(|a| {
             ["class", "id"].iter().any(|k| {
@@ -253,7 +246,7 @@ fn ist_logo<'a, N: Node<'a>>(n: N) -> bool {
 
 /// Die Stilwerte, die ein Link und sein Elternelement zum Vergleich brauchen.
 /// `None`, sobald der Host eines nicht liefert.
-fn vergleichswerte(s: &ComputedStyle) -> Option<[String; 5]> {
+fn comparison_values(s: &ComputedStyle) -> Option<[String; 5]> {
     Some([
         s.font_weight?.to_string(),
         s.font_style.clone()?,
@@ -278,88 +271,92 @@ fn vergleichswerte(s: &ComputedStyle) -> Option<[String; 5]> {
 /// Erreicht die Linkfarbe 3:1 zum umgebenden Text, kann G183 erfüllt sein
 /// (dazu ein Hinweis bei Hover und Fokus, den nur die Stylesheets zeigen):
 /// dann `REVIEW` statt `FAIL`.
-pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    let mut ungemessen = false;
+pub(crate) fn link_color_only<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut unmeasured = false;
     // Ob der Host überhaupt Stile liefert, zeigt der `<body>` (ohne ihn die
     // Wurzel). Liefert er welche, hat ein Link ohne Stil keinen Kasten.
-    let mit_stilen = elements(doc).find(|n| n.is_element("body")).map_or_else(
+    let with_styles = elements(doc).find(|n| n.is_element("body")).map_or_else(
         || doc.computed_style(doc.root()).is_some(),
         |b| doc.computed_style(b).is_some(),
     );
-    let ist_link = |n: &D::N<'_>| match explizite_rolle(*n) {
+    let is_link = |n: &D::N<'_>| match explicit_role(*n) {
         Some(r) => r == "link",
         None => n.is_element("a") && n.has_attr("href"),
     };
-    for link in elements(doc).filter(ist_link) {
-        let Some(eltern) = link.parent().filter(|p| p.kind() == NodeKind::Element) else {
+    for link in elements(doc).filter(is_link) {
+        let Some(parent) = link.parent().filter(|p| p.kind() == NodeKind::Element) else {
             continue;
         };
-        let kinder: Vec<_> = link
+        let children: Vec<_> = link
             .children()
             .filter(|k| k.kind() == NodeKind::Element)
             .collect();
-        if kinder.len() == 1 && matches!(kinder[0].local_name(), "img" | "svg" | "i") {
+        if children.len() == 1 && matches!(children[0].local_name(), "img" | "svg" | "i") {
             continue;
         }
         if subtree_text(link).trim().is_empty() {
             continue;
         }
-        let (stil, eltern_stil) = (doc.computed_style(link), doc.computed_style(eltern));
+        let (style, parent_style) = (doc.computed_style(link), doc.computed_style(parent));
         if matches!(
-            anzeige(stil.as_ref()),
+            display(style.as_ref()),
             "block" | "flex" | "grid" | "inline-flex" | "inline-grid"
         ) || matches!(
-            anzeige(eltern_stil.as_ref()),
+            display(parent_style.as_ref()),
             "flex" | "grid" | "inline-flex" | "inline-grid"
         ) {
             continue;
         }
-        if in_navigation(link) || ist_logo(link) {
+        if in_navigation(link) || is_logo(link) {
             continue;
         }
         // Ohne Kasten (`display: none`, so meldet ein Host aus einem
         // Layout-Schnappschuss etwa den Ersatzinhalt eines geladenen
         // `<object>`) unterscheidet sich der Link von nichts.
-        if anzeige(stil.as_ref()) == "none" {
+        if display(style.as_ref()) == "none" {
             continue;
         }
-        let (stil, eltern_stil) = match (stil, eltern_stil) {
+        let (style, parent_style) = match (style, parent_style) {
             (Some(s), Some(e)) => (s, e),
             // Ohne eigenen Stil bei einem Host, der Stile liefert, wird der
             // Link nicht dargestellt (etwa der Ersatzinhalt eines geladenen
             // `<object>`, dessen Element selbst auch keinen Stil hat): Er
             // unterscheidet sich von nichts, ungemessen ist er nicht.
-            (None, _) if mit_stilen => continue,
+            (None, _) if with_styles => continue,
             _ => {
-                ungemessen = true;
+                unmeasured = true;
                 continue;
             }
         };
-        let (Some(unterstreichung), Some(eigene), Some(fremde)) = (
-            stil.text_decoration_line.as_deref(),
-            vergleichswerte(&stil),
-            vergleichswerte(&eltern_stil),
+        let (Some(underline), Some(own), Some(foreign)) = (
+            style.text_decoration_line.as_deref(),
+            comparison_values(&style),
+            comparison_values(&parent_style),
         ) else {
-            ungemessen = true;
+            unmeasured = true;
             continue;
         };
-        if unterstreichung.to_ascii_lowercase().contains("underline") || eigene != fremde {
+        if underline.to_ascii_lowercase().contains("underline") || own != foreign {
             continue;
         }
-        let Some((andere, widget)) = blocktexte(doc, link) else {
+        let Some((other, widget)) = block_texts(doc, link) else {
             continue;
         };
-        if !im_fliesstext(&andere, &widget) {
+        if !in_running_text(&other, &widget) {
             continue;
         }
-        let farbabstand = match (stil.color, eltern_stil.color, eltern_stil.background_color) {
-            (Some(a), Some(b), Some(h)) => Some(crate::rendering::verhaeltnis(
-                crate::rendering::ueber(a, h),
-                crate::rendering::ueber(b, h),
+        let color_distance = match (
+            style.color,
+            parent_style.color,
+            parent_style.background_color,
+        ) {
+            (Some(a), Some(b), Some(h)) => Some(crate::rendering::ratio(
+                crate::rendering::over(a, h),
+                crate::rendering::over(b, h),
             )),
             _ => None,
         };
-        let finding = if farbabstand.is_some_and(|v| v >= 3.0) {
+        let finding = if color_distance.is_some_and(|v| v >= 3.0) {
             Finding::review(
                 "color/link-indistinct",
                 pick!(
@@ -392,7 +389,7 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
                 .at(at(link.id())),
         );
     }
-    if ungemessen {
+    if unmeasured {
         out.push(
             Finding::untested(
                 "color/link-indistinct",
@@ -407,7 +404,7 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
             )
             .with_severity(Severity::Medium)
             .with_wcag(["1.4.1"])
-            .at(seite(doc)),
+            .at(page(doc)),
         );
     }
 }
@@ -418,7 +415,7 @@ pub(crate) fn link_nur_farbe<D: Rendering>(doc: &D, locale: Locale, out: &mut Ve
 /// Innenabstände lassen `scrollHeight` um ein paar Pixel über `clientHeight`
 /// hinausgehen, ohne dass es etwas zu scrollen gäbe; axe nimmt denselben
 /// Puffer.
-const SCROLL_PUFFER_PX: f32 = 13.0;
+const SCROLL_BUFFER_PX: f32 = 13.0;
 
 fn inert<'a, N: Node<'a>>(n: N) -> bool {
     std::iter::once(n)
@@ -433,22 +430,22 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
 /// Wie auditmysite#717 (gov.si, `div.menus`). Der Seiten-Scroller selbst
 /// (`html`, `body`) scrollt immer per Tastatur. Ein Bereich ohne Text zählt
 /// nicht: Scrollen würde dort nichts zeigen.
-pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+pub(crate) fn scroll_area<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Ob der Host misst, zeigt auch das Dokument selbst: Eine leere Seite hat
     // keinen Kandidaten, ist deshalb aber nicht ungemessen.
-    let mut gemessen = elements(doc)
+    let mut measured = elements(doc)
         .filter(|n| matches!(n.local_name(), "html" | "body"))
         .any(|n| doc.scroll_overflow_px(n).is_some());
     for n in elements(doc).filter(|n| !matches!(n.local_name(), "html" | "body")) {
-        let Some(ueberhang) = doc.scroll_overflow_px(n) else {
+        let Some(overhang) = doc.scroll_overflow_px(n) else {
             continue;
         };
-        gemessen = true;
-        if ueberhang <= SCROLL_PUFFER_PX
+        measured = true;
+        if overhang <= SCROLL_BUFFER_PX
             || subtree_text(n).trim().is_empty()
             || inert(n)
-            || per_tab_erreichbar(n)
-            || descendants(n).any(|d| per_tab_erreichbar(d) && !inert(d))
+            || per_tab_reachable(n)
+            || descendants(n).any(|d| per_tab_reachable(d) && !inert(d))
         {
             continue;
         }
@@ -457,9 +454,9 @@ pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec
                 "keyboard/scrollable-region-not-focusable",
                 tr!(
                     locale,
-                    "This region scrolls ({ueberhang:.0}px of content beyond its box) but neither \
+                    "This region scrolls ({overhang:.0}px of content beyond its box) but neither \
                      it nor anything inside it can take keyboard focus.",
-                    "Dieser Bereich scrollt ({ueberhang:.0}px Inhalt über den Kasten hinaus), \
+                    "Dieser Bereich scrollt ({overhang:.0}px Inhalt über den Kasten hinaus), \
                      aber weder er noch etwas darin kann den Tastaturfokus bekommen."
                 ),
             )
@@ -468,7 +465,7 @@ pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec
             .at(at(n.id())),
         );
     }
-    if !gemessen {
+    if !measured {
         out.push(
             Finding::untested(
                 "keyboard/scrollable-region-not-focusable",
@@ -482,7 +479,7 @@ pub(crate) fn scrollbereich<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec
             )
             .with_severity(Severity::High)
             .with_wcag(["2.1.1"])
-            .at(seite(doc)),
+            .at(page(doc)),
         );
     }
 }
@@ -531,6 +528,6 @@ pub(crate) const METAS: [Meta; 3] = [
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn funktionen<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 3] {
-    [listenrolle, link_nur_farbe, scrollbereich]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 3] {
+    [list_role, link_color_only, scroll_area]
 }

@@ -18,7 +18,7 @@ use a11y_rules::run_with_rendering;
 struct Host<'a> {
     doc: &'a Arena,
     /// Ob der Host `visually_hidden` misst.
-    misst_verborgen: bool,
+    measures_hidden: bool,
 }
 
 impl Document for Host<'_> {
@@ -32,7 +32,7 @@ impl Document for Host<'_> {
     }
 }
 
-fn farbe(hex: &str) -> Color {
+fn make_color(hex: &str) -> Color {
     let k = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).unwrap();
     Color {
         r: k(0),
@@ -45,10 +45,10 @@ fn farbe(hex: &str) -> Color {
 impl Rendering for Host<'_> {
     fn computed_style<'n>(&'n self, node: Self::N<'n>) -> Option<ComputedStyle> {
         Some(ComputedStyle {
-            color: Some(farbe(node.attr("data-fg").unwrap_or("000000"))),
+            color: Some(make_color(node.attr("data-fg").unwrap_or("000000"))),
             background_color: match node.attr("data-bg") {
                 Some("none") => None,
-                b => Some(farbe(b.unwrap_or("ffffff"))),
+                b => Some(make_color(b.unwrap_or("ffffff"))),
             },
             font_size_px: Some(node.attr("data-px").map_or(16.0, |p| p.parse().unwrap())),
             font_weight: Some(400),
@@ -57,8 +57,8 @@ impl Rendering for Host<'_> {
             appearance: node.attr("data-appearance").map(Into::into),
             border_top_style: node.attr("data-border").map(|_| "solid".into()),
             border_top_width_px: node.attr("data-border").map(|_| 1.0),
-            border_top_color: node.attr("data-border").map(farbe),
-            own_background_color: node.attr("data-own").map(farbe),
+            border_top_color: node.attr("data-border").map(make_color),
+            own_background_color: node.attr("data-own").map(make_color),
             ..Default::default()
         })
     }
@@ -81,11 +81,11 @@ impl Rendering for Host<'_> {
     }
 
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
-        self.misst_verborgen.then(|| node.has_attr("data-hidden"))
+        self.measures_hidden.then(|| node.has_attr("data-hidden"))
     }
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
-        node.attr("data-backdrop").map(abtastung)
+        node.attr("data-backdrop").map(sampling)
     }
 }
 
@@ -104,17 +104,17 @@ fn lum(r: u8, g: u8, b: u8) -> f64 {
 /// Eine Abtastung wie aus dem Screenshot: 100 Pixel über den Verlauf von
 /// links nach rechts, dazu 10 % Glyphenpixel in Weiß. Die Verläufe stammen
 /// aus auditmysites `tests/fixtures/image_contrast.html`.
-fn abtastung(art: &str) -> Backdrop {
-    let mischen = |a: (u8, u8, u8), b: (u8, u8, u8), t: f64| {
+fn sampling(kind: &str) -> Backdrop {
+    let mix = |a: (u8, u8, u8), b: (u8, u8, u8), t: f64| {
         let m = |x: u8, y: u8| (f64::from(x) + (f64::from(y) - f64::from(x)) * t).round() as u8;
         lum(m(a.0, b.0), m(a.1, b.1), m(a.2, b.2))
     };
     let mut l: Vec<f64> = (0..90)
         .map(|i| {
             let t = f64::from(i) / 89.0;
-            match art {
-                "dunkel" => mischen((15, 23, 42), (30, 41, 59), t),
-                "hell" => mischen((240, 240, 240), (255, 255, 255), t),
+            match kind {
+                "dunkel" => mix((15, 23, 42), (30, 41, 59), t),
+                "hell" => mix((240, 240, 240), (255, 255, 255), t),
                 // Dunkel bis 65 %, danach Weiß.
                 _ if t < 0.65 => lum(15, 23, 42),
                 _ => 1.0,
@@ -125,7 +125,7 @@ fn abtastung(art: &str) -> Backdrop {
     Backdrop { luminance: l }
 }
 
-fn seite(element: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
+fn page(element: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder) -> Arena {
     element(
         Arena::builder()
             .open("html")
@@ -142,14 +142,14 @@ fn seite(element: impl FnOnce(a11y_dom::ArenaBuilder) -> a11y_dom::ArenaBuilder)
     .build()
 }
 
-fn pruefe(arena: &Arena, misst_verborgen: bool) -> Report {
+fn check(arena: &Arena, measures_hidden: bool) -> Report {
     run_with_rendering(&Host {
         doc: arena,
-        misst_verborgen,
+        measures_hidden,
     })
 }
 
-fn urteile(r: &Report, id: &str) -> Vec<Outcome> {
+fn verdicts(r: &Report, id: &str) -> Vec<Outcome> {
     r.findings
         .iter()
         .filter(|f| f.rule_id == id)
@@ -161,8 +161,8 @@ fn urteile(r: &Report, id: &str) -> Vec<Outcome> {
 /// `text-indent: -5000px` und `overflow: hidden`; sichtbar ist nur die Lupe.
 /// #1d70b8 auf #d2e2f1 sind 3,91:1 — für Text, den niemand sieht.
 #[test]
-fn optisch_verborgener_text_govuk_suchknopf() {
-    let arena = seite(|b| {
+fn visually_hidden_text_govuk_search_button() {
+    let arena = page(|b| {
         b.open("button")
             .attr("class", "gem-c-search__submit")
             .attr("data-fg", "1d70b8")
@@ -171,36 +171,36 @@ fn optisch_verborgener_text_govuk_suchknopf() {
             .text("Search GOV.UK")
             .close()
     });
-    assert!(urteile(&pruefe(&arena, true), "contrast/text-insufficient").is_empty());
+    assert!(verdicts(&check(&arena, true), "contrast/text-insufficient").is_empty());
     // Misst der Host es nicht, bleibt es beim Verstoß wie bisher.
     assert_eq!(
-        urteile(&pruefe(&arena, false), "contrast/text-insufficient"),
+        verdicts(&check(&arena, false), "contrast/text-insufficient"),
         [Outcome::Fail]
     );
 }
 
 /// auditmysite #716: Text unter einem Cookie-Banner ist nicht bestimmbar.
 #[test]
-fn ueberdeckter_text_ist_nicht_bestimmbar() {
-    let arena = seite(|b| {
+fn covered_text_is_not_determinable() {
+    let arena = page(|b| {
         b.open("p")
             .attr("data-fg", "777777")
             .attr("data-covered", "")
             .text("Hero text under a cookie banner")
             .close()
     });
-    let r = pruefe(&arena, true);
-    assert!(urteile(&r, "contrast/text-insufficient").is_empty());
+    let r = check(&arena, true);
+    assert!(verdicts(&r, "contrast/text-insufficient").is_empty());
     assert_eq!(
-        urteile(&r, "contrast/text-undetermined"),
+        verdicts(&r, "contrast/text-undetermined"),
         [Outcome::Untested]
     );
 }
 
 /// gov.uk-Linkfarbe #1d70b8 auf Weiß: 5,17:1 — besteht AA, verfehlt AAA.
 #[test]
-fn erhoehter_kontrast_govuk_linkfarbe() {
-    let arena = seite(|b| {
+fn enhanced_contrast_govuk_link_color() {
+    let arena = page(|b| {
         b.open("a")
             .attr("href", "/")
             .attr("data-fg", "1d70b8")
@@ -218,34 +218,34 @@ fn erhoehter_kontrast_govuk_linkfarbe() {
             .text("Grey")
             .close()
     });
-    let r = pruefe(&arena, true);
-    assert_eq!(urteile(&r, "contrast/text-enhanced"), [Outcome::Fail]);
-    assert_eq!(urteile(&r, "contrast/text-insufficient"), [Outcome::Fail]);
+    let r = check(&arena, true);
+    assert_eq!(verdicts(&r, "contrast/text-enhanced"), [Outcome::Fail]);
+    assert_eq!(verdicts(&r, "contrast/text-insufficient"), [Outcome::Fail]);
 }
 
 /// Ein Host, der von `Layout` nur `obscured` misst: `focus/obscured` läuft,
 /// die übrigen Heuristiken melden „nicht geprüft" statt still nichts.
 #[test]
-fn teilweises_layout_laesst_ungemessenes_ungeprueft() {
-    let arena = seite(|b| b.open("p").text("Text").close());
-    let r = pruefe(&arena, true);
+fn partial_layout_leaves_unmeasured_unchecked() {
+    let arena = page(|b| b.open("p").text("Text").close());
+    let r = check(&arena, true);
     for id in [
         "order/visual-mismatch",
         "motion/infinite-animation",
         "reflow/min-width",
         "keyboard/pointer-only",
     ] {
-        assert_eq!(urteile(&r, id), [Outcome::Untested], "{id}");
+        assert_eq!(verdicts(&r, id), [Outcome::Untested], "{id}");
     }
-    assert!(urteile(&r, "focus/obscured").is_empty());
+    assert!(verdicts(&r, "focus/obscured").is_empty());
 }
 
-fn verlauf(art: &'static str) -> Arena {
-    seite(move |b| {
+fn gradient(kind: &'static str) -> Arena {
+    page(move |b| {
         b.open("p")
             .attr("data-fg", "ffffff")
             .attr("data-bg", "none")
-            .attr("data-backdrop", art)
+            .attr("data-backdrop", kind)
             .text("Weißer Text über einem Verlauf")
             .close()
     })
@@ -253,43 +253,46 @@ fn verlauf(art: &'static str) -> Arena {
 
 /// `image_contrast.html`, `.dark-gradient-pass`: Weiß auf dunklem Verlauf.
 #[test]
-fn abgetastet_dunkler_verlauf_besteht() {
-    let r = pruefe(&verlauf("dunkel"), true);
+fn sampled_darker_gradient_passes() {
+    let r = check(&gradient("dunkel"), true);
     for id in ["contrast/text-insufficient", "contrast/text-undetermined"] {
-        assert!(urteile(&r, id).is_empty(), "{id}");
+        assert!(verdicts(&r, id).is_empty(), "{id}");
     }
 }
 
 /// `.light-gradient-fail`: Weiß auf hellem Verlauf, schon der Median verfehlt.
 #[test]
-fn abgetastet_heller_verlauf_verfehlt_mit_beleg() {
-    let r = pruefe(&verlauf("hell"), true);
-    assert_eq!(urteile(&r, "contrast/text-insufficient"), [Outcome::Fail]);
+fn sampled_lighter_gradient_fails_with_evidence() {
+    let r = check(&gradient("hell"), true);
+    assert_eq!(verdicts(&r, "contrast/text-insufficient"), [Outcome::Fail]);
     let f = r
         .findings
         .iter()
         .find(|f| f.rule_id == "contrast/text-insufficient")
         .unwrap();
-    let felder: Vec<_> = f
+    let fields: Vec<_> = f
         .evidence
         .iter()
         .filter_map(|e| e.field.as_deref())
         .collect();
-    assert_eq!(felder, ["contrast_ratio", "required_ratio"]);
+    assert_eq!(fields, ["contrast_ratio", "required_ratio"]);
 }
 
 /// `.split-gradient-warn`: Der Median besteht, das 40. Perzentil nicht.
 #[test]
-fn abgetastet_geteilter_verlauf_ist_hinweis() {
-    let r = pruefe(&verlauf("geteilt"), true);
-    assert!(urteile(&r, "contrast/text-insufficient").is_empty());
-    assert_eq!(urteile(&r, "contrast/text-undetermined"), [Outcome::Review]);
+fn sampled_split_gradient_is_hint() {
+    let r = check(&gradient("geteilt"), true);
+    assert!(verdicts(&r, "contrast/text-insufficient").is_empty());
+    assert_eq!(
+        verdicts(&r, "contrast/text-undetermined"),
+        [Outcome::Review]
+    );
 }
 
 /// Ohne Abtastung bleibt Text über einem Verlauf nicht bestimmbar.
 #[test]
-fn ohne_abtastung_nicht_bestimmbar() {
-    let arena = seite(|b| {
+fn without_sampling_not_determinable() {
+    let arena = page(|b| {
         b.open("p")
             .attr("data-fg", "ffffff")
             .attr("data-bg", "none")
@@ -297,15 +300,15 @@ fn ohne_abtastung_nicht_bestimmbar() {
             .close()
     });
     assert_eq!(
-        urteile(&pruefe(&arena, true), "contrast/text-undetermined"),
+        verdicts(&check(&arena, true), "contrast/text-undetermined"),
         [Outcome::Untested]
     );
 }
 
 // --- 1.4.11 Bedienelemente (auditmysite `non_text_contrast_css`) ------------
 
-fn kaestchen(attrs: &[(&str, &str)]) -> Arena {
-    seite(|b| {
+fn checkbox_arena(attrs: &[(&str, &str)]) -> Arena {
+    page(|b| {
         let mut b = b.open("input").attr("type", "checkbox");
         for (k, v) in attrs {
             b = b.attr(k, v);
@@ -317,34 +320,34 @@ fn kaestchen(attrs: &[(&str, &str)]) -> Arena {
 /// #cccccc auf Weiß sind 1,61:1 — das blasse Kästchen, das axe und Pa11y in
 /// der Praxis finden.
 #[test]
-fn blasser_rahmen_eines_eigenen_kaestchens_verfehlt() {
-    let r = pruefe(
-        &kaestchen(&[("data-appearance", "none"), ("data-border", "cccccc")]),
+fn paler_border_of_own_box_fails() {
+    let r = check(
+        &checkbox_arena(&[("data-appearance", "none"), ("data-border", "cccccc")]),
         false,
     );
     assert_eq!(
-        urteile(&r, "contrast/control-insufficient"),
+        verdicts(&r, "contrast/control-insufficient"),
         [Outcome::Fail]
     );
 }
 
 #[test]
-fn dunkler_rahmen_besteht() {
-    let r = pruefe(
-        &kaestchen(&[("data-appearance", "none"), ("data-border", "767676")]),
+fn darker_border_passes() {
+    let r = check(
+        &checkbox_arena(&[("data-appearance", "none"), ("data-border", "767676")]),
         false,
     );
-    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
+    assert!(verdicts(&r, "contrast/control-insufficient").is_empty());
 }
 
 #[test]
-fn ohne_rahmen_zaehlt_die_eigene_flaeche() {
-    let r = pruefe(
-        &kaestchen(&[("data-appearance", "none"), ("data-own", "eeeeee")]),
+fn without_border_own_surface_counts() {
+    let r = check(
+        &checkbox_arena(&[("data-appearance", "none"), ("data-own", "eeeeee")]),
         false,
     );
     assert_eq!(
-        urteile(&r, "contrast/control-insufficient"),
+        verdicts(&r, "contrast/control-insufficient"),
         [Outcome::Fail]
     );
 }
@@ -352,15 +355,15 @@ fn ohne_rahmen_zaehlt_die_eigene_flaeche() {
 /// Ein natives Kästchen zeichnet der Browser; sein Kontrast steht in keinem
 /// berechneten Stil.
 #[test]
-fn natives_kaestchen_wird_nicht_gemessen() {
-    let r = pruefe(&kaestchen(&[("data-border", "cccccc")]), false);
-    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
-    assert!(urteile(&r, "contrast/control-undetermined").is_empty());
+fn native_box_is_not_measured() {
+    let r = check(&checkbox_arena(&[("data-border", "cccccc")]), false);
+    assert!(verdicts(&r, "contrast/control-insufficient").is_empty());
+    assert!(verdicts(&r, "contrast/control-undetermined").is_empty());
 }
 
 #[test]
-fn ohne_hintergrund_dahinter_nicht_bestimmbar() {
-    let arena = seite(|b| {
+fn without_background_behind_not_determinable() {
+    let arena = page(|b| {
         b.open("div")
             .attr("data-bg", "none")
             .open("span")
@@ -370,10 +373,10 @@ fn ohne_hintergrund_dahinter_nicht_bestimmbar() {
             .close()
             .close()
     });
-    let r = pruefe(&arena, false);
+    let r = check(&arena, false);
     assert_eq!(
-        urteile(&r, "contrast/control-undetermined"),
+        verdicts(&r, "contrast/control-undetermined"),
         [Outcome::Untested]
     );
-    assert!(urteile(&r, "contrast/control-insufficient").is_empty());
+    assert!(verdicts(&r, "contrast/control-insufficient").is_empty());
 }
