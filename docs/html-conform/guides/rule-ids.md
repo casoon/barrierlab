@@ -63,9 +63,11 @@ inline script and style content is checked against `script-src` and `style-src`,
 back to `default-src`. Several meta policies apply cumulatively. A violation is a warning:
 the document is still conforming HTML, but a browser would block that content.
 
-The model is deliberately narrow. Only `'unsafe-inline'` counts as allowing inline content;
-nonce and hash sources are not evaluated, and HTTP response headers are out of reach because
-the checker only sees the document.
+The model is deliberately narrow. `'unsafe-inline'` allows inline content, except that it is
+ignored once the source list has a nonce or hash source. An inline `<script>` or `<style>` whose
+`nonce` attribute equals a `'nonce-…'` source is allowed. Hash sources are not evaluated: where
+one is present the finding is an Info instead of a warning. HTTP response headers are out of
+reach because the checker only sees the document.
 
 ## `tables.integrity`
 
