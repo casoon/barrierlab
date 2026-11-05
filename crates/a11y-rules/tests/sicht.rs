@@ -401,12 +401,17 @@ fn checkliste_erscheint_nur_mit_anlass() {
         punkte,
         [
             "manual/authentication",
+            "manual/consistent-help",
+            "manual/consistent-identification",
             "manual/error-handling",
+            "manual/error-prevention",
             "manual/help",
             "manual/image-alternatives",
+            "manual/keyboard-trap",
             "manual/media-alternatives",
             "manual/no-timing",
             "manual/re-authenticating",
+            "manual/sensory-characteristics",
             "manual/timing",
             "manual/unusual-words",
             "manual/use-of-color",
@@ -444,7 +449,9 @@ fn gesten_unterbrechungen_und_bewegung_nur_mit_anlass() {
     assert_eq!(
         punkte,
         [
+            "manual/dragging-movements",
             "manual/interruptions",
+            "manual/keyboard-trap",
             "manual/motion-actuation",
             "manual/pointer-gestures",
         ]

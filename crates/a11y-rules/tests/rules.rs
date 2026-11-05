@@ -940,6 +940,36 @@ fn jede_kennung_hinterlaesst_genau_einen_ausfuehrungsvermerk() {
 }
 
 #[test]
+fn jeder_ausfuehrungsvermerk_traegt_die_kriterien_seiner_regel() {
+    // `run` liefert gelaufene (Tier 1) und nicht gelaufene Vermerke (Tier 2+).
+    let doc = sauber().open("body").close().close().build();
+    let r = run(&doc);
+    let metas = a11y_rules::structure_metas()
+        .iter()
+        .chain(a11y_rules::semantics_metas())
+        .chain(a11y_rules::rendering_metas())
+        .chain(a11y_rules::stylesheet_metas());
+    let mut geprueft = (0, 0);
+    for m in metas {
+        for id in m.ids {
+            let lauf = r.rule_runs.iter().find(|l| l.rule_id == *id).unwrap();
+            assert_eq!(lauf.wcag, m.wcag, "{id}: Kriterien im Vermerk");
+            if !m.wcag.is_empty() {
+                if lauf.did_run() {
+                    geprueft.0 += 1;
+                } else {
+                    geprueft.1 += 1;
+                }
+            }
+        }
+    }
+    assert!(
+        geprueft.0 > 0 && geprueft.1 > 0,
+        "gelaufen und nicht gelaufen"
+    );
+}
+
+#[test]
 fn befunde_tragen_wcag_kriterien_und_eine_verortung() {
     let doc = sauber()
         .open("body")

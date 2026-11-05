@@ -559,6 +559,9 @@ pub(crate) const METAS: &[Meta] = &[
     darstellung::METAS[2],
 ];
 
+/// Drei eigene Regeln, dazu die Heuristiken und die Darstellungsregeln.
+const _: () = assert!(METAS.len() == 3 + heuristik::METAS.len() + darstellung::METAS.len());
+
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
     let funktionen = [
         text_kontrast as fn(&D, Locale, &mut Vec<Finding>),

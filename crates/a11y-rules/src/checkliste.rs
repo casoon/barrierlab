@@ -46,6 +46,8 @@ struct Anlass {
     anmeldung: bool,
     gesten: bool,
     unterbrechungen: bool,
+    tastenkuerzel: bool,
+    zeigerereignisse: bool,
 }
 
 impl Anlass {
@@ -91,6 +93,26 @@ impl Anlass {
             }
             if sieht_aus_wie_gesten(n) {
                 a.gesten = true;
+            }
+            if n.has_attr("accesskey")
+                || ["onkeydown", "onkeypress", "onkeyup"]
+                    .iter()
+                    .any(|h| n.has_attr(h))
+                || (n.is_element("script")
+                    && n.children().any(|k| {
+                        k.kind() == NodeKind::Text
+                            && ["keydown", "keypress", "keyup"]
+                                .iter()
+                                .any(|e| k.text().contains(e))
+                    }))
+            {
+                a.tastenkuerzel = true;
+            }
+            if ["onmousedown", "onpointerdown", "ontouchstart"]
+                .iter()
+                .any(|h| n.has_attr(h))
+            {
+                a.zeigerereignisse = true;
             }
             if sieht_aus_wie_captcha(n) {
                 a.anmeldung = true;
@@ -333,6 +355,96 @@ const PUNKTE: &[Punkt] = &[
         de: "Von Hand prüfen: Felder, die es brauchen, haben kontextbezogene Hilfe — \
              Anleitung, Beispiele oder einen Link zur Hilfe.",
     },
+    Punkt {
+        id: "manual/dragging-movements",
+        wcag: &["2.5.7"],
+        severity: Severity::Medium,
+        gilt: |a| a.gesten,
+        en: "Check by hand: everything done by dragging also works with a single pointer without dragging — for example buttons to move an item or a slider you can click.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Alles, was per Ziehen geht, geht auch mit einem einzelnen Zeiger ohne Ziehen — etwa Knöpfe zum Verschieben eines Eintrags oder ein Regler, den man anklicken kann.",
+    },
+    Punkt {
+        id: "manual/consistent-help",
+        wcag: &["3.2.6"],
+        severity: Severity::Low,
+        gilt: |a| a.text,
+        en: "Check by hand: where help is offered — contact, chat, a help page — it sits in the same place on every page of the set.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Wo Hilfe angeboten wird — Kontakt, Chat, Hilfeseite —, steht sie auf jeder Seite des Angebots an derselben Stelle.",
+    },
+    Punkt {
+        id: "manual/keyboard-trap",
+        wcag: &["2.1.2"],
+        severity: Severity::High,
+        gilt: |a| a.links || a.felder || a.unterbrechungen,
+        en: "Check by hand: with the keyboard alone you can move into and out of every control, dialog and embedded widget again.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Mit der Tastatur allein kommt man in jedes Bedienelement, jeden Dialog und jedes eingebettete Widget hinein und wieder heraus.",
+    },
+    Punkt {
+        id: "manual/character-shortcuts",
+        wcag: &["2.1.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.tastenkuerzel,
+        en: "Check by hand: a shortcut made of a single character key can be turned off, remapped, or only works while the control has focus.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Ein Tastenkürzel aus einer einzelnen Zeichentaste lässt sich abschalten, umbelegen oder gilt nur, solange das Bedienelement den Fokus hat.",
+    },
+    Punkt {
+        id: "manual/error-prevention",
+        wcag: &["3.3.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.felder,
+        en: "Check by hand: submissions with legal or financial effect, or that change or delete data, can be reversed, are checked for errors, or are confirmed before they are final.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Absendungen mit rechtlicher oder finanzieller Wirkung oder die Daten ändern oder löschen, lassen sich rückgängig machen, werden auf Fehler geprüft oder vor dem Abschluss bestätigt.",
+    },
+    Punkt {
+        id: "manual/pointer-cancellation",
+        wcag: &["2.5.2"],
+        severity: Severity::Medium,
+        gilt: |a| a.zeigerereignisse,
+        en: "Check by hand: a single-pointer action does not fire on the down event alone — it can be aborted or undone, or fires on release.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Eine Aktion mit einem einzelnen Zeiger löst nicht schon beim Herunterdrücken aus — sie lässt sich abbrechen oder rückgängig machen, oder sie löst beim Loslassen aus.",
+    },
+    Punkt {
+        id: "manual/consistent-navigation",
+        wcag: &["3.2.3"],
+        severity: Severity::Medium,
+        gilt: |a| a.links,
+        en: "Check by hand: navigation that repeats across the pages of the set keeps the same relative order.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Navigation, die sich auf den Seiten des Angebots wiederholt, behält dieselbe relative Reihenfolge.",
+    },
+    Punkt {
+        id: "manual/consistent-identification",
+        wcag: &["3.2.4"],
+        severity: Severity::Medium,
+        gilt: |a| a.links || a.felder,
+        en: "Check by hand: components with the same function carry the same name and the same icon on every page of the set.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Komponenten mit gleicher Funktion tragen auf jeder Seite des Angebots denselben Namen und dasselbe Symbol.",
+    },
+    Punkt {
+        id: "manual/sensory-characteristics",
+        wcag: &["1.3.3"],
+        severity: Severity::Medium,
+        gilt: |a| a.text,
+        en: "Check by hand: instructions do not rely on shape, size, position or sound alone — not just \"the round button\" or \"the box on the right\".",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Anweisungen verlassen sich nicht allein auf Form, Größe, Lage oder Klang — nicht nur „der runde Knopf“ oder „das Feld rechts“.",
+    },
+    Punkt {
+        id: "manual/multiple-ways",
+        wcag: &["2.4.5"],
+        severity: Severity::Medium,
+        gilt: |a| a.links,
+        en: "Check by hand: a page of the set can be reached in more than one way — for example navigation, search, site map or related links.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Eine Seite des Angebots ist auf mehr als einem Weg erreichbar — etwa über Navigation, Suche, Seitenübersicht oder verwandte Links.",
+    },
 ];
 
 pub(crate) const META: Meta = Meta {
@@ -350,6 +462,16 @@ pub(crate) const META: Meta = Meta {
         "manual/re-authenticating",
         "manual/unusual-words",
         "manual/help",
+        "manual/dragging-movements",
+        "manual/consistent-help",
+        "manual/keyboard-trap",
+        "manual/character-shortcuts",
+        "manual/error-prevention",
+        "manual/pointer-cancellation",
+        "manual/consistent-navigation",
+        "manual/consistent-identification",
+        "manual/sensory-characteristics",
+        "manual/multiple-ways",
     ],
     tier: Tier::Structure,
     // Was dargestellt wird, auch unter `aria-hidden`: Untertitel (1.2.2),
@@ -358,8 +480,9 @@ pub(crate) const META: Meta = Meta {
     // `aria-hidden="true"` braucht trotzdem Untertitel.
     scope: Scope::Rendered,
     wcag: &[
-        "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.2.5", "1.3.1", "1.4.1", "2.2.1", "2.2.3", "2.2.4",
-        "2.2.5", "2.5.1", "3.1.3", "3.3.1", "3.3.3", "3.3.5", "3.3.8",
+        "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.2.5", "1.3.1", "1.3.3", "1.4.1", "2.1.2", "2.1.4",
+        "2.2.1", "2.2.3", "2.2.4", "2.2.5", "2.4.5", "2.5.1", "2.5.2", "2.5.7", "3.1.3", "3.2.3",
+        "3.2.4", "3.2.6", "3.3.1", "3.3.3", "3.3.4", "3.3.5", "3.3.8",
     ],
     severity: Severity::Medium,
     help: "Criteria no machine can decide. Each appears once per page when the page contains \
