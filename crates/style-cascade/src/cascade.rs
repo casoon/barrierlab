@@ -45,19 +45,22 @@ struct Rule {
     decls: Vec<Decl>,
 }
 
-/// Rangfolge zweier Angaben (CSS Cascade 5 §6.1): Wichtigkeit, Ebene,
-/// `style`-Attribut, Spezifität, Reihenfolge.
+/// Rangfolge zweier Angaben (CSS Cascade 5 §6.1, §6.5): Wichtigkeit,
+/// Autorenherkunft (Darstellungsattribute liegen darunter), `style`-Attribut
+/// (steht über allen Ebenen), Ebene, Spezifität, Reihenfolge.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Weight {
     important: bool,
-    layer: u32,
+    author: bool,
     inline: bool,
+    layer: u32,
     spec: Specificity,
     order: u32,
 }
 
 fn weight(
     important: bool,
+    author: bool,
     layer: Option<u32>,
     inline: bool,
     spec: Specificity,
@@ -73,8 +76,9 @@ fn weight(
     };
     Weight {
         important,
-        layer,
+        author,
         inline,
+        layer,
         spec,
         order,
     }
@@ -121,6 +125,7 @@ pub struct Cascade {
     pub(crate) sizes: RefCell<HashMap<NodeId, Option<f32>>>,
     pub(crate) weights: RefCell<HashMap<NodeId, Option<u16>>>,
     depth: Cell<u32>,
+    imports: Vec<String>,
 }
 
 /// Eine Rekursionstiefe, ab der `var()`-Zyklen und absurde Ketten abbrechen.
@@ -143,6 +148,7 @@ impl Cascade {
             sizes: RefCell::default(),
             weights: RefCell::default(),
             depth: Cell::new(0),
+            imports: Vec::new(),
         };
         c.lade(sheets);
         c
@@ -152,7 +158,25 @@ impl Cascade {
         &self.env
     }
 
+    /// Die Vorspänne der `@import`-Regeln, die nicht aufgelöst sind. Solange
+    /// es welche gibt, ist jede Antwort `Unknown`, außer sie kommt aus einem
+    /// `!important` im `style`-Attribut. Der Host ersetzt dafür jede
+    /// `@import`-Regel durch die Regeln des importierten Stylesheets (in
+    /// Dokumentreihenfolge, vor den eigenen Regeln des importierenden Blatts).
+    pub fn unresolved_imports(&self) -> &[String] {
+        &self.imports
+    }
+
     fn lade(&mut self, sheets: &[Stylesheet]) {
+        for s in sheets {
+            for r in &s.rules {
+                if let CssRule::Other(a) = r
+                    && a.name == "import"
+                {
+                    self.imports.push(a.prelude.trim().to_string());
+                }
+            }
+        }
         // Reihenfolge der Ebenen: `@layer a, b;` legt sie vorab fest, sonst
         // gilt das erste Auftreten.
         let mut ebenen: Vec<String> = Vec::new();
@@ -297,7 +321,7 @@ impl Cascade {
         for (idx, m) in treffer.iter() {
             let r = &self.rules[*idx];
             for d in r.decls.iter().filter(|d| d.prop == prop) {
-                let w = weight(d.important, r.layer, false, r.spec, d.order);
+                let w = weight(d.important, true, r.layer, false, r.spec, d.order);
                 if *m == Match::Yes {
                     if best.is_none_or(|(b, _)| w > b) {
                         best = Some((w, &d.value));
@@ -313,7 +337,14 @@ impl Cascade {
             .filter(|d| d.prop == prop)
             .map(|d| {
                 (
-                    weight(d.important, None, true, Specificity::default(), d.order),
+                    weight(
+                        d.important,
+                        true,
+                        None,
+                        true,
+                        Specificity::default(),
+                        d.order,
+                    ),
                     d.value.clone(),
                 )
             })
@@ -333,7 +364,7 @@ impl Cascade {
         // Darstellungsattribute stehen unter jeder Regel der Seite.
         let (best_w, best_v) = match ua::hint(n, prop) {
             Some(h) => {
-                let w = weight(false, None, false, Specificity::default(), 0);
+                let w = weight(false, false, None, false, Specificity::default(), 0);
                 if best_w.is_none_or(|b| w > b) {
                     (Some(w), Some(h))
                 } else {
@@ -342,6 +373,11 @@ impl Cascade {
             }
             None => (best_w, best_v),
         };
+        // Ein unaufgelöstes `@import` kann jede Angabe überstimmen, nur nicht
+        // ein `!important` im `style`-Attribut.
+        if !self.imports.is_empty() && !best_w.is_some_and(|b| b.important && b.inline) {
+            return Declared::Unknown;
+        }
         if let Some(u) = unsicher
             && best_w.is_none_or(|b| u >= b)
         {

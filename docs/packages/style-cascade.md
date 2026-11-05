@@ -70,6 +70,9 @@ What cannot be determined without layout stays undetermined, never guessed:
 - **Approximations.** `@supports` conditions count as true unless negated; layers rank by first
   appearance or `@layer a, b;`; colours outside sRGB are clipped, not gamut-mapped; the page
   is assumed in the default light scheme unless `Environment` says otherwise.
+- **`@import`.** An unresolved `@import` makes all answers `Unknown` (except an inline `!important`)
+  until the host inlines the imported sheet; presentational hints rank below all author rules,
+  layered or not.
 - **Monospace size.** Chrome shrinks the default size to 13 px for `font-family: monospace`;
   the cascade does not, so `<code>` can come out 16 px where Chrome has 13 px.
 - **Presentational attributes** are read for `bgcolor`, `background`, `<font color>`, `<font size>`,
