@@ -11,8 +11,8 @@ decide whether a query *matches* anything.
 
 ## Status
 
-Feature-complete: tokenizer (CSS Syntax Level 3) and the full Media
-Queries Level 4 grammar, including the `<mf-range>` comparison syntax
+Feature-complete: the full Media Queries Level 4 grammar (tokenizing is done by
+[`css-tokenize`](https://crates.io/crates/css-tokenize)), including the `<mf-range>` comparison syntax
 (`(400px <= width <= 700px)`). Verified against 29 external
 web-platform-tests conformance cases. Public API is documented
 (`#![deny(missing_docs)]`) and marked `#[non_exhaustive]` where the

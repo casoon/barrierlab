@@ -18,6 +18,7 @@ flowchart BT
   subgraph L0["L0 · Parser und Engines"]
     h5[html5-parser]
     csp[csp-parse]
+    tok[css-tokenize]
     mq[media-query-parse]
     xp[xpath-eval]
     rng[relax-ng]
@@ -48,7 +49,8 @@ flowchart BT
 
   sch --> xp
   hc --> h5 & csp & mq & rng & sch
-  cssp --> mq
+  cssp --> tok
+  mq --> tok
   acc --> dom
   cas --> dom & cssp & mq
   rules --> dom & rep & acc & cas

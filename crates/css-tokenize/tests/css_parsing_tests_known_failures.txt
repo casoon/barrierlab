@@ -1,0 +1,14 @@
+# Cases from component_value_list.json the tokenizer does not satisfy: 38-47 need
+# <unicode-range> tokens, 48 needs the Selectors-3 match tokens (`^=`); neither is in
+# CSS Syntax Level 3. Index = position in the file.
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48

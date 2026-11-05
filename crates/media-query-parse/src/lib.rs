@@ -1,8 +1,7 @@
 //! A parser for the CSS Media Queries grammar, written in 100% safe Rust.
 //!
-//! Tokenizer (CSS Syntax Level 3) plus a Media Queries Level 4
-//! grammar/AST/parser, including the `<mf-range>` comparison syntax.
-//! See `plan/` for the roadmap.
+//! A Media Queries Level 4 grammar/AST/parser on top of the
+//! [`css_tokenize`] tokenizer, including the `<mf-range>` comparison syntax.
 //!
 //! # Example
 //!
@@ -27,7 +26,10 @@
 
 pub mod ast;
 pub mod parser;
-pub mod tokenizer;
+/// The CSS tokenizer now lives in the [`css_tokenize`] crate; this path is
+/// kept so existing code keeps compiling.
+#[doc(hidden)]
+pub use css_tokenize as tokenizer;
 
 pub use ast::{
     GeneralEnclosed, MediaCondition, MediaConditionWithoutOr, MediaFeature, MediaInParens,

@@ -7,7 +7,7 @@
 
 use std::ops::Range;
 
-use media_query_parse::tokenizer::Token;
+use css_tokenize::Token;
 
 use crate::Declaration;
 use crate::serialize::{Closer, closes, opens, serialize};

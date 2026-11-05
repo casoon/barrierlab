@@ -12,7 +12,7 @@
 //!
 //! [spec]: https://www.w3.org/TR/mediaqueries-4/
 
-use crate::tokenizer::Token;
+use css_tokenize::Token;
 
 /// `<media-query-list> = <media-query>#`
 ///
@@ -144,14 +144,15 @@ pub enum MfValue {
     },
     /// `<ident>`
     Ident(String),
-    /// `<ratio> = <number [0,∞]> <number [0,∞]>`, restricted here to
-    /// non-negative integers, matching typical media-feature usage
-    /// (e.g. `(aspect-ratio: 16/9)`).
+    /// `<ratio> = <number [0,∞]> [ / <number [0,∞]> ]?`, written with the
+    /// slash (e.g. `(aspect-ratio: 16/9)`). A lone number is
+    /// [`MfValue::Number`]. The denominator may be zero (degenerate but
+    /// syntactically valid).
     Ratio {
         /// The number before `/`.
-        numerator: u32,
+        numerator: f64,
         /// The number after `/`.
-        denominator: u32,
+        denominator: f64,
     },
 }
 

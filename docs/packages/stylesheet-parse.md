@@ -26,7 +26,7 @@ release build.
 
 ```mermaid
 flowchart LR
-  css["CSS text"] --> tok["Tokenizer\n(media-query-parse)"]
+  css["CSS text"] --> tok["Tokenizer\n(css-tokenize)"]
   tok --> parse["Parse algorithms\nCSS Syntax §5"]
   parse --> raw["raw tree\n(token ranges)"]
   raw --> conv["Classification\nStyle · Media · Keyframes · Group · Other"]
@@ -51,7 +51,7 @@ nested `@media` apply to the parent selector.
 
 ## Dependencies
 
-Downward: `media-query-parse` (only its tokenizer). Upward:
+Downward: `css-tokenize`. Upward:
 `a11y-rules` (planned).
 
 ## Limits
