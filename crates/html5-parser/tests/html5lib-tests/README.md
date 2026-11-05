@@ -49,3 +49,14 @@ Re-run `python3 xtask/fetch-html5lib-tests.py` to refresh from upstream.
 If wpt's directory listing changes (new files added/removed), update the
 `FILES` list at the top of that script from the GitHub API — see the
 script's own doc comment.
+
+## Tokenizer tests
+
+`tokenizer/*.test` are the html5lib-tests tokenizer fixtures (JSON, from
+<https://github.com/html5lib/html5lib-tests/tree/master/tokenizer>,
+2026-11-05, MIT — see `LICENSE`), vendored by the same script
+(`--tokenizer-only` refreshes just these). `xmlViolation.test` is not
+vendored (XML infoset coercion, not part of the WHATWG tokenizer). They run
+via `src/tokenizer_conformance.rs` against the crate-private tokenizer, once
+per `initialStates` entry; token streams are compared, `errors` are not.
+Known failures: `../html5lib_tokenizer_known_failures.txt` (currently none).
