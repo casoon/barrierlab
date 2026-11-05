@@ -27,6 +27,20 @@ path = ["crates/accname/tests/corpus/wpt/**/*.html", "crates/accname/tests/corpu
 SPDX-FileCopyrightText = "web-platform-tests contributors"
 SPDX-License-Identifier = "BSD-3-Clause"
 
+# Vendorte WPT-Media-Query-Fälle (BSD-3-Clause); Herkunft in
+# crates/media-query-parse/tests/corpus/wpt/UPSTREAM.md. UPSTREAM.md selbst bleibt MIT.
+[[annotations]]
+path = ["crates/media-query-parse/tests/corpus/wpt/**/*.html", "crates/media-query-parse/tests/corpus/wpt/LICENSE.md"]
+SPDX-FileCopyrightText = "web-platform-tests contributors"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+# Vendorte Jaxen-XPath-Testfälle (BSD-3-Clause-Stil); Herkunft in
+# crates/xpath-eval/tests/corpus/jaxen/UPSTREAM.md. UPSTREAM.md selbst bleibt MIT.
+[[annotations]]
+path = ["crates/xpath-eval/tests/corpus/jaxen/tests.xml", "crates/xpath-eval/tests/corpus/jaxen/xml/**", "crates/xpath-eval/tests/corpus/jaxen/LICENSE.txt"]
+SPDX-FileCopyrightText = "Jaxen Project contributors"
+SPDX-License-Identifier = "BSD-3-Clause"
+
 # Vendorte css-parsing-tests (SimonSapin, CC0-1.0); Herkunft in
 # crates/css-tokenize/tests/corpus/css-parsing-tests/UPSTREAM.md.
 [[annotations]]

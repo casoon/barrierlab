@@ -21,6 +21,7 @@ abweichen, steht je Schritt in
 
 ### Changed
 
+- **Breaking, Semver:** `Meta` ist `#[non_exhaustive]`: ein Struct-Literal außerhalb des Crates kompiliert nicht mehr, neue Felder sind künftig keine Breaking Changes. Hosts lesen `Meta` nur (über die Regel-Registries); im Workspace baut sie außerhalb von `a11y-rules` niemand; casoon/barrierlab#110.
 - **Interne Bezeichner:** Module, Typen, Funktionen, Variablen und Testnamen sind ins Englische übersetzt (Konvention aus `docs/conventions.md`); keine Änderung der öffentlichen API, der Regel-Kennungen und der Texte; casoon/barrierlab#109.
 - **Breaking, Feature `de`:** `Meta::help_de` gibt es unabhängig vom Feature; ohne `de` ist es
   leer. Die Gestalt von `Meta` hängt damit nicht mehr von Features ab.

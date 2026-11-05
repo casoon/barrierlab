@@ -4370,3 +4370,7 @@ mod tests {
         assert!(kinds.contains(&ParseErrorKind::EofInScriptHtmlCommentLikeText));
     }
 }
+
+#[cfg(test)]
+#[path = "tokenizer_conformance.rs"]
+mod tokenizer_conformance;

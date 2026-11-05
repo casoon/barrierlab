@@ -1,0 +1,35 @@
+# Known failures of the Jaxen XPath corpus (see tests/jaxen.rs and
+# tests/corpus/jaxen/UPSTREAM.md).
+#
+# One line per case: `tests.xml:<line>` of the <test>/<valueOf> element, then
+# the first failure as a comment.
+#
+# Generate with `JAXEN_BLESS=1 cargo test -p xpath-eval --test jaxen`, only
+# after every new entry has been examined. Never add entries by hand to silence
+# a failure.
+#
+# Causes (examined): lines 0178-0183 `evaluate()` (Jaxen extension), 0489-0507
+# `document()` (XSLT), 0564-0570 `upper-case`/`lower-case`/`ends-with` (XPath 2.0
+# or Jaxen extensions) - none is XPath 1.0 core. Line 0629: an unbound prefix is
+# an error in XPath 1.0 (2.3) and in Jaxen; xpath-eval makes the name test match
+# nothing instead (documented in EvaluationContext).
+# --- entries below, one per line ---
+
+tests.xml:0178  unknown function: evaluate
+tests.xml:0179  unknown function: evaluate
+tests.xml:0180  unknown function: evaluate
+tests.xml:0181  unknown function: evaluate
+tests.xml:0182  unknown function: evaluate
+tests.xml:0183  unknown function: evaluate
+tests.xml:0489  unknown function: document
+tests.xml:0493  unknown function: document
+tests.xml:0500  unknown function: document
+tests.xml:0507  unknown function: document
+tests.xml:0564  unknown function: upper-case
+tests.xml:0565  unknown function: lower-case
+tests.xml:0566  unknown function: upper-case
+tests.xml:0567  unknown function: upper-case
+tests.xml:0568  unknown function: upper-case
+tests.xml:0569  unknown function: ends-with
+tests.xml:0570  unknown function: ends-with
+tests.xml:0629  "/x:a/x:b/x:c": an error was expected

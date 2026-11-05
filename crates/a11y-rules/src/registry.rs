@@ -23,6 +23,7 @@ use crate::visibility::Scope;
 ///
 /// [`RuleRun`]: a11y_report::RuleRun
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Meta {
     /// Alle Befund-Kennungen dieser Regel, stabil über alle Oberflächen.
     pub ids: &'static [&'static str],

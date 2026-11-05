@@ -221,6 +221,105 @@ fn ebenen() {
     assert_eq!(farbe(&c, &d, "b"), Some(rgb(2, 2, 2)));
 }
 
+/// Hilfe für die Ebenentests: `p { color }` mit Wert `n` heißt `#0n0n0n`.
+fn ebenen_farbe(css: &str) -> Specified {
+    let d = seite(r#"<p id="p">t</p>"#);
+    kaskade(css).specified(finde(&d, "p"), "color")
+}
+
+fn grau(n: u8) -> Specified {
+    Specified::Set(format!("#0{n}0{n}0{n}"))
+}
+
+// CSS Cascade 5 §6.4.2: Unterebenen stehen in ihrer Ebene; die Regeln der
+// Ebene selbst zählen wie eine letzte, implizite Unterebene.
+#[test]
+fn verschachtelte_ebene_schlaegt_ihre_unterebene() {
+    let css = "@layer a { #p { color: #020202 } @layer b { #p { color: #010101 } } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    // Auch bei geringerer Spezifität und später in der Quelle.
+    let css = "@layer a { @layer b { #p { color: #010101 } } p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn unterebene_folgt_ihrer_elternebene() {
+    // a.b liegt in a und damit vor c, obwohl der Block später steht.
+    let css = "@layer a, c; @layer c { p { color: #020202 } } @layer a { @layer b { #p { color: #010101 } } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn punktname_ist_verschachtelt() {
+    let css = "@layer a.b { #p { color: #010101 } } @layer a { p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    // `a.b` und `a { @layer b }` sind dieselbe Ebene; später gewinnt dort.
+    let css = "@layer a.b { p { color: #010101 } } @layer a { @layer b { p { color: #020202 } } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn reihenfolge_der_unterebenen_per_anweisung() {
+    let css = "@layer a { @layer x, y; } @layer a { @layer y { p { color: #020202 } } @layer x { #p { color: #010101 } } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    let css =
+        "@layer a.x, a.y; @layer a.y { p { color: #020202 } } @layer a.x { #p { color: #010101 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn erstes_auftreten_zaehlt_in_dokumentreihenfolge() {
+    // `@layer y, x;` steht nach dem Block von x und ordnet nichts mehr um.
+    let css = "@layer x { #p { color: #010101 } } @layer y { p { color: #020202 } } @layer y, x;";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn wichtig_kehrt_auch_verschachtelte_ebenen_um() {
+    // Wichtig: die Unterebene schlägt ihre Elternebene, die frühere die spätere.
+    let css =
+        "@layer a { p { color: #020202 !important } @layer b { p { color: #010101 !important } } }";
+    assert_eq!(ebenen_farbe(css), grau(1));
+    let css =
+        "@layer a { p { color: #010101 !important } } @layer b { p { color: #020202 !important } }";
+    assert_eq!(ebenen_farbe(css), grau(1));
+}
+
+#[test]
+fn anonyme_ebenen_sind_je_eine_neue_ebene() {
+    let css = "@layer { #p { color: #010101 } } @layer { p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    let css = "@layer { #p { color: #010101 } } @layer a { p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    // In einer benannten Ebene: die anonyme Unterebene liegt unter deren Regeln.
+    let css = "@layer a { @layer { #p { color: #010101 } } p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn ebene_in_scheiternder_bedingung_zaehlt_nicht() {
+    let css = "@media print { @layer q { p { color: #030303 } } } @layer r { #p { color: #020202 } } @layer q { p { color: #040404 } }";
+    assert_eq!(ebenen_farbe(css), grau(4));
+}
+
+#[test]
+fn ebene_nur_unter_unbekannter_bedingung_ist_unbestimmt() {
+    // Ob `q` vor `r` steht, hängt vom `@container` ab.
+    let css = "@container (min-width: 1px) { @layer q { p { color: #030303 } } } @layer r { p { color: #020202 } } @layer q { p { color: #040404 } }";
+    assert_eq!(ebenen_farbe(css), Specified::Unknown);
+    // Eigenschaften, die die unsichere Ebene nicht berührt, bleiben bestimmt.
+    let css = "@container (min-width: 1px) { @layer q { p { margin: 0 } } } @layer r { p { color: #020202 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+}
+
+#[test]
+fn ungueltiger_ebenenname_ist_unbestimmt() {
+    assert_eq!(
+        ebenen_farbe("@layer a..b { p { color: #020202 } }"),
+        Specified::Unknown
+    );
+}
+
 #[test]
 fn kurzschreibweise_hintergrund() {
     let d = seite(r#"<div id="a"><p id="b">t</p></div>"#);

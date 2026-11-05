@@ -1,0 +1,16 @@
+# Known failures of the WPT media-query corpus (see tests/wpt.rs and
+# tests/corpus/wpt/UPSTREAM.md).
+#
+# One line per case: `<file>:<line>`, then the detail as a comment.
+#
+# Generate with `WPT_BLESS=1 cargo test -p media-query-parse --test wpt`, only
+# after every new entry has been examined. Never add entries by hand to silence
+# a failure.
+#
+# Known cause of all three: CSS Syntax closes an unclosed `(` block at end of
+# input, so `(color` is the valid query `(color)`; the parser rejects it.
+# --- entries below, one per line ---
+
+match-media-parsing.html:43  "(color" -> expected "(color)" (valid: [true]), got [false]
+match-media-parsing.html:46  " ( color   " -> expected "(color)" (valid: [true]), got [false]
+match-media-parsing.html:49  "  color ), ( color" -> expected "not all, (color)" (valid: [false, true]), got [false, false]
