@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-06
+
 ### Added
 
 - **Document:** `NodeId::as_u32` returns the node's arena index as a plain number.

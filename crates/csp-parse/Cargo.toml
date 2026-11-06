@@ -1,6 +1,6 @@
 [package]
 name = "csp-parse"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A parser for the Content Security Policy (CSP) directive grammar"
 license = "MIT"

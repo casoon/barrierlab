@@ -7,6 +7,8 @@ version bump.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-06
+
 ### Changed
 
 - **Evaluation:** a rule's `context` is parsed once when the schema is loaded and rewritten on the

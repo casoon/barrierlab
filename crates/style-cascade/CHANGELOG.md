@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-06
+
 ### Added
 
 - **Kaskade:** `Cascade::unresolved_imports` nennt die unaufgelösten `@import`-Regeln; der Host ersetzt sie durch die Regeln des importierten Blatts, um Antworten zu bekommen.

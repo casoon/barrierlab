@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-06
+
 ### Added
 
 - **Bericht:** `Report::schema` und `SCHEMA_VERSION` (1): Version des JSON-Vertrags, wird immer
@@ -24,10 +26,7 @@ Repository `casoon/a11y-core`.
   `InputNote` und `NotRun` sind `#[non_exhaustive]`. Struct-Literale und erschöpfende Matches
   außerhalb des Crates entfallen; neue Felder sind künftig keine Breaking Changes mehr. Bauen über
   `Finding::fail` und Verwandte, `RuleRun::ran`/`not_run`, `Location::file`/`node`, `Evidence::new`.
-
-### Documented
-
-- **Typentscheidungen:** `docs/packages/a11y-report.md` hält fest, welche Typen `#[non_exhaustive]` sind und welche bewusst nicht (Host-Eingabetypen, geschlossene Enums, `Evidence::source` als freier String); casoon/barrierlab#110.
+- **Doku:** `docs/packages/a11y-report.md` hält fest, welche Typen `#[non_exhaustive]` sind und welche bewusst nicht (Host-Eingabetypen, geschlossene Enums, `Evidence::source` als freier String); casoon/barrierlab#110.
 
 ## [0.27.0] - 2026-11-03
 
