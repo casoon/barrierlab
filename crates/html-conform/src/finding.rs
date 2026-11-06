@@ -166,8 +166,8 @@ impl CheckReport {
     /// look, which is what `Review` means: `Review` with `Low`. An `Info`
     /// is a statement the checker could not decide (such as unevaluated
     /// hash sources), so `Untested` with `Low`. The location becomes
-    /// `source_hint` as `"line:column"`, since `a11y_report::Location` has
-    /// no line or column field. Each [`Skipped`] becomes an
+    /// `Location::position` (line, column, byte offset) and, for readers of
+    /// older reports, `source_hint` as `"line:column"`. Each [`Skipped`] becomes an
     /// `InputKind::DocumentIncomplete` note, so unchecked content stays
     /// visible. No `RuleRun` entries are recorded: html-conform has no rule
     /// registry to say which rules could have run.
@@ -199,6 +199,11 @@ impl CheckReport {
             mapped = mapped.with_severity(severity);
             if let Some(location) = finding.location {
                 mapped.location.source_hint = Some(location.to_string());
+                mapped.location.position = Some(a11y_report::SourcePosition::new(
+                    location.line,
+                    location.column,
+                    location.byte_offset,
+                ));
             }
             report.push(mapped);
         }
@@ -308,6 +313,36 @@ mod tests {
             report.findings[0].location.source_hint.as_deref(),
             Some("3:7")
         );
+        assert_eq!(
+            report.findings[0].location.position,
+            Some(a11y_report::SourcePosition::new(3, 7, 20))
+        );
+    }
+
+    #[test]
+    fn checked_document_carries_byte_offset_into_report() {
+        let html = "<!DOCTYPE html><html lang=en><title>t</title><ul><div>x</div></ul></html>";
+        let checked = crate::check(html).unwrap();
+        let report = checked.to_report();
+        let positioned: Vec<_> = report
+            .findings
+            .iter()
+            .filter_map(|f| f.location.position)
+            .collect();
+        assert!(!positioned.is_empty(), "{:?}", report.findings);
+        for position in positioned {
+            assert!(position.byte_offset < html.len());
+            assert!(position.line >= 1 && position.column >= 1);
+        }
+        assert!(positioned_points_at(html, &report, "<div>"));
+    }
+
+    fn positioned_points_at(html: &str, report: &a11y_report::Report, tag: &str) -> bool {
+        report
+            .findings
+            .iter()
+            .filter_map(|f| f.location.position)
+            .any(|p| html[p.byte_offset..].starts_with(tag))
     }
 
     #[test]

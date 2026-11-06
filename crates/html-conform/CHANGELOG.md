@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-06
+
+### Added
+
+- **API:** `CheckReport::to_report()` fills `Location::position` (line, column, byte offset) from
+  the finding's source location, so hosts that re-read the checked markup at the reported offset
+  can move off the deprecated `Finding` type. `source_hint` keeps its `"line:column"` text.
+
 ## [0.4.0] - 2026-11-06
 
 ### Added
