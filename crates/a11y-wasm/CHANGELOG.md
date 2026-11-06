@@ -4,6 +4,8 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-06
+
 ### Added
 
 - **TypeScript:** `Report.schema: number` in der `.d.ts` (Version des JSON-Vertrags, derzeit 1).

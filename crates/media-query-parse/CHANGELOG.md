@@ -6,6 +6,8 @@ Git-Historie.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-06
+
 ### Added
 
 - **Konformanz:** Die WPT-Dateien `test_media_queries.html` und `match-media-parsing.html` laufen als

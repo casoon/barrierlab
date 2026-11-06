@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-06
+
 ### Added
 
 - **Feature `html5-parser`:** `impl Document for html5_parser::Document` mit dem Handle

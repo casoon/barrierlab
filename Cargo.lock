@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.27.0"
+version = "0.28.0"
 dependencies = [
  "html5-parser",
 ]
@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.27.0"
+version = "0.28.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.27.0"
+version = "0.28.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -65,7 +65,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.27.0"
+version = "0.28.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",
@@ -255,7 +255,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "csp-parse"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "css-tokenize"
@@ -342,7 +342,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "a11y-report",
  "criterion",
@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "html5-parser"
-version = "0.4.1"
+version = "0.4.2"
 
 [[package]]
 name = "icu_collections"
@@ -504,7 +504,7 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 
 [[package]]
 name = "media-query-parse"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "css-tokenize",
 ]
@@ -697,7 +697,7 @@ dependencies = [
 
 [[package]]
 name = "schematron-engine"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "roxmltree",
  "xpath-eval",
@@ -793,7 +793,7 @@ dependencies = [
 
 [[package]]
 name = "stylesheet-parse"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "css-tokenize",
 ]

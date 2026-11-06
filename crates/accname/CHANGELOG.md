@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-06
+
 ### Fixed
 
 - **Name (2A):** Nachkommen eines versteckten Knotens, der direkt per

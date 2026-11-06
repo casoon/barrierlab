@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `stylesheet-parse` stehen hier. Das Format fol
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-06
+
 ### Changed
 
 - **Abhängigkeiten:** Tokenisiert wird mit `css-tokenize` statt über `media-query-parse`; die
