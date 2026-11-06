@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Vendors the Jaxen XPath test cases (tests.xml and the documents it uses)
-# without modifying them. Run from crates/xpath-eval.
+# Fetches the Jaxen XPath test cases (tests.xml and the documents it uses) into
+# tests/corpus/jaxen on demand. The directory is gitignored: the sample
+# documents carry no licence notice of their own, so the corpus is
+# intentionally NOT part of this repository (see CONFORMANCE.md).
+# Run from crates/xpath-eval, then:
+#   cargo test -p xpath-eval --test jaxen -- --ignored
 #
 # Source: https://github.com/jaxen-xpath/jaxen, path core/xml/
-# License: BSD-3-Clause-style (upstream LICENSE.txt)
+# License: BSD-3-Clause-style (upstream LICENSE.txt, copied along)
 
 readonly upstream_repository='https://github.com/jaxen-xpath/jaxen.git'
 readonly upstream_revision='e675b18efa486234ed364483184ae8ce493c48d1'
+readonly tests_sha256='46c5c8f4acf69f1d3ce5e4773fc91ad4901d64e5379ef152a8d8f7d37eef204b'
 readonly destination='tests/corpus/jaxen'
 
-if [[ -e "$destination/UPSTREAM.md" ]]; then
-  echo "refusing to overwrite $destination" >&2
-  exit 1
+if [[ -e "$destination/tests.xml" ]]; then
+  echo "$destination already present; remove it to fetch again" >&2
+  exit 0
 fi
 
 temporary_directory=$(mktemp -d)
@@ -31,6 +36,11 @@ if [[ $(git -C "$temporary_directory/jaxen" rev-parse HEAD) != "$upstream_revisi
 fi
 
 source_directory="$temporary_directory/jaxen/core"
+if [[ $(shasum -a 256 "$source_directory/xml/test/tests.xml" | cut -d' ' -f1) != "$tests_sha256" ]]; then
+  echo 'tests.xml does not match the pinned checksum' >&2
+  exit 1
+fi
+
 mkdir -p "$destination/xml"
 cp "$source_directory/xml/test/tests.xml" "$destination/tests.xml"
 # Only the documents tests.xml refers to.
@@ -40,21 +50,4 @@ grep -o 'document url="xml/[^"]*"' "$source_directory/xml/test/tests.xml" |
     cp "$source_directory/$document" "$destination/$document"
   done
 cp "$temporary_directory/jaxen/LICENSE.txt" "$destination/LICENSE.txt"
-
-cat > "$destination/UPSTREAM.md" <<EOF
-# Jaxen XPath test cases
-
-Unmodified \`tests.xml\` (upstream \`core/xml/test/tests.xml\`) and the sample
-documents it refers to (\`xml/\`, upstream \`core/xml/\`) from
-[\`jaxen-xpath/jaxen\`](https://github.com/jaxen-xpath/jaxen).
-
-- Upstream revision: \`$upstream_revision\`
-- License: BSD-3-Clause-style (Jaxen Project); see the unmodified upstream
-  \`LICENSE.txt\` (SPDX header in \`REUSE.toml\`). Upstream states one licence for
-  the whole repository; the sample documents carry no notice of their own.
-- Refresh procedure: remove this directory deliberately, then run
-  \`xtask/vendor-jaxen.sh\` from \`crates/xpath-eval\`; changing the pinned
-  revision requires re-blessing \`tests/jaxen_known_failures.txt\`
-  (\`JAXEN_BLESS=1 cargo test -p xpath-eval --test jaxen\`).
-- Used by \`tests/jaxen.rs\`.
-EOF
+echo "fetched Jaxen corpus at $upstream_revision into $destination"

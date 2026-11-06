@@ -1,5 +1,6 @@
-//! Runs the Jaxen XPath test cases (`tests/corpus/jaxen/tests.xml`, vendored,
-//! see `UPSTREAM.md` there; the file is the source of Jaxen's `XPathTestBase`).
+//! Runs the Jaxen XPath test cases (`tests/corpus/jaxen/tests.xml`). The corpus
+//! is NOT in the repository: fetch it with `xtask/vendor-jaxen.sh`, then run
+//! `cargo test -p xpath-eval --test jaxen -- --ignored` (see `CONFORMANCE.md`).
 //!
 //! Semantics follow Jaxen's generator (`tests.xsl`): a `<context>` selects
 //! context nodes in the document (one run per node); its in-scope namespace
@@ -13,16 +14,15 @@
 //!
 //! Failing cases are listed in `tests/jaxen_known_failures.txt` as
 //! `tests.xml:<line>`; the list is checked both ways. Re-bless after examining
-//! every entry with `JAXEN_BLESS=1 cargo test -p xpath-eval --test jaxen`.
+//! every entry with `JAXEN_BLESS=1 cargo test -p xpath-eval --test jaxen -- --ignored`.
 
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
 
-use xpath_eval::{
-    Document, EvaluationContext, ExpandedName, Node as XNode, NodeKind, QName, Value, evaluate,
-    parse,
-};
+mod common;
+
+use common::{Doc, N, parse_xml};
+use xpath_eval::{Document, EvaluationContext, QName, Value, evaluate, parse};
 
 const CORPUS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/corpus/jaxen");
 const KNOWN_FAILURES: &str = concat!(
@@ -31,203 +31,6 @@ const KNOWN_FAILURES: &str = concat!(
 );
 const HEADER_END: &str = "# --- entries below, one per line ---\n";
 const VAR_URI: &str = "https://github.com/jaxen-xpath/jaxen/test-harness/var";
-
-struct Data {
-    kind: NodeKind,
-    name: Option<ExpandedName>,
-    text: Option<String>,
-    parent: Option<usize>,
-    children: Vec<usize>,
-    attributes: Vec<usize>,
-    namespaces: Vec<usize>,
-}
-
-/// Arena in document order, so `document_order` is an index comparison.
-struct Doc(Vec<Data>);
-
-#[derive(Clone, Copy)]
-struct N<'a>(&'a Doc, usize);
-
-impl PartialEq for N<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.1 == other.1
-    }
-}
-
-impl Eq for N<'_> {}
-
-impl Document for Doc {
-    type N<'a> = N<'a>;
-    fn root(&self) -> N<'_> {
-        N(self, 0)
-    }
-}
-
-impl<'a> XNode<'a> for N<'a> {
-    fn kind(self) -> NodeKind {
-        self.0.0[self.1].kind
-    }
-    fn parent(self) -> Option<Self> {
-        self.0.0[self.1].parent.map(|p| N(self.0, p))
-    }
-    fn children(self) -> impl Iterator<Item = Self> + 'a {
-        self.0.0[self.1].children.iter().map(move |&c| N(self.0, c))
-    }
-    fn attributes(self) -> impl Iterator<Item = Self> + 'a {
-        self.0.0[self.1]
-            .attributes
-            .iter()
-            .map(move |&c| N(self.0, c))
-    }
-    fn namespaces(self) -> impl Iterator<Item = Self> + 'a {
-        self.0.0[self.1]
-            .namespaces
-            .iter()
-            .map(move |&c| N(self.0, c))
-    }
-    fn expanded_name(self) -> Option<ExpandedName> {
-        self.0.0[self.1].name.clone()
-    }
-    fn string_value(self) -> String {
-        let d = &self.0.0[self.1];
-        match d.kind {
-            NodeKind::Root | NodeKind::Element => {
-                let mut out = String::new();
-                collect_text(self.0, self.1, &mut out);
-                out
-            }
-            _ => d.text.clone().unwrap_or_default(),
-        }
-    }
-    fn document_order(self, other: Self) -> Ordering {
-        self.1.cmp(&other.1)
-    }
-}
-
-fn collect_text(doc: &Doc, idx: usize, out: &mut String) {
-    for &c in &doc.0[idx].children {
-        let d = &doc.0[c];
-        match d.kind {
-            NodeKind::Text => out.push_str(d.text.as_deref().unwrap_or_default()),
-            NodeKind::Element => collect_text(doc, c, out),
-            _ => {}
-        }
-    }
-}
-
-/// XPath knows "in a namespace" or "in none", never the empty URI.
-fn ns(uri: Option<&str>) -> Option<String> {
-    uri.filter(|u| !u.is_empty()).map(str::to_owned)
-}
-
-fn push(
-    nodes: &mut Vec<Data>,
-    parent: usize,
-    kind: NodeKind,
-    name: Option<ExpandedName>,
-    text: Option<String>,
-) -> usize {
-    let idx = nodes.len();
-    nodes.push(Data {
-        kind,
-        name,
-        text,
-        parent: Some(parent),
-        children: Vec::new(),
-        attributes: Vec::new(),
-        namespaces: Vec::new(),
-    });
-    idx
-}
-
-fn add(nodes: &mut Vec<Data>, parent: usize, x: roxmltree::Node<'_, '_>) {
-    for c in x.children() {
-        match c.node_type() {
-            roxmltree::NodeType::Element => {
-                let name = ExpandedName {
-                    namespace_uri: ns(c.tag_name().namespace()),
-                    local_name: c.tag_name().name().to_owned(),
-                };
-                let idx = push(nodes, parent, NodeKind::Element, Some(name), None);
-                nodes[parent].children.push(idx);
-                // XPath 1.0 (5.4): every element has the `xml` namespace node;
-                // roxmltree does not report it.
-                let xml = ExpandedName {
-                    namespace_uri: None,
-                    local_name: "xml".to_owned(),
-                };
-                let uri = "http://www.w3.org/XML/1998/namespace".to_owned();
-                let i = push(nodes, idx, NodeKind::Namespace, Some(xml), Some(uri));
-                nodes[idx].namespaces.push(i);
-                for n in c.namespaces() {
-                    let name = ExpandedName {
-                        namespace_uri: None,
-                        local_name: n.name().unwrap_or_default().to_owned(),
-                    };
-                    let i = push(
-                        nodes,
-                        idx,
-                        NodeKind::Namespace,
-                        Some(name),
-                        Some(n.uri().to_owned()),
-                    );
-                    nodes[idx].namespaces.push(i);
-                }
-                for a in c.attributes() {
-                    let name = ExpandedName {
-                        namespace_uri: ns(a.namespace()),
-                        local_name: a.name().to_owned(),
-                    };
-                    let i = push(
-                        nodes,
-                        idx,
-                        NodeKind::Attribute,
-                        Some(name),
-                        Some(a.value().to_owned()),
-                    );
-                    nodes[idx].attributes.push(i);
-                }
-                add(nodes, idx, c);
-            }
-            roxmltree::NodeType::Text => {
-                let i = push(
-                    nodes,
-                    parent,
-                    NodeKind::Text,
-                    None,
-                    Some(c.text().unwrap_or_default().to_owned()),
-                );
-                nodes[parent].children.push(i);
-            }
-            roxmltree::NodeType::Comment => {
-                let i = push(
-                    nodes,
-                    parent,
-                    NodeKind::Comment,
-                    None,
-                    Some(c.text().unwrap_or_default().to_owned()),
-                );
-                nodes[parent].children.push(i);
-            }
-            roxmltree::NodeType::PI => {
-                let pi = c.pi().expect("PI node");
-                let name = ExpandedName {
-                    namespace_uri: None,
-                    local_name: pi.target.to_owned(),
-                };
-                let i = push(
-                    nodes,
-                    parent,
-                    NodeKind::ProcessingInstruction,
-                    Some(name),
-                    Some(pi.value.unwrap_or_default().to_owned()),
-                );
-                nodes[parent].children.push(i);
-            }
-            roxmltree::NodeType::Root => {}
-        }
-    }
-}
 
 /// Reads a file as UTF-8, or as ISO-8859-1 when it is not UTF-8
 /// (`moreover.xml`); roxmltree takes `&str` and ignores the declaration.
@@ -241,26 +44,7 @@ fn read_text(path: &str) -> String {
 }
 
 fn load(url: &str) -> Doc {
-    let text = read_text(&format!("{CORPUS}/{url}"));
-    let x = roxmltree::Document::parse_with_options(
-        &text,
-        roxmltree::ParsingOptions {
-            allow_dtd: true,
-            ..Default::default()
-        },
-    )
-    .unwrap_or_else(|e| panic!("{url}: {e}"));
-    let mut nodes = vec![Data {
-        kind: NodeKind::Root,
-        name: None,
-        text: None,
-        parent: None,
-        children: Vec::new(),
-        attributes: Vec::new(),
-        namespaces: Vec::new(),
-    }];
-    add(&mut nodes, 0, x.root());
-    Doc(nodes)
+    parse_xml(&read_text(&format!("{CORPUS}/{url}")))
 }
 
 struct Env {
@@ -350,6 +134,7 @@ fn bekannte() -> HashSet<String> {
 }
 
 #[test]
+#[ignore = "needs the externally fetched Jaxen corpus, see CONFORMANCE.md"]
 fn jaxen_xpath_corpus() {
     let text = read_text(&format!("{CORPUS}/tests.xml"));
     let tests = roxmltree::Document::parse(&text).unwrap();

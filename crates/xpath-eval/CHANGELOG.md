@@ -9,9 +9,13 @@ in the git history only.
 
 ### Added
 
-- **Conformance:** The Jaxen XPath test cases run as a corpus (`tests/jaxen.rs`, vendored through
-  `xtask/vendor-jaxen.sh`); the 18 known failures (non-XPath-1.0 functions and the unbound-prefix
-  policy) are listed in `tests/jaxen_known_failures.txt` (casoon/barrierlab#111).
+- **Conformance:** The Jaxen XPath test cases run as an opt-in, externally fetched corpus
+  (`tests/jaxen.rs`, `#[ignore]`, `xtask/vendor-jaxen.sh`; not kept in the repository): 263 of 281
+  case runs pass, the 18 known failures are in `tests/jaxen_known_failures.txt`. Details in
+  `CONFORMANCE.md` (casoon/barrierlab#111).
+- **Conformance:** Own XPath 1.0 regression tests (`tests/xpath10_regression.rs`) written from the
+  specification cover every category of that table, so the level stays checked without the external
+  corpus (casoon/barrierlab#111).
 
 ## [0.2.3] - 2026-10-31
 
