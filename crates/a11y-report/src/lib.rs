@@ -84,7 +84,7 @@ mod outcome;
 mod report;
 
 pub use extra::Extra;
-pub use finding::{Evidence, Finding, Location};
+pub use finding::{Evidence, Finding, Location, SourcePosition};
 pub use identity::{
     CauseConfidence, CriterionState, EvidenceBasis, FindingId, ImpactArea, PAGEWIDE_SELECTOR,
     RootCauseId, normalize_selector,
@@ -95,6 +95,20 @@ pub use report::{InputKind, InputNote, NotRun, Report, RuleRun, SCHEMA_VERSION, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn source_position_round_trips_and_is_omitted_when_absent() {
+        let with = Location::default().with_position(SourcePosition::new(3, 7, 20));
+        let json = serde_json::to_value(&with).unwrap();
+        assert_eq!(
+            json["position"],
+            serde_json::json!({"line": 3, "column": 7, "byte_offset": 20})
+        );
+        assert_eq!(serde_json::from_value::<Location>(json).unwrap(), with);
+        let without = serde_json::to_value(Location::file("a.html")).unwrap();
+        assert!(without.get("position").is_none());
+        assert!(!with.is_empty());
+    }
 
     #[test]
     fn zaehlt_zustaende_und_schweregrade_getrennt() {

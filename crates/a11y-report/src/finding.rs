@@ -27,6 +27,34 @@ pub struct Location {
     /// Hinweis auf die Quelldatei, wenn der Host sie zurückrechnen kann.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_hint: Option<String>,
+    /// Stelle im geprüften Quelltext, wenn die Prüfung auf Markup statt auf
+    /// einem Baum lief (etwa HTML-Konformanz).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<SourcePosition>,
+}
+
+/// Stelle im geprüften Quelltext. Zeile und Spalte zählen ab 1, der
+/// Byte-Versatz ab 0 — so meldet sie der Parser, der den Text gelesen hat.
+/// Der Versatz erlaubt dem Host, im selben Text nachzulesen, etwa den
+/// umschließenden Tag.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourcePosition {
+    /// Zeile, ab 1.
+    pub line: u32,
+    /// Spalte, ab 1.
+    pub column: u32,
+    /// Byte-Versatz im Quelltext, ab 0.
+    pub byte_offset: usize,
+}
+
+impl SourcePosition {
+    pub fn new(line: u32, column: u32, byte_offset: usize) -> Self {
+        SourcePosition {
+            line,
+            column,
+            byte_offset,
+        }
+    }
 }
 
 impl Location {
@@ -61,6 +89,11 @@ impl Location {
 
     pub fn with_source_hint(mut self, h: impl Into<String>) -> Self {
         self.source_hint = Some(h.into());
+        self
+    }
+
+    pub fn with_position(mut self, position: SourcePosition) -> Self {
+        self.position = Some(position);
         self
     }
 

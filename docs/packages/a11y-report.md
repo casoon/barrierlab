@@ -34,7 +34,7 @@ flowchart LR
 | `Outcome` | the four states; `NotRun` is one of them, not a special case of "passed" |
 | `Basis` | criterion or recommendation: a best-practice finding (`Finding::best_practice`) is `REVIEW` with `Basis::BestPractice`, never a WCAG failure |
 | `Severity`, `WcagLevel` | classification of a finding |
-| `Finding`, `Evidence`, `Location` | a finding and what it is anchored to |
+| `Finding`, `Evidence`, `Location`, `SourcePosition` | a finding and what it is anchored to |
 | `Report`, `RuleRun`, `NotRun`, `Summary` | what a run produced, including the rules that did not run |
 | `InputNote`, `InputKind` | `Report::inputs`: the host notes that an input was incomplete (stylesheet unavailable or unresolved, partial document). Rules do not read these notes; with `stylesheet_unavailable` present, treat the contrast rules as untested |
 | `Extra` | host-specific additional fields, without breaking the contract |
@@ -47,6 +47,7 @@ flowchart LR
 - `Report`, `Finding`, `RuleRun`, `Summary`, `Evidence`, `Location`, `InputNote`, `NotRun` (and `Meta` in `a11y-rules`) are `#[non_exhaustive]`: the crate produces them, hosts only read or build them through constructors, so new fields are not breaking.
 - `Outcome`, `Severity` and `WcagLevel` stay exhaustive: they are closed vocabularies, and a new member would change what a verdict means, so a `match` that breaks is the intended signal.
 - The host-input types `ComputedStyle`, `Layout`, `Rect`, `Color` and `Backdrop` stay exhaustive: hosts fill them completely, and a field added silently would be left at a default instead of being supplied.
+- `SourcePosition` stays exhaustive: line, column and byte offset are the complete position a parser reports, and the producer fills all three.
 - `Evidence::source` stays a free string: the set of sources is open (`ax_tree`, `dom_attribute`, `computed`, `meta`, `http_header`, and what hosts add), it is part of the JSON contract, and an enum would need an `Other(String)` escape that gives no more safety than the string.
 
 ## Dependencies

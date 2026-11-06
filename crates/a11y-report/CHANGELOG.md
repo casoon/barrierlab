@@ -7,6 +7,14 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-11-06
+
+### Added
+
+- **Ort:** `Location::position` mit `SourcePosition` (Zeile, Spalte ab 1, Byte-Versatz ab 0) und
+  `Location::with_position`: die Stelle im geprüften Quelltext für Prüfungen auf Markup. Der Host
+  kann mit dem Versatz im selben Text nachlesen. Das Feld entfällt im JSON, solange es leer ist.
+
 ## [0.28.0] - 2026-11-06
 
 ### Added
