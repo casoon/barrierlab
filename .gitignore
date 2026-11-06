@@ -21,3 +21,6 @@ docs/**/*.generated.svg
 
 # Astro
 .astro/
+
+# Extern geholter Jaxen-Korpus (crates/xpath-eval/xtask/vendor-jaxen.sh), nicht im Repo
+crates/xpath-eval/tests/corpus/
