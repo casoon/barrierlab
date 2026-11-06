@@ -816,6 +816,7 @@ fn error(message: String, location: Option<SourceLocation>) -> Finding {
         severity: Severity::Error,
         message,
         location,
+        detail: None,
     }
 }
 
