@@ -33,6 +33,7 @@ dependencies = [
  "a11y-report",
  "accname",
  "html5-parser",
+ "serde",
  "style-cascade",
  "stylesheet-parse",
 ]

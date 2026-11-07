@@ -23,11 +23,13 @@ use crate::visibility::Scope;
 ///
 /// [`RuleRun`]: a11y_report::RuleRun
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[non_exhaustive]
 pub struct Meta {
     /// Alle Befund-Kennungen dieser Regel, stabil über alle Oberflächen.
     pub ids: &'static [&'static str],
     /// Welche Datenschicht die Regel braucht.
+    #[cfg_attr(feature = "serde", serde(serialize_with = "serialize_tier"))]
     pub tier: Tier,
     /// Welche Knoten die Regel sieht. Versteckte Teilbäume fehlen in ihrer
     /// Sicht auf das Dokument, statt dass jede Regel sie einzeln ausnimmt.
@@ -40,6 +42,11 @@ pub struct Meta {
     pub help: &'static str,
     /// Derselbe Hinweis auf Deutsch. Ohne das Feature `de` leer.
     pub help_de: &'static str,
+}
+
+#[cfg(feature = "serde")]
+fn serialize_tier<S: serde::Serializer>(tier: &Tier, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(tier.as_str())
 }
 
 impl Meta {
