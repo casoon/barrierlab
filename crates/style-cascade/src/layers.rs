@@ -85,7 +85,7 @@ impl LayerTree {
         i
     }
 
-    fn path(&mut self, parent: usize, segs: &[&str], cond: Match) -> usize {
+    fn path(&mut self, parent: usize, segs: &[String], cond: Match) -> usize {
         segs.iter()
             .fold(parent, |p, s| self.child(p, Some(s), cond))
     }
@@ -97,7 +97,7 @@ impl LayerTree {
         for r in rules {
             match r {
                 CssRule::Other(a) if a.name == "layer" => {
-                    for n in a.prelude.split(',') {
+                    for n in split_unescaped(&a.prelude, ',') {
                         if let Some(segs) = layer_name(n) {
                             self.path(parent, &segs, cond);
                         }
@@ -182,21 +182,114 @@ pub(crate) fn gruppe(name: &str, prelude: &str) -> Match {
     }
 }
 
-/// `<layer-name>` = `<ident> ['.' <ident>]*`, ohne Leerraum dazwischen.
-fn layer_name(s: &str) -> Option<Vec<&str>> {
-    let s = s.trim();
-    let segs: Vec<&str> = s.split('.').collect();
-    segs.iter().all(|g| ident(g)).then_some(segs)
+/// `<layer-name>` = `<ident> ['.' <ident>]*`, ohne Leerraum dazwischen. Die
+/// Segmente kommen unescaped zurück (CSS Syntax 3 §4.3.7), denn `\61` und
+/// `a` nennen dieselbe Ebene; ein maskierter Punkt (`a\.b`) trennt nicht.
+fn layer_name(s: &str) -> Option<Vec<String>> {
+    let segs = split_unescaped(s.trim(), '.');
+    segs.iter()
+        .all(|g| ident(g))
+        .then(|| segs.iter().map(|g| unescape(g)).collect())
 }
 
+/// Teilt an `sep`, aber nicht hinter einem Backslash.
+fn split_unescaped(s: &str, sep: char) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut esc = false;
+    for (i, c) in s.char_indices() {
+        if esc {
+            esc = false;
+        } else if c == '\\' {
+            esc = true;
+        } else if c == sep {
+            out.push(&s[start..i]);
+            start = i + c.len_utf8();
+        }
+    }
+    out.push(&s[start..]);
+    out
+}
+
+/// CSS Syntax 3 §4.3.7 „consume an escaped code point": `\` mit bis zu sechs
+/// Hexziffern (und einem folgenden Leerraumzeichen) ist das Zeichen; Null,
+/// Ersatzzeichen und Werte über U+10FFFF werden zu U+FFFD; `\` vor jedem
+/// anderen Zeichen ist dieses Zeichen.
+fn unescape(s: &str) -> String {
+    let mut out = String::new();
+    let mut c = s.chars().peekable();
+    while let Some(ch) = c.next() {
+        if ch != '\\' {
+            out.push(ch);
+            continue;
+        }
+        let mut hex = String::new();
+        while hex.len() < 6 && c.peek().is_some_and(char::is_ascii_hexdigit) {
+            hex.extend(c.next());
+        }
+        if hex.is_empty() {
+            out.push(c.next().unwrap_or('\u{FFFD}'));
+            continue;
+        }
+        if c.peek().is_some_and(|w| w.is_ascii_whitespace()) {
+            c.next();
+        }
+        let n = u32::from_str_radix(&hex, 16).unwrap_or(0);
+        out.push(
+            char::from_u32(n)
+                .filter(|&ch| ch != '\0')
+                .unwrap_or('\u{FFFD}'),
+        );
+    }
+    out
+}
+
+/// Ein Bezeichner, in der Schreibung der Quelle. Ein Escape (Hexziffern mit
+/// einem Leerraumzeichen dahinter, oder ein beliebiges Zeichen außer
+/// Zeilenende) ist an jeder Stelle ein Namenszeichen.
 fn ident(g: &str) -> bool {
-    let mut c = g.chars();
-    let Some(first) = c.next() else { return false };
-    let start = |c: char| c.is_ascii_alphabetic() || c == '_' || !c.is_ascii() || c == '\\';
+    let chars: Vec<char> = g.chars().collect();
+    let start = |c: char| c.is_ascii_alphabetic() || c == '_' || !c.is_ascii();
     let ok = |c: char| start(c) || c.is_ascii_digit() || c == '-';
-    let first_ok =
-        start(first) || (first == '-' && g.chars().nth(1).is_some_and(|n| start(n) || n == '-'));
-    first_ok && g.chars().all(ok)
+    let mut i = 0;
+    let mut first = true;
+    while i < chars.len() {
+        let c = chars[i];
+        if c == '\\' {
+            match chars.get(i + 1) {
+                None | Some('\n' | '\r' | '\u{c}') => return false,
+                Some(h) if h.is_ascii_hexdigit() => {
+                    let n = chars[i + 1..]
+                        .iter()
+                        .take(6)
+                        .take_while(|c| c.is_ascii_hexdigit())
+                        .count();
+                    i += 1 + n;
+                    if chars.get(i).is_some_and(char::is_ascii_whitespace) {
+                        i += 1;
+                    }
+                }
+                Some(_) => i += 2,
+            }
+        } else {
+            let valid = if first {
+                // `-` und `--` dürfen vorn stehen, wenn danach ein Namenszeichen folgt.
+                start(c)
+                    || (c == '-'
+                        && chars
+                            .get(i + 1)
+                            .is_some_and(|&n| start(n) || n == '-' || n == '\\'))
+            } else {
+                ok(c)
+            };
+            if !valid {
+                return false;
+            }
+            i += 1;
+        }
+        first = false;
+    }
+    !chars.is_empty()
 }
 
 #[cfg(test)]
@@ -205,12 +298,26 @@ mod tests {
 
     #[test]
     fn namen() {
-        assert_eq!(layer_name("a"), Some(vec!["a"]));
-        assert_eq!(layer_name(" a.b-c "), Some(vec!["a", "b-c"]));
+        assert_eq!(layer_name("a"), Some(vec!["a".to_string()]));
+        assert_eq!(layer_name(" a.b-c "), Some(vec!["a".into(), "b-c".into()]));
         assert_eq!(layer_name("a..b"), None);
         assert_eq!(layer_name("a."), None);
         assert_eq!(layer_name("1a"), None);
         assert_eq!(layer_name("a b"), None);
         assert_eq!(layer_name(""), None);
+    }
+
+    #[test]
+    fn escapes_werden_normalisiert() {
+        // CSS Syntax 3 §4.3.7: Hexescape, Zeichenescape, maskierter Punkt.
+        assert_eq!(layer_name("\\61 b"), Some(vec!["ab".to_string()]));
+        assert_eq!(layer_name("\\61"), Some(vec!["a".to_string()]));
+        assert_eq!(layer_name("\\000061"), Some(vec!["a".to_string()]));
+        assert_eq!(layer_name("\\a"), Some(vec!["\n".to_string()]));
+        assert_eq!(layer_name("a\\.b"), Some(vec!["a.b".to_string()]));
+        assert_eq!(layer_name("\\62 .c"), Some(vec!["b".into(), "c".into()]));
+        assert_eq!(layer_name("\\0"), Some(vec!["\u{FFFD}".to_string()]));
+        assert_eq!(layer_name("a\\"), None);
+        assert_eq!(layer_name("\\g"), Some(vec!["g".to_string()]));
     }
 }
