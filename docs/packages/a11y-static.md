@@ -36,7 +36,10 @@ flowchart LR
 | `Page::parse(html)` | the parsed document |
 | `Page::stylesheet_refs()` | `StylesheetRef::Link { href, media }` and `Inline { css, media }`, in document order |
 | `Page::audit(sheets, env, locale)` | runs all rule tiers and the stylesheet rules, adds input notes |
-| `Sheet { source, css, media }` | what the host hands back; `source` is the `href` of the link |
+| `Sheet::new(source, css)` | a fetched sheet; `source` is the `href` of the link, verbatim |
+| `Sheet::failed(source, reason)` | a sheet the host could not fetch; `reason` becomes the note detail |
+| `Sheet::with_media(m)`, `Sheet::with_imports(v)` | the `media` of the link it answers; the sheets it `@import`s |
+| `Sheet { source, css, media, failure, imports }` | the fields behind these; `#[non_exhaustive]`, build through the constructors |
 | `Environment`, `Locale` | re-exported from `style-cascade` and `a11y-rules` |
 | feature `de` | German finding texts |
 
@@ -45,10 +48,24 @@ flowchart LR
 - **Discovery.** `<link>` counts with the `rel` token `stylesheet`, without `alternate`, without
   `disabled`, with a non-empty `href`. Every `<style>` counts. Elements inside `<template>` do not.
 - **Media.** A `media` attribute wraps the sheet's rules in `@media`; the cascade decides against
-  the `Environment`. A `media` on the `Sheet` takes precedence over the one on the link.
-- **Missing input.** A `<link>` without a `Sheet` (matched by `href`) gives
-  `InputKind::StylesheetUnavailable`; each `Cascade::unresolved_imports()` entry gives
-  `InputKind::StylesheetUnresolved`. While either note is present, the internal host
+  the `Environment`.
+- **Matching.** A `<link>` is answered by the `Sheet` with the same `href` and `media` (media
+  compared trimmed, ASCII case-insensitive). A `Sheet` without `media` answers any link with that
+  `href`; an exact match wins over it. Two links with the same `href` and different `media` each
+  need their own `Sheet`.
+- **URLs.** `source` is the URL as written; resolving it against the page URL, fetching, and policy
+  (size, scheme, redirects) are the host's job. The crate does no I/O and no URL resolution.
+- **Imports.** The crate does not follow `@import`. A host that loads imported sheets puts them in
+  `Sheet::imports` (matched by `source` equal to the URL in the `@import`, nested to any depth,
+  cycles stop at 16 levels or on repetition); the import is then replaced by the imported rules, in
+  place, wrapped in `@media` if the import has a media condition. For an `@import` in an inline
+  `<style>` the top-level `sheets` are searched. `@import ... layer()` and `supports()` are never
+  applied (style-cascade#121) and stay unresolved.
+- **Missing input.** A `<link>` without a usable `Sheet` gives `InputKind::StylesheetUnavailable`,
+  with `Sheet::failure` as detail if the host gave a reason; so does a qualifying `<link>` with
+  empty or missing `href` (no subject; it is not in `stylesheet_refs`, there is nothing to fetch).
+  An `@import` that stays unresolved gives `InputKind::StylesheetUnresolved` (detail: the import's
+  failure reason, if any). While either note is present, the internal host
   claims no colour or background (`display` and `visibility` stay), so the contrast rules report
   `untested`, never pass or fail on an unstyled page.
 - **Not rendered.** `aria-hidden="true"` and `inert` (node or ancestor) make a node ignored;
@@ -63,6 +80,7 @@ Downward: `html5-parser`, `a11y-dom` (feature `html5-parser`), `a11y-report`, `a
 ## Limits
 
 - No layout: no box geometry, so rules that need it do not decide.
-- A sheet supplied for no `<link>` is ignored; the host fetches what `stylesheet_refs` names.
-- Imports are not followed; the host may inline them into the `Sheet` text.
-- `@import` in a sheet that has a `media` condition is treated as unconditional.
+- A sheet supplied for no `<link>` (and no import) is ignored; the host fetches what
+  `stylesheet_refs` names.
+- Imports are not followed, only the ones the host hands over are applied.
+- An unresolved `@import` in a sheet that has a `media` condition is treated as unconditional.
