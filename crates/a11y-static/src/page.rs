@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use a11y_dom::{Node, NodeKind, ancestors, elements};
-use a11y_report::{InputKind, InputNote, Report, SourcePosition};
+use a11y_report::{InputKind, InputNote, Report};
 use a11y_rules::Locale;
-use style_cascade::Environment;
+use style_cascade::{Environment, Import};
 use stylesheet_parse::{AtRule, MediaRule, Rule, Stylesheet, parse_stylesheet};
 
 use crate::host::Host;
@@ -235,41 +233,7 @@ impl Page {
                     .with_detail(detail),
             );
         }
-        self.fill_positions(&mut report);
         report
-    }
-
-    /// Sets `Location::position` on every finding that names a node, from the
-    /// parser's source offsets. A node the parser synthesized (implied
-    /// `<tbody>`, `<html>`, `<head>`, `<body>`) takes the position of its
-    /// nearest ancestor that comes from the source; without one it stays
-    /// empty. Nothing is invented.
-    fn fill_positions(&self, report: &mut Report) {
-        let mut positions: HashMap<u32, SourcePosition> = HashMap::new();
-        let mut stack = vec![(self.doc.root(), None::<SourcePosition>)];
-        while let Some((id, inherited)) = stack.pop() {
-            let own = self
-                .doc
-                .node(id)
-                .position
-                .map(|p| SourcePosition::new(p.line, p.column, p.byte_offset));
-            let here = own.or(inherited);
-            if let Some(p) = here {
-                positions.insert(id.as_u32(), p);
-            }
-            stack.extend(self.doc.children(id).map(|c| (c, here)));
-        }
-        for f in &mut report.findings {
-            if f.location.position.is_some() {
-                continue;
-            }
-            f.location.position = f
-                .location
-                .node
-                .as_deref()
-                .and_then(|n| n.parse::<u32>().ok())
-                .and_then(|n| positions.get(&n).copied());
-        }
     }
 }
 
@@ -311,13 +275,11 @@ fn expand(
             continue;
         }
         let prelude = at.prelude.trim().to_string();
-        // `layer()` and `supports()` need the cascade (style-cascade#121):
-        // such an import stays unresolved instead of being applied wrongly.
-        let Some((url, media)) = import_target(&prelude) else {
+        let Some(import) = Import::parse(&prelude) else {
             out.push(rule);
             continue;
         };
-        let Some(sheet) = imports.iter().find(|s| s.source == url) else {
+        let Some(sheet) = imports.iter().find(|s| s.source == import.url) else {
             out.push(rule);
             continue;
         };
@@ -334,50 +296,11 @@ fn expand(
         chain.push(sheet.source.clone());
         let inner = expand(&sheet.css, &sheet.imports, chain, failures);
         chain.pop();
-        match media {
-            None => out.extend(inner),
-            Some(condition) => {
-                // Unresolved imports of the imported sheet stay at the top
-                // level, where the cascade looks for them.
-                let (left, inner): (Vec<_>, Vec<_>) = inner.into_iter().partition(is_import);
-                out.extend(left);
-                out.push(Rule::Media(MediaRule {
-                    condition,
-                    rules: inner,
-                }));
-            }
-        }
+        // Layer, `supports()` and media of the import become the matching
+        // wrapper rules (Cascade 5 §6.4.1); the cascade ranks them.
+        out.extend(import.wrap(inner));
     }
     out
-}
-
-/// The URL and optional media condition of an `@import` prelude, or `None`
-/// for a form this crate does not apply (`layer`, `supports`, no URL).
-fn import_target(prelude: &str) -> Option<(String, Option<String>)> {
-    let p = prelude.trim();
-    let (raw, rest) = if let Some(r) = p.strip_prefix("url(") {
-        let end = r.find(')')?;
-        (r[..end].trim(), &r[end + 1..])
-    } else if p.starts_with(['"', '\'']) {
-        let q = p.chars().next()?;
-        let end = p[1..].find(q)? + 1;
-        (&p[..=end], &p[end + 1..])
-    } else {
-        return None;
-    };
-    let url = match raw.chars().next()? {
-        q @ ('"' | '\'') => raw[1..].strip_suffix(q)?,
-        _ => raw,
-    };
-    let rest = rest.trim();
-    let lower = rest.to_ascii_lowercase();
-    if lower.starts_with("layer") || lower.contains("supports(") {
-        return None;
-    }
-    Some((
-        url.to_string(),
-        (!rest.is_empty()).then(|| rest.to_string()),
-    ))
 }
 
 /// With a media condition, the rules go into an `@media` block. `@import`

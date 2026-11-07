@@ -58,9 +58,10 @@ flowchart LR
 - **Imports.** The crate does not follow `@import`. A host that loads imported sheets puts them in
   `Sheet::imports` (matched by `source` equal to the URL in the `@import`, nested to any depth,
   cycles stop at 16 levels or on repetition); the import is then replaced by the imported rules, in
-  place, wrapped in `@media` if the import has a media condition. For an `@import` in an inline
-  `<style>` the top-level `sheets` are searched. `@import ... layer()` and `supports()` are never
-  applied (style-cascade#121) and stay unresolved.
+  place, wrapped as the import says: `layer` / `layer(x)` puts the rules in that cascade layer
+  (Cascade 5 §6.4.1), `supports()` and a media list become `@supports` and `@media` (see
+  `style_cascade::Import`). For an `@import` in an inline `<style>` the top-level `sheets` are
+  searched.
 - **Missing input.** A `<link>` without a usable `Sheet` gives `InputKind::StylesheetUnavailable`,
   with `Sheet::failure` as detail if the host gave a reason; so does a qualifying `<link>` with
   empty or missing `href` (no subject; it is not in `stylesheet_refs`, there is nothing to fetch).
@@ -71,30 +72,6 @@ flowchart LR
 - **Not rendered.** `aria-hidden="true"` and `inert` (node or ancestor) make a node ignored;
   `display: none` (including the `hidden` attribute through the UA rules), `visibility: hidden`
   and `collapse` make it not rendered.
-
-## Source positions
-
-`Page::audit` fills `Location::position` (`SourcePosition`: line and column from 1, byte offset
-from 0) on every finding whose `Location::node` names a node, after the rules ran; no rule is
-involved. The values come from `html5-parser`: the offset is a byte offset into the text handed to
-`parse`, and for an element it is the `<` of its start tag. The column counts characters (not
-bytes) since the last line break; CRLF and lone CR count as one line break, and the offset still
-refers to the original text. Tests over a document with multi-byte text and with CRLF check that
-the offset points at the offending tag for `images/alt-missing`, `links/name-missing` and
-`buttons/name-missing`.
-
-Findings that get **no** position:
-
-- Findings on a node the parser synthesized (implied `<html>`, `<head>`, `<body>`, `<tbody>`) take
-  the position of the nearest ancestor that exists in the source (an implied `<tbody>` points at
-  its `<table>`); with no such ancestor (an implied `<html>`) they stay empty.
-- Findings without a node (none seen from the current rules; the stylesheet and page rules name
-  the root element).
-
-Page-level findings (document language, title, stylesheet rules) name the root element, so
-their position is that of an explicit `<html>` tag and empty when the source has none. A finding
-on a text node points at the start of the text, not at a tag. A position already present is not
-overwritten.
 
 ## Dependencies
 

@@ -5,18 +5,17 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
-### Changed
-
-- **`Sheet` (inkompatibel zu 0.1.0, unveröffentlicht):** `#[non_exhaustive]` mit den neuen Feldern `failure` und `imports`; Aufbau über `Sheet::new`, `Sheet::failed`, `with_media`, `with_imports`. `media` am `Sheet` ist jetzt das `media` des `<link>`, das es beantwortet, kein Überschreiben mehr; ohne `media` passt es auf jeden Link mit dem `href`.
-- **Zuordnung:** Ein `<link>` wird über `href` plus `media` zugeordnet; zwei Links mit gleichem `href` und verschiedenem `media` bekommen je ihr Blatt.
-
 ### Added
 
-- **Quellposition:** `Page::audit` setzt `Location::position` (Zeile und Spalte ab 1, Byte-Versatz ab 0, der `<` des Start-Tags) an jedem Befund mit Knoten. Für vom Parser ergänzte Elemente gilt die Stelle des nächsten Vorfahren aus dem Quelltext, sonst bleibt das Feld leer. Welche Befunde keine Position bekommen, steht in der Doku.
 - **Ausfallgrund:** `Sheet::failed(source, reason)`; der Grund steht im `detail` des `StylesheetUnavailable`-Vermerks, die Kontrastregeln bleiben `untested`.
-- **`@import`:** Ein Host, der importierte Blätter lädt, übergibt sie in `Sheet::imports`; `StylesheetUnresolved` entfällt dann. Ohne Treffer, mit Fehlschlag, bei Zyklen sowie bei `layer()` und `supports()` bleibt der Import unaufgelöst.
+- **`@import`:** Ein Host, der importierte Blätter lädt, übergibt sie in `Sheet::imports`; `StylesheetUnresolved` entfällt dann. `layer`, `layer(x)`, `supports()` und Medienliste am `@import` gelten für das übergebene Blatt (Cascade 5 §6.4.1). Ohne Treffer, mit Fehlschlag und bei Zyklen bleibt der Import unaufgelöst.
 - **Leeres `href`:** Ein `<link rel=stylesheet>` ohne brauchbares `href` ergibt einen `StylesheetUnavailable`-Vermerk statt still zu fehlen.
 - **Doku:** URL-Auflösung und Abruf liegen beim Host.
+
+### Changed
+
+- **`Sheet` (inkompatibel zu 0.1.0):** `#[non_exhaustive]` mit den neuen Feldern `failure` und `imports`; Aufbau über `Sheet::new`, `Sheet::failed`, `with_media`, `with_imports`. `media` am `Sheet` ist jetzt das `media` des `<link>`, das es beantwortet, kein Überschreiben mehr; ohne `media` passt es auf jeden Link mit dem `href`.
+- **Zuordnung:** Ein `<link>` wird über `href` plus `media` zugeordnet; zwei Links mit gleichem `href` und verschiedenem `media` bekommen je ihr Blatt.
 
 ## [0.1.0] - 2026-11-06
 

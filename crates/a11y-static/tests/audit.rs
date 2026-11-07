@@ -291,18 +291,69 @@ fn import_cycle_stays_unresolved() {
     assert!(!contrast(&r, Outcome::Pass) && !contrast(&r, Outcome::Fail));
 }
 
+// CSS Cascade 5 §6.4.1: the rules of `@import … layer(x)` sit in layer x, which
+// loses to every unlayered rule (§6.4.2).
 #[test]
-fn layered_import_stays_unresolved_even_if_supplied() {
+fn layered_import_is_applied_in_its_layer() {
     let html = doc("<link rel=stylesheet href=a.css>", LOW);
-    let a = Sheet::new("a.css", "@import url(b.css) layer(x);")
-        .with_imports(vec![Sheet::new("b.css", "p{background:#fff;color:#000}")]);
+    let imported = || vec![Sheet::new("b.css", "body p{color:#999}")];
+    for import in [
+        "@import url(b.css) layer(x);",
+        "@import url(b.css) layer;",
+        "@import url(b.css) layer(x) supports(display: grid) screen;",
+    ] {
+        let a = Sheet::new("a.css", format!("{import} p{{color:#000;background:#fff}}"))
+            .with_imports(imported());
+        let r = audit(&html, &[a], Environment::default());
+        assert!(r.inputs.is_empty(), "{import}: {:?}", r.inputs);
+        assert!(
+            !contrast(&r, Outcome::Fail) && !contrast(&r, Outcome::Untested),
+            "{import}: {:?}",
+            r.findings
+        );
+    }
+    // Control: without a layer the imported rule applies.
+    let a = Sheet::new("a.css", "@import url(b.css); p{background:#fff}")
+        .with_imports(vec![Sheet::new("b.css", "body p{color:#999}")]);
     let r = audit(&html, &[a], Environment::default());
-    assert!(
-        r.inputs
-            .iter()
-            .any(|n| n.kind == InputKind::StylesheetUnresolved)
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn unsupplied_layered_import_stays_unresolved() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new(
+        "a.css",
+        "@import url(b.css) layer(x); p{background:#fff;color:#000}",
     );
+    let r = audit(&html, &[a], Environment::default());
+    let note = r
+        .inputs
+        .iter()
+        .find(|n| n.kind == InputKind::StylesheetUnresolved)
+        .expect("note");
+    assert_eq!(note.subject.as_deref(), Some("url(b.css) layer(x)"));
     assert!(!contrast(&r, Outcome::Pass) && !contrast(&r, Outcome::Fail));
+}
+
+#[test]
+fn import_with_unmet_condition_does_not_apply() {
+    // Media Queries 4 / Conditional 3 §7.1: a failing condition drops the sheet.
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    for import in [
+        "@import url(b.css) print;",
+        "@import url(b.css) supports(not (display: grid));",
+    ] {
+        let a = Sheet::new("a.css", format!("{import} p{{color:#000;background:#fff}}"))
+            .with_imports(vec![Sheet::new("b.css", "body p{color:#999}")]);
+        let r = audit(&html, &[a], Environment::default());
+        assert!(r.inputs.is_empty(), "{import}: {:?}", r.inputs);
+        assert!(
+            !contrast(&r, Outcome::Fail) && !contrast(&r, Outcome::Untested),
+            "{import}: {:?}",
+            r.findings
+        );
+    }
 }
 
 #[test]
