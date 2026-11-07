@@ -55,11 +55,11 @@ schematron-engine = { version = "0.3.0", path = "crates/schematron-engine" }
 html-conform = { version = "0.4.1", path = "crates/html-conform" }
 stylesheet-parse = { version = "0.1.1", path = "crates/stylesheet-parse" }
 style-cascade = { version = "0.1.0", path = "crates/style-cascade" }
-a11y-report = { version = "0.28.1", path = "crates/a11y-report" }
+a11y-report = { version = "0.28.2", path = "crates/a11y-report" }
 # Ohne Vorgabe-Features: Wer die deutschen Texte braucht, schaltet `de` zu.
-a11y-rules = { version = "0.28.1", path = "crates/a11y-rules", default-features = false }
-a11y-dom = { version = "0.28.1", path = "crates/a11y-dom" }
-accname = { version = "0.28.1", path = "crates/accname" }
+a11y-rules = { version = "0.28.2", path = "crates/a11y-rules", default-features = false }
+a11y-dom = { version = "0.28.2", path = "crates/a11y-dom" }
+accname = { version = "0.28.2", path = "crates/accname" }
 a11y-static = { version = "0.1.0", path = "crates/a11y-static" }
 
 serde = { version = "1", features = ["derive"] }

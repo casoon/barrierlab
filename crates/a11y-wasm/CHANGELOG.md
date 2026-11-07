@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-07
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.28.2; `keyboard/hidden-focusable` meldet hinter einem offenen Modal Review statt Fail (casoon/barrierlab#90).
+
 ## [0.15.0] - 2026-11-06
 
 ### Added
