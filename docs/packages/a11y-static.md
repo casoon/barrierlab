@@ -58,9 +58,10 @@ flowchart LR
 - **Imports.** The crate does not follow `@import`. A host that loads imported sheets puts them in
   `Sheet::imports` (matched by `source` equal to the URL in the `@import`, nested to any depth,
   cycles stop at 16 levels or on repetition); the import is then replaced by the imported rules, in
-  place, wrapped in `@media` if the import has a media condition. For an `@import` in an inline
-  `<style>` the top-level `sheets` are searched. `@import ... layer()` and `supports()` are never
-  applied (style-cascade#121) and stay unresolved.
+  place, wrapped as the import says: `layer` / `layer(x)` puts the rules in that cascade layer
+  (Cascade 5 §6.4.1), `supports()` and a media list become `@supports` and `@media` (see
+  `style_cascade::Import`). For an `@import` in an inline `<style>` the top-level `sheets` are
+  searched.
 - **Missing input.** A `<link>` without a usable `Sheet` gives `InputKind::StylesheetUnavailable`,
   with `Sheet::failure` as detail if the host gave a reason; so does a qualifying `<link>` with
   empty or missing `href` (no subject; it is not in `stylesheet_refs`, there is nothing to fetch).

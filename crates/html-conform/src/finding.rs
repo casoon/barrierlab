@@ -167,7 +167,10 @@ impl CheckReport {
     /// is a statement the checker could not decide (such as unevaluated
     /// hash sources), so `Untested` with `Low`. The location becomes
     /// `Location::position` (line, column, byte offset) and, for readers of
-    /// older reports, `source_hint` as `"line:column"`. Each [`Skipped`] becomes an
+    /// older reports, `source_hint` as `"line:column"`. A [`FindingDetail`]
+    /// travels in `Finding::extra` (read it with
+    /// `finding.extra.get::<FindingDetail>()`); like every `extra` it is not
+    /// serialized, so the JSON contract is unchanged. Each [`Skipped`] becomes an
     /// `InputKind::DocumentIncomplete` note, so unchecked content stays
     /// visible. No `RuleRun` entries are recorded: html-conform has no rule
     /// registry to say which rules could have run.
@@ -197,6 +200,9 @@ impl CheckReport {
                 ),
             };
             mapped = mapped.with_severity(severity);
+            if let Some(detail) = &finding.detail {
+                mapped = mapped.with_extra(detail.clone());
+            }
             if let Some(location) = finding.location {
                 mapped.location.source_hint = Some(location.to_string());
                 mapped.location.position = Some(a11y_report::SourcePosition::new(
@@ -335,6 +341,31 @@ mod tests {
             assert!(position.line >= 1 && position.column >= 1);
         }
         assert!(positioned_points_at(html, &report, "<div>"));
+    }
+
+    #[test]
+    fn schema_detail_travels_in_extra_and_stays_out_of_json() {
+        let html = "<!DOCTYPE html><html lang=en><title>t</title><ul><div>x</div></ul></html>";
+        let checked = crate::check(html).unwrap();
+        let with_detail = checked
+            .findings
+            .iter()
+            .filter(|f| f.detail.is_some())
+            .count();
+        assert!(with_detail > 0, "{:?}", checked.findings);
+        let report = checked.to_report();
+        let details: Vec<&FindingDetail> = report
+            .findings
+            .iter()
+            .filter_map(|f| f.extra.get::<FindingDetail>())
+            .collect();
+        assert_eq!(details.len(), with_detail);
+        assert!(details.iter().any(|d| matches!(
+            d,
+            FindingDetail::UnexpectedElement { element } if element == "div"
+        )));
+        let json = serde_json::to_string(&report).unwrap();
+        assert!(!json.contains("UnexpectedElement"), "{json}");
     }
 
     fn positioned_points_at(html: &str, report: &a11y_report::Report, tag: &str) -> bool {
