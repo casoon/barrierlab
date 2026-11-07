@@ -18,11 +18,7 @@ fn doc(head: &str, body: &str) -> String {
 const LOW: &str = "<p>We answer within two days.</p>";
 
 fn sheet(source: &str, css: &str) -> Sheet {
-    Sheet {
-        source: source.into(),
-        css: css.into(),
-        media: None,
-    }
+    Sheet::new(source, css)
 }
 
 #[test]
@@ -204,4 +200,164 @@ fn refs_in_document_order() {
             },
         ]
     );
+}
+
+fn untested_with(r: &Report, kind: InputKind, detail: &str) {
+    let note = r.inputs.iter().find(|n| n.kind == kind).expect("note");
+    assert_eq!(note.detail.as_deref(), Some(detail), "{:?}", r.inputs);
+    assert!(!contrast(r, Outcome::Fail) && !contrast(r, Outcome::Pass));
+    assert!(contrast(r, Outcome::Untested), "{:?}", r.findings);
+}
+
+#[test]
+fn failure_reason_reaches_the_note() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let r = audit(
+        &html,
+        &[Sheet::failed("a.css", "HTTP 404")],
+        Environment::default(),
+    );
+    let note = &r.inputs[0];
+    assert_eq!(note.subject.as_deref(), Some("a.css"));
+    untested_with(&r, InputKind::StylesheetUnavailable, "HTTP 404");
+}
+
+#[test]
+fn failed_sheet_text_is_not_used() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let mut s = Sheet::failed("a.css", "too large");
+    s.css = "body{background:#fff;color:#000}".into();
+    let r = audit(&html, &[s], Environment::default());
+    untested_with(&r, InputKind::StylesheetUnavailable, "too large");
+}
+
+#[test]
+fn imported_sheet_clears_the_note() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new("a.css", "@import url(b.css); p{color:#999}")
+        .with_imports(vec![Sheet::new("b.css", "p{background:#fff}")]);
+    let r = audit(&html, &[a], Environment::default());
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn nested_and_quoted_imports_resolve() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let b = Sheet::new("b.css", "@import 'c.css'; p{color:#999}")
+        .with_imports(vec![Sheet::new("c.css", "p{background:#fff}")]);
+    let a = Sheet::new("a.css", "@import \"b.css\" screen;").with_imports(vec![b]);
+    let r = audit(&html, &[a], Environment::default());
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn import_in_inline_style_uses_top_level_sheets() {
+    let html = doc("<style>@import url(b.css); p{color:#999}</style>", LOW);
+    let r = audit(
+        &html,
+        &[sheet("b.css", "p{background:#fff}")],
+        Environment::default(),
+    );
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn failed_import_keeps_reason_and_untested() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new("a.css", "@import url(b.css); p{color:#999}")
+        .with_imports(vec![Sheet::failed("b.css", "HTTP 500")]);
+    let r = audit(&html, &[a], Environment::default());
+    untested_with(&r, InputKind::StylesheetUnresolved, "HTTP 500");
+}
+
+#[test]
+fn import_cycle_stays_unresolved() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new("a.css", "@import url(b.css);").with_imports(vec![
+        Sheet::new("b.css", "@import url(b.css);")
+            .with_imports(vec![Sheet::new("b.css", "p{background:#fff}")]),
+    ]);
+    let r = audit(&html, &[a], Environment::default());
+    assert!(
+        r.inputs
+            .iter()
+            .any(|n| n.kind == InputKind::StylesheetUnresolved),
+        "{:?}",
+        r.inputs
+    );
+    assert!(!contrast(&r, Outcome::Pass) && !contrast(&r, Outcome::Fail));
+}
+
+#[test]
+fn layered_import_stays_unresolved_even_if_supplied() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new("a.css", "@import url(b.css) layer(x);")
+        .with_imports(vec![Sheet::new("b.css", "p{background:#fff;color:#000}")]);
+    let r = audit(&html, &[a], Environment::default());
+    assert!(
+        r.inputs
+            .iter()
+            .any(|n| n.kind == InputKind::StylesheetUnresolved)
+    );
+    assert!(!contrast(&r, Outcome::Pass) && !contrast(&r, Outcome::Fail));
+}
+
+#[test]
+fn links_with_same_href_match_by_media() {
+    let html = doc(
+        "<link rel=stylesheet href=a.css media=screen><link rel=stylesheet href=a.css media=print>",
+        LOW,
+    );
+    let screen = Sheet::new("a.css", "p{background:#fff;color:#999}").with_media("Screen ");
+    let print = Sheet::new("a.css", "p{background:#fff;color:#000}").with_media("print");
+    let r = audit(&html, &[screen.clone(), print], Environment::default());
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+
+    // only the screen sheet supplied: the print link is unavailable
+    let r = audit(&html, &[screen], Environment::default());
+    assert_eq!(r.inputs.len(), 1, "{:?}", r.inputs);
+    assert_eq!(r.inputs[0].subject.as_deref(), Some("a.css"));
+    assert!(!contrast(&r, Outcome::Fail) && !contrast(&r, Outcome::Pass));
+}
+
+#[test]
+fn exact_media_wins_over_wildcard_sheet() {
+    let html = doc("<link rel=stylesheet href=a.css media=screen>", LOW);
+    let any = sheet("a.css", "p{background:#fff;color:#000}");
+    let exact = Sheet::new("a.css", "p{background:#fff;color:#999}").with_media("screen");
+    let r = audit(&html, &[any, exact], Environment::default());
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn sheet_with_other_media_does_not_answer_the_link() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let s = Sheet::new("a.css", "p{background:#fff;color:#000}").with_media("print");
+    let r = audit(&html, &[s], Environment::default());
+    assert_eq!(r.inputs[0].kind, InputKind::StylesheetUnavailable);
+}
+
+#[test]
+fn empty_href_is_noted() {
+    for link in [
+        "<link rel=stylesheet href=\"\">",
+        "<link rel=stylesheet href=\"  \">",
+        "<link rel=stylesheet>",
+    ] {
+        let r = audit(&doc(link, LOW), &[], Environment::default());
+        assert_eq!(r.inputs.len(), 1, "{link}");
+        assert_eq!(r.inputs[0].subject, None);
+        untested_with(
+            &r,
+            InputKind::StylesheetUnavailable,
+            "<link rel=stylesheet> has an empty or missing href",
+        );
+    }
+    // still not listed for fetching
+    let page = Page::parse(&doc("<link rel=stylesheet href=\"\">", ""));
+    assert!(page.stylesheet_refs().is_empty());
 }
