@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Checkliste:** zwei weitere `manual/*`-Punkte: `text-spacing` (1.4.12, erscheint bei Text auf der Seite) und `content-on-hover-focus` (1.4.13, erscheint bei `role="tooltip"`, `popover`, `aria-haspopup` oder `onmouseover`). Beide `UNTESTED`: ob bei geändertem Textabstand Text verloren geht oder Hover-Inhalt sich schließen und überfahren lässt, entscheidet kein Markup und keine Kaskade; casoon/barrierlab#114.
+
 ## [0.28.2] - 2026-11-07
 
 ### Changed
