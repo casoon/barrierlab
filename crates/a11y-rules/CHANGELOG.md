@@ -14,6 +14,8 @@ abweichen, steht je Schritt in
 
 - **Regelkatalog:** `catalogue()` liefert alle Regeldeklarationen in fester Reihenfolge (Tier 1, 2, 3, Stylesheets), `meta_for(id)` die Deklaration zu einer Befund-Kennung. Mit dem neuen Feature `serde` sind `Meta` und `Scope` serialisierbar (`tier` als Name, z. B. `structure`); ein Test prüft, dass jede Kennung genau einmal vorkommt und die Regelreferenz dieselbe Menge listet; casoon/barrierlab#129.
 
+## [0.28.2] - 2026-11-07
+
 ### Changed
 
 - **Tastatur:** `keyboard/hidden-focusable` meldet Fokussierbares unter `aria-hidden` *außerhalb* eines offenen Modals (`<dialog open>` oder `aria-modal="true"`) als Review statt Fail, weil die Fokusführung im Dialog nur eine laufende Seite entscheiden kann; der Befund verweist auf das Modal (Evidenz `open_modal`). Fokussierbares `aria-hidden` innerhalb des Modals und ohne offenes Modal bleibt Fail; casoon/barrierlab#90, auditmysite#920.
