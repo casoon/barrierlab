@@ -15,12 +15,16 @@ default = ["de"]
 # Deutsche Befundtexte und Hinweise (`Locale::De`). Ohne das Feature kommen
 # nur die englischen Texte in den Binärcode.
 de = []
+# `Serialize` für `Meta` und `Scope`, damit der Regelkatalog als JSON ausgegeben
+# werden kann (`catalogue`).
+serde = ["dep:serde"]
 
 [dependencies]
 stylesheet-parse = { workspace = true }
 style-cascade = { workspace = true }
 a11y-dom = { workspace = true }
 a11y-report = { workspace = true }
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 accname = { workspace = true }

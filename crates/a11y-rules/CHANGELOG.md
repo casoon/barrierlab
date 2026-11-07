@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Regelkatalog:** `catalogue()` liefert alle Regeldeklarationen in fester Reihenfolge (Tier 1, 2, 3, Stylesheets), `meta_for(id)` die Deklaration zu einer Befund-Kennung. Mit dem neuen Feature `serde` sind `Meta` und `Scope` serialisierbar (`tier` als Name, z. B. `structure`); ein Test prüft, dass jede Kennung genau einmal vorkommt und die Regelreferenz dieselbe Menge listet; casoon/barrierlab#129.
+
 ## [0.28.2] - 2026-11-07
 
 ### Changed

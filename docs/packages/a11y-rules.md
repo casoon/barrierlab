@@ -39,6 +39,7 @@ flowchart LR
 | `run_stylesheets` | extends a report with the rules over stylesheets (`stylesheet-parse`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | the rules individually, when a host orchestrates itself |
 | `structure_metas`, `semantics_metas`, `rendering_metas`, `stylesheet_metas` | all identifiers up front, without running — for coverage reports |
+| `catalogue`, `meta_for` | all declarations in one stable list (tier 1, 2, 3, stylesheets) and the lookup by finding ID; with the feature `serde`, `Meta` and `Scope` are `Serialize` |
 | `Meta`, `StructureRule`, `SemanticsRule`, `RenderingRule`, `StylesheetRule` | rule types and their declaration |
 | `Scope` | which nodes a rule sees: accessibility tree, rendered content or the whole markup |
 

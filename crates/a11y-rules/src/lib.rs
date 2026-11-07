@@ -43,6 +43,7 @@
 
 mod aria;
 mod best_practice;
+mod catalogue;
 mod checklist;
 mod document;
 mod forms;
@@ -64,6 +65,7 @@ mod visibility;
 mod viz;
 
 pub use best_practice::{BEST_PRACTICE_RULES, BestPracticeRule, best_practice_rule};
+pub use catalogue::{catalogue, meta_for};
 pub use locale::Locale;
 use locale::pick;
 pub use registry::{Meta, RenderingRule, SemanticsRule, StructureRule, StylesheetRule};
