@@ -103,8 +103,8 @@ expect = "killed"
 id = "keyboard/hidden-focusable"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if per_tab_reachable(n) {'''
-replace = '''        if !per_tab_reachable(n) {'''
+find = '''        if !per_tab_reachable(n) {'''
+replace = '''        if per_tab_reachable(n) {'''
 test = "korpus"
 expect = "killed"
 
@@ -252,5 +252,14 @@ file = "src/tables.rs"
 kind = "drop-condition"
 find = '''|| *k == cell '''
 replace = ''''''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "keyboard/hidden-focusable"
+file = "src/structure.rs"
+kind = "invert"
+find = '''            (false, Some(modal)) => Finding::review('''
+replace = '''            (true, Some(modal)) => Finding::review('''
 test = "korpus"
 expect = "killed"

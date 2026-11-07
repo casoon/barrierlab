@@ -6,7 +6,7 @@ use a11y_dom::{
     Document, Node, NodeId, ScopedId, Tier, ancestors, closest, elements, has_text, scoped_id,
     self_and_descendants, subtree_text,
 };
-use a11y_report::{Finding, Location, Severity};
+use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::registry::{Meta, StructureRule};
@@ -1397,7 +1397,23 @@ pub(crate) fn per_tab_reachable<'a, N: Node<'a>>(n: N) -> bool {
 /// ist, was `inert` ist oder per `tabindex="-1"` aus der Tabfolge genommen
 /// wurde: So wird ein versteckter Bereich richtig gebaut. Nicht Dargestelltes
 /// fehlt in der Sicht dieser Regel ohnehin (`Scope::Rendered`).
+///
+/// Hinter einem offenen Modal (`<dialog open>` oder `aria-modal="true"`) ist
+/// `aria-hidden` auf dem Hintergrund richtig, wenn der Fokus im Dialog bleibt
+/// (ARIA-Dialogmuster). Ob er bleibt, zeigt nur die laufende Seite; statisch
+/// entscheidbar ist es nicht. Fokussierbares *außerhalb* des Modals ist dann
+/// ein Befund zum Prüfen mit Verweis auf das Modal, kein Verstoß. Innerhalb des
+/// Modals bleibt `aria-hidden` auf Fokussierbarem ein Verstoß. Ein Host mit
+/// Browser löst den Befund auf, indem er die Fokusführung misst
+/// (casoon/barrierlab#90).
 fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let modals: Vec<_> = elements(doc)
+        .filter(|n| {
+            (n.is_element("dialog") && n.has_attr("open"))
+                || n.attr("aria-modal")
+                    .is_some_and(|v| v.eq_ignore_ascii_case("true"))
+        })
+        .collect();
     for n in elements(doc) {
         let with_ancestors = || std::iter::once(n).chain(ancestors(n));
         if !with_ancestors().any(|a| a.attr("aria-hidden") == Some("true"))
@@ -1405,21 +1421,41 @@ fn hidden_focusable<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>
         {
             continue;
         }
-        if per_tab_reachable(n) {
-            out.push(
-                Finding::fail(
-                    "keyboard/hidden-focusable",
-                    pick!(
-                        locale,
-                        "The element is focusable but hidden with aria-hidden, on itself or an ancestor.",
-                        "Das Element ist fokussierbar, aber per aria-hidden versteckt, selbst oder über einen Vorfahren.",
-                    ),
-                )
+        if !per_tab_reachable(n) {
+            continue;
+        }
+        let inside_modal = modals
+            .iter()
+            .any(|m| with_ancestors().any(|a| a.id() == m.id()));
+        let finding = match (inside_modal, modals.first()) {
+            (false, Some(modal)) => Finding::review(
+                "keyboard/hidden-focusable",
+                pick!(
+                    locale,
+                    "The element is focusable and hidden with aria-hidden behind an open modal dialog; whether focus stays inside the dialog is not decidable without a browser.",
+                    "Das Element ist fokussierbar und hinter einem offenen modalen Dialog per aria-hidden versteckt; ob der Fokus im Dialog bleibt, ist ohne Browser nicht entscheidbar.",
+                ),
+            )
+            .add_evidence(
+                Evidence::new("dom")
+                    .with_field("open_modal")
+                    .with_value(modal.id().to_string()),
+            ),
+            _ => Finding::fail(
+                "keyboard/hidden-focusable",
+                pick!(
+                    locale,
+                    "The element is focusable but hidden with aria-hidden, on itself or an ancestor.",
+                    "Das Element ist fokussierbar, aber per aria-hidden versteckt, selbst oder über einen Vorfahren.",
+                ),
+            ),
+        };
+        out.push(
+            finding
                 .with_severity(Severity::High)
                 .with_wcag(["1.3.1", "4.1.2"])
                 .at(at(n.id())),
-            );
-        }
+        );
     }
 }
 

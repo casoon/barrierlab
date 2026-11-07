@@ -264,6 +264,8 @@ fn tab_order() -> Vec<Fall> {
     const F44: &str = "WCAG 2.4.3, F44; Normative Zuordnung (auditmysite#779): REVIEW";
     const VER: &str = "keyboard/hidden-focusable";
     const ACT: &str = "ACT 6cfa84 (aria-hidden ohne fokussierbaren Inhalt); WCAG 4.1.2";
+    const MODAL: &str = "WAI-ARIA APG Dialog (Modal): aria-hidden dahinter ist richtig, wenn der Fokus im Dialog bleibt; \
+        Referenzlauf basf.com 2026-11-01 (OneTrust-Dialog offen), auditmysite#920, barrierlab#90";
     vec![
         review(POS, r#"<button tabindex="1">Zuerst</button>"#, F44)
             .variant("Grenze: 1")
@@ -296,6 +298,30 @@ fn tab_order() -> Vec<Fall> {
             ACT,
         )
         .variant("tabindex=0"),
+        review(
+            VER,
+            r#"<div aria-hidden="true"><a href="/x">Link</a></div><dialog open><button>OK</button></dialog>"#,
+            MODAL,
+        )
+        .variant("offenes dialog, Hintergrund aria-hidden"),
+        review(
+            VER,
+            r#"<div aria-hidden="true"><a href="/x">Link</a></div><div role="dialog" aria-modal="true"><button>OK</button></div>"#,
+            MODAL,
+        )
+        .variant("aria-modal=true"),
+        fail(
+            VER,
+            r#"<dialog open><button aria-hidden="true">X</button></dialog>"#,
+            MODAL,
+        )
+        .variant("aria-hidden im offenen Modal selbst"),
+        negative(
+            VER,
+            r#"<div aria-hidden="true" inert><a href="/x">Link</a></div><dialog open><button>OK</button></dialog>"#,
+            MODAL,
+        )
+        .variant("offenes Modal, Hintergrund inert"),
         negative(
             VER,
             r#"<div aria-hidden="true"><a href="/x" tabindex="-1">Link</a></div>"#,
