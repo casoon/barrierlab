@@ -399,6 +399,38 @@ fn checklist() -> Vec<Fall> {
             r#"<div></div>"#,
             "WCAG 2.4.5: kein Inhalt",
         ),
+        // --- manual/text-spacing (1.4.12) --------------------------------------------
+        untested(
+            "manual/text-spacing",
+            r#"<p>Text</p>"#,
+            "WCAG 1.4.12: Text vorhanden; Verlust bei geändertem Abstand nur von Hand prüfbar",
+        ),
+        negative(
+            "manual/text-spacing",
+            r#"<div></div>"#,
+            "WCAG 1.4.12: kein Text, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/text-spacing",
+            r#"<div></div>"#,
+            "WCAG 1.4.12: kein Inhalt",
+        ),
+        // --- manual/content-on-hover-focus (1.4.13) --------------------------------------------
+        untested(
+            "manual/content-on-hover-focus",
+            r#"<span role="tooltip">Hint</span>"#,
+            "WCAG 1.4.13: Inhalt bei Hover oder Fokus; Schließen und Überfahren nur von Hand prüfbar",
+        ),
+        negative(
+            "manual/content-on-hover-focus",
+            r#"<p>Text</p>"#,
+            "WCAG 1.4.13: Seite ohne Inhalt bei Hover oder Fokus, das Kriterium gilt nicht",
+        ),
+        na(
+            "manual/content-on-hover-focus",
+            r#"<div></div>"#,
+            "WCAG 1.4.13: kein Inhalt",
+        ),
         // --- manual/authentication (3.3.8) ----------------------------------
         untested(
             "manual/authentication",

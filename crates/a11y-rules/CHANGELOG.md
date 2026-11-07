@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Checkliste:** zwei weitere `manual/*`-Punkte: `text-spacing` (1.4.12, erscheint bei Text auf der Seite) und `content-on-hover-focus` (1.4.13, erscheint bei `role="tooltip"`, `popover`, `aria-haspopup` oder `onmouseover`). Beide `UNTESTED`: ob bei geändertem Textabstand Text verloren geht oder Hover-Inhalt sich schließen und überfahren lässt, entscheidet kein Markup und keine Kaskade; casoon/barrierlab#114.
+
 ### Changed
 
 - **Tastatur:** `keyboard/hidden-focusable` meldet Fokussierbares unter `aria-hidden` *außerhalb* eines offenen Modals (`<dialog open>` oder `aria-modal="true"`) als Review statt Fail, weil die Fokusführung im Dialog nur eine laufende Seite entscheiden kann; der Befund verweist auf das Modal (Evidenz `open_modal`). Fokussierbares `aria-hidden` innerhalb des Modals und ohne offenes Modal bleibt Fail; casoon/barrierlab#90, auditmysite#920.

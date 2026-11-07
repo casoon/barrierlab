@@ -48,6 +48,7 @@ struct Trigger {
     interruptions: bool,
     shortcut: bool,
     pointer_events: bool,
+    hover_content: bool,
 }
 
 impl Trigger {
@@ -113,6 +114,14 @@ impl Trigger {
                 .any(|h| n.has_attr(h))
             {
                 a.pointer_events = true;
+            }
+            if n.attr("role") == Some("tooltip")
+                || n.has_attr("popover")
+                || n.has_attr("onmouseover")
+                || n.attr("aria-haspopup")
+                    .is_some_and(|v| !v.trim().eq_ignore_ascii_case("false"))
+            {
+                a.hover_content = true;
             }
             if looks_like_captcha(n) {
                 a.login = true;
@@ -445,6 +454,24 @@ const POINTS: &[Point] = &[
         #[cfg(feature = "de")]
         de: "Von Hand prüfen: Eine Seite des Angebots ist auf mehr als einem Weg erreichbar — etwa über Navigation, Suche, Seitenübersicht oder verwandte Links.",
     },
+    Point {
+        id: "manual/text-spacing",
+        wcag: &["1.4.12"],
+        severity: Severity::Medium,
+        applies: |a| a.text,
+        en: "Check by hand: with line height 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size applied, no text is cut off, overlapped or lost.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Mit Zeilenhöhe 1,5, Absatzabstand 2, Zeichenabstand 0,12 und Wortabstand 0,16 der Schriftgröße geht kein Text verloren, wird abgeschnitten oder überlagert.",
+    },
+    Point {
+        id: "manual/content-on-hover-focus",
+        wcag: &["1.4.13"],
+        severity: Severity::Medium,
+        applies: |a| a.hover_content,
+        en: "Check by hand: content that appears on hover or focus can be dismissed without moving the pointer or focus, can be hovered itself, and stays until dismissed or no longer valid.",
+        #[cfg(feature = "de")]
+        de: "Von Hand prüfen: Inhalt, der bei Hover oder Fokus erscheint, lässt sich schließen, ohne Zeiger oder Fokus zu bewegen, lässt sich selbst überfahren und bleibt, bis er geschlossen wird oder nicht mehr gilt.",
+    },
 ];
 
 pub(crate) const META: Meta = Meta {
@@ -472,6 +499,8 @@ pub(crate) const META: Meta = Meta {
         "manual/consistent-identification",
         "manual/sensory-characteristics",
         "manual/multiple-ways",
+        "manual/text-spacing",
+        "manual/content-on-hover-focus",
     ],
     tier: Tier::Structure,
     // Was dargestellt wird, auch unter `aria-hidden`: Untertitel (1.2.2),
@@ -480,9 +509,9 @@ pub(crate) const META: Meta = Meta {
     // `aria-hidden="true"` braucht trotzdem Untertitel.
     scope: Scope::Rendered,
     wcag: &[
-        "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.2.5", "1.3.1", "1.3.3", "1.4.1", "2.1.2", "2.1.4",
-        "2.2.1", "2.2.3", "2.2.4", "2.2.5", "2.4.5", "2.5.1", "2.5.2", "2.5.7", "3.1.3", "3.2.3",
-        "3.2.4", "3.2.6", "3.3.1", "3.3.3", "3.3.4", "3.3.5", "3.3.8",
+        "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.2.5", "1.3.1", "1.3.3", "1.4.1", "1.4.12", "1.4.13",
+        "2.1.2", "2.1.4", "2.2.1", "2.2.3", "2.2.4", "2.2.5", "2.4.5", "2.5.1", "2.5.2", "2.5.7",
+        "3.1.3", "3.2.3", "3.2.4", "3.2.6", "3.3.1", "3.3.3", "3.3.4", "3.3.5", "3.3.8",
     ],
     severity: Severity::Medium,
     help: "Criteria no machine can decide. Each appears once per page when the page contains \
