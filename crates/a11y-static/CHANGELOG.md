@@ -9,6 +9,7 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ### Added
 
+- **Quellposition:** `Page::audit` setzt `Location::position` (Zeile und Spalte ab 1, Byte-Versatz ab 0, der `<` des Start-Tags) an jedem Befund mit Knoten. Für vom Parser ergänzte Elemente gilt die Stelle des nächsten Vorfahren aus dem Quelltext, sonst bleibt das Feld leer. Welche Befunde keine Position bekommen, steht in der Doku.
 - **Ausfallgrund:** `Sheet::failed(source, reason)`; der Grund steht im `detail` des `StylesheetUnavailable`-Vermerks, die Kontrastregeln bleiben `untested`.
 - **`@import`:** Ein Host, der importierte Blätter lädt, übergibt sie in `Sheet::imports`; `StylesheetUnresolved` entfällt dann. `layer`, `layer(x)`, `supports()` und Medienliste am `@import` gelten für das übergebene Blatt (Cascade 5 §6.4.1). Ohne Treffer, mit Fehlschlag und bei Zyklen bleibt der Import unaufgelöst.
 - **Leeres `href`:** Ein `<link rel=stylesheet>` ohne brauchbares `href` ergibt einen `StylesheetUnavailable`-Vermerk statt still zu fehlen.
