@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use a11y_dom::{Node, NodeKind, ancestors, elements};
-use a11y_report::{InputKind, InputNote, Report};
+use a11y_report::{InputKind, InputNote, Report, SourcePosition};
 use a11y_rules::Locale;
 use style_cascade::Environment;
 use stylesheet_parse::{AtRule, MediaRule, Rule, Stylesheet, parse_stylesheet};
@@ -233,7 +235,41 @@ impl Page {
                     .with_detail(detail),
             );
         }
+        self.fill_positions(&mut report);
         report
+    }
+
+    /// Sets `Location::position` on every finding that names a node, from the
+    /// parser's source offsets. A node the parser synthesized (implied
+    /// `<tbody>`, `<html>`, `<head>`, `<body>`) takes the position of its
+    /// nearest ancestor that comes from the source; without one it stays
+    /// empty. Nothing is invented.
+    fn fill_positions(&self, report: &mut Report) {
+        let mut positions: HashMap<u32, SourcePosition> = HashMap::new();
+        let mut stack = vec![(self.doc.root(), None::<SourcePosition>)];
+        while let Some((id, inherited)) = stack.pop() {
+            let own = self
+                .doc
+                .node(id)
+                .position
+                .map(|p| SourcePosition::new(p.line, p.column, p.byte_offset));
+            let here = own.or(inherited);
+            if let Some(p) = here {
+                positions.insert(id.as_u32(), p);
+            }
+            stack.extend(self.doc.children(id).map(|c| (c, here)));
+        }
+        for f in &mut report.findings {
+            if f.location.position.is_some() {
+                continue;
+            }
+            f.location.position = f
+                .location
+                .node
+                .as_deref()
+                .and_then(|n| n.parse::<u32>().ok())
+                .and_then(|n| positions.get(&n).copied());
+        }
     }
 }
 
