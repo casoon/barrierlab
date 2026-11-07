@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-07
+
 ### Added
 
 - **`@import`:** `Import::parse` und `Import::wrap` legen die Regeln eines gelieferten Imports in die Ebene (`layer`, `layer(x)`, anonym), unter `supports()` und die Medienliste (CSS Cascade 5 §6.4.1); ohne gelieferte Datei bleibt es bei `Unknown`. Siehe `docs/packages/style-cascade.md`.
