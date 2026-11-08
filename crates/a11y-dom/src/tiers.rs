@@ -18,7 +18,7 @@
 //!
 //! [`Document`]: crate::Document
 
-use crate::tree::Document;
+use crate::tree::{Document, NodeId};
 
 /// Welche Datenschicht eine Regel braucht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -301,6 +301,31 @@ pub struct PasteProbe {
     pub inserted: bool,
 }
 
+/// Messung nach dem Fokussieren eines Bedienelements: wie viel von seinem
+/// Kasten ein fixiertes oder klebendes fremdes Element überdeckt.
+///
+/// Der Host fokussiert das Element, lässt den Browser es so in den
+/// sichtbaren Bereich scrollen, wie ein Tastaturnutzer es sähe, tastet ein
+/// festes Raster im Kasten ab (etwa 3 mal 3, 1 px eingerückt, alle Punkte im
+/// Viewport) und fragt je Punkt die Malreihenfolge ab (`elementsFromPoint`).
+/// Er hält fest, **wie** er gescrollt hat (etwa `scrollIntoView({block:
+/// 'nearest'})`), und stellt Scrollposition und Fokus danach wieder her.
+/// Statische Geometrie ohne Fokuslauf ist keine solche Messung und darf nicht
+/// als eine geliefert werden: Der Fall, um den es dem Kriterium geht — ein
+/// Element, das unter eine klebende Kopfzeile scrollt —, entsteht erst beim
+/// Fokussieren.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FocusCover {
+    /// Anzahl der Abtastpunkte im Kasten des Elements.
+    pub points: u32,
+    /// Wie viele davon ein Element überdeckt, das weder Vorfahr noch Nachfahr
+    /// des Bedienelements ist und `position: fixed` oder `sticky` hat und
+    /// darüber gemalt wird. Eine Überlagerung unter dem Element zählt nicht.
+    pub covered: u32,
+    /// Das oberste solche Element.
+    pub blocker: Option<NodeId>,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -380,6 +405,16 @@ pub trait Rendering: Document {
     /// `value`; sie ist deshalb ein eigener, ausdrücklicher Durchgang des
     /// Hosts. Vorgabe `None`: nicht untersucht.
     fn paste_probe<'n>(&'n self, _node: Self::N<'n>) -> Option<PasteProbe> {
+        None
+    }
+
+    /// Abdeckung eines fokussierten Bedienelements durch fixierte oder
+    /// klebende Elemente, nach einem Fokuslauf des Hosts (siehe
+    /// [`FocusCover`]). Der Lauf ändert Fokus und Scrollposition und ist
+    /// deshalb ein eigener, ausdrücklicher Durchgang; ein Deckel auf die Zahl
+    /// der Bedienelemente ist Sache des Hosts und soll gemeldet werden.
+    /// Vorgabe `None`: nicht untersucht.
+    fn focus_cover<'n>(&'n self, _node: Self::N<'n>) -> Option<FocusCover> {
         None
     }
 }

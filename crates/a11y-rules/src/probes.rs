@@ -9,12 +9,13 @@
 //! stilles Bestehen. Gibt es nichts, worauf die Regel zielt, lief sie und
 //! meldet nichts.
 
-use a11y_dom::{Node, NodeId, Rendering, Tier, elements};
+use a11y_dom::{FocusCover, Node, NodeId, Rendering, Tier, elements};
 use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::not_run;
 use crate::registry::Meta;
+use crate::structure::per_tab_reachable;
 use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
@@ -211,6 +212,70 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+// --- focus/obscured-enhanced --------------------------------------------------
+
+pub(crate) fn cover_evidence(c: FocusCover) -> Vec<Evidence> {
+    let mut e = vec![
+        Evidence::computed("focus_points", c.points.to_string()),
+        Evidence::computed("focus_covered", c.covered.to_string()),
+    ];
+    if let Some(b) = c.blocker {
+        e.push(Evidence::computed("focus_blocker", b.to_string()));
+    }
+    e
+}
+
+/// 2.4.12 (AAA): kein Teil des fokussierten Bedienelements ist verdeckt. Die
+/// Abtastung sieht „irgendein Punkt überdeckt"; ob das ein Teil im Sinne des
+/// Kriteriums ist, entscheidet ein Mensch — `REVIEW`. Dieselbe Messung wie bei
+/// `focus/obscured`, andere Schwelle.
+fn focus_obscured_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut candidates = false;
+    let mut measured = false;
+    for n in
+        elements(doc).filter(|n| per_tab_reachable(*n) && doc.visually_hidden(*n) != Some(true))
+    {
+        candidates = true;
+        let Some(c) = doc.focus_cover(n) else {
+            continue;
+        };
+        measured = true;
+        if c.covered == 0 {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "focus/obscured-enhanced",
+                tr!(
+                    locale,
+                    "After receiving focus, {} of {} sample points of this control lie under a \
+                     fixed or sticky element. Enhanced (AAA): no part of a focused control may \
+                     be hidden. Check it by hand.",
+                    "Nach dem Fokussieren liegen {} von {} Abtastpunkten dieses Bedienelements \
+                     unter einem fixierten oder klebenden Element. Erhöht (AAA): kein Teil \
+                     eines fokussierten Bedienelements darf verdeckt sein. Von Hand prüfen.",
+                    c.covered,
+                    c.points,
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["2.4.12"])
+            .with_evidence(cover_evidence(c))
+            .at(at(n.id())),
+        );
+    }
+    if candidates && !measured {
+        out.push(not_run::note(
+            "focus/obscured-enhanced",
+            pick!(
+                locale,
+                "host did not run a focus pass (no focus_cover)",
+                "Host hat keinen Fokuslauf gemacht (kein focus_cover)",
+            ),
+        ));
+    }
+}
+
 // --- auth/paste-blocked -------------------------------------------------------
 
 /// Ein Feld, auf das 3.3.8 zielt und das der Host auf Einfügen prüfen soll:
@@ -301,6 +366,26 @@ fn paste_blocked<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 
 pub(crate) const METAS: &[Meta] = &[
     Meta {
+        ids: &["focus/obscured-enhanced"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &["2.4.12"],
+        severity: Severity::Low,
+        help: "Enhanced (AAA): no part of a focused control may be hidden by fixed or sticky \
+               content. Seen: Rendering::focus_cover, sample points under such an element after \
+               the host focused and scrolled the control; any covered point is reported. \
+               Sampling approximates \"any part\", so the result is a review. Without a focus \
+               pass the rule does not run: static geometry is not a probe.",
+        help_de: de_text!(
+            "Erhöht (AAA): Kein Teil eines fokussierten Bedienelements darf von fixiertem oder \
+                  klebendem Inhalt verdeckt sein. Gesehen wird Rendering::focus_cover, \
+                  Abtastpunkte unter einem solchen Element, nachdem der Host das Bedienelement \
+                  fokussiert und gescrollt hat; jeder überdeckte Punkt wird gemeldet. Die \
+                  Abtastung nähert \"irgendein Teil\" nur an, das Ergebnis ist ein Review. Ohne \
+                  Fokuslauf läuft die Regel nicht: statische Geometrie ist keine Messung."
+        ),
+    },
+    Meta {
         ids: &["auth/paste-blocked"],
         tier: Tier::Rendering,
         scope: Scope::Rendered,
@@ -362,8 +447,8 @@ pub(crate) const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 3] {
-    [paste_blocked, root_rotated, frames]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 4] {
+    [focus_obscured_enhanced, paste_blocked, root_rotated, frames]
 }
 
-const _: () = assert!(METAS.len() == 3);
+const _: () = assert!(METAS.len() == 4);

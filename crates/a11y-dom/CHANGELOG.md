@@ -12,6 +12,7 @@ Repository `casoon/a11y-core`.
 - **Rendering:** `Rendering::frame_reachable(node) -> Option<bool>` (Vorgabe `None`, nicht gemessen): ob das Dokument eines `<iframe>`/`<frame>` lesbar ist; casoon/barrierlab#132.
 - **Rendering:** `BoxTransform` und `Rendering::box_transform(node) -> Option<BoxTransform>` (Vorgabe `None`): berechnetes `transform` und `rotate` eines Elements. Eine Methode statt zweier neuer Felder an `ComputedStyle`, weil neue Felder an diesem Struct (kein `non_exhaustive`) jeden Host brechen, der es als Struct-Literal baut; casoon/barrierlab#134.
 - **Rendering:** `PasteProbe { cancelled, inserted }` und `Rendering::paste_probe(node) -> Option<PasteProbe>` (Vorgabe `None`): Rohbeobachtungen einer synthetischen Einfüge-Probe an einem Passwort- oder Codefeld; casoon/barrierlab#133.
+- **Rendering:** `FocusCover { points, covered, blocker }` und `Rendering::focus_cover(node) -> Option<FocusCover>` (Vorgabe `None`): Abdeckung eines fokussierten Bedienelements durch fixierte oder klebende Elemente nach einem Fokuslauf des Hosts; casoon/barrierlab#135.
 
 ## [0.28.2] - 2026-11-07
 

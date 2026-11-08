@@ -340,7 +340,11 @@ mod tests {
         // Messungen an der laufenden Seite, die dieses Paket noch nicht liefert
         // (casoon/barrierlab#130): ihre Kennungen stehen als nicht gelaufen im
         // Bericht, nicht als bestanden.
-        const NOCH_NICHT_GEMESSEN: &[&str] = &["orientation/root-rotated", "auth/paste-blocked"];
+        const NOCH_NICHT_GEMESSEN: &[&str] = &[
+            "orientation/root-rotated",
+            "auth/paste-blocked",
+            "focus/obscured-enhanced",
+        ];
         let offen = report
             .rule_runs
             .iter()

@@ -6,7 +6,7 @@
 //! auditmysite-Korpus `tests/fixtures/detection_corpus/` (nur gelesen) und
 //! sind hier als eigene, kleine Dokumente nachgestellt.
 
-use super::super::{Fall, fail, na, negative, not_run, untested};
+use super::super::{Fall, fail, na, negative, not_run, review, untested};
 
 const FRAME_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/content_frames_cross_origin (frame-tested): booking, small-map, shadow-calendar and late-reviews are reported; pixel (1x1), collapsed (display:none), silent (aria-hidden) and local-help (readable) are not";
 const FRAME_NORM: &str = "no WCAG criterion applies to a document the tool cannot read (coverage note); host contract of Rendering::frame_reachable, casoon/barrierlab#132";
@@ -16,6 +16,7 @@ pub fn cases() -> Vec<Fall> {
     v.extend(frames());
     v.extend(orientation());
     v.extend(paste());
+    v.extend(focus_cover());
     v
 }
 
@@ -314,5 +315,88 @@ fn paste() -> Vec<Fall> {
             r#"<!DOCTYPE html><html lang="en" style="--unmeasured: paste"><head><title>T</title></head><body><input type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:0"></body></html>"#,
             "docs/conventions.md: not measured is not passed; issue #133: no probe on any candidate gives NotRun",
         ),
+    ]
+}
+
+const FOCUS_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/interaction_focus_obscured: covered, mobile and dynamic are reported for 2.4.11 and 2.4.12; partial for 2.4.12 only; edge, under-hidden, above-backdrop and in-banner for neither";
+const FOCUS_NORM: &str = "WCAG 2.2 SC 2.4.11 (entirely hidden) and 2.4.12 (any part hidden) Focus Not Obscured; sampling approximates both, so the result is a review; Rendering::focus_cover contract, casoon/barrierlab#135";
+
+/// Die Fixture als eigenes Dokument: je Bedienelement die Messung des Hosts
+/// nach dem Fokussieren (3 mal 3 Punkte).
+const FOCUS_PAGE: &str = r#"<div id="cookie" role="region" aria-label="Cookie notice">We use cookies <button id="fo-in-banner" type="button" style="--focus-points:9;--focus-covered:0">Accept</button></div>
+<div id="chat"></div>
+<a id="fo-covered" href="/privacy" style="--focus-points:9;--focus-covered:9;--focus-blocker:cookie">Privacy</a>
+<a id="fo-partial" href="/imprint" style="--focus-points:9;--focus-covered:3;--focus-blocker:cookie">Imprint</a>
+<a id="fo-edge" href="/contact" style="--focus-points:9;--focus-covered:0">Contact</a>
+<a id="fo-under-hidden" href="/jobs" style="--focus-points:9;--focus-covered:0">Jobs</a>
+<a id="fo-above-backdrop" href="/press" style="--focus-points:9;--focus-covered:0">Press</a>
+<a id="fo-mobile" href="/app" style="--focus-points:9;--focus-covered:9;--focus-blocker:cookie">Get the app</a>
+<a id="fo-dynamic" href="/support" style="--focus-points:9;--focus-covered:9;--focus-blocker:chat">Support</a>"#;
+
+fn focus_cover() -> Vec<Fall> {
+    let id = "focus/obscured";
+    let en = "focus/obscured-enhanced";
+    vec![
+        review(id, FOCUS_PAGE, FOCUS_FIXTURE)
+            .variant("Fixture nachgestellt: covered, mobile, dynamic")
+            .count(3),
+        review(
+            id,
+            r#"<a href="/privacy" style="--focus-points:9;--focus-covered:9">Privacy</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == points")
+        .count(1),
+        negative(
+            id,
+            r#"<a href="/imprint" style="--focus-points:9;--focus-covered:8">Imprint</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == points - 1 ist nicht ganz verdeckt"),
+        negative(
+            id,
+            r#"<a href="/x" style="--focus-points:0;--focus-covered:0">X</a>"#,
+            "issue #135: points must be positive; no sample point inside the viewport is no measurement",
+        )
+        .variant("keine Abtastpunkte"),
+        negative(
+            id,
+            r#"<button style="--obscured:1;--focus-points:9;--focus-covered:0">Buy</button>"#,
+            "issue #135: static geometry must not be fed as if it were a probe; after the focus scroll the control is visible",
+        )
+        .variant("Messung nach dem Fokussieren ersetzt das statische Bit"),
+        review(
+            en,
+            FOCUS_PAGE,
+            FOCUS_FIXTURE,
+        )
+        .variant("Fixture nachgestellt: covered, partial, mobile, dynamic")
+        .count(4),
+        review(
+            en,
+            r#"<a href="/x" style="--focus-points:9;--focus-covered:1">X</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == 1")
+        .count(1),
+        negative(
+            en,
+            r#"<a href="/x" style="--focus-points:9;--focus-covered:0">X</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == 0 (edge, under-hidden, above-backdrop)"),
+        na(en, r#"<p>No controls.</p>"#, FOCUS_NORM),
+        na(
+            en,
+            r#"<div tabindex="-1" style="--focus-points:9;--focus-covered:9">Panel</div>"#,
+            "2.4.12 applies to components that receive keyboard focus; tabindex=-1 is not in the sequential order",
+        )
+        .variant("tabindex=-1"),
+        not_run(
+            en,
+            r#"<button style="--obscured:1">Buy</button>"#,
+            "issue #135: static geometry is not a probe; without focus_cover the rule does not run",
+        )
+        .variant("nur statisches Bit, keine Fokusmessung"),
     ]
 }

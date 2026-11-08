@@ -162,3 +162,77 @@ replace = '''    if false && candidates && !measured {
             "auth/paste-blocked",'''
 test = "korpus"
 expect = "killed"
+
+# --- focus/obscured (Fokusmessung) --------------------------------------------
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "threshold"
+find = '''c.points > 0 && c.covered >= c.points'''
+replace = '''c.points > 0 && c.covered + 1 >= c.points'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''c.points > 0 && c.covered >= c.points'''
+replace = '''c.covered >= c.points'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''            && cover.is_none()
+            && per_tab_reachable(n)'''
+replace = '''            && per_tab_reachable(n)'''
+test = "korpus"
+expect = "killed"
+note = "Die Messung nach dem Fokussieren ersetzt das statische Bit."
+
+# --- focus/obscured-enhanced --------------------------------------------------
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''        if c.covered == 0 {'''
+replace = '''        if c.covered < c.points {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if c.covered == 0 {'''
+replace = '''        if c.covered > 0 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''elements(doc).filter(|n| per_tab_reachable(*n) && doc.visually_hidden(*n) != Some(true))'''
+replace = '''elements(doc).filter(|n| doc.visually_hidden(*n) != Some(true))'''
+test = "korpus"
+expect = "killed"
+note = "Nur Bedienelemente der Tabreihenfolge zählen."
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "focus/obscured-enhanced",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "focus/obscured-enhanced",'''
+test = "korpus"
+expect = "killed"

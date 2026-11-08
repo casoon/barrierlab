@@ -27,12 +27,16 @@
 //!   serialisiert: `matrix(…)`, Winkel; das Wort `transform` in `--unmeasured`
 //!   schaltet die Messung ab); `--paste-cancelled` und `--paste-inserted`
 //!   (`1`/`0`, Vorgabe `0` und `1`; `--paste-probe: unmeasured` am Feld oder das
-//!   Wort `paste` in `--unmeasured` lässt die Probe aus).
+//!   Wort `paste` in `--unmeasured` lässt die Probe aus); `--focus-points`,
+//!   `--focus-covered` und `--focus-blocker` (das `id`-Attribut des
+//!   überdeckenden Elements) am Bedienelement — ohne eine der beiden Zahlen
+//!   gibt es keine Fokusmessung für das Element.
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
-    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document, Layout,
-    Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, ancestors, elements,
+    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document,
+    FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, ancestors,
+    elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -559,6 +563,24 @@ impl Rendering for Host<'_> {
         Some(PasteProbe {
             cancelled: switch(node, "--paste-cancelled"),
             inserted: own(node, "--paste-inserted").is_none_or(|v| v == "1" || v == "true"),
+        })
+    }
+
+    fn focus_cover<'n>(&'n self, node: Self::N<'n>) -> Option<FocusCover> {
+        let count = |p: &str| own(node, p).and_then(|v| v.parse::<u32>().ok());
+        let (points, covered) = (count("--focus-points"), count("--focus-covered"));
+        if points.is_none() && covered.is_none() {
+            return None;
+        }
+        let blocker = own(node, "--focus-blocker").and_then(|id| {
+            elements(self.doc)
+                .find(|e| e.attr("id") == Some(id.as_str()))
+                .map(|e| e.id())
+        });
+        Some(FocusCover {
+            points: points.unwrap_or(9),
+            covered: covered.unwrap_or(0),
+            blocker,
         })
     }
 

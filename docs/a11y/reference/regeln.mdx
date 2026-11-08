@@ -13,7 +13,7 @@ may deviate from it.
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.28.2 declares 167 IDs.
+a11y-rules 0.28.2 declares 168 IDs.
 
 ## Tier 1: Structure
 
@@ -173,7 +173,7 @@ a11y-rules 0.28.2 declares 167 IDs.
 
 ## Tier 3: Rendering
 
-20 IDs, needs `Rendering`, i.e. computed styles and geometry.
+21 IDs, needs `Rendering`, i.e. computed styles and geometry.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -186,7 +186,7 @@ a11y-rules 0.28.2 declares 167 IDs.
 | `motion/infinite-animation` | 2.2.2 | medium | Movement that lasts longer than five seconds needs a way to pause, stop or hide it. |
 | `reflow/min-width` | 1.4.10 | medium | Content must reflow at 320 CSS pixels wide; a min-width above that forces horizontal scrolling. |
 | `keyboard/pointer-only` | 2.1.1, 4.1.2 | high | Whatever reacts to a click must be a control: a `<button>` or `<a>`, or a role and tabindex with keyboard handling. |
-| `focus/obscured` | 2.4.11 | medium | A focused control must not be entirely hidden by fixed or sticky content. |
+| `focus/obscured` | 2.4.11 | medium | A focused control must not be entirely hidden by fixed or sticky content. Seen: the bits obscured and hides\_focus, and, when the host ran a focus pass, Rendering::focus\_cover (sample points under fixed or sticky elements after the host focused and scrolled the control); the probe replaces the static bit for that control. Sampling approximates "entirely", so the result stays a review. Which scroll a real Tab produces is not settled; the host records how it scrolled. |
 | `targets/size` | 2.5.8 | medium | Targets need at least 24 × 24 CSS pixels, or enough spacing to their neighbours. |
 | `targets/size-enhanced` | 2.5.5 | low | Enhanced target size (AAA): targets of at least 44 × 44 CSS pixels. |
 | `focus/indicator-missing` | 2.4.7 | high | Keyboard focus must be visible on every control. |
@@ -194,6 +194,7 @@ a11y-rules 0.28.2 declares 167 IDs.
 | `lists/role-redundant` | – | low | role="list" on a `<ul>` or `<ol>` is only needed when list-style-type is none. |
 | `color/link-indistinct` | 1.4.1 | medium | A link in running text needs more than colour to stand out: an underline, or a different weight, style, border or background. |
 | `keyboard/scrollable-region-not-focusable` | 2.1.1 | high | A scrollable region needs keyboard access: tabindex="0" on the region or a focusable element inside it. |
+| `focus/obscured-enhanced` | 2.4.12 | low | Enhanced (AAA): no part of a focused control may be hidden by fixed or sticky content. Seen: Rendering::focus\_cover, sample points under such an element after the host focused and scrolled the control; any covered point is reported. Sampling approximates "any part", so the result is a review. Without a focus pass the rule does not run: static geometry is not a probe. |
 | `auth/paste-blocked` | 3.3.8 | high | A password or one-time-code field must accept pasted text, so that a password manager can fill it: a handler that cancels the paste event without inserting the text itself blocks it. Seen: a synthetic, cancelable paste event the host dispatched; it is not trusted (isTrusted is false), so a handler that reacts only to trusted events or to key presses is not seen. autocomplete="off" on a password field is not a finding: browsers ignore it. |
 | `orientation/root-rotated` | 1.3.4 | high | A page that rotates its root (html or body) by a quarter turn to force one display orientation fails 1.3.4. Seen: the computed transform matrix and the rotate property of html and body, in the one viewport the host measured; a lock that applies only in the other orientation needs a second snapshot there (RuleRun::in\_viewport). That an orientation is essential is a human judgement. |
 | `frames/cross-origin` | – | low | A frame whose document the tool cannot read (cross-origin, or still navigating) was not tested. Not a conformance check and tied to no success criterion: a coverage note. Frames that are presentational, hidden or 1 px or smaller are skipped. |

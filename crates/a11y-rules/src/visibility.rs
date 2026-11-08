@@ -314,6 +314,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         let doc: &'n D = self.doc;
         doc.paste_probe(node.inner)
     }
+
+    fn focus_cover<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::FocusCover> {
+        let doc: &'n D = self.doc;
+        doc.focus_cover(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -383,6 +388,14 @@ mod tests {
             Some(a11y_dom::BoxTransform::default())
         }
 
+        fn focus_cover<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::FocusCover> {
+            Some(a11y_dom::FocusCover {
+                points: 9,
+                covered: 3,
+                blocker: None,
+            })
+        }
+
         fn paste_probe<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::PasteProbe> {
             Some(a11y_dom::PasteProbe {
                 cancelled: true,
@@ -407,6 +420,7 @@ mod tests {
         assert!(visibility.sampled_backdrop(n).is_some());
         assert_eq!(visibility.frame_reachable(n), Some(false));
         assert!(visibility.box_transform(n).is_some());
+        assert_eq!(visibility.focus_cover(n).map(|c| c.covered), Some(3));
         assert_eq!(
             visibility.paste_probe(n),
             Some(a11y_dom::PasteProbe {
