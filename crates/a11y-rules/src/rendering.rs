@@ -29,6 +29,7 @@ use a11y_report::{Evidence, Finding, Location, Severity};
 use crate::heuristics;
 use crate::locale::{Locale, de_text, pick, tr};
 use crate::presentation;
+use crate::probes;
 use crate::registry::{Meta, RenderingRule};
 use crate::visibility::Scope;
 
@@ -580,10 +581,18 @@ pub(crate) const METAS: &[Meta] = &[
     presentation::METAS[0],
     presentation::METAS[1],
     presentation::METAS[2],
+    probes::METAS[0],
+    probes::METAS[1],
+    probes::METAS[2],
+    probes::METAS[3],
+    probes::METAS[4],
 ];
 
-/// Drei eigene Regeln, dazu die Heuristiken und die Darstellungsregeln.
-const _: () = assert!(METAS.len() == 3 + heuristics::METAS.len() + presentation::METAS.len());
+/// Drei eigene Regeln, dazu die Heuristiken, die Darstellungsregeln und die
+/// Regeln über Messungen des Hosts.
+const _: () = assert!(
+    METAS.len() == 3 + heuristics::METAS.len() + presentation::METAS.len() + probes::METAS.len()
+);
 
 pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
     let functions = [
@@ -593,7 +602,8 @@ pub(crate) fn rules<D: Rendering>() -> Vec<RenderingRule<D>> {
     ]
     .into_iter()
     .chain(heuristics::functions::<D>())
-    .chain(presentation::functions::<D>());
+    .chain(presentation::functions::<D>())
+    .chain(probes::functions::<D>());
     METAS
         .iter()
         .zip(functions)

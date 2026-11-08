@@ -337,8 +337,22 @@ mod tests {
             flags: vec![4; arena.len()],
         };
         let report = a11y_rules::run_full(&RenderArena::new(&arena, &spalten));
+        // Messungen an der laufenden Seite, die dieses Paket noch nicht liefert
+        // (casoon/barrierlab#130): ihre Kennungen stehen als nicht gelaufen im
+        // Bericht, nicht als bestanden.
+        const NOCH_NICHT_GEMESSEN: &[&str] = &[
+            "orientation/root-rotated",
+            "auth/paste-blocked",
+            "focus/obscured-enhanced",
+            "text-spacing/clipped",
+        ];
+        let offen = report
+            .rule_runs
+            .iter()
+            .filter(|r| !r.did_run() && !NOCH_NICHT_GEMESSEN.contains(&r.rule_id.as_str()))
+            .count();
         assert_eq!(
-            report.summary.rules_not_run,
+            offen,
             a11y_rules::stylesheet_metas()
                 .iter()
                 .map(|m| m.ids.len())

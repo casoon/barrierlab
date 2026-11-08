@@ -20,11 +20,25 @@
 //!   `visually-hidden`, `style`, `bounds`, `unrendered` (kein Stil für nicht
 //!   Dargestelltes, wie ein Host aus einem Layout-Schnappschuss),
 //!   `unrendered-fields` (dafür nur `display: none`, sonst nichts).
+//!   Messungen an der laufenden Seite (casoon/barrierlab#130), je an dem Element,
+//!   das sie betrifft: `--frame-reachable` (`1`/`0`, Vorgabe `1`; das Wort
+//!   `frames` in `--unmeasured` schaltet die Messung ab); `transform` und
+//!   `rotate` am Element selbst (Vorgabe `none`, so wie der Browser sie berechnet
+//!   serialisiert: `matrix(…)`, Winkel; das Wort `transform` in `--unmeasured`
+//!   schaltet die Messung ab); `--paste-cancelled` und `--paste-inserted`
+//!   (`1`/`0`, Vorgabe `0` und `1`; `--paste-probe: unmeasured` am Feld oder das
+//!   Wort `paste` in `--unmeasured` lässt die Probe aus); `--focus-points`,
+//!   `--focus-covered` und `--focus-blocker` (das `id`-Attribut des
+//!   überdeckenden Elements) am Bedienelement — ohne eine der beiden Zahlen
+//!   gibt es keine Fokusmessung für das Element; `--clip-before` und
+//!   `--clip-after` (`1`/`0`) am Element — ohne eine der beiden gibt es kein
+//!   Textabstands-Paar für das Element.
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
-    Arena, ArenaBuilder, ArenaNode, Backdrop, Color, ComputedStyle, Document, Layout, Node,
-    NodeKind, Rect, Rendering, Semantics, ancestors, elements,
+    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document,
+    FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, SpacingClip,
+    ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -530,6 +544,56 @@ impl Rendering for Host<'_> {
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         self.measures("visually-hidden")
             .then(|| switch(node, "--visually-hidden"))
+    }
+
+    fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
+        self.measures("frames")
+            .then(|| own(node, "--frame-reachable").is_none_or(|v| v == "1" || v == "true"))
+    }
+
+    fn box_transform<'n>(&'n self, node: Self::N<'n>) -> Option<BoxTransform> {
+        self.measures("transform").then(|| BoxTransform {
+            transform: Some(own(node, "transform").unwrap_or_else(|| "none".into())),
+            rotate: Some(own(node, "rotate").unwrap_or_else(|| "none".into())),
+        })
+    }
+
+    fn paste_probe<'n>(&'n self, node: Self::N<'n>) -> Option<PasteProbe> {
+        if !self.measures("paste") || own(node, "--paste-probe").as_deref() == Some("unmeasured") {
+            return None;
+        }
+        Some(PasteProbe {
+            cancelled: switch(node, "--paste-cancelled"),
+            inserted: own(node, "--paste-inserted").is_none_or(|v| v == "1" || v == "true"),
+        })
+    }
+
+    fn focus_cover<'n>(&'n self, node: Self::N<'n>) -> Option<FocusCover> {
+        let count = |p: &str| own(node, p).and_then(|v| v.parse::<u32>().ok());
+        let (points, covered) = (count("--focus-points"), count("--focus-covered"));
+        if points.is_none() && covered.is_none() {
+            return None;
+        }
+        let blocker = own(node, "--focus-blocker").and_then(|id| {
+            elements(self.doc)
+                .find(|e| e.attr("id") == Some(id.as_str()))
+                .map(|e| e.id())
+        });
+        Some(FocusCover {
+            points: points.unwrap_or(9),
+            covered: covered.unwrap_or(0),
+            blocker,
+        })
+    }
+
+    fn text_spacing_clip<'n>(&'n self, node: Self::N<'n>) -> Option<SpacingClip> {
+        if own(node, "--clip-before").is_none() && own(node, "--clip-after").is_none() {
+            return None;
+        }
+        Some(SpacingClip {
+            before: switch(node, "--clip-before"),
+            after: switch(node, "--clip-after"),
+        })
     }
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {

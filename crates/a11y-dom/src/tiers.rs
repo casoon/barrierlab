@@ -18,7 +18,7 @@
 //!
 //! [`Document`]: crate::Document
 
-use crate::tree::Document;
+use crate::tree::{Document, NodeId};
 
 /// Welche Datenschicht eine Regel braucht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -267,6 +267,88 @@ pub struct Layout {
     pub animating: Option<bool>,
 }
 
+/// Berechnete Transformation eines Elements, als Zeichenketten so, wie
+/// der Browser sie serialisiert: `transform` als `none` oder
+/// `matrix(…)`/`matrix3d(…)`, `rotate` als `none` oder Winkel (`90deg`).
+///
+/// Jedes Feld ist einzeln optional, `None` heißt „nicht gemessen". Ein Host
+/// baut den Wert mit `BoxTransform { transform: …, ..Default::default() }`,
+/// damit künftige Felder keine Quelltextänderung erzwingen.
+///
+/// Eine eigene Methode ([`Rendering::box_transform`]) statt zweier Felder an
+/// [`ComputedStyle`]: neue Felder an dem Struct ohne `non_exhaustive` wären
+/// für jeden Host, der es als Struct-Literal baut, ein Bruch.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BoxTransform {
+    pub transform: Option<String>,
+    pub rotate: Option<String>,
+}
+
+/// Rohe Beobachtungen einer Einfüge-Probe an einem Passwort- oder
+/// Code-Feld, kein Urteil. Der Host schickt ein synthetisches, abbrechbares
+/// `paste`-Ereignis mit einem Probetext, stellt den Wert des Feldes danach
+/// wieder her und unterdrückt `alert`/`confirm`/`prompt`.
+///
+/// Das Ereignis ist synthetisch (`isTrusted` ist falsch): Ein Handler, der nur
+/// auf vertrauenswürdige Ereignisse oder Tastendrücke reagiert, bleibt
+/// unsichtbar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PasteProbe {
+    /// `dispatchEvent` lieferte `false`: ein Handler hat das Ereignis
+    /// abgebrochen.
+    pub cancelled: bool,
+    /// Der Probetext stand danach im Wert des Feldes.
+    pub inserted: bool,
+}
+
+/// Messung nach dem Fokussieren eines Bedienelements: wie viel von seinem
+/// Kasten ein fixiertes oder klebendes fremdes Element überdeckt.
+///
+/// Der Host fokussiert das Element, lässt den Browser es so in den
+/// sichtbaren Bereich scrollen, wie ein Tastaturnutzer es sähe, tastet ein
+/// festes Raster im Kasten ab (etwa 3 mal 3, 1 px eingerückt, alle Punkte im
+/// Viewport) und fragt je Punkt die Malreihenfolge ab (`elementsFromPoint`).
+/// Er hält fest, **wie** er gescrollt hat (etwa `scrollIntoView({block:
+/// 'nearest'})`), und stellt Scrollposition und Fokus danach wieder her.
+/// Statische Geometrie ohne Fokuslauf ist keine solche Messung und darf nicht
+/// als eine geliefert werden: Der Fall, um den es dem Kriterium geht — ein
+/// Element, das unter eine klebende Kopfzeile scrollt —, entsteht erst beim
+/// Fokussieren.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FocusCover {
+    /// Anzahl der Abtastpunkte im Kasten des Elements.
+    pub points: u32,
+    /// Wie viele davon ein Element überdeckt, das weder Vorfahr noch Nachfahr
+    /// des Bedienelements ist und `position: fixed` oder `sticky` hat und
+    /// darüber gemalt wird. Eine Überlagerung unter dem Element zählt nicht.
+    pub covered: u32,
+    /// Das oberste solche Element.
+    pub blocker: Option<NodeId>,
+}
+
+/// Zwei Aufnahmen derselben Tatsache an einem Element, vor und nach dem
+/// Überschreiben des Textabstands (WCAG 1.4.12): ob das Element seinen eigenen
+/// Text durch `overflow: hidden` abschneidet.
+///
+/// Der Host rechnet je Element `clipped = (overflow-x hidden und scrollWidth >
+/// clientWidth + 2) oder (overflow-y hidden und scrollHeight > clientHeight +
+/// 2)` und verlangt nichtleeren Text und einen Kasten über 2 px in beiden
+/// Richtungen (das übliche „nur für Screenreader" ist ein dauerhaftes 1-px-Clip
+/// und kein Befund). Elemente mit `backface-visibility: hidden` an sich oder
+/// bis zu fünf Vorfahren bleiben aus (Wendekarten). Überschrieben werden
+/// Zeilenhöhe mindestens das 1,5fache der Schriftgröße, Absatzabstand das
+/// 2fache, Zeichenabstand 0,12 und Wortabstand 0,16 der Schriftgröße; der Host
+/// spritzt das ein, misst, entfernt es wieder und meldet, ob das Einspritzen
+/// gelang. Ein Deckel auf die Zahl der Elemente ist Sache des Hosts und soll
+/// gemeldet werden.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpacingClip {
+    /// Abgeschnitten, bevor der Host den Textabstand überschrieben hat.
+    pub before: bool,
+    /// Abgeschnitten mit überschriebenem Textabstand.
+    pub after: bool,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -316,6 +398,55 @@ pub trait Rendering: Document {
     /// [`ComputedStyle::background_color`] fehlt. Vorgabe `None`: nicht
     /// abgetastet — dann bleibt der Kontrast nicht bestimmbar.
     fn sampled_backdrop<'n>(&'n self, _node: Self::N<'n>) -> Option<Backdrop> {
+        None
+    }
+
+    /// Ob das Dokument eines `<iframe>`/`<frame>` lesbar ist — die Messung des
+    /// Hosts je Rahmen, einschließlich Rahmen in offenen Shadow Roots.
+    ///
+    /// - `Some(true)`: lesbar, der Rahmen wird geprüft oder lässt sich prüfen.
+    /// - `Some(false)`: nicht lesbar — fremder Ursprung, oder die Navigation
+    ///   läuft noch; ein Host in der Seite kann beides nicht unterscheiden.
+    /// - `None`: der Host sieht sich Rahmen nicht an. Vorgabe.
+    ///
+    /// Ob der Rahmen dargestellt wird, leitet die Regel aus `display`,
+    /// `visibility` und `bounds` ab.
+    fn frame_reachable<'n>(&'n self, _node: Self::N<'n>) -> Option<bool> {
+        None
+    }
+
+    /// Berechnetes `transform` und `rotate` des Knotens, mindestens für
+    /// `html` und `body`. Ein Quarterdreh der Wurzel ist der Fehler, den
+    /// `orientation/root-rotated` sieht. Vorgabe `None`: nicht gemessen.
+    fn box_transform<'n>(&'n self, _node: Self::N<'n>) -> Option<BoxTransform> {
+        None
+    }
+
+    /// Ergebnis der Einfüge-Probe an einem Passwort- oder Einmalcode-Feld
+    /// (`input[type=password]`, `autocomplete` mit `one-time-code` oder
+    /// `current-password`). Die Probe führt Seiten-Handler aus und schreibt
+    /// `value`; sie ist deshalb ein eigener, ausdrücklicher Durchgang des
+    /// Hosts. Vorgabe `None`: nicht untersucht.
+    fn paste_probe<'n>(&'n self, _node: Self::N<'n>) -> Option<PasteProbe> {
+        None
+    }
+
+    /// Abdeckung eines fokussierten Bedienelements durch fixierte oder
+    /// klebende Elemente, nach einem Fokuslauf des Hosts (siehe
+    /// [`FocusCover`]). Der Lauf ändert Fokus und Scrollposition und ist
+    /// deshalb ein eigener, ausdrücklicher Durchgang; ein Deckel auf die Zahl
+    /// der Bedienelemente ist Sache des Hosts und soll gemeldet werden.
+    /// Vorgabe `None`: nicht untersucht.
+    fn focus_cover<'n>(&'n self, _node: Self::N<'n>) -> Option<FocusCover> {
+        None
+    }
+
+    /// Vorher/Nachher-Paar der Textabstands-Messung (siehe [`SpacingClip`]).
+    /// Das Einspritzen verändert die Seite für die Dauer der Messung und ist
+    /// ein eigener, ausdrücklicher Durchgang des Hosts. Vorgabe `None`:
+    /// nicht gemessen — auch wenn das Einspritzen blockiert war (etwa durch
+    /// eine CSP `style-src`) oder nicht stattfand.
+    fn text_spacing_clip<'n>(&'n self, _node: Self::N<'n>) -> Option<SpacingClip> {
         None
     }
 }

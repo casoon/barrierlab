@@ -420,12 +420,40 @@ fn only_pointer<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// 2.4.11: ein Bedienelement, das eine fixierte Leiste überdeckt — oder eine
 /// Leiste, unter der ein fokussiertes Element verschwinden kann, weil
 /// `scroll-padding-top` sie nicht freihält.
+///
+/// Hat der Host nach dem Fokussieren gemessen (`Rendering::focus_cover`),
+/// entscheidet die Messung über das Element: ganz überdeckt heißt `REVIEW`,
+/// und das Bit `obscured` (statische Geometrie) zählt für dieses Element
+/// nicht mehr. Ohne Fokuslauf bleibt es bei den Bits.
 fn covered<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    if !measured(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
+    let probed = elements(doc).any(|n| doc.focus_cover(n).is_some());
+    if !probed && !measured(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
         let field = "overlap with fixed or sticky elements";
         return unmeasured(doc, "focus/obscured", &["2.4.11"], field, locale, out);
     }
     for n in elements(doc) {
+        let cover = doc.focus_cover(n);
+        if let Some(c) = cover.filter(|c| c.points > 0 && c.covered >= c.points) {
+            out.push(
+                Finding::review(
+                    "focus/obscured",
+                    pick!(
+                        locale,
+                        "After receiving focus, every sample point of this control lies under a \
+                         fixed or sticky element. Check that the control is not entirely hidden \
+                         when it is focused.",
+                        "Nach dem Fokussieren liegt jeder Abtastpunkt dieses Bedienelements unter \
+                         einem fixierten oder klebenden Element. Prüfen, ob das Bedienelement \
+                         beim Fokussieren nicht ganz verdeckt ist.",
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["2.4.11"])
+                .with_evidence(crate::probes::cover_evidence(c))
+                .at(at(n.id())),
+            );
+            continue;
+        }
         let Some(layout) = doc.layout(n) else {
             continue;
         };
@@ -439,6 +467,7 @@ fn covered<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                  verschwinden.",
             )
         } else if layout.obscured == Some(true)
+            && cover.is_none()
             && per_tab_reachable(n)
             && doc.visually_hidden(n) != Some(true)
         {
@@ -884,10 +913,22 @@ pub(crate) const METAS: [Meta; 8] = [
         scope: Scope::Rendered,
         wcag: &["2.4.11"],
         severity: Severity::Medium,
-        help: "A focused control must not be entirely hidden by fixed or sticky content.",
+        help: "A focused control must not be entirely hidden by fixed or sticky content. \
+               Seen: the bits obscured and hides_focus, and, when the host ran a focus pass, \
+               Rendering::focus_cover (sample points under fixed or sticky elements after the \
+               host focused and scrolled the control); the probe replaces the static bit for \
+               that control. Sampling approximates \"entirely\", so the result stays a review. \
+               Which scroll a real Tab produces is not settled; the host records how it \
+               scrolled.",
         help_de: de_text!(
             "Ein fokussiertes Bedienelement darf nicht ganz von fixiertem oder klebendem \
-                  Inhalt verdeckt sein."
+                  Inhalt verdeckt sein. Gesehen werden die Bits obscured und hides_focus und, \
+                  wenn der Host einen Fokuslauf gemacht hat, Rendering::focus_cover \
+                  (Abtastpunkte unter fixierten oder klebenden Elementen, nachdem der Host das \
+                  Bedienelement fokussiert und gescrollt hat); die Messung ersetzt für dieses \
+                  Bedienelement das statische Bit. Die Abtastung nähert \"ganz\" nur an, das \
+                  Ergebnis bleibt Review. Welchen Scroll ein echtes Tab erzeugt, ist offen; der \
+                  Host hält fest, wie er gescrollt hat."
         ),
     },
     Meta {

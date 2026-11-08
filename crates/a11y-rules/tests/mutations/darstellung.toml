@@ -155,9 +155,9 @@ expect = "killed"
 id = "focus/obscured"
 file = "src/heuristics.rs"
 kind = "drop-condition"
-find = '''        } else if layout.obscured == Some(true)
+find = '''            && cover.is_none()
             && per_tab_reachable(n)'''
-replace = '''        } else if layout.obscured == Some(true)'''
+replace = '''            && cover.is_none()'''
 test = "korpus"
 expect = "killed"
 

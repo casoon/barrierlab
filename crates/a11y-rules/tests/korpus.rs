@@ -89,6 +89,22 @@ fn check(fall: &Fall) -> Result<(), String> {
             }
             Ok(())
         }
+        Kind::NotRun => {
+            if rule_run.not_run.is_none() {
+                return Err("Regel lief, erwartet: nicht gelaufen".into());
+            }
+            if rule_run
+                .reason
+                .as_deref()
+                .is_none_or(|r| r.trim().is_empty())
+            {
+                return Err("nicht gelaufen ohne Grund".into());
+            }
+            if !verdicts.is_empty() {
+                return Err(format!("kein Befund erwartet, gemeldet {verdicts:?}"));
+            }
+            Ok(())
+        }
         Kind::Negative | Kind::NotApplicable => {
             if rule_run.not_run.is_some() {
                 return Err(format!("Regel lief nicht: {:?}", rule_run.not_run));
@@ -137,7 +153,7 @@ fn korpus_faelle() {
 #[test]
 fn gate_every_id_has_all_three_kinds() {
     let ids = all_ids();
-    let mut kinds: BTreeMap<&str, [usize; 3]> = ids.iter().map(|id| (*id, [0; 3])).collect();
+    let mut kinds: BTreeMap<&str, [usize; 4]> = ids.iter().map(|id| (*id, [0; 4])).collect();
     let mut unknown = BTreeSet::new();
     for fall in all() {
         assert!(
@@ -158,7 +174,7 @@ fn gate_every_id_has_all_three_kinds() {
     );
     let gaps: Vec<String> = kinds
         .iter()
-        .filter(|(_, z)| z.contains(&0))
+        .filter(|(_, z)| z[..3].contains(&0))
         .map(|(id, z)| format!("{id}: positiv {}, negativ {}, n/a {}", z[0], z[1], z[2]))
         .collect();
     assert!(

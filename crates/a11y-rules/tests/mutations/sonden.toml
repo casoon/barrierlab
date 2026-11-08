@@ -1,0 +1,292 @@
+# Mutationen der Gruppe „sonden“ — siehe xtask/mutate.py
+
+# --- frames/cross-origin ------------------------------------------------------
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "invert"
+find = '''            Some(true) => measured = true,
+            Some(false) => {'''
+replace = '''            Some(false) => measured = true,
+            Some(true) => {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''        .is_some_and(|b| b.width <= 1.0 || b.height <= 1.0)'''
+replace = '''        .is_some_and(|b| b.width < 1.0 || b.height < 1.0)'''
+test = "korpus"
+expect = "killed"
+note = "Ein Kasten von genau 1 px ist ausgenommen."
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        || n.has_attr("hidden")
+        || n.attr("aria-hidden")
+            .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+    {'''
+replace = '''        || n.has_attr("hidden")
+    {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "frames/cross-origin",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "frames/cross-origin",'''
+test = "korpus"
+expect = "killed"
+note = "Ohne Messung kein NotRun-Vermerk: stilles Bestehen."
+
+# --- orientation/root-rotated -------------------------------------------------
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''    Some(b.abs() > 0.01 && (b + c).abs() < 0.01)'''
+replace = '''    Some(b.abs() > 0.011 && (b + c).abs() < 0.01)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    Some(b.abs() > 0.01 && (b + c).abs() < 0.01)'''
+replace = '''    Some(b.abs() > 0.01)'''
+test = "korpus"
+expect = "killed"
+note = "Neigung (b ohne passendes c) wäre sonst eine Drehung."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        (rest, 1, 4)'''
+replace = '''        (rest, 1, 5)'''
+test = "korpus"
+expect = "killed"
+note = "Falscher Spaltenindex für c in matrix3d."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    Some(axis && off > 0.01 && off < 179.99)'''
+replace = '''    Some(off > 0.01 && off < 179.99)'''
+test = "korpus"
+expect = "killed"
+note = "Kippen um X oder Y ist keine Drehung in der Bildebene."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if roots && !measured {'''
+replace = '''    if false && roots && !measured {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    for n in elements(doc).filter(|n| matches!(n.local_name(), "html" | "body")) {'''
+replace = '''    for n in elements(doc) {'''
+test = "korpus"
+expect = "killed"
+note = "Nur html und body zählen, nicht jedes gedrehte Bauteil."
+
+# --- auth/paste-blocked -------------------------------------------------------
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if !(probe.cancelled && !probe.inserted) {'''
+replace = '''        if !(probe.cancelled && probe.inserted) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        if !(probe.cancelled && !probe.inserted) {'''
+replace = '''        if !probe.cancelled {'''
+test = "korpus"
+expect = "killed"
+note = "Ein Handler, der abbricht und selbst einfügt, blockiert nichts."
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    if !n.is_element("input") || n.has_attr("disabled") || n.has_attr("readonly") {'''
+replace = '''    if !n.is_element("input") {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    (kind == "password" || token("one-time-code") || token("current-password"))'''
+replace = '''    (kind == "password" || token("one-time-code") || token("current-password") || kind == "text")'''
+test = "korpus"
+expect = "killed"
+note = "Jedes Textfeld wäre sonst ein Kandidat."
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "auth/paste-blocked",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "auth/paste-blocked",'''
+test = "korpus"
+expect = "killed"
+
+# --- focus/obscured (Fokusmessung) --------------------------------------------
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "threshold"
+find = '''c.points > 0 && c.covered >= c.points'''
+replace = '''c.points > 0 && c.covered + 1 >= c.points'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''c.points > 0 && c.covered >= c.points'''
+replace = '''c.covered >= c.points'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''            && cover.is_none()
+            && per_tab_reachable(n)'''
+replace = '''            && per_tab_reachable(n)'''
+test = "korpus"
+expect = "killed"
+note = "Die Messung nach dem Fokussieren ersetzt das statische Bit."
+
+# --- focus/obscured-enhanced --------------------------------------------------
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''        if c.covered == 0 {'''
+replace = '''        if c.covered < c.points {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if c.covered == 0 {'''
+replace = '''        if c.covered > 0 {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''elements(doc).filter(|n| per_tab_reachable(*n) && doc.visually_hidden(*n) != Some(true))'''
+replace = '''elements(doc).filter(|n| doc.visually_hidden(*n) != Some(true))'''
+test = "korpus"
+expect = "killed"
+note = "Nur Bedienelemente der Tabreihenfolge zählen."
+
+[[mutation]]
+id = "focus/obscured-enhanced"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "focus/obscured-enhanced",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "focus/obscured-enhanced",'''
+test = "korpus"
+expect = "killed"
+
+# --- text-spacing/clipped -----------------------------------------------------
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        if !(clip.after && !clip.before) {'''
+replace = '''        if !clip.after {'''
+test = "korpus"
+expect = "killed"
+note = "Schon vorher Abgeschnittenes ist kein Befund."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if !(clip.after && !clip.before) {'''
+replace = '''        if !(clip.before && !clip.after) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''.is_some_and(|b| b.width <= 2.0 || b.height <= 2.0)'''
+replace = '''.is_some_and(|b| b.width < 2.0 || b.height < 2.0)'''
+test = "korpus"
+expect = "killed"
+note = "Ein Kasten von genau 2 px ist ausgenommen."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''            .any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty())'''
+replace = '''            .any(|k| k.kind() == NodeKind::Text)'''
+test = "korpus"
+expect = "killed"
+note = "Nur nichtleerer eigener Text zählt."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "text-spacing/clipped",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "text-spacing/clipped",'''
+test = "korpus"
+expect = "killed"

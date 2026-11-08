@@ -1,0 +1,474 @@
+//! Gruppe „sonden“: Regeln über Messungen, die ein Host an der laufenden
+//! Seite vornimmt (`probes.rs`, `heuristics.rs` für `focus/obscured`).
+//!
+//! Die Dokumente tragen die Werte des Hosts als eigene Eigenschaften im
+//! `style`-Attribut (siehe `host.rs`). Die Vorlagen stammen aus dem
+//! auditmysite-Korpus `tests/fixtures/detection_corpus/` (nur gelesen) und
+//! sind hier als eigene, kleine Dokumente nachgestellt.
+
+use super::super::{Fall, fail, na, negative, not_run, review, untested};
+
+const FRAME_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/content_frames_cross_origin (frame-tested): booking, small-map, shadow-calendar and late-reviews are reported; pixel (1x1), collapsed (display:none), silent (aria-hidden) and local-help (readable) are not";
+const FRAME_NORM: &str = "no WCAG criterion applies to a document the tool cannot read (coverage note); host contract of Rendering::frame_reachable, casoon/barrierlab#132";
+
+pub fn cases() -> Vec<Fall> {
+    let mut v = Vec::new();
+    v.extend(frames());
+    v.extend(orientation());
+    v.extend(paste());
+    v.extend(focus_cover());
+    v.extend(spacing());
+    v
+}
+
+fn frames() -> Vec<Fall> {
+    let id = "frames/cross-origin";
+    vec![
+        untested(
+            id,
+            r#"<iframe id="booking" title="Room booking" src="https://other.example/booking" style="--w:400px;--h:200px;--frame-reachable:0"></iframe>
+<iframe id="small-map" title="Location map" src="https://other.example/map" style="--w:2px;--h:2px;--frame-reachable:0"></iframe>
+<iframe id="pixel" title="Visitor counter" src="https://other.example/pixel" style="--w:1px;--h:1px;--frame-reachable:0"></iframe>
+<iframe id="collapsed" title="Chat" src="https://other.example/chat" style="display:none;--frame-reachable:0"></iframe>
+<iframe id="silent" title="Analytics" src="https://other.example/analytics" aria-hidden="true" style="--w:300px;--h:100px;--frame-reachable:0"></iframe>
+<iframe id="local-help" title="Booking help" style="--w:400px;--h:120px"></iframe>
+<booking-widget><template shadowrootmode="open"><iframe id="shadow-calendar" title="Room calendar" src="https://other.example/calendar" style="--w:300px;--h:150px;--frame-reachable:0"></iframe></template></booking-widget>
+<div id="late-frame"><iframe id="late-reviews" title="Reviews" src="https://other.example/reviews" style="--w:300px;--h:150px;--frame-reachable:0"></iframe></div>"#,
+            FRAME_FIXTURE,
+        )
+        .variant("Fixture nachgestellt: vier gemeldet, vier nicht, ein Rahmen im Shadow Root")
+        .count(4),
+        untested(
+            id,
+            r#"<!DOCTYPE html><html lang="en"><head><title>T</title></head><frameset><frame src="https://other.example/nav" style="--w:200px;--h:300px;--frame-reachable:0"></frameset></html>"#,
+            FRAME_NORM,
+        )
+        .variant("<frame> statt <iframe>"),
+        negative(
+            id,
+            r#"<iframe title="Booking help" style="--w:400px;--h:120px"></iframe>"#,
+            "auditmysite content_frames_cross_origin: local-help (srcdoc) is readable and not reported",
+        )
+        .variant("lesbarer Rahmen"),
+        na(
+            id,
+            r#"<iframe title="Counter" src="https://other.example/pixel" style="--w:1px;--h:1px;--frame-reachable:0"></iframe>"#,
+            FRAME_FIXTURE,
+        )
+        .variant("Grenze: 1 px ist ausgenommen"),
+        na(
+            id,
+            r#"<iframe title="Chat" src="https://other.example/chat" style="display:none;--frame-reachable:0"></iframe>"#,
+            FRAME_FIXTURE,
+        )
+        .variant("display: none"),
+        na(
+            id,
+            r#"<iframe title="Analytics" src="https://other.example/a" aria-hidden="true" style="--w:300px;--h:100px;--frame-reachable:0"></iframe>"#,
+            FRAME_FIXTURE,
+        )
+        .variant("aria-hidden"),
+        na(
+            id,
+            r#"<iframe src="https://other.example/a" role="presentation" style="--w:300px;--h:100px;--frame-reachable:0"></iframe>"#,
+            FRAME_NORM,
+        )
+        .variant("role=presentation"),
+        na(
+            id,
+            r#"<iframe src="https://other.example/a" hidden style="--w:300px;--h:100px;--frame-reachable:0"></iframe>"#,
+            FRAME_NORM,
+        )
+        .variant("hidden"),
+        na(id, r#"<p>No frames here.</p>"#, FRAME_NORM),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: frames"><head><title>T</title></head><body><iframe title="Booking" src="https://other.example/booking" style="--w:400px;--h:200px"></iframe></body></html>"#,
+            "docs/conventions.md: not measured is not passed; issue #132: None for every frame yields NotRun",
+        ),
+    ]
+}
+
+const ORIENT_FIXTURES: &str = "auditmysite tests/fixtures/detection_corpus/visual_orientation_{lock,script_lock,ok,hide}: computed transform of html and body (css-orientation-lock)";
+const ORIENT_NORM: &str = "WCAG 2.2 SC 1.3.4 Orientation: content does not restrict its view and operation to a single display orientation; a quarter-turn rotation of the root is such a restriction";
+
+/// Ein vollständiges Dokument, dessen `html`- und `body`-Element die
+/// berechneten Werte des Hosts tragen.
+macro_rules! root {
+    ($html:literal, $body:literal) => {
+        concat!(
+            r#"<!DOCTYPE html><html lang="en" style=""#,
+            $html,
+            r#""><head><title>T</title></head><body style=""#,
+            $body,
+            r#""><p>Content</p></body></html>"#
+        )
+    };
+}
+
+fn orientation() -> Vec<Fall> {
+    let id = "orientation/root-rotated";
+    vec![
+        fail(
+            id,
+            root!("", "transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_lock: body rotate(90deg)")
+        .count(1),
+        fail(
+            id,
+            root!("transform: matrix(6.12323e-17, -1, 1, 6.12323e-17, 0, 0)", ""),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_script_lock: html rotate(-90deg), Script setzt es")
+        .count(1),
+        fail(
+            id,
+            root!(
+                "",
+                "transform: matrix3d(0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"
+            ),
+            ORIENT_NORM,
+        )
+        .variant("matrix3d: rotateZ(90deg)")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 90deg", ""),
+            "issue #134: a rotate angle off a multiple of 180 degrees counts",
+        )
+        .variant("rotate: 90deg an html")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 0.25turn", ""),
+            "CSS Transforms 2: angles in turn are 360 degrees",
+        )
+        .variant("rotate in turn")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 0 0 1 90deg", ""),
+            "CSS Transforms 2: axis (0, 0, 1) is the z axis, a rotation in the picture plane",
+        )
+        .variant("rotate um die Z-Achse in Langform")
+        .count(1),
+        fail(
+            id,
+            root!(
+                "transform: matrix(1, 0.0101, -0.0101, 1, 0, 0)",
+                "transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"
+            ),
+            "issue #134: threshold |b| > 0.01 and |b + c| < 0.01",
+        )
+        .variant("Grenze: b = 0,0101 darüber; html und body je ein Befund")
+        .count(2),
+        negative(
+            id,
+            root!("transform: matrix(1, 0.01, -0.01, 1, 0, 0)", ""),
+            "issue #134: threshold |b| > 0.01; exactly 0.01 does not count",
+        )
+        .variant("Grenze: b = 0,01 nicht darüber"),
+        negative(
+            id,
+            root!(
+                "transform: matrix(1, -2.44929e-16, 2.44929e-16, 1, 0, 0)",
+                "transform: matrix(1, 0, 0, 1, 0, 0)"
+            ),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_ok: rotate(360deg) und translateX(0)"),
+        negative(
+            id,
+            root!("transform: matrix(-1, 1.22465e-16, -1.22465e-16, -1, 0, 0)", ""),
+            "issue #134: a half turn gives b = 0 and does not force an orientation",
+        )
+        .variant("rotate(180deg)"),
+        negative(
+            id,
+            root!("transform: matrix(1, 1, 0, 1, 0, 0)", ""),
+            "issue #134: skew alone does not produce b = -c",
+        )
+        .variant("skewY(45deg)"),
+        negative(
+            id,
+            root!("transform: matrix(2, 0, 0, 2, 0, 0)", "rotate: 180deg"),
+            "issue #134: scale alone, and a rotate that is a multiple of 180 degrees",
+        )
+        .variant("scale und rotate: 180deg"),
+        negative(
+            id,
+            root!("rotate: x 90deg", ""),
+            "CSS Transforms 2: a rotation about the x axis tilts, it does not turn in the picture plane",
+        )
+        .variant("rotate um die X-Achse"),
+        negative(
+            id,
+            r#"<div style="transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)">Badge</div>"#,
+            "issue #134: only html and body are read; a rotated component is not an orientation lock",
+        )
+        .variant("gedrehtes Bauteil im Inhalt"),
+        negative(id, root!("", ""), ORIENT_FIXTURES)
+            .variant("visual_orientation_hide: nichts gedreht"),
+        na(
+            id,
+            r#"<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>"#,
+            "issue #134: the rule reads html and body; a foreign document has neither",
+        ),
+        not_run(
+            id,
+            concat!(
+                r#"<!DOCTYPE html><html lang="en" style="--unmeasured: transform"><head><title>T</title></head>"#,
+                r#"<body style="transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"><p>Content</p></body></html>"#
+            ),
+            "docs/conventions.md: not measured is not passed; issue #134: neither field measured on html/body gives NotRun",
+        ),
+    ]
+}
+
+const AUTH_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/accessible_authentication (accessible-auth-paste-blocked): pw-blocked and otp-blocked are violations, pw-ok and pw-sanitised pass";
+const AUTH_NORM: &str = "WCAG 2.2 SC 3.3.8 Accessible Authentication (Minimum): a cognitive function test such as remembering a password needs a mechanism to assist; paste / a password manager is that mechanism (Understanding 3.3.8)";
+
+fn paste() -> Vec<Fall> {
+    let id = "auth/paste-blocked";
+    vec![
+        fail(
+            id,
+            r#"<input id="pw-blocked" name="password" type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-blocked: addEventListener + preventDefault")
+        .count(1),
+        fail(
+            id,
+            r#"<input id="otp-blocked" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" onpaste="return false" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("otp-blocked: onpaste=return false, Einmalcode")
+        .count(1),
+        fail(
+            id,
+            r#"<input type="password" autocomplete="off" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_NORM,
+        )
+        .variant("Passwortfeld mit autocomplete=off wird trotzdem geprüft")
+        .count(1),
+        fail(
+            id,
+            r#"<input name="pw" autocomplete="section-login current-password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "HTML autocomplete: a space-separated token list; current-password selects the field",
+        )
+        .variant("Tokenliste, Feld ohne type=password")
+        .count(1),
+        fail(
+            id,
+            r#"<input type="password" style="--paste-probe:unmeasured"><input type="password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: a field without a probe result is not judged, a probed one is",
+        )
+        .variant("ein Feld ohne Messung, eines blockiert")
+        .count(1),
+        negative(
+            id,
+            r#"<input id="pw-ok" name="password2" type="password" autocomplete="current-password">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-ok: Einfügen erlaubt"),
+        negative(
+            id,
+            r#"<input id="pw-sanitised" name="password3" type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:1">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-sanitised: Handler bricht ab, fügt aber selbst ein"),
+        negative(
+            id,
+            r#"<input type="password" style="--paste-cancelled:0;--paste-inserted:0">"#,
+            "issue #133: blocked means cancelled and not inserted; not cancelled is not blocked",
+        )
+        .variant("nicht abgebrochen, aber nichts eingefügt"),
+        na(
+            id,
+            r#"<input id="user-a" name="username" type="text" autocomplete="username" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("Benutzername: kein Passwort- oder Codefeld"),
+        na(
+            id,
+            r#"<input type="password" disabled style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible, not disabled and not read-only",
+        )
+        .variant("disabled"),
+        na(
+            id,
+            r#"<input type="password" readonly style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible, not disabled and not read-only",
+        )
+        .variant("readonly"),
+        na(
+            id,
+            r#"<input type="password" style="display:none;--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible",
+        )
+        .variant("display: none"),
+        na(id, r#"<p>No fields.</p>"#, AUTH_NORM),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: paste"><head><title>T</title></head><body><input type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:0"></body></html>"#,
+            "docs/conventions.md: not measured is not passed; issue #133: no probe on any candidate gives NotRun",
+        ),
+    ]
+}
+
+const FOCUS_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/interaction_focus_obscured: covered, mobile and dynamic are reported for 2.4.11 and 2.4.12; partial for 2.4.12 only; edge, under-hidden, above-backdrop and in-banner for neither";
+const FOCUS_NORM: &str = "WCAG 2.2 SC 2.4.11 (entirely hidden) and 2.4.12 (any part hidden) Focus Not Obscured; sampling approximates both, so the result is a review; Rendering::focus_cover contract, casoon/barrierlab#135";
+
+/// Die Fixture als eigenes Dokument: je Bedienelement die Messung des Hosts
+/// nach dem Fokussieren (3 mal 3 Punkte).
+const FOCUS_PAGE: &str = r#"<div id="cookie" role="region" aria-label="Cookie notice">We use cookies <button id="fo-in-banner" type="button" style="--focus-points:9;--focus-covered:0">Accept</button></div>
+<div id="chat"></div>
+<a id="fo-covered" href="/privacy" style="--focus-points:9;--focus-covered:9;--focus-blocker:cookie">Privacy</a>
+<a id="fo-partial" href="/imprint" style="--focus-points:9;--focus-covered:3;--focus-blocker:cookie">Imprint</a>
+<a id="fo-edge" href="/contact" style="--focus-points:9;--focus-covered:0">Contact</a>
+<a id="fo-under-hidden" href="/jobs" style="--focus-points:9;--focus-covered:0">Jobs</a>
+<a id="fo-above-backdrop" href="/press" style="--focus-points:9;--focus-covered:0">Press</a>
+<a id="fo-mobile" href="/app" style="--focus-points:9;--focus-covered:9;--focus-blocker:cookie">Get the app</a>
+<a id="fo-dynamic" href="/support" style="--focus-points:9;--focus-covered:9;--focus-blocker:chat">Support</a>"#;
+
+fn focus_cover() -> Vec<Fall> {
+    let id = "focus/obscured";
+    let en = "focus/obscured-enhanced";
+    vec![
+        review(id, FOCUS_PAGE, FOCUS_FIXTURE)
+            .variant("Fixture nachgestellt: covered, mobile, dynamic")
+            .count(3),
+        review(
+            id,
+            r#"<a href="/privacy" style="--focus-points:9;--focus-covered:9">Privacy</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == points")
+        .count(1),
+        negative(
+            id,
+            r#"<a href="/imprint" style="--focus-points:9;--focus-covered:8">Imprint</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == points - 1 ist nicht ganz verdeckt"),
+        negative(
+            id,
+            r#"<a href="/x" style="--focus-points:0;--focus-covered:0">X</a>"#,
+            "issue #135: points must be positive; no sample point inside the viewport is no measurement",
+        )
+        .variant("keine Abtastpunkte"),
+        negative(
+            id,
+            r#"<button style="--obscured:1;--focus-points:9;--focus-covered:0">Buy</button>"#,
+            "issue #135: static geometry must not be fed as if it were a probe; after the focus scroll the control is visible",
+        )
+        .variant("Messung nach dem Fokussieren ersetzt das statische Bit"),
+        review(
+            en,
+            FOCUS_PAGE,
+            FOCUS_FIXTURE,
+        )
+        .variant("Fixture nachgestellt: covered, partial, mobile, dynamic")
+        .count(4),
+        review(
+            en,
+            r#"<a href="/x" style="--focus-points:9;--focus-covered:1">X</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == 1")
+        .count(1),
+        negative(
+            en,
+            r#"<a href="/x" style="--focus-points:9;--focus-covered:0">X</a>"#,
+            FOCUS_NORM,
+        )
+        .variant("Grenze: covered == 0 (edge, under-hidden, above-backdrop)"),
+        na(en, r#"<p>No controls.</p>"#, FOCUS_NORM),
+        na(
+            en,
+            r#"<div tabindex="-1" style="--focus-points:9;--focus-covered:9">Panel</div>"#,
+            "2.4.12 applies to components that receive keyboard focus; tabindex=-1 is not in the sequential order",
+        )
+        .variant("tabindex=-1"),
+        not_run(
+            en,
+            r#"<button style="--obscured:1">Buy</button>"#,
+            "issue #135: static geometry is not a probe; without focus_cover the rule does not run",
+        )
+        .variant("nur statisches Bit, keine Fokusmessung"),
+    ]
+}
+
+const SPACING_FIXTURES: &str = "auditmysite tests/fixtures/detection_corpus/visual_text_spacing_{clipped,letter,ok}: badge (height 20px, line-height 1.2) and chip (width 8em, nowrap) clip at the override; sr-only (permanent 1x1 clip), min-height badge, fit, preclipped and late do not count";
+const SPACING_NORM: &str = "WCAG 2.1 SC 1.4.12 Text Spacing: no loss of content or functionality at line height 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16; text newly clipped by hidden overflow is the one loss visible here (review)";
+
+fn spacing() -> Vec<Fall> {
+    let id = "text-spacing/clipped";
+    vec![
+        review(
+            id,
+            r#"<div id="badge" style="--clip-before:0;--clip-after:1">Free delivery on all orders</div>
+<span class="sr-only" style="--w:1px;--h:1px;--clip-before:1;--clip-after:1">Prices include tax</span>
+<p style="--clip-before:0;--clip-after:0">Weatherproof chairs made of larch wood.</p>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_clipped: badge neu abgeschnitten, sr-only dauerhaft")
+        .count(1),
+        review(
+            id,
+            r#"<p><span id="chip" style="--clip-before:0;--clip-after:1">Add to basket</span></p>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_letter: Zeichen- und Wortabstand")
+        .count(1),
+        negative(
+            id,
+            r#"<div id="badge" style="--clip-before:0;--clip-after:0">Free delivery on all orders</div>
+<div id="fit" style="--clip-before:0;--clip-after:0">In stock</div>
+<div id="preclipped" style="--clip-before:1;--clip-after:1">Teaser text that is cut by design and expands on click.</div>
+<div id="late" style="--clip-before:0;--clip-after:0">Assembly takes ten minutes</div>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_ok: wächst mit, passt genau, schon vorher abgeschnitten"),
+        negative(
+            id,
+            r#"<div style="--clip-before:1;--clip-after:0">Was clipped, is not any more</div>"#,
+            "issue #136: it fires when after && !before only",
+        )
+        .variant("vorher abgeschnitten, nachher nicht"),
+        negative(
+            id,
+            r#"<div style="--w:2px;--h:2px;--clip-before:0;--clip-after:1">Hidden label</div>"#,
+            "issue #136: the standard visually-hidden technique is a permanent 1px clip; a box of 2 px or less is no finding",
+        )
+        .variant("Grenze: Kasten von 2 px"),
+        review(
+            id,
+            r#"<div style="--w:3px;--h:3px;--clip-before:0;--clip-after:1">Tiny label</div>"#,
+            "issue #136: a box larger than 2 px in both directions counts",
+        )
+        .variant("Grenze: Kasten von 3 px")
+        .count(1),
+        negative(
+            id,
+            r#"<div style="--clip-before:0;--clip-after:1"><p style="--clip-before:0;--clip-after:0">Text in a child</p></div>"#,
+            "issue #136: the element must clip its own text; a container without own text is not judged",
+        )
+        .variant("Container ohne eigenen Text"),
+        negative(
+            id,
+            "<div style=\"--clip-before:0;--clip-after:1\">\n  <p style=\"--clip-before:0;--clip-after:0\">Text in a child</p>\n</div>",
+            "issue #136: only non-empty own text counts; whitespace between child elements is not text",
+        )
+        .variant("Container mit Leerraum zwischen Kindern"),
+        na(id, r#"<div></div>"#, SPACING_NORM),
+        not_run(
+            id,
+            r#"<p>Text on a page the host did not run the spacing pass on.</p>"#,
+            "docs/conventions.md: not measured is not passed; issue #136: injection blocked or not performed gives NotRun",
+        ),
+    ]
+}
