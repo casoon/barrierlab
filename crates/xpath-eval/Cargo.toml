@@ -11,3 +11,6 @@ repository.workspace = true
 [dev-dependencies]
 # Only for tests: the Jaxen corpus (tests/jaxen.rs) is XML.
 roxmltree = "0.21.1"
+# The shared roxmltree adapter. Path only, no version: it depends on this
+# crate, so Cargo drops the entry when packaging.
+xml-adapters = { path = "../xml-adapters", default-features = false, features = ["xpath"] }
