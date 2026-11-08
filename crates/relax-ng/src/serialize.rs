@@ -8,6 +8,9 @@
 //! magic "RNGC" | version u8 | string table | node table | start | definitions | FNV-1a 64 (LE)
 //! ```
 //!
+//! A definition is its name, its pattern and the attribute and element names it can lead to
+//! (the validator's lookup tables, stored so that loading does not derive them again).
+//!
 //! Integers are LEB128 varints. The node table is written bottom-up: a node refers only to
 //! nodes of an earlier position (per kind: contexts, name classes, pattern lists, patterns),
 //! so a reader needs no recursion and cannot meet a cycle. Equal nodes are written once, so
@@ -24,7 +27,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::grammar::{Context, NameClass, Param, Pattern};
-use crate::simplify::{CompiledSchema, Definitions};
+use crate::simplify::{CompiledSchema, Definitions, ReachNames};
 
 const MAGIC: &[u8; 4] = b"RNGC";
 
@@ -385,7 +388,7 @@ impl<'a> Writer<'a> {
 }
 
 impl CompiledSchema {
-    /// Writes this schema in the binary form (see the [module](self) documentation); the bytes
+    /// Writes this schema in a stable binary form (version [`FORMAT_VERSION`]); the bytes
     /// are the same for the same schema. [`CompiledSchema::from_bytes`] reads them back.
     ///
     /// Fails only for a schema that is not in simplified form, which [`crate::simplify`] never
@@ -394,10 +397,10 @@ impl CompiledSchema {
         let mut writer = Writer::new();
         let start = writer.pattern(&self.start)?;
         let mut definitions = Vec::new();
-        for (name, pattern) in self.definitions.named() {
+        for (name, pattern, reach) in self.definitions.named() {
             let name = writer.string(name);
             let pattern = writer.pattern(pattern)?;
-            definitions.push((name, pattern));
+            definitions.push((name, pattern, reach));
         }
 
         let mut out = Vec::new();
@@ -412,9 +415,16 @@ impl CompiledSchema {
         out.extend_from_slice(&writer.nodes);
         varint(&mut out, start);
         varint(&mut out, length(definitions.len())?);
-        for (name, pattern) in definitions {
+        for (name, pattern, reach) in definitions {
             varint(&mut out, name);
             varint(&mut out, pattern);
+            for (any, locals) in reach {
+                out.push(u8::from(any));
+                varint(&mut out, length(locals.len())?);
+                for local in locals {
+                    varint(&mut out, writer.string(local));
+                }
+            }
         }
         let sum = checksum(&out);
         out.extend_from_slice(&sum.to_le_bytes());
@@ -566,6 +576,20 @@ impl Reader<'_> {
         Ok(classes)
     }
 
+    fn reach_set(&mut self) -> Result<ReachNames<String>, LoadError> {
+        let any = match self.cursor.byte()? {
+            0 => false,
+            1 => true,
+            _ => return Err(LoadError::Invalid("flag is not 0 or 1")),
+        };
+        let count = self.cursor.count()?;
+        let mut locals = Vec::with_capacity(count);
+        for _ in 0..count {
+            locals.push(self.string()?);
+        }
+        Ok((any, locals))
+    }
+
     fn list(&mut self) -> Result<Arc<[Pattern]>, LoadError> {
         let id = self.cursor.varint()?;
         Ok(Arc::clone(at(
@@ -594,27 +618,26 @@ impl Reader<'_> {
         let start_id = self.cursor.varint()?;
         let start = at(&self.patterns, start_id, "start pattern index out of range")?.clone();
         let definition_count = self.cursor.count()?;
-        let mut definitions = BTreeMap::new();
+        let mut definitions = Vec::with_capacity(definition_count);
         for _ in 0..definition_count {
             let name = self.string()?;
             let id = self.cursor.varint()?;
             let pattern = at(&self.patterns, id, "definition pattern index out of range")?.clone();
-            if definitions.insert(name, pattern).is_some() {
-                return Err(LoadError::Invalid("duplicate definition"));
-            }
+            let attributes = self.reach_set()?;
+            let elements = self.reach_set()?;
+            definitions.push((name, pattern, attributes, elements));
         }
         if self.cursor.position != self.cursor.bytes.len() {
             return Err(LoadError::Invalid("trailing data"));
         }
+        let definitions = Definitions::from_loaded(definitions)
+            .ok_or(LoadError::Invalid("duplicate definition"))?;
         for &id in &self.refs {
-            if !definitions.contains_key(&self.strings[id as usize]) {
+            if definitions.position(&self.strings[id as usize]).is_none() {
                 return Err(LoadError::Invalid("ref to an undefined definition"));
             }
         }
-        Ok(CompiledSchema {
-            start,
-            definitions: Definitions::new(definitions),
-        })
+        Ok(CompiledSchema { start, definitions })
     }
 
     fn node(&mut self, tag: u8) -> Result<(), LoadError> {
@@ -652,7 +675,8 @@ impl Reader<'_> {
             TAG_NAME_ANY => {
                 let except = self.name_classes()?;
                 let context = self.context_by_value()?;
-                self.names.push(Arc::new(NameClass::Any { except, context }));
+                self.names
+                    .push(Arc::new(NameClass::Any { except, context }));
             }
             TAG_NAME_NS => {
                 let namespace = self.optional()?;
@@ -796,9 +820,7 @@ mod tests {
         let loaded = CompiledSchema::from_bytes(&bytes).expect("loads");
         assert_eq!(loaded.start, schema.start);
         assert_eq!(loaded.definition_count(), schema.definition_count());
-        for (name, pattern) in schema.definitions.named() {
-            assert_eq!(loaded.definitions.get(name), Some(pattern));
-        }
+        assert_eq!(loaded.definitions.named(), schema.definitions.named());
         assert_eq!(loaded.to_bytes().expect("serializes"), bytes);
     }
 
@@ -836,7 +858,7 @@ mod tests {
                 state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
                 damaged[index] = (state >> 16) as u8;
             }
-            if state % 5 == 0 {
+            if state.is_multiple_of(5) {
                 damaged.truncate(5 + (state >> 8) as usize % (body_len - 5));
             }
             let sum = checksum(&damaged);

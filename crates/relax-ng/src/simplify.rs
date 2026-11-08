@@ -55,6 +55,10 @@ struct NameSet {
     locals: HashSet<String>,
 }
 
+/// A [`NameSet`] as plain data: `any`, then the local names.
+#[cfg(feature = "serialize")]
+pub(crate) type ReachNames<S> = (bool, Vec<S>);
+
 impl NameSet {
     fn add_class(&mut self, class: &NameClass) {
         match class {
@@ -96,9 +100,15 @@ impl Definitions {
         Self { entries, index }
     }
 
-    /// Every definition with its name, in name order — what [`Definitions::new`] was given.
+    /// Every definition with its name and the attribute and element names it can reach
+    /// (`any`, then the sorted local names), in name order.
     #[cfg(feature = "serialize")]
-    pub(crate) fn named(&self) -> Vec<(&str, &Pattern)> {
+    pub(crate) fn named(&self) -> Vec<(&str, &Pattern, [ReachNames<&str>; 2])> {
+        fn names(set: &NameSet) -> ReachNames<&str> {
+            let mut locals: Vec<&str> = set.locals.iter().map(String::as_str).collect();
+            locals.sort_unstable();
+            (set.any, locals)
+        }
         let mut named: Vec<_> = self
             .index
             .iter()
@@ -107,8 +117,44 @@ impl Definitions {
         named.sort_unstable();
         named
             .into_iter()
-            .map(|(position, name)| (name, &self.entries[position].pattern))
+            .map(|(position, name)| {
+                let entry = &self.entries[position];
+                (
+                    name,
+                    &entry.pattern,
+                    [names(&entry.reach.attributes), names(&entry.reach.elements)],
+                )
+            })
             .collect()
+    }
+
+    /// Definitions as stored by [`Definitions::named`], in name order, without computing the
+    /// reach again. `None` for a repeated name.
+    #[cfg(feature = "serialize")]
+    pub(crate) fn from_loaded(
+        loaded: Vec<(String, Pattern, ReachNames<String>, ReachNames<String>)>,
+    ) -> Option<Self> {
+        fn set((any, locals): ReachNames<String>) -> NameSet {
+            NameSet {
+                any,
+                locals: locals.into_iter().collect(),
+            }
+        }
+        let mut entries = Vec::with_capacity(loaded.len());
+        let mut index = HashMap::with_capacity(loaded.len());
+        for (name, pattern, attributes, elements) in loaded {
+            if index.insert(name, entries.len()).is_some() {
+                return None;
+            }
+            entries.push(Definition {
+                pattern,
+                reach: Reach {
+                    attributes: set(attributes),
+                    elements: set(elements),
+                },
+            });
+        }
+        Some(Self { entries, index })
     }
 
     fn entry(&self, name: &str) -> Option<&Definition> {
