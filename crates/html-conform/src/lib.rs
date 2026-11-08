@@ -25,6 +25,8 @@ mod finding;
 mod infoset;
 mod parse;
 mod schema;
+#[cfg(any(test, feature = "runtime-compile"))]
+mod schema_source;
 mod scripts;
 mod skipped;
 mod table_integrity;

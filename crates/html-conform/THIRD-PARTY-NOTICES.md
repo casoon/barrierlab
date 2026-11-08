@@ -11,6 +11,7 @@ This project contains third-party components and vendored assets from external p
 - **Vendored Locations:**
   - `schema/` (RelaxNG schemas: `html5/`, `svg11/`, `mathml3-inc.rnc`, `html5-all.rnc`)
   - `tests/corpus/` (W3C HTML / HTML-ARIA differential test suite)
+  - `prebuilt/html5.rngc` (generated: the vendored schemas compiled and serialized, see `src/schema.rs`)
 - **License:** MIT License (Copyright (c) 2007-2026 Mozilla Foundation, Henri Sivonen, and W3C)
 
 ---

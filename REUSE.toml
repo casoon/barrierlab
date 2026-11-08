@@ -13,7 +13,7 @@ SPDX-License-Identifier = "MIT"
 # crates/html-conform/THIRD-PARTY-NOTICES.md. Genauer als die Regel oben und
 # überschreibt sie deshalb (REUSE.toml: die letzte passende Tabelle gilt).
 [[annotations]]
-path = ["crates/html-conform/schema/**", "crates/html-conform/tests/corpus/**"]
+path = ["crates/html-conform/schema/**", "crates/html-conform/tests/corpus/**", "crates/html-conform/prebuilt/**"]
 SPDX-FileCopyrightText = "2007-2026 Mozilla Foundation, Henri Sivonen, and the W3C"
 SPDX-License-Identifier = "MIT"
 

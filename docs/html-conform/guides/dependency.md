@@ -53,7 +53,7 @@ removes parser diagnostics.
   may well be conforming. Browsers' parsers stop nesting at the same depth (Blink appends
   further elements as siblings from level 512 on), so pages a browser renders as authored
   stay below it. The parser itself has no limit, as WHATWG tree construction has none.
-- `Initialization { message }`: the embedded HTML schema failed to compile or the embedded
+- `Initialization { message }`: the embedded HTML schema failed to load or the embedded
   rule set failed to parse.
 
 A document that is merely non-conforming always produces `Ok` with findings. `CheckError` is `#[non_exhaustive]` and
