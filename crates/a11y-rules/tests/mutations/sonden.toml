@@ -1,0 +1,47 @@
+# Mutationen der Gruppe „sonden“ — siehe xtask/mutate.py
+
+# --- frames/cross-origin ------------------------------------------------------
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "invert"
+find = '''            Some(true) => measured = true,
+            Some(false) => {'''
+replace = '''            Some(false) => measured = true,
+            Some(true) => {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''        .is_some_and(|b| b.width <= 1.0 || b.height <= 1.0)'''
+replace = '''        .is_some_and(|b| b.width < 1.0 || b.height < 1.0)'''
+test = "korpus"
+expect = "killed"
+note = "Ein Kasten von genau 1 px ist ausgenommen."
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        || n.has_attr("hidden")
+        || n.attr("aria-hidden")
+            .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
+    {'''
+replace = '''        || n.has_attr("hidden")
+    {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/cross-origin"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {'''
+replace = '''    if false && candidates && !measured {'''
+test = "korpus"
+expect = "killed"
+note = "Ohne Messung kein NotRun-Vermerk: stilles Bestehen."

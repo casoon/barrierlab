@@ -12,6 +12,9 @@ abweichen, steht je Schritt in
 
 ### Added
 
+- **Rahmen:** `frames/cross-origin` (kein Erfolgskriterium, Abdeckungsnotiz): `UNTESTED` je dargestellten Rahmen, dessen Dokument `Rendering::frame_reachable` als nicht lesbar meldet, mit `src` im Text. Liefert der Host für keinen Rahmen eine Messung, steht die Kennung als `NotRun::CapabilityMissing` mit Grund im Bericht; casoon/barrierlab#132.
+- **Nicht gemessen:** Eine Regel kann eine fehlende Messung des Hosts als Ausführungsvermerk melden (`NotRun::CapabilityMissing` mit Grund in `rule_runs`) statt als `UNTESTED`-Befund am Wurzelknoten; der Host muss nicht nach Wurzelbefunden filtern. Zunächst nur von den neuen Kennungen benutzt, die bestehenden Regeln melden unverändert; casoon/barrierlab#145.
+
 - **Regelkatalog:** `catalogue()` liefert alle Regeldeklarationen in fester Reihenfolge (Tier 1, 2, 3, Stylesheets), `meta_for(id)` die Deklaration zu einer Befund-Kennung. Mit dem neuen Feature `serde` sind `Meta` und `Scope` serialisierbar (`tier` als Name, z. B. `structure`); ein Test prüft, dass jede Kennung genau einmal vorkommt und die Regelreferenz dieselbe Menge listet; casoon/barrierlab#129.
 - **Checkliste:** zwei weitere `manual/*`-Punkte: `text-spacing` (1.4.12, erscheint bei Text auf der Seite) und `content-on-hover-focus` (1.4.13, erscheint bei `role="tooltip"`, `popover`, `aria-haspopup` oder `onmouseover`). Beide `UNTESTED`: ob bei geändertem Textabstand Text verloren geht oder Hover-Inhalt sich schließen und überfahren lässt, entscheidet kein Markup und keine Kaskade; casoon/barrierlab#114.
 

@@ -33,7 +33,7 @@
 //! // Stylesheets, weil dieser Host weder Semantik noch Darstellung noch
 //! // Stylesheets liefert. Sie fehlen nicht im Bericht, sie stehen mit
 //! // `NotRun::CapabilityMissing` darin.
-//! assert_eq!(report.summary.rules_not_run, 57);
+//! assert_eq!(report.summary.rules_not_run, 58);
 //! ```
 //!
 //! Mit einem Host, der [`a11y_dom::Semantics`] erfüllt, laufen die
@@ -53,7 +53,9 @@ mod links;
 mod locale;
 mod media;
 mod names;
+mod not_run;
 mod presentation;
+mod probes;
 mod registry;
 mod rendering;
 mod roles;
@@ -122,11 +124,21 @@ pub fn stylesheet_rules<D: Document>() -> Vec<StylesheetRule<D>> {
 /// Der Vermerk läuft über die **Befund**-Kennungen, nicht über eine
 /// übergeordnete Regelkennung. Nur so benutzen `rule_runs` und `findings`
 /// dieselbe Namensmenge und lassen sich verbinden.
-fn record_runs(meta: &Meta, found: &[Finding], report: &mut Report) {
+fn record_runs(meta: &Meta, found: Vec<Finding>, report: &mut Report) {
+    // Eine Regel, der die Messung des Hosts fehlt, meldet das als Vermerk
+    // (`not_run::note`): kein Befund, sondern `NotRun::CapabilityMissing`.
+    let (notes, found): (Vec<Finding>, Vec<Finding>) =
+        found.into_iter().partition(not_run::is_note);
     for id in meta.ids {
-        let count = found.iter().filter(|f| f.rule_id == *id).count();
-        report.record(RuleRun::ran(*id, count).with_wcag(meta.wcag.iter().copied()));
+        let run = match notes.iter().find(|f| f.rule_id == *id) {
+            Some(note) => {
+                RuleRun::not_run(*id, NotRun::CapabilityMissing).with_reason(note.message.clone())
+            }
+            None => RuleRun::ran(*id, found.iter().filter(|f| f.rule_id == *id).count()),
+        };
+        report.record(run.with_wcag(meta.wcag.iter().copied()));
     }
+    report.extend(found);
 }
 
 /// Vermerkt jede Kennung der übergebenen Deklarationen als nicht gelaufen.
@@ -174,8 +186,7 @@ fn run_structure<D: Document>(doc: &D, v: &Hidden, locale: Locale, report: &mut 
     for rule in structure_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
         (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
-        record_runs(&rule.meta, &out, report);
-        report.extend(out);
+        record_runs(&rule.meta, out, report);
     }
 }
 
@@ -238,8 +249,7 @@ fn run_semantics<D: Semantics>(doc: &D, v: &Hidden, locale: Locale, report: &mut
     for rule in semantics_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
         (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
-        record_runs(&rule.meta, &out, report);
-        report.extend(out);
+        record_runs(&rule.meta, out, report);
     }
 }
 
@@ -247,8 +257,7 @@ fn run_rendering<D: Rendering>(doc: &D, v: &Hidden, locale: Locale, report: &mut
     for rule in rendering_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
         (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
-        record_runs(&rule.meta, &out, report);
-        report.extend(out);
+        record_runs(&rule.meta, out, report);
     }
 }
 
@@ -349,8 +358,7 @@ pub fn run_stylesheets_in<D: Document>(
             locale,
             &mut out,
         );
-        record_runs(&rule.meta, &out, &mut report);
-        report.extend(out);
+        record_runs(&rule.meta, out, &mut report);
     }
     report.finish()
 }

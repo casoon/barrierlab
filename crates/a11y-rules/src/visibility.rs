@@ -299,6 +299,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         let doc: &'n D = self.doc;
         doc.sampled_backdrop(node.inner)
     }
+
+    fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
+        let doc: &'n D = self.doc;
+        doc.frame_reachable(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -359,6 +364,10 @@ mod tests {
                 luminance: vec![0.5],
             })
         }
+
+        fn frame_reachable<'n>(&'n self, _: Self::N<'n>) -> Option<bool> {
+            Some(false)
+        }
     }
 
     #[test]
@@ -375,5 +384,6 @@ mod tests {
         assert_eq!(visibility.scroll_overflow_px(n), Some(7.0));
         assert_eq!(visibility.visually_hidden(n), Some(true));
         assert!(visibility.sampled_backdrop(n).is_some());
+        assert_eq!(visibility.frame_reachable(n), Some(false));
     }
 }

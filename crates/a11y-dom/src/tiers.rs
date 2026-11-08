@@ -318,6 +318,20 @@ pub trait Rendering: Document {
     fn sampled_backdrop<'n>(&'n self, _node: Self::N<'n>) -> Option<Backdrop> {
         None
     }
+
+    /// Ob das Dokument eines `<iframe>`/`<frame>` lesbar ist — die Messung des
+    /// Hosts je Rahmen, einschließlich Rahmen in offenen Shadow Roots.
+    ///
+    /// - `Some(true)`: lesbar, der Rahmen wird geprüft oder lässt sich prüfen.
+    /// - `Some(false)`: nicht lesbar — fremder Ursprung, oder die Navigation
+    ///   läuft noch; ein Host in der Seite kann beides nicht unterscheiden.
+    /// - `None`: der Host sieht sich Rahmen nicht an. Vorgabe.
+    ///
+    /// Ob der Rahmen dargestellt wird, leitet die Regel aus `display`,
+    /// `visibility` und `bounds` ab.
+    fn frame_reachable<'n>(&'n self, _node: Self::N<'n>) -> Option<bool> {
+        None
+    }
 }
 
 /// **Tier 4** — Fokus, Ereignisse, veränderlicher DOM.

@@ -20,6 +20,9 @@
 //!   `visually-hidden`, `style`, `bounds`, `unrendered` (kein Stil für nicht
 //!   Dargestelltes, wie ein Host aus einem Layout-Schnappschuss),
 //!   `unrendered-fields` (dafür nur `display: none`, sonst nichts).
+//!   Messungen an der laufenden Seite (casoon/barrierlab#130), je an dem Element,
+//!   das sie betrifft: `--frame-reachable` (`1`/`0`, Vorgabe `1`; das Wort
+//!   `frames` in `--unmeasured` schaltet die Messung ab).
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
@@ -530,6 +533,11 @@ impl Rendering for Host<'_> {
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         self.measures("visually-hidden")
             .then(|| switch(node, "--visually-hidden"))
+    }
+
+    fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
+        self.measures("frames")
+            .then(|| own(node, "--frame-reachable").is_none_or(|v| v == "1" || v == "true"))
     }
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {

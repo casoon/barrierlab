@@ -11,6 +11,7 @@ mod gruppen {
     pub mod landmarken;
     pub mod namen;
     pub mod regressionen;
+    pub mod sonden;
     pub mod struktur;
 }
 
@@ -23,6 +24,10 @@ pub enum Kind {
     Negative,
     /// Nichts, worauf die Regel zielt: die Kennung lief und meldet nichts.
     NotApplicable,
+    /// Dem Host fehlt die Messung: die Kennung lief nicht
+    /// (`NotRun::CapabilityMissing`, mit Grund) und meldet keinen Befund.
+    /// Zählt nicht zu den drei Pflichtarten.
+    NotRun,
 }
 
 impl Kind {
@@ -31,6 +36,7 @@ impl Kind {
             Kind::Positive(_) => 0,
             Kind::Negative => 1,
             Kind::NotApplicable => 2,
+            Kind::NotRun => 3,
         }
     }
 
@@ -39,6 +45,7 @@ impl Kind {
             Kind::Positive(_) => "positiv",
             Kind::Negative => "negativ",
             Kind::NotApplicable => "n/a",
+            Kind::NotRun => "nicht gelaufen",
         }
     }
 }
@@ -122,6 +129,11 @@ pub fn na(id: &'static str, html: &'static str, source: &'static str) -> Fall {
     fall(id, Kind::NotApplicable, html, source)
 }
 
+/// Dem Host fehlt die Messung: die Kennung ist nicht gelaufen.
+pub fn not_run(id: &'static str, html: &'static str, source: &'static str) -> Fall {
+    fall(id, Kind::NotRun, html, source)
+}
+
 pub fn all() -> Vec<Fall> {
     [
         gruppen::aria::cases(),
@@ -132,6 +144,7 @@ pub fn all() -> Vec<Fall> {
         gruppen::landmarken::cases(),
         gruppen::namen::cases(),
         gruppen::regressionen::cases(),
+        gruppen::sonden::cases(),
         gruppen::struktur::cases(),
     ]
     .into_iter()

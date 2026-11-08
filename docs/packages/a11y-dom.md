@@ -33,6 +33,7 @@ flowchart TB
 |---|---|
 | `Document` | the minimum: tree, elements, attributes |
 | `Semantics`, `Rendering` | tiers a host offers only if it really has the data |
+| `Rendering` host measurements | default methods, `None` = not measured: `layout`, `scroll_overflow_px`, `visually_hidden`, `sampled_backdrop`, `frame_reachable` (casoon/barrierlab#132) |
 | `Layout` | layout information for heuristic rules, via `Rendering::layout()` (default `None`) |
 | `Arena`, `ArenaBuilder`, `ArenaNode` | ready-made implementation for tests and parser-based hosts |
 

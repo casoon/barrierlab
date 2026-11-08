@@ -49,6 +49,19 @@ the **heuristics** in tier 3 (`REVIEW`, from `Rendering::layout` and
 `bounds`; without this data they report nothing, only the unmeasured
 focus visibility remains as `UNTESTED`).
 
+## Rules over host measurements
+
+Some facts exist only on a live page and only after the host acted on it. They are default
+methods of `Rendering`; the default `None` means "not measured". The rule reads the value and
+compares, the host decides whether and how to measure. A rule whose measurement is `None` on
+every element it targets does not stay silent and does not pass: the identifier is recorded as
+`NotRun::CapabilityMissing` with a reason in `Report::rule_runs`, and it adds no finding (so a
+host has nothing to filter). A page with nothing the rule targets counts as run.
+
+| ID | Measurement | Result |
+|---|---|---|
+| `frames/cross-origin` | `Rendering::frame_reachable` per `<iframe>`/`<frame>` (not presentational, not hidden, larger than 1 px) | `UNTESTED` per unreadable frame, no WCAG criterion: a coverage note |
+
 ## Normative mapping
 
 A finding with a WCAG criterion and `FAIL` asserts a violation. It may do so

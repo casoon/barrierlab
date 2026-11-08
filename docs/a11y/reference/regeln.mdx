@@ -13,7 +13,7 @@ may deviate from it.
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.28.2 declares 164 IDs.
+a11y-rules 0.28.2 declares 165 IDs.
 
 ## Tier 1: Structure
 
@@ -173,7 +173,7 @@ a11y-rules 0.28.2 declares 164 IDs.
 
 ## Tier 3: Rendering
 
-17 IDs, needs `Rendering`, i.e. computed styles and geometry.
+18 IDs, needs `Rendering`, i.e. computed styles and geometry.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -194,6 +194,7 @@ a11y-rules 0.28.2 declares 164 IDs.
 | `lists/role-redundant` | – | low | role="list" on a `<ul>` or `<ol>` is only needed when list-style-type is none. |
 | `color/link-indistinct` | 1.4.1 | medium | A link in running text needs more than colour to stand out: an underline, or a different weight, style, border or background. |
 | `keyboard/scrollable-region-not-focusable` | 2.1.1 | high | A scrollable region needs keyboard access: tabindex="0" on the region or a focusable element inside it. |
+| `frames/cross-origin` | – | low | A frame whose document the tool cannot read (cross-origin, or still navigating) was not tested. Not a conformance check and tied to no success criterion: a coverage note. Frames that are presentational, hidden or 1 px or smaller are skipped. |
 
 ## Stylesheets
 
