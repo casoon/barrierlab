@@ -14,7 +14,7 @@ version bump.
   `to_svrl_with` write them as an SVRL document string, `location_path` builds an XPath location
   for a node from the `Node` trait. No new dependency; `evaluate` and its results are unchanged.
 
-### Documentation
+### Changed
 
 - **Scope:** pattern-level `<let>` stays scoped to its pattern, checked against ISO/IEC 19757-3:2016
   3.26 and 5.4.5 (barrierlab#2); the schxslt case `let-pattern-global` is a known difference, not
