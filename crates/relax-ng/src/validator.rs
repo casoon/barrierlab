@@ -308,12 +308,13 @@ fn validate_element_content<E: Element>(
             }
             Content::Element(child_element) => {
                 let name = child_element.name();
-                match interner.element_contents(frame.pattern, &name) {
+                let name_id = interner.name_id(&name);
+                match interner.element_contents_by_id(frame.pattern, &name, name_id) {
                     Some(child_content) => {
                         // The parent's derivative depends only on the
                         // child's name, not on how its content validates,
                         // so it can be taken before the child is entered.
-                        frame.pattern = interner.deriv_element(frame.pattern, &name);
+                        frame.pattern = interner.deriv_element_by_id(frame.pattern, &name, name_id);
                         let mut child_frame =
                             open_frame(interner, child_content, &child_element, &mut path, errors);
                         child_frame.element = Some(child_element);
@@ -350,7 +351,8 @@ fn open_frame<E: Element>(
     // Attributes are unordered — fold the derivative over them in
     // whatever order the caller's iterator happens to yield.
     for (name, value) in element.attributes() {
-        if !interner.attribute_name_known(pattern, &name) {
+        let name_id = interner.name_id(&name);
+        if !interner.attribute_known_by_id(pattern, &name, name_id) {
             errors.push(ValidationError {
                 kind: ValidationErrorKind::UnexpectedAttribute(name),
                 path: path.clone(),
@@ -358,7 +360,8 @@ fn open_frame<E: Element>(
             });
             continue;
         }
-        let derived = interner.deriv_attribute(pattern, &name, &value, context_id, &context);
+        let derived =
+            interner.deriv_attribute_by_id(pattern, &name, name_id, &value, context_id, &context);
         if derived == NOT_ALLOWED {
             errors.push(ValidationError {
                 kind: ValidationErrorKind::InvalidAttributeValue(name, value),

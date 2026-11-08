@@ -16,7 +16,9 @@
 //! uses the `regex` crate's dialect, which differs in some corners from
 //! XSD's own regular expression language (Part 2 Appendix F).
 
+use std::cell::RefCell;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 use regex::Regex;
 
@@ -1029,14 +1031,32 @@ fn compare_ordered(
     bound_key.partial_cmp(&value_key)
 }
 
-/// Compiles `pattern` fresh on every call. `validate_params` already
-/// rejected any `pattern` facet that doesn't compile, so this always
-/// succeeds in practice; a per-schema pattern cache would save repeated
-/// compilation across many `matches` calls, but that's a performance
-/// concern deliberately deferred rather than
-/// something to build speculatively now.
+/// Upper bound on cached patterns per thread. Patterns come from the schema,
+/// so a schema's own count is small; the bound only keeps a long-lived
+/// thread that sees many different schemas from growing without limit.
+const PATTERN_CACHE_LIMIT: usize = 256;
+
+thread_local! {
+    static PATTERN_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+}
+
+/// The compiled, anchored regex for `pattern`, compiled once per thread.
+/// `validate_params` already rejected any `pattern` facet that doesn't
+/// compile, so compiling always succeeds in practice. `Regex` clones share
+/// their compiled program, so a cache hit is a hash lookup plus a refcount.
 fn compiled_pattern(pattern: &str) -> Regex {
-    Regex::new(&format!("^(?:{pattern})$")).expect("validated by validate_params")
+    PATTERN_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some(regex) = cache.get(pattern) {
+            return regex.clone();
+        }
+        let regex = Regex::new(&format!("^(?:{pattern})$")).expect("validated by validate_params");
+        if cache.len() >= PATTERN_CACHE_LIMIT {
+            cache.clear();
+        }
+        cache.insert(pattern.to_owned(), regex.clone());
+        regex
+    })
 }
 
 #[cfg(test)]

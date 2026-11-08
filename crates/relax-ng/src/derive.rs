@@ -25,8 +25,10 @@
 //! additionally flattens nested choices and drops duplicate branches, which
 //! changes no result: `choice` is associative and idempotent).
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::hash::{BuildHasherDefault, Hash, Hasher};
+use std::collections::hash_map::RandomState;
+use std::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 use std::rc::Rc;
 
 use crate::datatypes::{DatatypeContext, DatatypeRegistry};
@@ -114,8 +116,7 @@ impl Event<'_> {
 
 /// Multiply-rotate hashing for maps keyed only by ids and other small
 /// integers the interner hands out itself. Maps keyed by document strings
-/// (names, attribute values, namespace bindings) keep the standard,
-/// collision-resistant hasher.
+/// (names, attribute values, namespace bindings) use [`KeyedMap`] instead.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct IdHasher(u64);
 
@@ -159,6 +160,90 @@ impl Hasher for IdHasher {
 
 type IdMap<K, V> = HashMap<K, V, BuildHasherDefault<IdHasher>>;
 
+/// A map for keys that come from the document (names, attribute values,
+/// namespace bindings), so an attacker chooses them and the hash must resist
+/// collision flooding. The key is hashed once with the standard
+/// `RandomState` (SipHash, seeded randomly per map); the 64-bit result then
+/// selects a bucket in a map that only mixes that value again, and keys that
+/// share a hash are told apart by full comparison. Compared with a plain
+/// `HashMap<K, V>` a miss followed by an insert hashes the key once, not
+/// twice, and growing the table re-hashes nothing. Without the seed an
+/// attacker cannot predict which keys collide, exactly as with `HashMap`.
+pub(crate) struct KeyedMap<K, V> {
+    state: RandomState,
+    slots: IdMap<u64, Slot<K, V>>,
+    len: usize,
+}
+
+enum Slot<K, V> {
+    One(K, V),
+    Many(Vec<(K, V)>),
+}
+
+impl<K, V> KeyedMap<K, V> {
+    pub(crate) fn new() -> Self {
+        Self::with_state(RandomState::new())
+    }
+
+    /// A map that hashes with `state`; maps sharing one state give the same
+    /// hash for the same key, so a caller can hash once for several maps.
+    pub(crate) fn with_state(state: RandomState) -> Self {
+        Self {
+            state,
+            slots: IdMap::default(),
+            len: 0,
+        }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.len
+    }
+
+    /// The hash to pass to [`Self::get_hashed`] and [`Self::insert_hashed`].
+    pub(crate) fn hash_of<Q: Hash + ?Sized>(&self, key: &Q) -> u64 {
+        self.state.hash_one(key)
+    }
+
+    pub(crate) fn get_hashed<Q>(&self, hash: u64, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Eq + ?Sized,
+    {
+        match self.slots.get(&hash)? {
+            Slot::One(slot_key, value) => (slot_key.borrow() == key).then_some(value),
+            Slot::Many(entries) => entries
+                .iter()
+                .find(|(slot_key, _)| slot_key.borrow() == key)
+                .map(|(_, value)| value),
+        }
+    }
+
+    /// Adds `key`, which must not be present yet (callers insert after a
+    /// miss of [`Self::get_hashed`] with the same hash).
+    pub(crate) fn insert_hashed(&mut self, hash: u64, key: K, value: V) {
+        self.len += 1;
+        match self.slots.entry(hash) {
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                vacant.insert(Slot::One(key, value));
+            }
+            std::collections::hash_map::Entry::Occupied(mut occupied) => match occupied.get_mut() {
+                Slot::Many(entries) => entries.push((key, value)),
+                slot @ Slot::One(..) => {
+                    let Slot::One(first_key, first_value) =
+                        std::mem::replace(slot, Slot::Many(Vec::with_capacity(2)))
+                    else {
+                        unreachable!("matched One above")
+                    };
+                    if let Slot::Many(entries) = slot {
+                        entries.push((first_key, first_value));
+                        entries.push((key, value));
+                    }
+                }
+            },
+        }
+    }
+}
+
 /// Interned nodes plus every memo table, for one schema and registry.
 pub(crate) struct Interner<'s> {
     definitions: &'s Definitions,
@@ -170,12 +255,14 @@ pub(crate) struct Interner<'s> {
     schema_ids: IdMap<usize, Id>,
     /// Each definition's interned body, by position.
     ref_targets: Vec<Option<Id>>,
-    names: HashMap<ExpandedName, u32>,
-    contexts: HashMap<Vec<(String, String)>, u32>,
+    names: KeyedMap<ExpandedName, u32>,
+    contexts: KeyedMap<Vec<(String, String)>, u32>,
     element_derivs: IdMap<(Id, u32), Id>,
     element_contents: IdMap<(Id, u32), Option<Id>>,
     attribute_known: IdMap<(Id, u32), bool>,
-    attribute_derivs: IdMap<(Id, u32, u32), HashMap<Box<str>, Id>>,
+    /// Seeds the hashes of attribute values, shared by all value maps.
+    value_state: RandomState,
+    attribute_derivs: IdMap<(Id, u32, u32), KeyedMap<Box<str>, Id>>,
 }
 
 impl<'s> Interner<'s> {
@@ -188,11 +275,12 @@ impl<'s> Interner<'s> {
             ids: IdMap::default(),
             schema_ids: IdMap::default(),
             ref_targets: vec![None; definitions.len()],
-            names: HashMap::new(),
-            contexts: HashMap::new(),
+            names: KeyedMap::new(),
+            contexts: KeyedMap::new(),
             element_derivs: IdMap::default(),
             element_contents: IdMap::default(),
             attribute_known: IdMap::default(),
+            value_state: RandomState::new(),
             attribute_derivs: IdMap::default(),
         };
         for node in [Node::Empty, Node::NotAllowed, Node::Text] {
@@ -218,11 +306,12 @@ impl<'s> Interner<'s> {
 
     /// The id for a document name, so memo keys stay small.
     pub(crate) fn name_id(&mut self, name: &ExpandedName) -> u32 {
-        if let Some(&id) = self.names.get(name) {
+        let hash = self.names.hash_of(name);
+        if let Some(&id) = self.names.get_hashed(hash, name) {
             return id;
         }
         let id = u32::try_from(self.names.len()).expect("fewer than 2^32 distinct names");
-        self.names.insert(name.clone(), id);
+        self.names.insert_hashed(hash, name.clone(), id);
         id
     }
 
@@ -230,11 +319,12 @@ impl<'s> Interner<'s> {
     /// are only reused under the same bindings, since `QName`-typed values
     /// resolve against them.
     pub(crate) fn context_id(&mut self, bindings: &[(String, String)]) -> u32 {
-        if let Some(&id) = self.contexts.get(bindings) {
+        let hash = self.contexts.hash_of(bindings);
+        if let Some(&id) = self.contexts.get_hashed(hash, bindings) {
             return id;
         }
         let id = u32::try_from(self.contexts.len()).expect("fewer than 2^32 contexts");
-        self.contexts.insert(bindings.to_vec(), id);
+        self.contexts.insert_hashed(hash, bindings.to_vec(), id);
         id
     }
 
@@ -577,13 +667,21 @@ impl<'s> Interner<'s> {
 
     /// The derivative of `id` by a child element named `name` (just the
     /// name: the child's own content is validated separately).
+    #[cfg(test)]
     pub(crate) fn deriv_element(&mut self, id: Id, name: &ExpandedName) -> Id {
         let name_id = self.name_id(name);
+        self.deriv_element_by_id(id, name, name_id)
+    }
+
+    /// [`Self::deriv_element`] for a name already interned with
+    /// [`Self::name_id`], so the caller hashes each document name once.
+    pub(crate) fn deriv_element_by_id(&mut self, id: Id, name: &ExpandedName, name_id: u32) -> Id {
         self.deriv(id, Event::Element { name, name_id })
     }
 
     /// The derivative of `id` by an attribute. `context_id` must be
     /// [`Self::context_id`] of the bindings `context` was built from.
+    #[cfg(test)]
     pub(crate) fn deriv_attribute(
         &mut self,
         id: Id,
@@ -593,6 +691,20 @@ impl<'s> Interner<'s> {
         context: &DatatypeContext,
     ) -> Id {
         let name_id = self.name_id(name);
+        self.deriv_attribute_by_id(id, name, name_id, value, context_id, context)
+    }
+
+    /// [`Self::deriv_attribute`] for a name already interned with
+    /// [`Self::name_id`].
+    pub(crate) fn deriv_attribute_by_id(
+        &mut self,
+        id: Id,
+        name: &ExpandedName,
+        name_id: u32,
+        value: &str,
+        context_id: u32,
+        context: &DatatypeContext,
+    ) -> Id {
         self.deriv(
             id,
             Event::Attribute {
@@ -628,18 +740,20 @@ impl<'s> Interner<'s> {
                 ..
             } => {
                 let key = (id, name_id, context_id);
+                let hash = self.value_state.hash_one(value);
                 if let Some(&known) = self
                     .attribute_derivs
                     .get(&key)
-                    .and_then(|values| values.get(value))
+                    .and_then(|values| values.get_hashed(hash, value))
                 {
                     return known;
                 }
                 let result = self.deriv_uncached(id, event);
+                let state = &self.value_state;
                 self.attribute_derivs
                     .entry(key)
-                    .or_default()
-                    .insert(value.into(), result);
+                    .or_insert_with(|| KeyedMap::with_state(state.clone()))
+                    .insert_hashed(hash, value.into(), result);
                 result
             }
             Event::Text { .. } => {
@@ -882,12 +996,20 @@ impl<'s> Interner<'s> {
     /// positions an attribute derivative looks at) has a name class
     /// matching `name`, whatever the value: tells "not allowed here" apart
     /// from "allowed, but wrong value".
+    #[cfg(test)]
     pub(crate) fn attribute_name_known(&mut self, id: Id, name: &ExpandedName) -> bool {
         let name_id = self.name_id(name);
         self.attribute_known_by_id(id, name, name_id)
     }
 
-    fn attribute_known_by_id(&mut self, id: Id, name: &ExpandedName, name_id: u32) -> bool {
+    /// [`Self::attribute_name_known`] for a name already interned with
+    /// [`Self::name_id`].
+    pub(crate) fn attribute_known_by_id(
+        &mut self,
+        id: Id,
+        name: &ExpandedName,
+        name_id: u32,
+    ) -> bool {
         if let Some(&known) = self.attribute_known.get(&(id, name_id)) {
             return known;
         }
@@ -921,7 +1043,14 @@ impl<'s> Interner<'s> {
         self.element_contents_by_id(id, name, name_id)
     }
 
-    fn element_contents_by_id(&mut self, id: Id, name: &ExpandedName, name_id: u32) -> Option<Id> {
+    /// [`Self::element_contents`] for a name already interned with
+    /// [`Self::name_id`].
+    pub(crate) fn element_contents_by_id(
+        &mut self,
+        id: Id,
+        name: &ExpandedName,
+        name_id: u32,
+    ) -> Option<Id> {
         if let Some(&known) = self.element_contents.get(&(id, name_id)) {
             return known;
         }
@@ -986,4 +1115,34 @@ fn schema_value_context(namespace: &Option<String>, schema_context: &Context) ->
         .collect();
     bindings.push((String::new(), namespace.clone().unwrap_or_default()));
     DatatypeContext::from_bindings(bindings)
+}
+
+#[cfg(test)]
+mod keyed_map_tests {
+    use super::KeyedMap;
+
+    #[test]
+    fn keys_sharing_a_hash_stay_distinct() {
+        let mut map: KeyedMap<Box<str>, u32> = KeyedMap::new();
+        for (index, key) in ["a", "b", "c"].into_iter().enumerate() {
+            // A fixed hash forces every key into one bucket.
+            assert_eq!(map.get_hashed(7, key), None);
+            map.insert_hashed(7, key.into(), index as u32);
+        }
+        assert_eq!(map.len(), 3);
+        assert_eq!(map.get_hashed(7, "a"), Some(&0));
+        assert_eq!(map.get_hashed(7, "b"), Some(&1));
+        assert_eq!(map.get_hashed(7, "c"), Some(&2));
+        assert_eq!(map.get_hashed(7, "d"), None);
+        assert_eq!(map.get_hashed(8, "a"), None);
+    }
+
+    #[test]
+    fn lookup_by_own_hash_round_trips() {
+        let mut map: KeyedMap<Box<str>, u32> = KeyedMap::new();
+        let hash = map.hash_of("x");
+        map.insert_hashed(hash, "x".into(), 1);
+        assert_eq!(map.get_hashed(map.hash_of("x"), "x"), Some(&1));
+        assert_eq!(map.get_hashed(map.hash_of("y"), "y"), None);
+    }
 }
