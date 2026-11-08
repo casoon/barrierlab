@@ -309,6 +309,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         let doc: &'n D = self.doc;
         doc.box_transform(node.inner)
     }
+
+    fn paste_probe<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::PasteProbe> {
+        let doc: &'n D = self.doc;
+        doc.paste_probe(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -377,6 +382,13 @@ mod tests {
         fn box_transform<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::BoxTransform> {
             Some(a11y_dom::BoxTransform::default())
         }
+
+        fn paste_probe<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::PasteProbe> {
+            Some(a11y_dom::PasteProbe {
+                cancelled: true,
+                inserted: false,
+            })
+        }
     }
 
     #[test]
@@ -395,5 +407,12 @@ mod tests {
         assert!(visibility.sampled_backdrop(n).is_some());
         assert_eq!(visibility.frame_reachable(n), Some(false));
         assert!(visibility.box_transform(n).is_some());
+        assert_eq!(
+            visibility.paste_probe(n),
+            Some(a11y_dom::PasteProbe {
+                cancelled: true,
+                inserted: false
+            })
+        );
     }
 }

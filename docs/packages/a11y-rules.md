@@ -60,6 +60,7 @@ host has nothing to filter). A page with nothing the rule targets counts as run.
 
 | ID | Measurement | Result |
 |---|---|---|
+| `auth/paste-blocked` | `Rendering::paste_probe` on visible, enabled, writable `input[type=password]` and fields with `autocomplete` `one-time-code` or `current-password` (frames and open shadow roots included, by the host) | `FAIL` (3.3.8) when `cancelled && !inserted`; a handler that cancels and inserts the text itself blocks nothing. The event is synthetic (`isTrusted` false): a handler reacting only to trusted events or key presses is not seen. `autocomplete="off"` is not a finding. Failure technique F109 is **not** cited: it concerns split-field entry, not paste handlers |
 | `orientation/root-rotated` | `Rendering::box_transform` of `html` and `body`: the computed matrix (`b = sin θ`, `c = -sin θ`, thresholds `abs(b) > 0.01` and `abs(b + c) < 0.01`; `matrix3d` entries 2 and 5) or a `rotate` angle off a multiple of 180° about the z axis | `FAIL` (1.3.4) per rotated root. One viewport only: a lock in the other orientation needs a second snapshot there (`RuleRun::in_viewport`); that an orientation is essential stays a human judgement |
 | `frames/cross-origin` | `Rendering::frame_reachable` per `<iframe>`/`<frame>` (not presentational, not hidden, larger than 1 px) | `UNTESTED` per unreadable frame, no WCAG criterion: a coverage note |
 

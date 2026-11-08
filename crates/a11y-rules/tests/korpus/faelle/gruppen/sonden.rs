@@ -15,6 +15,7 @@ pub fn cases() -> Vec<Fall> {
     let mut v = Vec::new();
     v.extend(frames());
     v.extend(orientation());
+    v.extend(paste());
     v
 }
 
@@ -220,6 +221,98 @@ fn orientation() -> Vec<Fall> {
                 r#"<body style="transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"><p>Content</p></body></html>"#
             ),
             "docs/conventions.md: not measured is not passed; issue #134: neither field measured on html/body gives NotRun",
+        ),
+    ]
+}
+
+const AUTH_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/accessible_authentication (accessible-auth-paste-blocked): pw-blocked and otp-blocked are violations, pw-ok and pw-sanitised pass";
+const AUTH_NORM: &str = "WCAG 2.2 SC 3.3.8 Accessible Authentication (Minimum): a cognitive function test such as remembering a password needs a mechanism to assist; paste / a password manager is that mechanism (Understanding 3.3.8)";
+
+fn paste() -> Vec<Fall> {
+    let id = "auth/paste-blocked";
+    vec![
+        fail(
+            id,
+            r#"<input id="pw-blocked" name="password" type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-blocked: addEventListener + preventDefault")
+        .count(1),
+        fail(
+            id,
+            r#"<input id="otp-blocked" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" onpaste="return false" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("otp-blocked: onpaste=return false, Einmalcode")
+        .count(1),
+        fail(
+            id,
+            r#"<input type="password" autocomplete="off" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_NORM,
+        )
+        .variant("Passwortfeld mit autocomplete=off wird trotzdem geprüft")
+        .count(1),
+        fail(
+            id,
+            r#"<input name="pw" autocomplete="section-login current-password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "HTML autocomplete: a space-separated token list; current-password selects the field",
+        )
+        .variant("Tokenliste, Feld ohne type=password")
+        .count(1),
+        fail(
+            id,
+            r#"<input type="password" style="--paste-probe:unmeasured"><input type="password" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: a field without a probe result is not judged, a probed one is",
+        )
+        .variant("ein Feld ohne Messung, eines blockiert")
+        .count(1),
+        negative(
+            id,
+            r#"<input id="pw-ok" name="password2" type="password" autocomplete="current-password">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-ok: Einfügen erlaubt"),
+        negative(
+            id,
+            r#"<input id="pw-sanitised" name="password3" type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:1">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("pw-sanitised: Handler bricht ab, fügt aber selbst ein"),
+        negative(
+            id,
+            r#"<input type="password" style="--paste-cancelled:0;--paste-inserted:0">"#,
+            "issue #133: blocked means cancelled and not inserted; not cancelled is not blocked",
+        )
+        .variant("nicht abgebrochen, aber nichts eingefügt"),
+        na(
+            id,
+            r#"<input id="user-a" name="username" type="text" autocomplete="username" style="--paste-cancelled:1;--paste-inserted:0">"#,
+            AUTH_FIXTURE,
+        )
+        .variant("Benutzername: kein Passwort- oder Codefeld"),
+        na(
+            id,
+            r#"<input type="password" disabled style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible, not disabled and not read-only",
+        )
+        .variant("disabled"),
+        na(
+            id,
+            r#"<input type="password" readonly style="--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible, not disabled and not read-only",
+        )
+        .variant("readonly"),
+        na(
+            id,
+            r#"<input type="password" style="display:none;--paste-cancelled:1;--paste-inserted:0">"#,
+            "issue #133: fields are visible",
+        )
+        .variant("display: none"),
+        na(id, r#"<p>No fields.</p>"#, AUTH_NORM),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: paste"><head><title>T</title></head><body><input type="password" autocomplete="current-password" style="--paste-cancelled:1;--paste-inserted:0"></body></html>"#,
+            "docs/conventions.md: not measured is not passed; issue #133: no probe on any candidate gives NotRun",
         ),
     ]
 }

@@ -284,6 +284,23 @@ pub struct BoxTransform {
     pub rotate: Option<String>,
 }
 
+/// Rohe Beobachtungen einer Einfüge-Probe an einem Passwort- oder
+/// Code-Feld, kein Urteil. Der Host schickt ein synthetisches, abbrechbares
+/// `paste`-Ereignis mit einem Probetext, stellt den Wert des Feldes danach
+/// wieder her und unterdrückt `alert`/`confirm`/`prompt`.
+///
+/// Das Ereignis ist synthetisch (`isTrusted` ist falsch): Ein Handler, der nur
+/// auf vertrauenswürdige Ereignisse oder Tastendrücke reagiert, bleibt
+/// unsichtbar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PasteProbe {
+    /// `dispatchEvent` lieferte `false`: ein Handler hat das Ereignis
+    /// abgebrochen.
+    pub cancelled: bool,
+    /// Der Probetext stand danach im Wert des Feldes.
+    pub inserted: bool,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -354,6 +371,15 @@ pub trait Rendering: Document {
     /// `html` und `body`. Ein Quarterdreh der Wurzel ist der Fehler, den
     /// `orientation/root-rotated` sieht. Vorgabe `None`: nicht gemessen.
     fn box_transform<'n>(&'n self, _node: Self::N<'n>) -> Option<BoxTransform> {
+        None
+    }
+
+    /// Ergebnis der Einfüge-Probe an einem Passwort- oder Einmalcode-Feld
+    /// (`input[type=password]`, `autocomplete` mit `one-time-code` oder
+    /// `current-password`). Die Probe führt Seiten-Handler aus und schreibt
+    /// `value`; sie ist deshalb ein eigener, ausdrücklicher Durchgang des
+    /// Hosts. Vorgabe `None`: nicht untersucht.
+    fn paste_probe<'n>(&'n self, _node: Self::N<'n>) -> Option<PasteProbe> {
         None
     }
 }

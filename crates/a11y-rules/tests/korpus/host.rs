@@ -25,12 +25,14 @@
 //!   `frames` in `--unmeasured` schaltet die Messung ab); `transform` und
 //!   `rotate` am Element selbst (Vorgabe `none`, so wie der Browser sie berechnet
 //!   serialisiert: `matrix(…)`, Winkel; das Wort `transform` in `--unmeasured`
-//!   schaltet die Messung ab).
+//!   schaltet die Messung ab); `--paste-cancelled` und `--paste-inserted`
+//!   (`1`/`0`, Vorgabe `0` und `1`; `--paste-probe: unmeasured` am Feld oder das
+//!   Wort `paste` in `--unmeasured` lässt die Probe aus).
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
     Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document, Layout,
-    Node, NodeKind, Rect, Rendering, Semantics, ancestors, elements,
+    Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -547,6 +549,16 @@ impl Rendering for Host<'_> {
         self.measures("transform").then(|| BoxTransform {
             transform: Some(own(node, "transform").unwrap_or_else(|| "none".into())),
             rotate: Some(own(node, "rotate").unwrap_or_else(|| "none".into())),
+        })
+    }
+
+    fn paste_probe<'n>(&'n self, node: Self::N<'n>) -> Option<PasteProbe> {
+        if !self.measures("paste") || own(node, "--paste-probe").as_deref() == Some("unmeasured") {
+            return None;
+        }
+        Some(PasteProbe {
+            cancelled: switch(node, "--paste-cancelled"),
+            inserted: own(node, "--paste-inserted").is_none_or(|v| v == "1" || v == "true"),
         })
     }
 

@@ -583,6 +583,7 @@ pub(crate) const METAS: &[Meta] = &[
     presentation::METAS[2],
     probes::METAS[0],
     probes::METAS[1],
+    probes::METAS[2],
 ];
 
 /// Drei eigene Regeln, dazu die Heuristiken, die Darstellungsregeln und die

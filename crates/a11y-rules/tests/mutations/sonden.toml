@@ -40,8 +40,12 @@ expect = "killed"
 id = "frames/cross-origin"
 file = "src/probes.rs"
 kind = "drop-finding"
-find = '''    if candidates && !measured {'''
-replace = '''    if false && candidates && !measured {'''
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "frames/cross-origin",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "frames/cross-origin",'''
 test = "korpus"
 expect = "killed"
 note = "Ohne Messung kein NotRun-Vermerk: stilles Bestehen."
@@ -105,3 +109,56 @@ replace = '''    for n in elements(doc) {'''
 test = "korpus"
 expect = "killed"
 note = "Nur html und body zählen, nicht jedes gedrehte Bauteil."
+
+# --- auth/paste-blocked -------------------------------------------------------
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if !(probe.cancelled && !probe.inserted) {'''
+replace = '''        if !(probe.cancelled && probe.inserted) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        if !(probe.cancelled && !probe.inserted) {'''
+replace = '''        if !probe.cancelled {'''
+test = "korpus"
+expect = "killed"
+note = "Ein Handler, der abbricht und selbst einfügt, blockiert nichts."
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    if !n.is_element("input") || n.has_attr("disabled") || n.has_attr("readonly") {'''
+replace = '''    if !n.is_element("input") {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    (kind == "password" || token("one-time-code") || token("current-password"))'''
+replace = '''    (kind == "password" || token("one-time-code") || token("current-password") || kind == "text")'''
+test = "korpus"
+expect = "killed"
+note = "Jedes Textfeld wäre sonst ein Kandidat."
+
+[[mutation]]
+id = "auth/paste-blocked"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "auth/paste-blocked",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "auth/paste-blocked",'''
+test = "korpus"
+expect = "killed"

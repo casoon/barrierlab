@@ -211,7 +211,117 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+// --- auth/paste-blocked -------------------------------------------------------
+
+/// Ein Feld, auf das 3.3.8 zielt und das der Host auf Einfügen prüfen soll:
+/// ein Passwortfeld oder ein Feld mit `autocomplete` `one-time-code` oder
+/// `current-password`, sichtbar, nicht gesperrt, nicht schreibgeschützt.
+/// `autocomplete="off"` oder fehlendes `autocomplete` macht ein Passwortfeld
+/// weder zum Befund noch zur Ausnahme — Browser ignorieren es.
+fn is_paste_candidate<'a, D: Rendering>(doc: &'a D, n: D::N<'a>) -> bool {
+    if !n.is_element("input") || n.has_attr("disabled") || n.has_attr("readonly") {
+        return false;
+    }
+    let kind = n
+        .attr("type")
+        .map(|t| t.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    if matches!(
+        kind.as_str(),
+        "hidden"
+            | "checkbox"
+            | "radio"
+            | "file"
+            | "submit"
+            | "button"
+            | "reset"
+            | "image"
+            | "range"
+            | "color"
+    ) {
+        return false;
+    }
+    let token = |wanted: &str| {
+        n.attr("autocomplete")
+            .is_some_and(|a| a.split_whitespace().any(|t| t.eq_ignore_ascii_case(wanted)))
+    };
+    (kind == "password" || token("one-time-code") || token("current-password"))
+        && !doc.bounds(n).is_some_and(|b| b.is_empty())
+}
+
+/// 3.3.8: Einfügen in ein Passwort- oder Codefeld ist der Mechanismus, mit dem
+/// ein Passwortmanager hilft. Blockiert ist es, wenn ein Handler das
+/// Ereignis abbricht und den Text nicht selbst einfügt.
+fn paste_blocked<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut candidates = false;
+    let mut measured = false;
+    for n in elements(doc).filter(|n| is_paste_candidate(doc, *n)) {
+        candidates = true;
+        let Some(probe) = doc.paste_probe(n) else {
+            continue;
+        };
+        measured = true;
+        if !(probe.cancelled && !probe.inserted) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "auth/paste-blocked",
+                pick!(
+                    locale,
+                    "Pasting into this field is blocked: a handler cancels the paste event and \
+                     does not insert the text itself. A password manager or paste is the \
+                     mechanism that keeps remembering a password from being required.",
+                    "Einfügen in dieses Feld ist blockiert: Ein Handler bricht das \
+                     paste-Ereignis ab und fügt den Text nicht selbst ein. Ein \
+                     Passwortmanager oder Einfügen ist der Mechanismus, der verhindert, dass \
+                     man sich ein Passwort merken muss.",
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["3.3.8"])
+            .with_evidence([
+                Evidence::computed("paste_cancelled", "true"),
+                Evidence::computed("paste_inserted", "false"),
+            ])
+            .at(at(n.id())),
+        );
+    }
+    if candidates && !measured {
+        out.push(not_run::note(
+            "auth/paste-blocked",
+            pick!(
+                locale,
+                "host did not probe paste",
+                "Host hat das Einfügen nicht untersucht",
+            ),
+        ));
+    }
+}
+
 pub(crate) const METAS: &[Meta] = &[
+    Meta {
+        ids: &["auth/paste-blocked"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &["3.3.8"],
+        severity: Severity::High,
+        help: "A password or one-time-code field must accept pasted text, so that a password \
+               manager can fill it: a handler that cancels the paste event without inserting \
+               the text itself blocks it. Seen: a synthetic, cancelable paste event the host \
+               dispatched; it is not trusted (isTrusted is false), so a handler that reacts \
+               only to trusted events or to key presses is not seen. autocomplete=\"off\" on a \
+               password field is not a finding: browsers ignore it.",
+        help_de: de_text!(
+            "Ein Passwort- oder Einmalcode-Feld muss eingefügten Text annehmen, damit ein \
+                  Passwortmanager es füllen kann: Ein Handler, der das paste-Ereignis abbricht, \
+                  ohne den Text selbst einzufügen, blockiert das. Gesehen wird ein synthetisches, \
+                  abbrechbares paste-Ereignis des Hosts; es ist nicht vertrauenswürdig \
+                  (isTrusted ist false), ein Handler, der nur auf vertrauenswürdige Ereignisse \
+                  oder Tastendrücke reagiert, bleibt unsichtbar. autocomplete=\"off\" an einem \
+                  Passwortfeld ist kein Befund: Browser ignorieren es."
+        ),
+    },
     Meta {
         ids: &["orientation/root-rotated"],
         tier: Tier::Rendering,
@@ -252,8 +362,8 @@ pub(crate) const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 2] {
-    [root_rotated, frames]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 3] {
+    [paste_blocked, root_rotated, frames]
 }
 
-const _: () = assert!(METAS.len() == 2);
+const _: () = assert!(METAS.len() == 3);
