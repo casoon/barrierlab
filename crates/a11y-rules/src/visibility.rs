@@ -319,6 +319,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         let doc: &'n D = self.doc;
         doc.focus_cover(node.inner)
     }
+
+    fn text_spacing_clip<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::SpacingClip> {
+        let doc: &'n D = self.doc;
+        doc.text_spacing_clip(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -388,6 +393,13 @@ mod tests {
             Some(a11y_dom::BoxTransform::default())
         }
 
+        fn text_spacing_clip<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::SpacingClip> {
+            Some(a11y_dom::SpacingClip {
+                before: false,
+                after: true,
+            })
+        }
+
         fn focus_cover<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::FocusCover> {
             Some(a11y_dom::FocusCover {
                 points: 9,
@@ -421,6 +433,7 @@ mod tests {
         assert_eq!(visibility.frame_reachable(n), Some(false));
         assert!(visibility.box_transform(n).is_some());
         assert_eq!(visibility.focus_cover(n).map(|c| c.covered), Some(3));
+        assert_eq!(visibility.text_spacing_clip(n).map(|c| c.after), Some(true));
         assert_eq!(
             visibility.paste_probe(n),
             Some(a11y_dom::PasteProbe {

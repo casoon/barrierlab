@@ -344,6 +344,7 @@ mod tests {
             "orientation/root-rotated",
             "auth/paste-blocked",
             "focus/obscured-enhanced",
+            "text-spacing/clipped",
         ];
         let offen = report
             .rule_runs

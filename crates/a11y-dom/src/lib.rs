@@ -66,7 +66,7 @@ pub use arena::{Arena, ArenaBuilder, ArenaNode};
 pub use html5::Html5Node;
 pub use tiers::{
     Backdrop, BoxTransform, Caps, Color, ComputedStyle, FocusCover, Interaction, Layout,
-    NameSource, PasteProbe, Rect, Rendering, Semantics, Tier,
+    NameSource, PasteProbe, Rect, Rendering, Semantics, SpacingClip, Tier,
 };
 pub use tree::{
     Document, Node, NodeId, NodeKind, ScopedId, TreeScope, ancestors, closest, descendants,

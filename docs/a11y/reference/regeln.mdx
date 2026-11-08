@@ -13,7 +13,7 @@ may deviate from it.
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.28.2 declares 168 IDs.
+a11y-rules 0.28.2 declares 169 IDs.
 
 ## Tier 1: Structure
 
@@ -173,7 +173,7 @@ a11y-rules 0.28.2 declares 168 IDs.
 
 ## Tier 3: Rendering
 
-21 IDs, needs `Rendering`, i.e. computed styles and geometry.
+22 IDs, needs `Rendering`, i.e. computed styles and geometry.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -194,6 +194,7 @@ a11y-rules 0.28.2 declares 168 IDs.
 | `lists/role-redundant` | – | low | role="list" on a `<ul>` or `<ol>` is only needed when list-style-type is none. |
 | `color/link-indistinct` | 1.4.1 | medium | A link in running text needs more than colour to stand out: an underline, or a different weight, style, border or background. |
 | `keyboard/scrollable-region-not-focusable` | 2.1.1 | high | A scrollable region needs keyboard access: tabindex="0" on the region or a focusable element inside it. |
+| `text-spacing/clipped` | 1.4.12 | medium | No content or function may be lost when line height is at least 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size. Seen: text that hidden overflow newly cuts off after the host applied that override (Rendering::text\_spacing\_clip, a before/after pair; already clipped boxes are not findings). Overlapping text and content that disappears in other ways are not detected, so the result is a review. If the host could not apply the override (for example blocked by a CSP style-src), the rule does not run. |
 | `focus/obscured-enhanced` | 2.4.12 | low | Enhanced (AAA): no part of a focused control may be hidden by fixed or sticky content. Seen: Rendering::focus\_cover, sample points under such an element after the host focused and scrolled the control; any covered point is reported. Sampling approximates "any part", so the result is a review. Without a focus pass the rule does not run: static geometry is not a probe. |
 | `auth/paste-blocked` | 3.3.8 | high | A password or one-time-code field must accept pasted text, so that a password manager can fill it: a handler that cancels the paste event without inserting the text itself blocks it. Seen: a synthetic, cancelable paste event the host dispatched; it is not trusted (isTrusted is false), so a handler that reacts only to trusted events or to key presses is not seen. autocomplete="off" on a password field is not a finding: browsers ignore it. |
 | `orientation/root-rotated` | 1.3.4 | high | A page that rotates its root (html or body) by a quarter turn to force one display orientation fails 1.3.4. Seen: the computed transform matrix and the rotate property of html and body, in the one viewport the host measured; a lock that applies only in the other orientation needs a second snapshot there (RuleRun::in\_viewport). That an orientation is essential is a human judgement. |

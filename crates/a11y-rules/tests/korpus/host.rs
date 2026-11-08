@@ -30,13 +30,15 @@
 //!   Wort `paste` in `--unmeasured` lässt die Probe aus); `--focus-points`,
 //!   `--focus-covered` und `--focus-blocker` (das `id`-Attribut des
 //!   überdeckenden Elements) am Bedienelement — ohne eine der beiden Zahlen
-//!   gibt es keine Fokusmessung für das Element.
+//!   gibt es keine Fokusmessung für das Element; `--clip-before` und
+//!   `--clip-after` (`1`/`0`) am Element — ohne eine der beiden gibt es kein
+//!   Textabstands-Paar für das Element.
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
     Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document,
-    FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, ancestors,
-    elements,
+    FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, SpacingClip,
+    ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -581,6 +583,16 @@ impl Rendering for Host<'_> {
             points: points.unwrap_or(9),
             covered: covered.unwrap_or(0),
             blocker,
+        })
+    }
+
+    fn text_spacing_clip<'n>(&'n self, node: Self::N<'n>) -> Option<SpacingClip> {
+        if own(node, "--clip-before").is_none() && own(node, "--clip-after").is_none() {
+            return None;
+        }
+        Some(SpacingClip {
+            before: switch(node, "--clip-before"),
+            after: switch(node, "--clip-after"),
         })
     }
 

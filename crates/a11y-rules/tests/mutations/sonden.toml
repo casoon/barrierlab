@@ -236,3 +236,57 @@ replace = '''    if false && candidates && !measured {
             "focus/obscured-enhanced",'''
 test = "korpus"
 expect = "killed"
+
+# --- text-spacing/clipped -----------------------------------------------------
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''        if !(clip.after && !clip.before) {'''
+replace = '''        if !clip.after {'''
+test = "korpus"
+expect = "killed"
+note = "Schon vorher Abgeschnittenes ist kein Befund."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        if !(clip.after && !clip.before) {'''
+replace = '''        if !(clip.before && !clip.after) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''.is_some_and(|b| b.width <= 2.0 || b.height <= 2.0)'''
+replace = '''.is_some_and(|b| b.width < 2.0 || b.height < 2.0)'''
+test = "korpus"
+expect = "killed"
+note = "Ein Kasten von genau 2 px ist ausgenommen."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''            .any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty())'''
+replace = '''            .any(|k| k.kind() == NodeKind::Text)'''
+test = "korpus"
+expect = "killed"
+note = "Nur nichtleerer eigener Text zählt."
+
+[[mutation]]
+id = "text-spacing/clipped"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if candidates && !measured {
+        out.push(not_run::note(
+            "text-spacing/clipped",'''
+replace = '''    if false && candidates && !measured {
+        out.push(not_run::note(
+            "text-spacing/clipped",'''
+test = "korpus"
+expect = "killed"

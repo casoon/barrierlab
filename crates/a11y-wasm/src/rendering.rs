@@ -310,6 +310,7 @@ mod tests {
                     "orientation/root-rotated",
                     "auth/paste-blocked",
                     "focus/obscured-enhanced",
+                    "text-spacing/clipped",
                 ]
                 .contains(&r.rule_id.as_str())
             })

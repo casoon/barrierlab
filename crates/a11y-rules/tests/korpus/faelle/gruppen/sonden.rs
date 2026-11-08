@@ -17,6 +17,7 @@ pub fn cases() -> Vec<Fall> {
     v.extend(orientation());
     v.extend(paste());
     v.extend(focus_cover());
+    v.extend(spacing());
     v
 }
 
@@ -398,5 +399,76 @@ fn focus_cover() -> Vec<Fall> {
             "issue #135: static geometry is not a probe; without focus_cover the rule does not run",
         )
         .variant("nur statisches Bit, keine Fokusmessung"),
+    ]
+}
+
+const SPACING_FIXTURES: &str = "auditmysite tests/fixtures/detection_corpus/visual_text_spacing_{clipped,letter,ok}: badge (height 20px, line-height 1.2) and chip (width 8em, nowrap) clip at the override; sr-only (permanent 1x1 clip), min-height badge, fit, preclipped and late do not count";
+const SPACING_NORM: &str = "WCAG 2.1 SC 1.4.12 Text Spacing: no loss of content or functionality at line height 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16; text newly clipped by hidden overflow is the one loss visible here (review)";
+
+fn spacing() -> Vec<Fall> {
+    let id = "text-spacing/clipped";
+    vec![
+        review(
+            id,
+            r#"<div id="badge" style="--clip-before:0;--clip-after:1">Free delivery on all orders</div>
+<span class="sr-only" style="--w:1px;--h:1px;--clip-before:1;--clip-after:1">Prices include tax</span>
+<p style="--clip-before:0;--clip-after:0">Weatherproof chairs made of larch wood.</p>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_clipped: badge neu abgeschnitten, sr-only dauerhaft")
+        .count(1),
+        review(
+            id,
+            r#"<p><span id="chip" style="--clip-before:0;--clip-after:1">Add to basket</span></p>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_letter: Zeichen- und Wortabstand")
+        .count(1),
+        negative(
+            id,
+            r#"<div id="badge" style="--clip-before:0;--clip-after:0">Free delivery on all orders</div>
+<div id="fit" style="--clip-before:0;--clip-after:0">In stock</div>
+<div id="preclipped" style="--clip-before:1;--clip-after:1">Teaser text that is cut by design and expands on click.</div>
+<div id="late" style="--clip-before:0;--clip-after:0">Assembly takes ten minutes</div>"#,
+            SPACING_FIXTURES,
+        )
+        .variant("visual_text_spacing_ok: wächst mit, passt genau, schon vorher abgeschnitten"),
+        negative(
+            id,
+            r#"<div style="--clip-before:1;--clip-after:0">Was clipped, is not any more</div>"#,
+            "issue #136: it fires when after && !before only",
+        )
+        .variant("vorher abgeschnitten, nachher nicht"),
+        negative(
+            id,
+            r#"<div style="--w:2px;--h:2px;--clip-before:0;--clip-after:1">Hidden label</div>"#,
+            "issue #136: the standard visually-hidden technique is a permanent 1px clip; a box of 2 px or less is no finding",
+        )
+        .variant("Grenze: Kasten von 2 px"),
+        review(
+            id,
+            r#"<div style="--w:3px;--h:3px;--clip-before:0;--clip-after:1">Tiny label</div>"#,
+            "issue #136: a box larger than 2 px in both directions counts",
+        )
+        .variant("Grenze: Kasten von 3 px")
+        .count(1),
+        negative(
+            id,
+            r#"<div style="--clip-before:0;--clip-after:1"><p style="--clip-before:0;--clip-after:0">Text in a child</p></div>"#,
+            "issue #136: the element must clip its own text; a container without own text is not judged",
+        )
+        .variant("Container ohne eigenen Text"),
+        negative(
+            id,
+            "<div style=\"--clip-before:0;--clip-after:1\">\n  <p style=\"--clip-before:0;--clip-after:0\">Text in a child</p>\n</div>",
+            "issue #136: only non-empty own text counts; whitespace between child elements is not text",
+        )
+        .variant("Container mit Leerraum zwischen Kindern"),
+        na(id, r#"<div></div>"#, SPACING_NORM),
+        not_run(
+            id,
+            r#"<p>Text on a page the host did not run the spacing pass on.</p>"#,
+            "docs/conventions.md: not measured is not passed; issue #136: injection blocked or not performed gives NotRun",
+        ),
     ]
 }

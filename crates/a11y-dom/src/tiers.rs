@@ -326,6 +326,29 @@ pub struct FocusCover {
     pub blocker: Option<NodeId>,
 }
 
+/// Zwei Aufnahmen derselben Tatsache an einem Element, vor und nach dem
+/// Überschreiben des Textabstands (WCAG 1.4.12): ob das Element seinen eigenen
+/// Text durch `overflow: hidden` abschneidet.
+///
+/// Der Host rechnet je Element `clipped = (overflow-x hidden und scrollWidth >
+/// clientWidth + 2) oder (overflow-y hidden und scrollHeight > clientHeight +
+/// 2)` und verlangt nichtleeren Text und einen Kasten über 2 px in beiden
+/// Richtungen (das übliche „nur für Screenreader" ist ein dauerhaftes 1-px-Clip
+/// und kein Befund). Elemente mit `backface-visibility: hidden` an sich oder
+/// bis zu fünf Vorfahren bleiben aus (Wendekarten). Überschrieben werden
+/// Zeilenhöhe mindestens das 1,5fache der Schriftgröße, Absatzabstand das
+/// 2fache, Zeichenabstand 0,12 und Wortabstand 0,16 der Schriftgröße; der Host
+/// spritzt das ein, misst, entfernt es wieder und meldet, ob das Einspritzen
+/// gelang. Ein Deckel auf die Zahl der Elemente ist Sache des Hosts und soll
+/// gemeldet werden.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpacingClip {
+    /// Abgeschnitten, bevor der Host den Textabstand überschrieben hat.
+    pub before: bool,
+    /// Abgeschnitten mit überschriebenem Textabstand.
+    pub after: bool,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -415,6 +438,15 @@ pub trait Rendering: Document {
     /// der Bedienelemente ist Sache des Hosts und soll gemeldet werden.
     /// Vorgabe `None`: nicht untersucht.
     fn focus_cover<'n>(&'n self, _node: Self::N<'n>) -> Option<FocusCover> {
+        None
+    }
+
+    /// Vorher/Nachher-Paar der Textabstands-Messung (siehe [`SpacingClip`]).
+    /// Das Einspritzen verändert die Seite für die Dauer der Messung und ist
+    /// ein eigener, ausdrücklicher Durchgang des Hosts. Vorgabe `None`:
+    /// nicht gemessen — auch wenn das Einspritzen blockiert war (etwa durch
+    /// eine CSP `style-src`) oder nicht stattfand.
+    fn text_spacing_clip<'n>(&'n self, _node: Self::N<'n>) -> Option<SpacingClip> {
         None
     }
 }

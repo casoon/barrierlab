@@ -9,7 +9,7 @@
 //! stilles Bestehen. Gibt es nichts, worauf die Regel zielt, lief sie und
 //! meldet nichts.
 
-use a11y_dom::{FocusCover, Node, NodeId, Rendering, Tier, elements};
+use a11y_dom::{FocusCover, Node, NodeId, NodeKind, Rendering, Tier, elements};
 use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
@@ -212,6 +212,72 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+// --- text-spacing/clipped -----------------------------------------------------
+
+/// 1.4.12: Der Host hat den Textabstand auf die Mindestwerte des Kriteriums
+/// gesetzt und je Element gemessen, ob es seinen Text abschneidet. Gemeldet
+/// wird, was *neu* abgeschnitten ist (`after && !before`); schon vorher
+/// Abgeschnittenes liegt nicht am Textabstand. Überlappung und
+/// verschwindender Inhalt sieht die Regel nicht, deshalb `REVIEW`.
+fn text_spacing_clipped<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut candidates = false;
+    let mut measured = false;
+    for n in elements(doc).filter(|n| {
+        n.children()
+            .any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty())
+    }) {
+        // Ein dauerhaftes Clip eines Kastens von höchstens 2 px ist kein
+        // Befund (das übliche „nur für Screenreader").
+        if doc
+            .bounds(n)
+            .is_some_and(|b| b.width <= 2.0 || b.height <= 2.0)
+        {
+            continue;
+        }
+        candidates = true;
+        let Some(clip) = doc.text_spacing_clip(n) else {
+            continue;
+        };
+        measured = true;
+        if !(clip.after && !clip.before) {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "text-spacing/clipped",
+                pick!(
+                    locale,
+                    "With the text spacing of WCAG 1.4.12 applied (line height 1.5, paragraph \
+                     spacing 2, letter spacing 0.12, word spacing 0.16), this element cuts off \
+                     its own text, which it did not before. Check by hand that no content or \
+                     function is lost.",
+                    "Mit dem Textabstand aus WCAG 1.4.12 (Zeilenhöhe 1,5, Absatzabstand 2, \
+                     Zeichenabstand 0,12, Wortabstand 0,16) schneidet dieses Element seinen \
+                     eigenen Text ab, was es vorher nicht tat. Von Hand prüfen, dass kein \
+                     Inhalt und keine Funktion verloren geht.",
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["1.4.12"])
+            .with_evidence([
+                Evidence::computed("clipped_before", "false"),
+                Evidence::computed("clipped_after", "true"),
+            ])
+            .at(at(n.id())),
+        );
+    }
+    if candidates && !measured {
+        out.push(not_run::note(
+            "text-spacing/clipped",
+            pick!(
+                locale,
+                "host did not apply the text-spacing override (no text_spacing_clip)",
+                "Host hat den Textabstand nicht überschrieben (kein text_spacing_clip)",
+            ),
+        ));
+    }
+}
+
 // --- focus/obscured-enhanced --------------------------------------------------
 
 pub(crate) fn cover_evidence(c: FocusCover) -> Vec<Evidence> {
@@ -366,6 +432,31 @@ fn paste_blocked<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 
 pub(crate) const METAS: &[Meta] = &[
     Meta {
+        ids: &["text-spacing/clipped"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &["1.4.12"],
+        severity: Severity::Medium,
+        help: "No content or function may be lost when line height is at least 1.5, paragraph \
+               spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size. Seen: \
+               text that hidden overflow newly cuts off after the host applied that override \
+               (Rendering::text_spacing_clip, a before/after pair; already clipped boxes are not \
+               findings). Overlapping text and content that disappears in other ways are not \
+               detected, so the result is a review. If the host could not apply the override (for \
+               example blocked by a CSP style-src), the rule does not run.",
+        help_de: de_text!(
+            "Bei einer Zeilenhöhe von mindestens 1,5, einem Absatzabstand von 2, einem \
+                  Zeichenabstand von 0,12 und einem Wortabstand von 0,16 der Schriftgröße darf \
+                  kein Inhalt und keine Funktion verloren gehen. Gesehen wird Text, den \
+                  verstecktes Overflow nach dem Überschreiben durch den Host neu abschneidet \
+                  (Rendering::text_spacing_clip, ein Vorher/Nachher-Paar; schon vorher \
+                  abgeschnittene Kästen sind kein Befund). Überlappender Text und anderweitig \
+                  verschwindender Inhalt werden nicht erkannt, das Ergebnis ist deshalb ein \
+                  Review. Konnte der Host das Überschreiben nicht anwenden (etwa durch eine CSP \
+                  style-src), läuft die Regel nicht."
+        ),
+    },
+    Meta {
         ids: &["focus/obscured-enhanced"],
         tier: Tier::Rendering,
         scope: Scope::Rendered,
@@ -447,8 +538,14 @@ pub(crate) const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 4] {
-    [focus_obscured_enhanced, paste_blocked, root_rotated, frames]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 5] {
+    [
+        text_spacing_clipped,
+        focus_obscured_enhanced,
+        paste_blocked,
+        root_rotated,
+        frames,
+    ]
 }
 
-const _: () = assert!(METAS.len() == 4);
+const _: () = assert!(METAS.len() == 5);
