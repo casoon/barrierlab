@@ -11,6 +11,10 @@ in the git history only.
 
 - **Datatypes:** XSD `pattern` facets compile their regular expression once per thread instead of on
   every value check (barrierlab#70); results are unchanged.
+- **Validator:** document names, attribute values and namespace bindings are hashed once per lookup
+  instead of two to four times (name interning, value memo, table growth), still with a randomly
+  seeded SipHash so documents cannot be crafted to collide. Schema validation of large real HTML
+  pages is about a fifth faster (barrierlab#70); results are unchanged.
 
 ## [0.2.3] - 2026-10-31
 
