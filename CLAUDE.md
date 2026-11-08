@@ -11,7 +11,7 @@ Lokaler Stand und offene Punkte: `plan/status.md` (gitignored).
 
 ```
 L0  html5-parser · csp-parse · media-query-parse · xpath-eval · relax-ng · schematron-engine
-L1  a11y-dom · a11y-report · html-conform · stylesheet-parse
+L1  a11y-dom · a11y-report · html-conform · stylesheet-parse · xml-adapters
 L2  accname · style-cascade · a11y-rules · a11y-perception · web-checks
 L3  a11y-wasm (Crate + npm)
 ──  Repo-Grenze: Hosts binden nur über die Registries ein

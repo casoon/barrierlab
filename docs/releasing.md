@@ -59,6 +59,8 @@ Crate-Konfiguration.
 
 **Ein neues Crate lässt sich damit nicht anlegen** — crates.io verlangt für die
 erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
+
+`xml-adapters` ist so ein Fall (noch nicht veröffentlicht). Es hängt von `xpath-eval` und `relax-ng` ab, die es als Dev-Abhängigkeit zurückholt: `xpath-eval` führt `xml-adapters` nur per `path` ohne `version` (Cargo lässt den Eintrag beim Verpacken weg), damit die Veröffentlichungsreihenfolge nicht zirkulär wird. Reihenfolge beim ersten Mal: `xml-adapters` von Hand, danach läuft alles über `release-plz`.
 - `repository`-Metadaten zeigen nach dem Import auf dieses Repository. Der erste
   Release eines umgezogenen Crates korrigiert damit auch den Link auf crates.io.
 

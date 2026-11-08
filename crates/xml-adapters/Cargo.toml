@@ -1,0 +1,28 @@
+[package]
+name = "xml-adapters"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Adapters that let relax-ng, xpath-eval and schematron-engine read common XML trees (roxmltree first)."
+keywords = ["xml", "relaxng", "schematron", "xpath", "roxmltree"]
+categories = ["parser-implementations"]
+readme = "README.md"
+
+[features]
+default = ["relax-ng", "xpath"]
+# `relax_ng::Element` for roxmltree nodes.
+relax-ng = ["dep:relax-ng"]
+# `xpath_eval::Document` (and with it `schematron-engine`) over roxmltree.
+xpath = ["dep:xpath-eval"]
+
+[dependencies]
+roxmltree = "0.21.1"
+relax-ng = { workspace = true, optional = true }
+xpath-eval = { workspace = true, optional = true }
+
+[dev-dependencies]
+schematron-engine = { workspace = true }
