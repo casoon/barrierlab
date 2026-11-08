@@ -38,7 +38,7 @@ things about the same `robots.txt`. BarrierLab is where those checks live once.
 | Layer | Crates | What they do |
 |---|---|---|
 | **L0** parsers | `html5-parser` · `css-tokenize` · `csp-parse` · `media-query-parse` · `xpath-eval` · `relax-ng` · `schematron-engine` | WHATWG HTML tree construction, CSP3 and Media Queries grammars, XPath 1.0, RELAX NG, ISO Schematron |
-| **L1** models | `a11y-dom` · `a11y-report` · `stylesheet-parse` · `html-conform` | document model as a trait, the shared finding model, CSS with `@media` context, HTML5 conformance without a JVM |
+| **L1** models | `a11y-dom` · `a11y-report` · `stylesheet-parse` · `html-conform` · `xml-adapters` | document model as a trait, the shared finding model, CSS with `@media` context, HTML5 conformance without a JVM, `roxmltree` adapters for RELAX NG, XPath and Schematron |
 | **L2** computation | `accname` · `style-cascade` · `a11y-rules` · `a11y-static` · `a11y-perception` · `web-checks` | accessible name and description, the CSS cascade without a browser, 169 rule IDs, reading order and snapshot diffs, robots / meta / OpenGraph / JSON-LD / hreflang |
 | **L3** delivery | `a11y-wasm` (crate + npm `@casoon/a11y-wasm`) | the rule set inside a live page |
 

@@ -70,6 +70,10 @@ so implementing them requires importing that crate's traits. See
 adapter over a real XML tree (via `roxmltree`), evaluating a realistic
 schema end to end.
 
+To get an SVRL report, evaluate with `evaluate_trace` and serialise with
+`to_svrl(&schema, phase, &events)`; `to_svrl_with` takes your own location
+function. The output is a string, no XML library is involved.
+
 `xpath-eval`'s version is a compatibility boundary, not an implementation
 detail — `Cargo.toml` pins a version requirement, and CI always builds and
 tests against whatever version that requirement (and `Cargo.lock`)
@@ -88,6 +92,8 @@ than silently doing the wrong thing:
 | `<extends href="...">` (external-file rule reuse) | `MissingAttribute` (`extends` requires `@rule`) — deliberately not wired up to `SchemaResolver` even though `<include>` now is: the ISO reference implementation (`iso_dsdl_include.xsl`) itself labels `extends[@href]` "experimental and non-standard", with substitution semantics that differ from `<include>` (splices the target's *children*, not the element itself) |
 | `<let value="...">` | supported (`LetValue::Expr`) |
 | `<let>` with literal-XML (`foreign-element+`) content instead of `value` | supported (`LetValue::Literal`) — bound as the content's string-value (concatenation of descendant text, like an XSLT 1.0 result-tree-fragment used as a string); not usable as a navigable node-set (no `exsl:node-set()`-equivalent escape hatch, consistent with implementing XPath 1.0 only) |
+| Scope of a pattern-level `<let>` | that pattern and its rules only, not sibling patterns — ISO/IEC 19757-3:2016 3.26 and 5.4.5; the schxslt case `let-pattern-global` expects document-wide scope and is a known difference (see its `SKIP` entry) |
+| SVRL output | `evaluate_trace` + `to_svrl` (`active-pattern`, `fired-rule`, `failed-assert`, `successful-report`, `diagnostic-reference`, `ns-prefix-in-attribute-values`, `location` as XPath); `title`, `schemaVersion`, `flag`, `property-reference` are not written |
 | `<name>` in messages | evaluated — resolves to the named node's expanded name (`path="..."` selects a node other than the firing check's own context node, same as `<value-of select="...">`) |
 | `<emph>`/`<dir>`/`<span>` in messages | accepted as plain, inert text containers — purely presentational, no data-dependent semantics; their own text still contributes to the message, their tag does not |
 | `rule/@context` match-pattern semantics | reduced to `descendant-or-self::node()/context`, a location-path selection — covers the common case, not every exotic XSLT-match-pattern-style `context` |
