@@ -3,6 +3,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use a11y_dom::{Node, NodeId, NodeKind};
 use stylesheet_parse::{Context, Rule as CssRule, Stylesheet, parse_stylesheet};
@@ -101,6 +102,7 @@ enum Declared {
 
 const VERERBT: &[&str] = &[
     "color",
+    "color-scheme",
     "font-style",
     "font-family",
     "line-height",
@@ -119,50 +121,66 @@ fn vererbt(prop: &str) -> bool {
     prop.starts_with("--") || VERERBT.contains(&prop)
 }
 
-/// Die Kaskade über die Stylesheets einer Seite. Gehört zu **einem**
-/// Dokument: die Zwischenspeicher sind nach Knotenkennung geordnet.
-pub struct Cascade {
+/// Der Regelsatz einer Kaskade: die Stylesheets, gelesen, nach Selektor
+/// indiziert und gegen eine [`Environment`] bewertet. Er ändert sich nach dem
+/// Bau nie, ist `Send + Sync` und gehört keinem Dokument: ein Host, dessen
+/// Seiten dieselben Stylesheets teilen, baut ihn **einmal** und legt je Seite
+/// mit [`Cascade::with_rules`] nur noch die Zwischenspeicher an.
+///
+/// ```
+/// use std::sync::Arc;
+/// use style_cascade::{Cascade, Environment, RuleSet};
+/// use stylesheet_parse::parse_stylesheet;
+///
+/// let shared = parse_stylesheet("a { color: red }");
+/// let rules = Arc::new(RuleSet::new(&[&shared], Environment::default()));
+/// let _page_one = Cascade::with_rules(Arc::clone(&rules));
+/// let _page_two = Cascade::with_rules(rules);
+/// ```
+pub struct RuleSet {
     env: Environment,
     rules: Vec<Rule>,
     by_id: HashMap<String, Vec<usize>>,
     by_class: HashMap<String, Vec<usize>>,
     by_type: HashMap<String, Vec<usize>>,
     universal: Vec<usize>,
+    imports: Vec<String>,
+}
+
+/// Die Kaskade über die Stylesheets einer Seite. Gehört zu **einem**
+/// Dokument: die Zwischenspeicher sind nach Knotenkennung geordnet. Den
+/// Regelsatz darunter ([`RuleSet`]) teilen beliebig viele Kaskaden.
+pub struct Cascade {
+    rs: Arc<RuleSet>,
     matched: RefCell<HashMap<NodeId, Matches>>,
     inline: RefCell<HashMap<NodeId, Rc<Vec<Decl>>>>,
     cache: RefCell<HashMap<(NodeId, String), Specified>>,
     pub(crate) sizes: RefCell<HashMap<NodeId, Option<f32>>>,
     pub(crate) weights: RefCell<HashMap<NodeId, Option<u16>>>,
     depth: Cell<u32>,
-    imports: Vec<String>,
 }
 
 /// Eine Rekursionstiefe, ab der `var()`-Zyklen und absurde Ketten abbrechen.
 const MAX_TIEFE: u32 = 64;
 
-impl Cascade {
-    /// Baut die Kaskade. Die Reihenfolge der Stylesheets ist die im
-    /// Dokument.
-    pub fn new(sheets: &[Stylesheet], env: Environment) -> Self {
-        let mut c = Cascade {
+impl RuleSet {
+    /// Liest und indiziert die Stylesheets, in Dokumentreihenfolge, gegen
+    /// `env`. Die Blätter werden nur gelesen, nicht behalten.
+    pub fn new(sheets: &[&Stylesheet], env: Environment) -> Self {
+        let mut rs = RuleSet {
             env,
             rules: Vec::new(),
             by_id: HashMap::new(),
             by_class: HashMap::new(),
             by_type: HashMap::new(),
             universal: Vec::new(),
-            matched: RefCell::default(),
-            inline: RefCell::default(),
-            cache: RefCell::default(),
-            sizes: RefCell::default(),
-            weights: RefCell::default(),
-            depth: Cell::new(0),
             imports: Vec::new(),
         };
-        c.lade(sheets);
-        c
+        rs.lade(sheets);
+        rs
     }
 
+    /// Die Umgebung, gegen die der Satz bewertet ist.
     pub fn environment(&self) -> &Environment {
         &self.env
     }
@@ -171,12 +189,16 @@ impl Cascade {
     /// es welche gibt, ist jede Antwort `Unknown`, außer sie kommt aus einem
     /// `!important` im `style`-Attribut. Der Host ersetzt dafür jede
     /// `@import`-Regel durch die Regeln des importierten Stylesheets (in
-    /// Dokumentreihenfolge, vor den eigenen Regeln des importierenden Blatts).
+    /// Dokumentreihenfolge, vor den eigenen Regeln des importierenden Blatts),
+    /// am einfachsten mit [`expand_imports`](crate::expand_imports); ein
+    /// Import, von dem er weiß, dass er keine Regeln liefert (ein
+    /// Webfont-Stylesheet), fällt dort mit [`Resolution::Inert`](crate::Resolution::Inert)
+    /// weg.
     pub fn unresolved_imports(&self) -> &[String] {
         &self.imports
     }
 
-    fn lade(&mut self, sheets: &[Stylesheet]) {
+    fn lade(&mut self, sheets: &[&Stylesheet]) {
         for s in sheets {
             for r in &s.rules {
                 if let CssRule::Other(a) = r
@@ -262,25 +284,63 @@ impl Cascade {
             });
         }
     }
+}
+
+impl Cascade {
+    /// Baut die Kaskade. Die Reihenfolge der Stylesheets ist die im
+    /// Dokument. Teilen mehrere Seiten dieselben Stylesheets, ist
+    /// [`RuleSet`] mit [`Cascade::with_rules`] billiger.
+    pub fn new(sheets: &[Stylesheet], env: Environment) -> Self {
+        let refs: Vec<&Stylesheet> = sheets.iter().collect();
+        Cascade::with_rules(Arc::new(RuleSet::new(&refs, env)))
+    }
+
+    /// Eine Kaskade über einen fertigen, geteilten Regelsatz: nur die
+    /// Zwischenspeicher dieses Dokuments werden angelegt.
+    pub fn with_rules(rules: Arc<RuleSet>) -> Self {
+        Cascade {
+            rs: rules,
+            matched: RefCell::default(),
+            inline: RefCell::default(),
+            cache: RefCell::default(),
+            sizes: RefCell::default(),
+            weights: RefCell::default(),
+            depth: Cell::new(0),
+        }
+    }
+
+    /// Der Regelsatz, auf dem diese Kaskade steht.
+    pub fn rules(&self) -> &Arc<RuleSet> {
+        &self.rs
+    }
+
+    pub fn environment(&self) -> &Environment {
+        &self.rs.env
+    }
+
+    /// Siehe [`RuleSet::unresolved_imports`].
+    pub fn unresolved_imports(&self) -> &[String] {
+        &self.rs.imports
+    }
 
     fn matched<'a, N: Node<'a>>(&self, n: N) -> Matches {
         if let Some(m) = self.matched.borrow().get(&n.id()) {
             return Rc::clone(m);
         }
-        let mut kandidaten: Vec<usize> = self.universal.clone();
+        let mut kandidaten: Vec<usize> = self.rs.universal.clone();
         if let Some(id) = n.attr("id")
-            && let Some(v) = self.by_id.get(id)
+            && let Some(v) = self.rs.by_id.get(id)
         {
             kandidaten.extend(v);
         }
         if let Some(klassen) = n.attr("class") {
             for k in klassen.split_ascii_whitespace() {
-                if let Some(v) = self.by_class.get(k) {
+                if let Some(v) = self.rs.by_class.get(k) {
                     kandidaten.extend(v);
                 }
             }
         }
-        if let Some(v) = self.by_type.get(&n.local_name().to_ascii_lowercase()) {
+        if let Some(v) = self.rs.by_type.get(&n.local_name().to_ascii_lowercase()) {
             kandidaten.extend(v);
         }
         kandidaten.sort_unstable();
@@ -288,7 +348,7 @@ impl Cascade {
         let treffer: Vec<(usize, Match)> = kandidaten
             .into_iter()
             .filter_map(|i| {
-                let r = &self.rules[i];
+                let r = &self.rs.rules[i];
                 let m = r.selector.matches(n, Mode::Resting).und(r.cond);
                 (m != Match::No).then_some((i, m))
             })
@@ -338,7 +398,7 @@ impl Cascade {
         let mut unsicher: Option<Weight> = None;
         let treffer = self.matched(n);
         for (idx, m) in treffer.iter() {
-            let r = &self.rules[*idx];
+            let r = &self.rs.rules[*idx];
             for d in r.decls.iter().filter(|d| d.prop == prop) {
                 let mut w = weight(d.important, true, r.layer, false, r.spec, d.order);
                 if r.layer_unsure {
@@ -398,7 +458,7 @@ impl Cascade {
         };
         // Ein unaufgelöstes `@import` kann jede Angabe überstimmen, nur nicht
         // ein `!important` im `style`-Attribut.
-        if !self.imports.is_empty() && !best_w.is_some_and(|b| b.important && b.inline) {
+        if !self.rs.imports.is_empty() && !best_w.is_some_and(|b| b.important && b.inline) {
             return Declared::Unknown;
         }
         if let Some(u) = unsicher

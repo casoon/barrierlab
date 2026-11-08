@@ -1,8 +1,7 @@
 use a11y_dom::{Node, NodeKind, ancestors, elements};
 use a11y_report::{InputKind, InputNote, Report};
 use a11y_rules::Locale;
-use style_cascade::{Environment, Import};
-use stylesheet_parse::{AtRule, MediaRule, Rule, Stylesheet, parse_stylesheet};
+use style_cascade::{Environment, ExpandedImports, Resolution, expand_imports, wrap_media};
 
 use crate::host::Host;
 
@@ -56,6 +55,11 @@ pub struct Sheet {
     /// The sheets this one imports with `@import`, for a host that loads
     /// them. Each answers the `@import` whose URL equals its `source`.
     pub imports: Vec<Sheet>,
+    /// The host declares: this sheet contains no rules that set a style (a
+    /// web-font stylesheet with only `@font-face`). An `@import` it answers
+    /// is dropped instead of making every style undetermined. See
+    /// [`Sheet::inert`].
+    pub inert: bool,
 }
 
 impl Sheet {
@@ -67,6 +71,22 @@ impl Sheet {
             media: None,
             failure: None,
             imports: Vec::new(),
+            inert: false,
+        }
+    }
+
+    /// A sheet the host declares as **without effect on styles**: it holds
+    /// only things like `@font-face`, no rule that sets a property. Typical
+    /// for the `@import` of a web-font stylesheet on a host the crate cannot
+    /// know (`fonts.googleapis.com`). The host decides; the crate never
+    /// guesses from a URL. Nothing is fetched or read. The `@import` it
+    /// answers disappears, so colours stay determined (and, if the sheet does
+    /// set colours after all, the findings are wrong, not undetermined).
+    /// As a `<link>` answer it contributes no rules either.
+    pub fn inert(source: impl Into<String>) -> Self {
+        Sheet {
+            inert: true,
+            ..Sheet::new(source, "")
         }
     }
 
@@ -186,20 +206,17 @@ impl Page {
                     "<link rel=stylesheet> has an empty or missing href".into(),
                 )),
                 Ref::Public(StylesheetRef::Inline { css, media }) => {
-                    let rules = expand(&css, sheets, &mut Vec::new(), &mut import_failures);
-                    parsed.push(wrap(rules, media.as_deref()));
+                    let out = expand(&css, sheets);
+                    import_failures.extend(out.failures);
+                    parsed.push(wrap_media(out.rules, media.as_deref()));
                 }
                 Ref::Public(StylesheetRef::Link { href, media }) => {
                     match find_sheet(sheets, &href, media.as_deref()) {
                         Some(s) => match &s.failure {
                             None => {
-                                let rules = expand(
-                                    &s.css,
-                                    &s.imports,
-                                    &mut vec![s.source.clone()],
-                                    &mut import_failures,
-                                );
-                                parsed.push(wrap(rules, media.as_deref()));
+                                let out = expand(&s.css, &s.imports);
+                                import_failures.extend(out.failures);
+                                parsed.push(wrap_media(out.rules, media.as_deref()));
                             }
                             Some(reason) => missing.push((Some(href), reason.clone())),
                         },
@@ -249,72 +266,31 @@ fn find_sheet<'s>(sheets: &'s [Sheet], href: &str, media: Option<&str>) -> Optio
         .or_else(|| same_href().find(|s| non_empty(s.media.as_deref()).is_none()))
 }
 
-const MAX_IMPORT_DEPTH: usize = 16;
-
-fn is_import(r: &Rule) -> bool {
-    matches!(r, Rule::Other(AtRule { name, .. }) if name == "import")
-}
-
-/// Parses `css` and replaces each `@import` the host answered by the rules of
-/// the imported sheet. Imports left in place are reported by the cascade; a
-/// failure reason goes to `failures`, keyed by the cascade's prelude text.
-fn expand(
-    css: &str,
-    imports: &[Sheet],
-    chain: &mut Vec<String>,
-    failures: &mut Vec<(String, String)>,
-) -> Vec<Rule> {
-    let mut out = Vec::new();
-    for rule in parse_stylesheet(css).rules {
-        let Rule::Other(at) = &rule else {
-            out.push(rule);
-            continue;
-        };
-        if at.name != "import" {
-            out.push(rule);
-            continue;
+/// Answers an `@import` from the sheets the host handed over: the sheet whose
+/// `source` equals the URL, looked up in `level` for a top-level import and in
+/// the `imports` of the sheets along `chain` below that.
+fn answer(level: &[Sheet], chain: &[String], url: &str) -> Resolution {
+    let mut level = level;
+    for source in chain {
+        match level.iter().find(|s| &s.source == source) {
+            Some(s) => level = &s.imports,
+            None => return Resolution::Unresolved,
         }
-        let prelude = at.prelude.trim().to_string();
-        let Some(import) = Import::parse(&prelude) else {
-            out.push(rule);
-            continue;
-        };
-        let Some(sheet) = imports.iter().find(|s| s.source == import.url) else {
-            out.push(rule);
-            continue;
-        };
-        if let Some(reason) = &sheet.failure {
-            failures.push((prelude, reason.clone()));
-            out.push(rule);
-            continue;
-        }
-        if chain.contains(&sheet.source) || chain.len() >= MAX_IMPORT_DEPTH {
-            failures.push((prelude, "@import cycle or nesting too deep".into()));
-            out.push(rule);
-            continue;
-        }
-        chain.push(sheet.source.clone());
-        let inner = expand(&sheet.css, &sheet.imports, chain, failures);
-        chain.pop();
-        // Layer, `supports()` and media of the import become the matching
-        // wrapper rules (Cascade 5 §6.4.1); the cascade ranks them.
-        out.extend(import.wrap(inner));
     }
-    out
+    match level.iter().find(|s| s.source == url) {
+        None => Resolution::Unresolved,
+        Some(s) => match (&s.failure, s.inert) {
+            (Some(reason), _) => Resolution::Failed(reason.clone()),
+            (None, true) => Resolution::Inert,
+            (None, false) => Resolution::Css(s.css.clone()),
+        },
+    }
 }
 
-/// With a media condition, the rules go into an `@media` block. `@import`
-/// stays at the top level, where the cascade looks for it.
-fn wrap(rules: Vec<Rule>, media: Option<&str>) -> Stylesheet {
-    let Some(condition) = media else {
-        return Stylesheet { rules };
-    };
-    let (mut rules, inner): (Vec<_>, Vec<_>) = rules.into_iter().partition(is_import);
-    rules.push(Rule::Media(MediaRule {
-        condition: condition.to_string(),
-        rules: inner,
-    }));
-    Stylesheet { rules }
+/// `level` is where the imports of `css` are looked up: the top-level sheets
+/// for an inline `<style>`, `Sheet::imports` for a linked sheet.
+fn expand(css: &str, level: &[Sheet]) -> ExpandedImports {
+    expand_imports(css, &mut |import, chain| answer(level, chain, &import.url))
 }
 
 /// One call: parses `html` and audits it with the default [`Locale`] (English).
