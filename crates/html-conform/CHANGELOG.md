@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **Features:** `runtime-compile` compiles the vendored schema on first use instead of loading
+  the prebuilt artefact.
+
+### Changed
+
+- **Start-up:** the first `check()` in a process loads the schema from `prebuilt/html5.rngc`
+  instead of compiling the `.rnc` files: about 3.7 billion instructions and 146 ms become 0.12
+  billion and 7 ms (barrierlab#72). Findings are unchanged. Regenerate with `xtask/README.md`.
+
 ## [0.4.2] - 2026-11-07
 
 ### Added

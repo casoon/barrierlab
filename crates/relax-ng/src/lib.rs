@@ -7,6 +7,8 @@ mod derive;
 mod grammar;
 mod resolver;
 mod schema;
+#[cfg(feature = "serialize")]
+mod serialize;
 mod simplify;
 mod syntax;
 mod validator;
@@ -17,6 +19,8 @@ pub use datatypes::{
 pub use grammar::SchemaDocument;
 pub use resolver::{ResolveError, SchemaResolver, SchemaSource, SchemaSyntax};
 pub use schema::{CompileError, Schema};
+#[cfg(feature = "serialize")]
+pub use serialize::{FORMAT_VERSION, LoadError, SerializeError};
 pub use simplify::{CompiledSchema, SchemaError, simplify};
 pub use syntax::{ParseError, parse};
 pub use validator::{

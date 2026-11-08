@@ -121,6 +121,23 @@ impl Schema {
         validate(&self.compiled, registry, root)
     }
 
+    /// Writes the compiled schema in a stable binary form (feature `serialize`), so it can be
+    /// compiled once at build time and loaded with [`Schema::from_bytes`]. See
+    /// [`CompiledSchema::to_bytes`].
+    #[cfg(feature = "serialize")]
+    pub fn to_bytes(&self) -> Result<Vec<u8>, crate::SerializeError> {
+        self.compiled.to_bytes()
+    }
+
+    /// Loads a schema written by [`Schema::to_bytes`] instead of compiling schema text
+    /// (feature `serialize`). Malformed input is an [`Err`](crate::LoadError), never a panic.
+    #[cfg(feature = "serialize")]
+    pub fn from_bytes(bytes: &[u8]) -> Result<Schema, crate::LoadError> {
+        Ok(Schema {
+            compiled: CompiledSchema::from_bytes(bytes)?,
+        })
+    }
+
     /// The underlying compiled representation, for callers that need it
     /// directly (e.g. [`CompiledSchema::definition_count`] for
     /// diagnostics) rather than going through [`Schema::validate`].

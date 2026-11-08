@@ -7,6 +7,12 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **API:** feature `serialize` adds `Schema::to_bytes`/`from_bytes`, a stable, versioned binary
+  form of the compiled schema that a host can build once and load instead of compiling
+  (barrierlab#72). Malformed input is a `LoadError`; no new dependencies.
+
 ### Changed
 
 - **Datatypes:** XSD `pattern` facets compile their regular expression once per thread instead of on

@@ -6,6 +6,10 @@ description = "A pure-Rust RELAX NG schema parser and validator"
 license = "MIT"
 repository.workspace = true
 
+[features]
+# Binary form of a compiled schema (`Schema::to_bytes`/`from_bytes`); no extra dependencies.
+serialize = []
+
 [dependencies]
 regex = "1"
 roxmltree = "0.21.1"

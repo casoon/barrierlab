@@ -12,13 +12,17 @@ keywords = ["html", "html5", "validator", "conformance", "vnu"]
 categories = ["web-programming", "parser-implementations", "development-tools"]
 exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches", "/site", "/docs", "/examples"]
 
+[features]
+# Compile the vendored RELAX NG schema at first use instead of loading prebuilt/html5.rngc.
+runtime-compile = []
+
 [dependencies]
 a11y-report = { workspace = true }
 csp-parse = { workspace = true }
 encoding_rs = "0.8"
 html5-parser = { workspace = true }
 media-query-parse = { workspace = true }
-relax-ng = { workspace = true }
+relax-ng = { workspace = true, features = ["serialize"] }
 schematron-engine = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

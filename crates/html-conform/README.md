@@ -137,6 +137,7 @@ let report = check_with_options(html, options).unwrap();
   cargo +nightly fuzz run check fuzz/corpus/check tests/corpus/html
   ```
   (the `tests/corpus/html` argument seeds the fuzzer from the existing corpus without copying it; crashes land in `fuzz/artifacts/check/`).
+- **Start-up:** `cargo run --release --example first_check` times the first `check()` of a fresh process, which loads the prebuilt schema (`prebuilt/html5.rngc`). Run it from a shell loop, or under `/usr/bin/time -l` for instructions retired, to compare before and after a change.
 - **Benchmarks:** `benches/check.rs` (`criterion`) times `check()` against a small typical page and a large, table-heavy real-world page from `tests/corpus/`. CI only compiles the benchmarks (`cargo bench --no-run`) to catch bit-rot; run them locally for actual numbers:
   ```sh
   cargo bench
