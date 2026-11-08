@@ -23,8 +23,9 @@ impl TreeBuilder {
             }
             TokenKind::Doctype(doctype) => {
                 // The parse-error checks (wrong name/public-identifier/
-                // system-identifier shape) have no tree-shape effect —
-                // omitted.
+                // system-identifier shape) are not recorded: html-conform
+                // reports DOCTYPE problems itself, and a parser-level
+                // error would duplicate its finding.
                 let root = self.document.root();
                 let has_doctype_or_element_child = self.document.children(root).any(|child| {
                     matches!(
@@ -53,8 +54,10 @@ impl TreeBuilder {
             }
             _ => {
                 // "Anything else": not an iframe srcdoc document (this
-                // crate never parses srcdoc content), so set quirks
-                // mode unconditionally, then switch and reprocess.
+                // crate never parses srcdoc content), so quirks mode is
+                // set unconditionally, then switch and reprocess. The
+                // spec's parse error for a missing DOCTYPE is not
+                // recorded, for the same reason as above.
                 self.quirks_mode = QuirksMode::Quirks;
                 self.insertion_mode = InsertionMode::BeforeHtml;
                 TokenOutcome::Reprocess
@@ -305,8 +308,10 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags_thoroughly(&self.document);
-                // The parse-error check ("current node is not a
-                // template element") has no tree-shape effect. The
+                // "If the current node is not a template element, then
+                // this is a parse error."
+                self.check_current_node_is(&["template"], position);
+                // The
                 // "insertion target"/marker cleanup is content-
                 // patching's `for`-attribute bookkeeping — out of
                 // scope, this crate never sets those in the first
@@ -380,7 +385,9 @@ impl TreeBuilder {
             {
                 self.process_token_in_head(kind, position)
             }
-            TokenKind::EndTag(tag) if tag.name == "br" => self.in_head_noscript_anything_else(),
+            TokenKind::EndTag(tag) if tag.name == "br" => {
+                self.in_head_noscript_anything_else(kind, position)
+            }
             TokenKind::StartTag(tag) if matches!(tag.name.as_str(), "head" | "noscript") => {
                 // "Parse error. Ignore the token."
                 self.error(ParseErrorKind::StrayStartTag, position);
@@ -391,14 +398,23 @@ impl TreeBuilder {
                 self.error(ParseErrorKind::StrayEndTag, position);
                 TokenOutcome::Consumed(None)
             }
-            _ => self.in_head_noscript_anything_else(),
+            _ => self.in_head_noscript_anything_else(kind, position),
         }
     }
 
     /// "In head noscript"'s "anything else" case (and its explicit
     /// `</br>` entry, which acts the same way): pop the `noscript`
     /// element, switch back to "in head", and reprocess.
-    pub(super) fn in_head_noscript_anything_else(&mut self) -> TokenOutcome {
+    ///
+    /// The spec makes this a parse error ("Anything else: Parse error.
+    /// Pop the current node...") for every token that reaches it,
+    /// including `</br>`, characters and the end of the file.
+    pub(super) fn in_head_noscript_anything_else(
+        &mut self,
+        kind: &TokenKind,
+        position: Position,
+    ) -> TokenOutcome {
+        self.report_stray_token(kind, position);
         self.open_elements.pop();
         self.insertion_mode = InsertionMode::InHead;
         TokenOutcome::Reprocess
@@ -470,6 +486,9 @@ impl TreeBuilder {
                         "the head element pointer is always set by the time \"after head\" runs"
                     )
                 };
+                // "Parse error. Push the node pointed to by the head
+                // element pointer onto the stack of open elements."
+                self.error(ParseErrorKind::StrayStartTag, position);
                 self.open_elements.push(head);
                 let outcome = self.process_token_in_head(kind, position);
                 let head_index = self

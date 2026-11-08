@@ -63,7 +63,7 @@ const SKIP: &[(&str, &str)] = &[
     ),
     (
         "let-pattern-global",
-        "issue #12 (found via this corpus): whether pattern-level <let> should have document-wide (\"global\") scope, per ISO Schematron 2016 5.4.5 clause 1, needs ISO-text verification before changing this crate's existing, tested per-pattern scoping",
+        "issue #2 (verified against ISO/IEC 19757-3:2016): this crate scopes pattern-level <let> to its pattern, as 3.26 (\"scoped within the parent schema, phase, pattern or rule\") and 5.4.5 (referencing a variable not defined in the current schema, phase, pattern or rule is an error) say; 5.4.5 clause 1 only covers rule-level vs. root context. The case encodes SchXslt's global compilation of pattern variables, a documented SchXslt limitation, not the standard. Kept as a known difference",
     ),
     (
         "include-baseuri-fixup",

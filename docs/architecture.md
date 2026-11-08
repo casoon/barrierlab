@@ -29,6 +29,7 @@ flowchart BT
     rep[a11y-report]
     hc[html-conform]
     cssp[stylesheet-parse]
+    xa[xml-adapters]
   end
   subgraph L2["L2 · Berechnung"]
     acc[accname]
@@ -49,6 +50,7 @@ flowchart BT
   end
 
   sch --> xp
+  xa --> rng & xp
   hc --> h5 & csp & mq & rng & sch
   cssp --> tok
   mq --> tok
@@ -68,7 +70,7 @@ flowchart BT
 | Schicht | Aufgabe | Regel |
 |---|---|---|
 | L0 | Syntax lesen: HTML, CSP, Media Queries, XPath, RELAX NG, Schematron | keine Bewertung, keine Zugänglichkeitsbegriffe |
-| L1 | Datenmodell: Baum, Befund, Konformanz, Stylesheet | ein Befundmodell für alle Hosts (`a11y-report`) |
+| L1 | Datenmodell: Baum, Befund, Konformanz, Stylesheet; Adapter fremder Bäume für L0 | ein Befundmodell für alle Hosts (`a11y-report`); `xml-adapters` bindet `roxmltree` an `relax-ng`/`xpath-eval` (und damit `schematron-engine`), die Kerne bleiben formatfrei |
 | L2 | Berechnung: Name, Kaskade, Regeln, Wahrnehmung, Prüfungen | reine Funktionen über L1, browserfrei; `a11y-rules` darf auf `accname` und `style-cascade` aufbauen; `a11y-static` steht darüber und fügt Parser, Modell, Regeln und Kaskade zum Lauf über statisches HTML zusammen |
 | L3 | Auslieferung in andere Laufzeiten (WASM) | reicht durch, bewertet nicht |
 | L4 | Erhebung, Orchestrierung, Ausgabe | außerhalb dieses Repositorys |

@@ -403,10 +403,14 @@ impl TreeBuilder {
                         matches!(attribute.name.as_str(), "color" | "face" | "size")
                     })) =>
             {
+                // "Parse error. While the current node is not a MathML
+                // text integration point, [...] pop" (§13.2.6.5).
+                self.error(ParseErrorKind::ForeignContentBreakout, position);
                 self.pop_out_of_foreign_content();
                 TokenOutcome::Reprocess
             }
             TokenKind::EndTag(tag) if matches!(tag.name.as_str(), "br" | "p") => {
+                self.error(ParseErrorKind::ForeignContentBreakout, position);
                 self.pop_out_of_foreign_content();
                 TokenOutcome::Reprocess
             }
@@ -449,6 +453,15 @@ impl TreeBuilder {
                         return TokenOutcome::Consumed(None);
                     }
                     if self.element_name_matches_ignore_case(current, &tag.name) {
+                        // Step 2: "If node's tag name, converted to ASCII
+                        // lowercase, is not the same as the tag name of
+                        // the token, then this is a parse error." Only
+                        // reported when a deeper match closes the
+                        // intervening elements; with no match at all the
+                        // HTML rules below report the stray end tag.
+                        if self.open_elements.current_node() != Some(current) {
+                            self.error(ParseErrorKind::ImpliedEndTagWithUnclosedElements, position);
+                        }
                         self.pop_until_node_popped(current);
                         return TokenOutcome::Consumed(None);
                     }

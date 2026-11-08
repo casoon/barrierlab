@@ -23,8 +23,10 @@ impl TreeBuilder {
                     this.open_elements
                         .generate_implied_end_tags(&this.document, Some(tag.name.as_str()));
                     // "If node is not the current node, then this is a
-                    // parse error" — parse-error-only, no tree-shape
-                    // effect.
+                    // parse error."
+                    if this.open_elements.current_node() != Some(node) {
+                        this.error(ParseErrorKind::ImpliedEndTagWithUnclosedElements, position);
+                    }
                     loop {
                         let popped = this.open_elements.pop();
                         if popped == Some(node) {

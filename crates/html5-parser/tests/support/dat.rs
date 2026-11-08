@@ -32,6 +32,17 @@ pub struct TestCase {
     /// output via plain string equality, the same way the reference
     /// runner's `assert_equals(actual, expected)` does.
     pub expected_document: String,
+    /// The `#errors` section's lines, as written: html5lib's own
+    /// wording and counting, e.g. `(1,0): expected-doctype-but-got-chars`.
+    /// Not a spec artefact (it counts per character for some
+    /// conditions, and positions are html5lib's), so the harness only
+    /// uses it for presence and a reported count.
+    pub expected_errors: Vec<String>,
+    /// The `#new-errors` section's lines, as written: WHATWG error codes
+    /// with spec positions, e.g.
+    /// `(1:5) missing-semicolon-after-character-reference`. Only
+    /// tokenizer errors appear here.
+    pub expected_new_errors: Vec<String>,
 }
 
 /// Returns the section name for a line like `"#data\n"` (already
@@ -58,6 +69,15 @@ fn normalise(mut sections: HashMap<String, String>) -> HashMap<String, String> {
         }
     }
     sections
+}
+
+fn error_lines(section: Option<String>) -> Vec<String> {
+    section
+        .unwrap_or_default()
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 /// Parses every test case out of a `.dat` file's contents.
@@ -116,6 +136,8 @@ pub fn parse_dat_file(contents: &str) -> Vec<TestCase> {
             data: sections.remove("data").unwrap_or_default(),
             is_fragment: sections.contains_key("document-fragment"),
             script_on_only: sections.contains_key("script-on"),
+            expected_errors: error_lines(sections.remove("errors")),
+            expected_new_errors: error_lines(sections.remove("new-errors")),
             expected_document: sections.remove("document").unwrap_or_default(),
         })
         .collect()

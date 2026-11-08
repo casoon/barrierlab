@@ -34,8 +34,8 @@ implementation would produce).
 ## What this crate's harness (`tests/schxslt_testsuite.rs`) actually
 ## checks — and what it doesn't
 
-This crate does not implement SVRL (XML) output at all — `evaluate`
-returns structured `Report`s, not a serialized report document — so
+This harness does not serialise SVRL (the crate can, via `to_svrl`, but
+the harness runs `evaluate`, which returns structured `Report`s) — so
 `<expectations>` (which assert against SVRL element/attribute shapes)
 cannot be checked here. The harness checks the coarser, still-meaningful
 `expectValid` verdict instead: `expectValid="true"` iff `evaluate`
