@@ -10,6 +10,7 @@ Repository `casoon/a11y-core`.
 ### Added
 
 - **Rendering:** `Rendering::frame_reachable(node) -> Option<bool>` (Vorgabe `None`, nicht gemessen): ob das Dokument eines `<iframe>`/`<frame>` lesbar ist; casoon/barrierlab#132.
+- **Rendering:** `BoxTransform` und `Rendering::box_transform(node) -> Option<BoxTransform>` (Vorgabe `None`): berechnetes `transform` und `rotate` eines Elements. Eine Methode statt zweier neuer Felder an `ComputedStyle`, weil neue Felder an diesem Struct (kein `non_exhaustive`) jeden Host brechen, der es als Struct-Literal baut; casoon/barrierlab#134.
 
 ## [0.28.2] - 2026-11-07
 

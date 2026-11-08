@@ -33,7 +33,8 @@ flowchart TB
 |---|---|
 | `Document` | the minimum: tree, elements, attributes |
 | `Semantics`, `Rendering` | tiers a host offers only if it really has the data |
-| `Rendering` host measurements | default methods, `None` = not measured: `layout`, `scroll_overflow_px`, `visually_hidden`, `sampled_backdrop`, `frame_reachable` (casoon/barrierlab#132) |
+| `Rendering` host measurements | default methods, `None` = not measured: `layout`, `scroll_overflow_px`, `visually_hidden`, `sampled_backdrop`, `frame_reachable` (#132), `box_transform` (#134) |
+| `BoxTransform` | computed `transform` and `rotate` of an element as strings, via `Rendering::box_transform()` (default `None`); a method instead of two `ComputedStyle` fields because new fields on that non-`non_exhaustive` struct break hosts that build it as a literal |
 | `Layout` | layout information for heuristic rules, via `Rendering::layout()` (default `None`) |
 | `Arena`, `ArenaBuilder`, `ArenaNode` | ready-made implementation for tests and parser-based hosts |
 

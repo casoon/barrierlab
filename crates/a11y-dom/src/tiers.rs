@@ -267,6 +267,23 @@ pub struct Layout {
     pub animating: Option<bool>,
 }
 
+/// Berechnete Transformation eines Elements, als Zeichenketten so, wie
+/// der Browser sie serialisiert: `transform` als `none` oder
+/// `matrix(…)`/`matrix3d(…)`, `rotate` als `none` oder Winkel (`90deg`).
+///
+/// Jedes Feld ist einzeln optional, `None` heißt „nicht gemessen". Ein Host
+/// baut den Wert mit `BoxTransform { transform: …, ..Default::default() }`,
+/// damit künftige Felder keine Quelltextänderung erzwingen.
+///
+/// Eine eigene Methode ([`Rendering::box_transform`]) statt zweier Felder an
+/// [`ComputedStyle`]: neue Felder an dem Struct ohne `non_exhaustive` wären
+/// für jeden Host, der es als Struct-Literal baut, ein Bruch.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BoxTransform {
+    pub transform: Option<String>,
+    pub rotate: Option<String>,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -330,6 +347,13 @@ pub trait Rendering: Document {
     /// Ob der Rahmen dargestellt wird, leitet die Regel aus `display`,
     /// `visibility` und `bounds` ab.
     fn frame_reachable<'n>(&'n self, _node: Self::N<'n>) -> Option<bool> {
+        None
+    }
+
+    /// Berechnetes `transform` und `rotate` des Knotens, mindestens für
+    /// `html` und `body`. Ein Quarterdreh der Wurzel ist der Fehler, den
+    /// `orientation/root-rotated` sieht. Vorgabe `None`: nicht gemessen.
+    fn box_transform<'n>(&'n self, _node: Self::N<'n>) -> Option<BoxTransform> {
         None
     }
 }

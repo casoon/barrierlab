@@ -6,7 +6,7 @@
 //! auditmysite-Korpus `tests/fixtures/detection_corpus/` (nur gelesen) und
 //! sind hier als eigene, kleine Dokumente nachgestellt.
 
-use super::super::{Fall, na, negative, not_run, untested};
+use super::super::{Fall, fail, na, negative, not_run, untested};
 
 const FRAME_FIXTURE: &str = "auditmysite tests/fixtures/detection_corpus/content_frames_cross_origin (frame-tested): booking, small-map, shadow-calendar and late-reviews are reported; pixel (1x1), collapsed (display:none), silent (aria-hidden) and local-help (readable) are not";
 const FRAME_NORM: &str = "no WCAG criterion applies to a document the tool cannot read (coverage note); host contract of Rendering::frame_reachable, casoon/barrierlab#132";
@@ -14,6 +14,7 @@ const FRAME_NORM: &str = "no WCAG criterion applies to a document the tool canno
 pub fn cases() -> Vec<Fall> {
     let mut v = Vec::new();
     v.extend(frames());
+    v.extend(orientation());
     v
 }
 
@@ -81,6 +82,144 @@ fn frames() -> Vec<Fall> {
             id,
             r#"<!DOCTYPE html><html lang="en" style="--unmeasured: frames"><head><title>T</title></head><body><iframe title="Booking" src="https://other.example/booking" style="--w:400px;--h:200px"></iframe></body></html>"#,
             "docs/conventions.md: not measured is not passed; issue #132: None for every frame yields NotRun",
+        ),
+    ]
+}
+
+const ORIENT_FIXTURES: &str = "auditmysite tests/fixtures/detection_corpus/visual_orientation_{lock,script_lock,ok,hide}: computed transform of html and body (css-orientation-lock)";
+const ORIENT_NORM: &str = "WCAG 2.2 SC 1.3.4 Orientation: content does not restrict its view and operation to a single display orientation; a quarter-turn rotation of the root is such a restriction";
+
+/// Ein vollständiges Dokument, dessen `html`- und `body`-Element die
+/// berechneten Werte des Hosts tragen.
+macro_rules! root {
+    ($html:literal, $body:literal) => {
+        concat!(
+            r#"<!DOCTYPE html><html lang="en" style=""#,
+            $html,
+            r#""><head><title>T</title></head><body style=""#,
+            $body,
+            r#""><p>Content</p></body></html>"#
+        )
+    };
+}
+
+fn orientation() -> Vec<Fall> {
+    let id = "orientation/root-rotated";
+    vec![
+        fail(
+            id,
+            root!("", "transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_lock: body rotate(90deg)")
+        .count(1),
+        fail(
+            id,
+            root!("transform: matrix(6.12323e-17, -1, 1, 6.12323e-17, 0, 0)", ""),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_script_lock: html rotate(-90deg), Script setzt es")
+        .count(1),
+        fail(
+            id,
+            root!(
+                "",
+                "transform: matrix3d(0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"
+            ),
+            ORIENT_NORM,
+        )
+        .variant("matrix3d: rotateZ(90deg)")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 90deg", ""),
+            "issue #134: a rotate angle off a multiple of 180 degrees counts",
+        )
+        .variant("rotate: 90deg an html")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 0.25turn", ""),
+            "CSS Transforms 2: angles in turn are 360 degrees",
+        )
+        .variant("rotate in turn")
+        .count(1),
+        fail(
+            id,
+            root!("rotate: 0 0 1 90deg", ""),
+            "CSS Transforms 2: axis (0, 0, 1) is the z axis, a rotation in the picture plane",
+        )
+        .variant("rotate um die Z-Achse in Langform")
+        .count(1),
+        fail(
+            id,
+            root!(
+                "transform: matrix(1, 0.0101, -0.0101, 1, 0, 0)",
+                "transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"
+            ),
+            "issue #134: threshold |b| > 0.01 and |b + c| < 0.01",
+        )
+        .variant("Grenze: b = 0,0101 darüber; html und body je ein Befund")
+        .count(2),
+        negative(
+            id,
+            root!("transform: matrix(1, 0.01, -0.01, 1, 0, 0)", ""),
+            "issue #134: threshold |b| > 0.01; exactly 0.01 does not count",
+        )
+        .variant("Grenze: b = 0,01 nicht darüber"),
+        negative(
+            id,
+            root!(
+                "transform: matrix(1, -2.44929e-16, 2.44929e-16, 1, 0, 0)",
+                "transform: matrix(1, 0, 0, 1, 0, 0)"
+            ),
+            ORIENT_FIXTURES,
+        )
+        .variant("visual_orientation_ok: rotate(360deg) und translateX(0)"),
+        negative(
+            id,
+            root!("transform: matrix(-1, 1.22465e-16, -1.22465e-16, -1, 0, 0)", ""),
+            "issue #134: a half turn gives b = 0 and does not force an orientation",
+        )
+        .variant("rotate(180deg)"),
+        negative(
+            id,
+            root!("transform: matrix(1, 1, 0, 1, 0, 0)", ""),
+            "issue #134: skew alone does not produce b = -c",
+        )
+        .variant("skewY(45deg)"),
+        negative(
+            id,
+            root!("transform: matrix(2, 0, 0, 2, 0, 0)", "rotate: 180deg"),
+            "issue #134: scale alone, and a rotate that is a multiple of 180 degrees",
+        )
+        .variant("scale und rotate: 180deg"),
+        negative(
+            id,
+            root!("rotate: x 90deg", ""),
+            "CSS Transforms 2: a rotation about the x axis tilts, it does not turn in the picture plane",
+        )
+        .variant("rotate um die X-Achse"),
+        negative(
+            id,
+            r#"<div style="transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)">Badge</div>"#,
+            "issue #134: only html and body are read; a rotated component is not an orientation lock",
+        )
+        .variant("gedrehtes Bauteil im Inhalt"),
+        negative(id, root!("", ""), ORIENT_FIXTURES)
+            .variant("visual_orientation_hide: nichts gedreht"),
+        na(
+            id,
+            r#"<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>"#,
+            "issue #134: the rule reads html and body; a foreign document has neither",
+        ),
+        not_run(
+            id,
+            concat!(
+                r#"<!DOCTYPE html><html lang="en" style="--unmeasured: transform"><head><title>T</title></head>"#,
+                r#"<body style="transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"><p>Content</p></body></html>"#
+            ),
+            "docs/conventions.md: not measured is not passed; issue #134: neither field measured on html/body gives NotRun",
         ),
     ]
 }

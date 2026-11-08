@@ -303,6 +303,9 @@ mod tests {
             .rule_runs
             .iter()
             .filter(|r| !r.did_run())
+            // Messungen an der laufenden Seite, die dieses Paket noch nicht
+            // liefert (casoon/barrierlab#130).
+            .filter(|r| !["orientation/root-rotated"].contains(&r.rule_id.as_str()))
             .map(|r| r.rule_id.as_str())
             .collect();
         let stile: Vec<&str> = a11y_rules::stylesheet_metas()

@@ -22,12 +22,15 @@
 //!   `unrendered-fields` (dafür nur `display: none`, sonst nichts).
 //!   Messungen an der laufenden Seite (casoon/barrierlab#130), je an dem Element,
 //!   das sie betrifft: `--frame-reachable` (`1`/`0`, Vorgabe `1`; das Wort
-//!   `frames` in `--unmeasured` schaltet die Messung ab).
+//!   `frames` in `--unmeasured` schaltet die Messung ab); `transform` und
+//!   `rotate` am Element selbst (Vorgabe `none`, so wie der Browser sie berechnet
+//!   serialisiert: `matrix(…)`, Winkel; das Wort `transform` in `--unmeasured`
+//!   schaltet die Messung ab).
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
-    Arena, ArenaBuilder, ArenaNode, Backdrop, Color, ComputedStyle, Document, Layout, Node,
-    NodeKind, Rect, Rendering, Semantics, ancestors, elements,
+    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document, Layout,
+    Node, NodeKind, Rect, Rendering, Semantics, ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -538,6 +541,13 @@ impl Rendering for Host<'_> {
     fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         self.measures("frames")
             .then(|| own(node, "--frame-reachable").is_none_or(|v| v == "1" || v == "true"))
+    }
+
+    fn box_transform<'n>(&'n self, node: Self::N<'n>) -> Option<BoxTransform> {
+        self.measures("transform").then(|| BoxTransform {
+            transform: Some(own(node, "transform").unwrap_or_else(|| "none".into())),
+            rotate: Some(own(node, "rotate").unwrap_or_else(|| "none".into())),
+        })
     }
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {

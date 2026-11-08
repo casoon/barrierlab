@@ -100,27 +100,160 @@ fn frames<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
-pub(crate) const METAS: &[Meta] = &[Meta {
-    ids: &["frames/cross-origin"],
-    tier: Tier::Rendering,
-    scope: Scope::Rendered,
-    wcag: &[],
-    severity: Severity::Low,
-    help: "A frame whose document the tool cannot read (cross-origin, or still navigating) \
+// --- orientation/root-rotated -------------------------------------------------
+
+/// Ob eine berechnete `transform`-Matrix um eine Vierteldrehung dreht:
+/// `b = sin θ`, `c = −sin θ` (bei `matrix3d` Eintrag 2 und 5 der
+/// Spaltenfolge). Neigung und Skalierung allein ergeben dieses Paar nicht.
+/// `None`: nicht auswertbar (weder `none` noch eine Matrix).
+fn matrix_rotates(value: &str) -> Option<bool> {
+    let value = value.trim();
+    if value.eq_ignore_ascii_case("none") {
+        return Some(false);
+    }
+    let (inner, b, c) = if let Some(rest) = value.strip_prefix("matrix3d(") {
+        (rest, 1, 4)
+    } else {
+        (value.strip_prefix("matrix(")?, 1, 2)
+    };
+    let numbers: Vec<f64> = inner
+        .strip_suffix(')')?
+        .split(',')
+        .map(|v| v.trim().parse().ok())
+        .collect::<Option<_>>()?;
+    let (b, c) = (*numbers.get(b)?, *numbers.get(c)?);
+    Some(b.abs() > 0.01 && (b + c).abs() < 0.01)
+}
+
+/// Ob die Eigenschaft `rotate` um einen Winkel abseits eines Vielfachen von
+/// 180° um die Z-Achse dreht. Achsen in X oder Y kippen und drehen nicht in
+/// der Bildebene. `None`: nicht auswertbar.
+fn rotate_turns(value: &str) -> Option<bool> {
+    let tokens: Vec<&str> = value.split_whitespace().collect();
+    let (angle, axis) = match tokens.as_slice() {
+        ["none"] => return Some(false),
+        [angle] => (*angle, true),
+        ["z", angle] => (*angle, true),
+        ["x" | "y", angle] => (*angle, false),
+        [x, y, z, angle] => {
+            let axis: Vec<f64> = [x, y, z]
+                .iter()
+                .map(|v| v.parse().ok())
+                .collect::<Option<_>>()?;
+            (*angle, axis[0] == 0.0 && axis[1] == 0.0 && axis[2] > 0.0)
+        }
+        _ => return None,
+    };
+    let degrees = if let Some(v) = angle.strip_suffix("deg") {
+        v.parse::<f64>().ok()?
+    } else if let Some(v) = angle.strip_suffix("grad") {
+        v.parse::<f64>().ok()? * 0.9
+    } else if let Some(v) = angle.strip_suffix("rad") {
+        v.parse::<f64>().ok()?.to_degrees()
+    } else if let Some(v) = angle.strip_suffix("turn") {
+        v.parse::<f64>().ok()? * 360.0
+    } else {
+        return None;
+    };
+    let off = degrees.rem_euclid(180.0);
+    Some(axis && off > 0.01 && off < 179.99)
+}
+
+/// 1.3.4: Die Seite dreht ihre Wurzel, um nur eine Ausrichtung nutzbar zu
+/// machen. Sichtbar ist das an `html` und `body`; ob die Ausrichtung
+/// wesentlich ist, entscheidet ein Mensch.
+fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut roots = false;
+    let mut measured = false;
+    for n in elements(doc).filter(|n| matches!(n.local_name(), "html" | "body")) {
+        roots = true;
+        let Some(value) = doc.box_transform(n) else {
+            continue;
+        };
+        let by_matrix = value.transform.as_deref().and_then(matrix_rotates);
+        let by_angle = value.rotate.as_deref().and_then(rotate_turns);
+        measured |= by_matrix.is_some() || by_angle.is_some();
+        if by_matrix != Some(true) && by_angle != Some(true) {
+            continue;
+        }
+        let tag = n.local_name();
+        out.push(
+            Finding::fail(
+                "orientation/root-rotated",
+                tr!(
+                    locale,
+                    "The <{tag}> element is rotated, which can force a single display                      orientation. Unless a specific orientation is essential, content must not                      restrict its view and operation to one.",
+                    "Das Element <{tag}> ist gedreht, was eine einzige Bildschirmausrichtung                      erzwingen kann. Außer eine bestimmte Ausrichtung ist wesentlich, darf der                      Inhalt Ansicht und Bedienung nicht auf eine beschränken."
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.3.4"])
+            .with_evidence(
+                [
+                    ("transform", &value.transform),
+                    ("rotate", &value.rotate),
+                ]
+                .into_iter()
+                .filter_map(|(field, v)| v.as_deref().map(|v| Evidence::computed(field, v))),
+            )
+            .at(at(n.id())),
+        );
+    }
+    if roots && !measured {
+        out.push(not_run::note(
+            "orientation/root-rotated",
+            pick!(
+                locale,
+                "host does not report transform or rotate of html and body",
+                "Host meldet transform und rotate von html und body nicht",
+            ),
+        ));
+    }
+}
+
+pub(crate) const METAS: &[Meta] = &[
+    Meta {
+        ids: &["orientation/root-rotated"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &["1.3.4"],
+        severity: Severity::High,
+        help: "A page that rotates its root (html or body) by a quarter turn to force one \
+               display orientation fails 1.3.4. Seen: the computed transform matrix and the \
+               rotate property of html and body, in the one viewport the host measured; a lock \
+               that applies only in the other orientation needs a second snapshot there \
+               (RuleRun::in_viewport). That an orientation is essential is a human judgement.",
+        help_de: de_text!(
+            "Eine Seite, die ihre Wurzel (html oder body) um eine Vierteldrehung dreht, um \
+                  eine Ausrichtung zu erzwingen, verfehlt 1.3.4. Gesehen werden die berechnete \
+                  transform-Matrix und die Eigenschaft rotate von html und body, in dem einen \
+                  Viewport, den der Host gemessen hat; eine Sperre nur in der anderen \
+                  Ausrichtung braucht dort einen zweiten Schnappschuss (RuleRun::in_viewport). \
+                  Ob eine Ausrichtung wesentlich ist, entscheidet ein Mensch."
+        ),
+    },
+    Meta {
+        ids: &["frames/cross-origin"],
+        tier: Tier::Rendering,
+        scope: Scope::Rendered,
+        wcag: &[],
+        severity: Severity::Low,
+        help: "A frame whose document the tool cannot read (cross-origin, or still navigating) \
            was not tested. Not a conformance check and tied to no success criterion: a \
            coverage note. Frames that are presentational, hidden or 1 px or smaller are \
            skipped.",
-    help_de: de_text!(
-        "Ein Rahmen, dessen Dokument das Werkzeug nicht lesen kann (fremder Ursprung oder \
+        help_de: de_text!(
+            "Ein Rahmen, dessen Dokument das Werkzeug nicht lesen kann (fremder Ursprung oder \
               Navigation läuft noch), blieb ungeprüft. Keine Konformitätsprüfung und an kein \
               Erfolgskriterium gebunden: eine Abdeckungsnotiz. Präsentationale, versteckte und \
               höchstens 1 px große Rahmen bleiben außen vor."
-    ),
-}];
+        ),
+    },
+];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 1] {
-    [frames]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 2] {
+    [root_rotated, frames]
 }
 
-const _: () = assert!(METAS.len() == 1);
+const _: () = assert!(METAS.len() == 2);

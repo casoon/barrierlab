@@ -45,3 +45,63 @@ replace = '''    if false && candidates && !measured {'''
 test = "korpus"
 expect = "killed"
 note = "Ohne Messung kein NotRun-Vermerk: stilles Bestehen."
+
+# --- orientation/root-rotated -------------------------------------------------
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "threshold"
+find = '''    Some(b.abs() > 0.01 && (b + c).abs() < 0.01)'''
+replace = '''    Some(b.abs() > 0.011 && (b + c).abs() < 0.01)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    Some(b.abs() > 0.01 && (b + c).abs() < 0.01)'''
+replace = '''    Some(b.abs() > 0.01)'''
+test = "korpus"
+expect = "killed"
+note = "Neigung (b ohne passendes c) wäre sonst eine Drehung."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "invert"
+find = '''        (rest, 1, 4)'''
+replace = '''        (rest, 1, 5)'''
+test = "korpus"
+expect = "killed"
+note = "Falscher Spaltenindex für c in matrix3d."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    Some(axis && off > 0.01 && off < 179.99)'''
+replace = '''    Some(off > 0.01 && off < 179.99)'''
+test = "korpus"
+expect = "killed"
+note = "Kippen um X oder Y ist keine Drehung in der Bildebene."
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-finding"
+find = '''    if roots && !measured {'''
+replace = '''    if false && roots && !measured {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/root-rotated"
+file = "src/probes.rs"
+kind = "drop-condition"
+find = '''    for n in elements(doc).filter(|n| matches!(n.local_name(), "html" | "body")) {'''
+replace = '''    for n in elements(doc) {'''
+test = "korpus"
+expect = "killed"
+note = "Nur html und body zählen, nicht jedes gedrehte Bauteil."

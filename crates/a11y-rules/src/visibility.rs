@@ -304,6 +304,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         let doc: &'n D = self.doc;
         doc.frame_reachable(node.inner)
     }
+
+    fn box_transform<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::BoxTransform> {
+        let doc: &'n D = self.doc;
+        doc.box_transform(node.inner)
+    }
 }
 
 #[cfg(test)]
@@ -368,6 +373,10 @@ mod tests {
         fn frame_reachable<'n>(&'n self, _: Self::N<'n>) -> Option<bool> {
             Some(false)
         }
+
+        fn box_transform<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::BoxTransform> {
+            Some(a11y_dom::BoxTransform::default())
+        }
     }
 
     #[test]
@@ -385,5 +394,6 @@ mod tests {
         assert_eq!(visibility.visually_hidden(n), Some(true));
         assert!(visibility.sampled_backdrop(n).is_some());
         assert_eq!(visibility.frame_reachable(n), Some(false));
+        assert!(visibility.box_transform(n).is_some());
     }
 }

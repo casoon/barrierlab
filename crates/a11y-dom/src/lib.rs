@@ -65,8 +65,8 @@ pub use arena::{Arena, ArenaBuilder, ArenaNode};
 #[cfg(feature = "html5-parser")]
 pub use html5::Html5Node;
 pub use tiers::{
-    Backdrop, Caps, Color, ComputedStyle, Interaction, Layout, NameSource, Rect, Rendering,
-    Semantics, Tier,
+    Backdrop, BoxTransform, Caps, Color, ComputedStyle, Interaction, Layout, NameSource, Rect,
+    Rendering, Semantics, Tier,
 };
 pub use tree::{
     Document, Node, NodeId, NodeKind, ScopedId, TreeScope, ancestors, closest, descendants,
