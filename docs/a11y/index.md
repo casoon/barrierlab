@@ -36,7 +36,8 @@ bundled `Arena` from `a11y-dom` is the test vehicle and the form a WASM host nee
 
 - **Getting started:** add the crates and check a first document.
 - **Concepts:** capability tiers, the finding model and name computation.
-- **Reference:** all rule IDs and an overview of the public API. The detailed documentation of
-  each type is on [docs.rs](https://docs.rs/a11y-rules).
+- **Reference:** all rule IDs, an overview of the public API and the
+  [annotation file](reference/annotations.md) (external assessments of findings, keyed by finding id).
+  The detailed documentation of each type is on [docs.rs](https://docs.rs/a11y-rules).
 - **Planning:** [page-dependent rules inventory](page-dependent-rules-inventory.md), which
   auditmysite rules need the live page and what data a host would have to supply (in German).
