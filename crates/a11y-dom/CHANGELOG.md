@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.28.3] - 2026-11-08
+
 ### Added
 
 - **Rendering:** `Rendering::frame_reachable(node) -> Option<bool>` (Vorgabe `None`, nicht gemessen): ob das Dokument eines `<iframe>`/`<frame>` lesbar ist; casoon/barrierlab#132.
