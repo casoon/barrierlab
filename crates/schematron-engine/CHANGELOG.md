@@ -7,6 +7,19 @@ version bump.
 
 ## [Unreleased]
 
+### Added
+
+- **API:** SVRL output (barrierlab#79): `evaluate_trace` / `evaluate_trace_with_phase` return the
+  run as `Event`s (active patterns, fired rules, fired checks with their `test`), `to_svrl` and
+  `to_svrl_with` write them as an SVRL document string, `location_path` builds an XPath location
+  for a node from the `Node` trait. No new dependency; `evaluate` and its results are unchanged.
+
+### Documentation
+
+- **Scope:** pattern-level `<let>` stays scoped to its pattern, checked against ISO/IEC 19757-3:2016
+  3.26 and 5.4.5 (barrierlab#2); the schxslt case `let-pattern-global` is a known difference, not
+  a bug. No behaviour change.
+
 ## [0.3.0] - 2026-11-06
 
 ### Changed

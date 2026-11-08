@@ -50,6 +50,7 @@ use crate::context::Alternative;
 use crate::schema::{
     Check, CheckKind, Diagnostic, LetBinding, LetValue, MessagePart, Pattern, Schema,
 };
+use crate::svrl::Event;
 
 /// One fired check: a failed `assert`, or a true-evaluating `report`.
 /// Checks that do not fire are not represented at all (no `fired: bool`
@@ -134,7 +135,34 @@ pub fn evaluate_with_phase<'a, D: Document>(
     document: &'a D,
     phase_id: Option<&str>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
-    evaluate_in(schema, document, phase_id, &DocumentCache::new())
+    evaluate_in(schema, document, phase_id, &DocumentCache::new(), None)
+}
+
+/// [`evaluate`] with a full trace instead of the fired checks alone: which
+/// patterns were active, which rules fired on which node, and the fired
+/// checks, in evaluation order — the input of [`crate::to_svrl`].
+pub fn evaluate_trace<'a, D: Document>(
+    schema: &Schema,
+    document: &'a D,
+) -> Result<Vec<Event<D::N<'a>>>, SchematronEvalError> {
+    evaluate_trace_with_phase(schema, document, schema.default_phase.as_deref())
+}
+
+/// [`evaluate_with_phase`] with a full trace, see [`evaluate_trace`].
+pub fn evaluate_trace_with_phase<'a, D: Document>(
+    schema: &Schema,
+    document: &'a D,
+    phase_id: Option<&str>,
+) -> Result<Vec<Event<D::N<'a>>>, SchematronEvalError> {
+    let mut events = Vec::new();
+    evaluate_in(
+        schema,
+        document,
+        phase_id,
+        &DocumentCache::new(),
+        Some(&mut events),
+    )?;
+    Ok(events)
 }
 
 /// [`evaluate`] with a caller-held [`DocumentCache`] for `document`, so
@@ -146,7 +174,13 @@ pub fn evaluate_with_cache<'a, D: Document>(
     document: &'a D,
     cache: &DocumentCache<D::N<'a>>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
-    evaluate_in(schema, document, schema.default_phase.as_deref(), cache)
+    evaluate_in(
+        schema,
+        document,
+        schema.default_phase.as_deref(),
+        cache,
+        None,
+    )
 }
 
 fn evaluate_in<'a, D: Document>(
@@ -154,6 +188,7 @@ fn evaluate_in<'a, D: Document>(
     document: &'a D,
     phase_id: Option<&str>,
     cache: &DocumentCache<D::N<'a>>,
+    mut trace: Option<&mut Vec<Event<D::N<'a>>>>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
     let ns_lookup = |prefix: &str| {
         schema
@@ -203,6 +238,12 @@ fn evaluate_in<'a, D: Document>(
             }
         }
 
+        if let Some(trace) = trace.as_deref_mut() {
+            trace.push(Event::ActivePattern {
+                id: pattern.id.clone(),
+            });
+        }
+
         let mut pattern_scope = Scope::new(Some(&phase_scope));
         extend_lets(&mut pattern_scope, &pattern.lets, document.root(), &env)?;
 
@@ -212,6 +253,12 @@ fn evaluate_in<'a, D: Document>(
             for node in nodes {
                 let mut node_scope = Scope::new(Some(&pattern_scope));
                 extend_lets(&mut node_scope, &rule.lets, node, &env)?;
+                if let Some(trace) = trace.as_deref_mut() {
+                    trace.push(Event::FiredRule {
+                        context: rule.context.clone(),
+                        node,
+                    });
+                }
 
                 for check in &rule.checks {
                     if let Some(report) = evaluate_check(
@@ -222,6 +269,18 @@ fn evaluate_in<'a, D: Document>(
                         &env,
                         &schema.diagnostics,
                     )? {
+                        if let Some(trace) = trace.as_deref_mut() {
+                            trace.push(Event::Check {
+                                report: report.clone(),
+                                test: check.test.clone(),
+                                diagnostic_ids: check
+                                    .diagnostics
+                                    .iter()
+                                    .filter(|id| schema.diagnostics.iter().any(|d| &d.id == *id))
+                                    .cloned()
+                                    .collect(),
+                            });
+                        }
                         reports.push(report);
                     }
                 }
