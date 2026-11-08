@@ -247,7 +247,7 @@ impl TreeBuilder {
     /// actually closed one (false only when `caption` isn't in table
     /// scope — every one of this helper's real call sites treats that
     /// the same way: ignore the token, don't reprocess).
-    pub(super) fn close_caption(&mut self) -> bool {
+    pub(super) fn close_caption(&mut self, position: Position) -> bool {
         if !self
             .open_elements
             .has_element_in_table_scope(&self.document, "caption")
@@ -256,6 +256,7 @@ impl TreeBuilder {
         }
         self.open_elements
             .generate_implied_end_tags(&self.document, None);
+        self.check_current_node_is(&["caption"], position);
         self.pop_until_one_of_popped(&["caption"]);
         self.active_formatting_elements.clear_up_to_last_marker();
         self.insertion_mode = InsertionMode::InTable;
@@ -270,7 +271,7 @@ impl TreeBuilder {
     ) -> TokenOutcome {
         match kind {
             TokenKind::EndTag(tag) if tag.name == "caption" => {
-                if !self.close_caption() {
+                if !self.close_caption(position) {
                     // "...this is a parse error; ignore the token."
                     self.error(ParseErrorKind::StrayEndTagInTable, position);
                 }
@@ -290,7 +291,7 @@ impl TreeBuilder {
                         | "tr"
                 ) =>
             {
-                if self.close_caption() {
+                if self.close_caption(position) {
                     TokenOutcome::Reprocess
                 } else {
                     // "...this is a parse error; ignore the token."
@@ -299,7 +300,7 @@ impl TreeBuilder {
                 }
             }
             TokenKind::EndTag(tag) if tag.name == "table" => {
-                if self.close_caption() {
+                if self.close_caption(position) {
                     TokenOutcome::Reprocess
                 } else {
                     // "...this is a parse error; ignore the token."
@@ -448,6 +449,8 @@ impl TreeBuilder {
                 TokenOutcome::Consumed(None)
             }
             TokenKind::StartTag(tag) if matches!(tag.name.as_str(), "th" | "td") => {
+                // "Parse error."
+                self.error(ParseErrorKind::MisplacedTokenInTable, position);
                 self.clear_stack_back_to_a_table_body_context();
                 let tr_tag = TagToken {
                     name: "tr".to_owned(),
@@ -610,9 +613,12 @@ impl TreeBuilder {
     }
 
     /// "Close the cell" (§13.2.6.4.15).
-    pub(super) fn close_the_cell(&mut self) {
+    pub(super) fn close_the_cell(&mut self, position: Position) {
         self.open_elements
             .generate_implied_end_tags(&self.document, None);
+        // Step 2: "If the current node is not now a td element or a th
+        // element, then this is a parse error."
+        self.check_current_node_is(&["td", "th"], position);
         self.pop_until_one_of_popped(&["td", "th"]);
         self.active_formatting_elements.clear_up_to_last_marker();
         self.insertion_mode = InsertionMode::InRow;
@@ -636,6 +642,7 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, None);
+                self.check_current_node_is(&[tag.name.as_str()], position);
                 self.pop_until_one_of_popped(&[tag.name.as_str()]);
                 self.active_formatting_elements.clear_up_to_last_marker();
                 self.insertion_mode = InsertionMode::InRow;
@@ -655,7 +662,7 @@ impl TreeBuilder {
                         | "tr"
                 ) =>
             {
-                self.close_the_cell();
+                self.close_the_cell(position);
                 TokenOutcome::Reprocess
             }
             TokenKind::EndTag(tag)
@@ -682,7 +689,7 @@ impl TreeBuilder {
                     self.error(ParseErrorKind::StrayEndTagInTable, position);
                     return TokenOutcome::Consumed(None);
                 }
-                self.close_the_cell();
+                self.close_the_cell(position);
                 TokenOutcome::Reprocess
             }
             _ => self.process_token_in_body(kind, position),

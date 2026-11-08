@@ -40,10 +40,15 @@ pub struct ParseError {
 /// specific kind stays meaningful. `#[non_exhaustive]` because more
 /// variants may still be added: the tokenizer level (§13.2.5)
 /// is complete at 50 of the 52 named errors,
-/// but the tree-construction level (§13.2.6) covers only the conditions
-/// with a demonstrated consumer need, not all of §13.2.6's unnamed
-/// ones — adding one later must not be a breaking change for any caller
-/// matching on this type.
+/// and the tree-construction level (§13.2.6) records each unnamed
+/// "this is a parse error" point of the algorithm under the closest
+/// matching kind (several points share one). Two groups are not
+/// recorded: points reachable only in the fragment case (no fragment
+/// parsing here), and the tree builder's own U+0000 "parse error" in body,
+/// table text and foreign content, which repeats the tokenizer's
+/// [`UnexpectedNullCharacter`](Self::UnexpectedNullCharacter) for the same
+/// character. Adding a variant later must not be a breaking change for any
+/// caller matching on this type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ParseErrorKind {
@@ -141,6 +146,11 @@ pub enum ParseErrorKind {
     NestedFormattingElement,
     FormattingElementNotInScope,
     MisnestedFormattingElement,
+    StrayCharacter,
+    NestedHeading,
+    NestedButton,
+    OptionInScope,
+    ForeignContentBreakout,
 }
 
 impl std::fmt::Display for ParseErrorKind {
@@ -275,6 +285,15 @@ impl std::fmt::Display for ParseErrorKind {
             }
             Self::MisnestedFormattingElement => {
                 "a formatting element end tag that violates nesting rules (misnested tags)"
+            }
+            Self::StrayCharacter => "a character that the spec ignores here",
+            Self::NestedHeading => "a heading start tag directly inside another heading",
+            Self::NestedButton => "a \"button\" start tag while a \"button\" is still open",
+            Self::OptionInScope => {
+                "an \"option\" or \"optgroup\" start tag (or \"hr\" in a select) while an option is open"
+            }
+            Self::ForeignContentBreakout => {
+                "an HTML start or end tag that breaks out of SVG or MathML content"
             }
         };
         f.write_str(text)

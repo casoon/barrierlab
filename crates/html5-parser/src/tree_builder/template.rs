@@ -72,9 +72,9 @@ impl TreeBuilder {
                 // reached: this crate never does fragment parsing, and
                 // this mode is only ever entered via a genuine
                 // `<template>` start tag, which always pushes a
-                // template element first). The "otherwise this is a
-                // parse error" check on the real path has no
-                // tree-shape effect.
+                // template element first). The "otherwise, this is a
+                // parse error" path is therefore always taken.
+                self.error(ParseErrorKind::EofWithUnclosedElements, position);
                 self.pop_until_one_of_popped(&["template"]);
                 self.active_formatting_elements.clear_up_to_last_marker();
                 self.stack_of_template_insertion_modes.pop();

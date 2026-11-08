@@ -228,6 +228,10 @@ impl TreeBuilder {
                         .any(|&heading| self.node_has_html_name(node, heading))
                 });
                 if current_is_heading {
+                    // "If the current node is an HTML element whose tag
+                    // name is one of h1-h6, then this is a parse error;
+                    // pop the current node" (§13.2.6.4.7).
+                    self.error(ParseErrorKind::NestedHeading, position);
                     self.open_elements.pop();
                 }
                 self.insert_html_element(tag, Some(position));
@@ -273,6 +277,8 @@ impl TreeBuilder {
                     if self.node_has_html_name(current, "li") {
                         self.open_elements
                             .generate_implied_end_tags(&self.document, Some("li"));
+                        // §13.2.6.4.7 "li" start tag, step 4.
+                        self.check_current_node_is(&["li"], position);
                         self.pop_until_one_of_popped(&["li"]);
                         break;
                     }
@@ -301,12 +307,14 @@ impl TreeBuilder {
                     if self.node_has_html_name(current, "dd") {
                         self.open_elements
                             .generate_implied_end_tags(&self.document, Some("dd"));
+                        self.check_current_node_is(&["dd"], position);
                         self.pop_until_one_of_popped(&["dd"]);
                         break;
                     }
                     if self.node_has_html_name(current, "dt") {
                         self.open_elements
                             .generate_implied_end_tags(&self.document, Some("dt"));
+                        self.check_current_node_is(&["dt"], position);
                         self.pop_until_one_of_popped(&["dt"]);
                         break;
                     }
@@ -343,6 +351,8 @@ impl TreeBuilder {
                     .open_elements
                     .has_element_in_scope(&self.document, "button")
                 {
+                    // "...then run these substeps: Parse error."
+                    self.error(ParseErrorKind::NestedButton, position);
                     self.open_elements
                         .generate_implied_end_tags(&self.document, None);
                     self.pop_until_one_of_popped(&["button"]);
@@ -395,6 +405,10 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, None);
+                // "If the current node is not an HTML element with the
+                // same tag name as that of the token, then this is a
+                // parse error."
+                self.check_current_node_is(&[tag.name.as_str()], position);
                 self.pop_until_one_of_popped(&[tag.name.as_str()]);
                 TokenOutcome::Consumed(None)
             }
@@ -410,6 +424,7 @@ impl TreeBuilder {
                     }
                     self.open_elements
                         .generate_implied_end_tags(&self.document, None);
+                    self.check_current_node_is(&["form"], position);
                     self.pop_until_one_of_popped(&["form"]);
                 } else {
                     // "If node is null or [...] the stack of open elements
@@ -425,6 +440,11 @@ impl TreeBuilder {
                     }
                     self.open_elements
                         .generate_implied_end_tags(&self.document, None);
+                    // "If the current node is not node, then this is a
+                    // parse error."
+                    if self.open_elements.current_node() != Some(node) {
+                        self.error(ParseErrorKind::ImpliedEndTagWithUnclosedElements, position);
+                    }
                     self.remove_node_from_open_elements(node);
                 }
                 TokenOutcome::Consumed(None)
@@ -461,6 +481,7 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, Some("li"));
+                self.check_current_node_is(&["li"], position);
                 self.pop_until_one_of_popped(&["li"]);
                 TokenOutcome::Consumed(None)
             }
@@ -475,6 +496,7 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, Some(tag.name.as_str()));
+                self.check_current_node_is(&[tag.name.as_str()], position);
                 self.pop_until_one_of_popped(&[tag.name.as_str()]);
                 TokenOutcome::Consumed(None)
             }
@@ -492,6 +514,8 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, None);
+                // Same tag name as the *token*, not just any heading.
+                self.check_current_node_is(&[tag.name.as_str()], position);
                 self.pop_until_one_of_popped(&headings);
                 let _ = tag;
                 TokenOutcome::Consumed(None)
@@ -607,6 +631,7 @@ impl TreeBuilder {
                 }
                 self.open_elements
                     .generate_implied_end_tags(&self.document, None);
+                self.check_current_node_is(&[tag.name.as_str()], position);
                 self.pop_until_one_of_popped(&[tag.name.as_str()]);
                 self.active_formatting_elements.clear_up_to_last_marker();
                 TokenOutcome::Consumed(None)
@@ -654,6 +679,11 @@ impl TreeBuilder {
                     .open_elements
                     .has_element_in_scope(&self.document, "select")
                 {
+                    // "...then this is a parse error; pop elements from
+                    // the stack of open elements until a select element
+                    // has been popped" — the input itself is still
+                    // inserted below.
+                    self.error(ParseErrorKind::StrayStartTag, position);
                     self.pop_until_one_of_popped(&["select"]);
                 }
                 self.reconstruct_the_active_formatting_elements();
@@ -691,8 +721,15 @@ impl TreeBuilder {
                 {
                     self.open_elements
                         .generate_implied_end_tags(&self.document, None);
-                    // parse-error-only checks (option/optgroup in
-                    // scope) omitted, no tree-shape effect.
+                    if self
+                        .open_elements
+                        .has_element_in_scope(&self.document, "option")
+                        || self
+                            .open_elements
+                            .has_element_in_scope(&self.document, "optgroup")
+                    {
+                        self.error(ParseErrorKind::OptionInScope, position);
+                    }
                 }
                 self.insert_html_element(tag, Some(position));
                 self.open_elements.pop();
@@ -779,6 +816,14 @@ impl TreeBuilder {
                     {
                         this.open_elements
                             .generate_implied_end_tags(&this.document, Some("optgroup"));
+                        // "If the stack of open elements has an option
+                        // element in scope, then this is a parse error."
+                        if this
+                            .open_elements
+                            .has_element_in_scope(&this.document, "option")
+                        {
+                            this.error(ParseErrorKind::OptionInScope, position);
+                        }
                     } else if this
                         .open_elements
                         .current_node()
@@ -799,6 +844,18 @@ impl TreeBuilder {
                     {
                         this.open_elements
                             .generate_implied_end_tags(&this.document, None);
+                        // "If the stack of open elements has an option
+                        // element in scope or has an optgroup element in
+                        // scope, then this is a parse error."
+                        if this
+                            .open_elements
+                            .has_element_in_scope(&this.document, "option")
+                            || this
+                                .open_elements
+                                .has_element_in_scope(&this.document, "optgroup")
+                        {
+                            this.error(ParseErrorKind::OptionInScope, position);
+                        }
                     } else if this
                         .open_elements
                         .current_node()
@@ -819,6 +876,9 @@ impl TreeBuilder {
                     self.open_elements
                         .generate_implied_end_tags(&self.document, None);
                 }
+                // "If the current node is not now a ruby element, this
+                // is a parse error."
+                self.check_current_node_is(&["ruby"], position);
                 self.insert_html_element(tag, Some(position));
                 TokenOutcome::Consumed(None)
             }
@@ -830,6 +890,9 @@ impl TreeBuilder {
                     self.open_elements
                         .generate_implied_end_tags(&self.document, Some("rtc"));
                 }
+                // "If the current node is not now a rtc element or a
+                // ruby element, this is a parse error."
+                self.check_current_node_is(&["rtc", "ruby"], position);
                 self.insert_html_element(tag, Some(position));
                 TokenOutcome::Consumed(None)
             }

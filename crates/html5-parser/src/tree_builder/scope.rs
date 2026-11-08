@@ -137,6 +137,22 @@ impl TreeBuilder {
         })
     }
 
+    /// The check shared by every "generate implied end tags ... if the
+    /// current node is not an X element, then this is a parse error" step
+    /// of §13.2.6.4.x: records
+    /// [`ParseErrorKind::ImpliedEndTagWithUnclosedElements`] when the
+    /// current node is not an HTML element named one of `names`.
+    pub(super) fn check_current_node_is(&mut self, names: &[&str], position: Position) {
+        let matches = self.open_elements.current_node().is_some_and(|node| {
+            names
+                .iter()
+                .any(|&name| self.node_has_html_name(node, name))
+        });
+        if !matches {
+            self.error(ParseErrorKind::ImpliedEndTagWithUnclosedElements, position);
+        }
+    }
+
     /// "Close a p element" (§13.2.6.4.7): generate implied end tags
     /// except for `p` elements, then pop until a `p` element has been
     /// popped. Callers are expected to have already checked
