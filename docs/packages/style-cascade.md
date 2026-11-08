@@ -46,6 +46,7 @@ flowchart LR
 | `Cascade::computed_style` | the `ComputedStyle` for `Rendering::computed_style` |
 | `Cascade::effective_background` | the colour behind the text, `None` if it cannot be known |
 | `Cascade::backdrop_luminances` | luminance samples where a gradient lies behind the text |
+| `Import::parse`, `Import::wrap` | reads an `@import` prelude; turns the sheet the host supplies into the rules that replace the import (layer, `@supports`, `@media`) |
 | `selector::Selector`, `Specificity`, `Mode` | selector matching; `Resting` for the cascade, `Possible` for "could this rule apply?" |
 | `parse_color`, `over`, `luminance` | CSS colours (including `oklch()`, `lab()`, `color-mix()` in srgb and oklab) and compositing |
 | `Environment` | the assumed window: size, colour scheme, reduced motion; optional hover, pointer, contrast and forced-colors (`Unknown` when unset) |
@@ -73,8 +74,11 @@ What cannot be determined without layout stays undetermined, never guessed:
   make the properties they declare `Unknown`; colours outside sRGB are clipped, not gamut-mapped; the page
   is assumed in the default light scheme unless `Environment` says otherwise.
 - **`@import`.** An unresolved `@import` makes all answers `Unknown` (except an inline `!important`)
-  until the host inlines the imported sheet; presentational hints rank below all author rules,
-  layered or not.
+  until the host replaces it with `Import::wrap(rules)` of the imported sheet: `layer` and
+  `layer(x)` put the rules in that layer (Cascade 5 §6.4.1), `supports()` and a media list apply to
+  the whole sheet. The cascade fetches nothing and resolves no URLs. Layer names are compared
+  after CSS unescaping; presentational hints rank below all author rules, layered or not. An
+  import whose media condition fails does not create its layer (same as a failing `@media`).
 - **Monospace size.** Chrome shrinks the default size to 13 px for `font-family: monospace`;
   the cascade does not, so `<code>` can come out 16 px where Chrome has 13 px.
 - **Presentational attributes** are read for `bgcolor`, `background`, `<font color>`, `<font size>`,

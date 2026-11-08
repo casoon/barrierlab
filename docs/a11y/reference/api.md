@@ -12,6 +12,7 @@ order: 2
 | `run_in`, `run_with_semantics_in`, `run_with_rendering_in`, `run_full_in` | the same, with finding texts in the chosen `Locale` (`En`, `De`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | the rules of a tier, bound to a host |
 | `structure_metas`, `semantics_metas`, `rendering_metas` | the declarations without a host, for listing and naming |
+| `catalogue`, `meta_for` | all declarations in one stable list, and the lookup by finding ID (feature `serde`: serialisable) |
 | `Meta` | IDs, tier, WCAG criteria, default severity and hint of a rule |
 | `StructureRule`, `SemanticsRule`, `RenderingRule` | a rule as a function pointer plus `Meta` |
 

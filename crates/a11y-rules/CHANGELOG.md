@@ -12,6 +12,7 @@ abweichen, steht je Schritt in
 
 ### Added
 
+- **Regelkatalog:** `catalogue()` liefert alle Regeldeklarationen in fester Reihenfolge (Tier 1, 2, 3, Stylesheets), `meta_for(id)` die Deklaration zu einer Befund-Kennung. Mit dem neuen Feature `serde` sind `Meta` und `Scope` serialisierbar (`tier` als Name, z. B. `structure`); ein Test prüft, dass jede Kennung genau einmal vorkommt und die Regelreferenz dieselbe Menge listet; casoon/barrierlab#129.
 - **Checkliste:** zwei weitere `manual/*`-Punkte: `text-spacing` (1.4.12, erscheint bei Text auf der Seite) und `content-on-hover-focus` (1.4.13, erscheint bei `role="tooltip"`, `popover`, `aria-haspopup` oder `onmouseover`). Beide `UNTESTED`: ob bei geändertem Textabstand Text verloren geht oder Hover-Inhalt sich schließen und überfahren lässt, entscheidet kein Markup und keine Kaskade; casoon/barrierlab#114.
 
 ## [0.28.2] - 2026-11-07

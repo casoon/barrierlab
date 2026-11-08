@@ -2,8 +2,8 @@
 //! Vererbung, `var()`, Medien, Ebenen und der effektive Hintergrund.
 
 use a11y_dom::{Arena, Color, Node, elements};
-use style_cascade::{Cascade, Environment, Specified};
-use stylesheet_parse::parse_stylesheet;
+use style_cascade::{Cascade, Environment, Import, Specified};
+use stylesheet_parse::{Rule, Stylesheet, parse_stylesheet};
 
 fn seite(inneres: &str) -> Arena {
     // Ein Mini-Parser reicht nicht für beliebiges HTML: der Aufbau steht hier
@@ -512,4 +512,161 @@ fn aufgeloester_import_gibt_klare_antwort() {
     let c = kaskade("p { color: #020202 } p { color: #010101 }");
     assert!(c.unresolved_imports().is_empty());
     assert_eq!(farbe(&c, &d, "p"), Some(rgb(1, 1, 1)));
+}
+
+/// Ersetzt jedes `@import`, dessen URL in `geliefert` steht, durch
+/// `Import::wrap` des gelieferten Textes (was ein Host tut, der lädt).
+fn mit_importen(css: &str, geliefert: &[(&str, &str)]) -> Cascade {
+    let rules = parse_stylesheet(css)
+        .rules
+        .into_iter()
+        .flat_map(|r| match &r {
+            Rule::Other(a) if a.name == "import" => {
+                let imp = Import::parse(&a.prelude).unwrap();
+                match geliefert.iter().find(|(u, _)| *u == imp.url) {
+                    Some((_, text)) => imp.wrap(parse_stylesheet(text).rules),
+                    None => vec![r],
+                }
+            }
+            _ => vec![r],
+        })
+        .collect();
+    Cascade::new(&[Stylesheet { rules }], Environment::default())
+}
+
+fn p_farbe(c: &Cascade) -> Option<Color> {
+    farbe(c, &seite(r#"<p id="p">t</p>"#), "p")
+}
+
+// CSS Cascade 5 §6.4.1: `@import url() layer(x)` legt die Regeln des Imports in
+// die Ebene x, als stünden sie in `@layer x { … }`.
+#[test]
+fn import_mit_ebene_legt_regeln_in_die_ebene() {
+    let x = "#p { color: #020202 }";
+    // Ohne Ebene gewinnt die Spezifität des Imports …
+    let c = mit_importen("@import url(x.css); p { color: #010101 }", &[("x.css", x)]);
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+    // … in einer Ebene verliert er gegen jede Regel ohne Ebene (§6.4.2).
+    let c = mit_importen(
+        "@import url(x.css) layer(x); p { color: #010101 }",
+        &[("x.css", x)],
+    );
+    assert!(c.unresolved_imports().is_empty());
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+    // Ebene ohne Namen: dasselbe.
+    let c = mit_importen(
+        "@import url(x.css) layer; p { color: #010101 }",
+        &[("x.css", x)],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+}
+
+#[test]
+fn import_ebene_ordnet_nach_erstem_auftreten() {
+    // Der Import steht vor dem Block: x kommt zuerst, y schlägt x.
+    let c = mit_importen(
+        "@import url(x.css) layer(x); @layer y { p { color: #010101 } }",
+        &[("x.css", "#p { color: #020202 }")],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+    // `@layer y;` vor dem Import legt y zuerst an: jetzt schlägt x.
+    let c = mit_importen(
+        "@layer y; @import url(x.css) layer(x); @layer y { p { color: #010101 } }",
+        &[("x.css", "p { color: #020202 }")],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+}
+
+#[test]
+fn import_mit_gleichem_ebenennamen_teilt_die_ebene() {
+    // Gleiche Ebene: die Spezifität entscheidet, nicht die Reihenfolge.
+    let c = mit_importen(
+        "@import url(x.css) layer(x); @layer x { p { color: #010101 } }",
+        &[("x.css", "#p { color: #020202 }")],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+    // Punktname: Unterebene a.b.
+    let c = mit_importen(
+        "@import url(x.css) layer(a.b); @layer a { @layer b { p { color: #010101 } } }",
+        &[("x.css", "#p { color: #020202 }")],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+}
+
+#[test]
+fn import_ohne_namen_ist_je_eine_neue_ebene() {
+    let c = mit_importen(
+        "@import url(a.css) layer; @import url(b.css) layer;",
+        &[
+            ("a.css", "#p { color: #020202 }"),
+            ("b.css", "p { color: #010101 }"),
+        ],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+}
+
+// CSS Conditional 3 §7.1 und Media Queries 4: `supports()` und Medienliste am
+// Import gelten für das ganze importierte Blatt.
+#[test]
+fn import_mit_supports_und_medien() {
+    let x = &[("x.css", "p { color: #020202 }")];
+    let base = "p { color: #010101 }";
+    let c = mit_importen(
+        &format!("@import url(x.css) supports(display: grid); {base}"),
+        x,
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1))); // Import steht davor, später gewinnt: 1
+    let c = mit_importen(
+        &format!("{base} @import url(x.css) supports(display: grid);"),
+        x,
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+    // Nicht erfüllte Bedingung: der Import zählt nicht.
+    let c = mit_importen(
+        &format!("{base} @import url(x.css) supports(not (display: grid));"),
+        x,
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+    let c = mit_importen(&format!("{base} @import url(x.css) print;"), x);
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1)));
+    let c = mit_importen(&format!("{base} @import url(x.css) screen;"), x);
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+    let c = mit_importen(
+        &format!("{base} @import url(x.css) layer(l) supports(display: grid) screen;"),
+        x,
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(1, 1, 1))); // in Ebene: Regel ohne Ebene gewinnt
+}
+
+#[test]
+fn import_ohne_gelieferte_datei_bleibt_unbekannt() {
+    let d = seite(r#"<p id="p">t</p>"#);
+    let c = mit_importen("@import url(x.css) layer(x); p { color: #010101 }", &[]);
+    assert_eq!(c.unresolved_imports(), ["url(x.css) layer(x)"]);
+    assert_eq!(c.specified(finde(&d, "p"), "color"), Specified::Unknown);
+    // Ein unaufgelöster Import im gelieferten Blatt bleibt sichtbar.
+    let c = mit_importen(
+        "@import url(x.css) layer(x); p { color: #010101 }",
+        &[("x.css", "@import url(y.css); p { color: #020202 }")],
+    );
+    assert_eq!(c.unresolved_imports(), ["url(y.css)"]);
+    assert_eq!(c.specified(finde(&d, "p"), "color"), Specified::Unknown);
+}
+
+// CSS Syntax 3 §4.3.7: `\61` und `a` sind derselbe Name.
+#[test]
+fn ebenennamen_werden_nach_unescape_verglichen() {
+    // Gleiche Ebene `a`: die Spezifität entscheidet (2). Als zwei Ebenen
+    // gelesen, gewänne die spätere (1).
+    let css = "@layer a { #p { color: #020202 } } @layer \\61 { p { color: #010101 } }";
+    assert_eq!(ebenen_farbe(css), grau(2));
+    let css =
+        "@layer a\\.b { #p { color: #020202 } } @layer a { @layer b { p { color: #010101 } } }";
+    assert_eq!(ebenen_farbe(css), grau(1)); // maskierter Punkt: Name „a.b", nicht a → b
+    // Über einen Import.
+    let c = mit_importen(
+        "@import url(x.css) layer(\\78); @layer x { p { color: #010101 } }",
+        &[("x.css", "#p { color: #020202 }")],
+    );
+    assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
 }
