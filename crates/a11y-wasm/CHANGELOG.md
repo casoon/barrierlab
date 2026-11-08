@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-11-08
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.28.3 mit fünf neuen Regeln (`frames/cross-origin`, `orientation/root-rotated`, `auth/paste-blocked`, `focus/obscured-enhanced`, `text-spacing/clipped`). Ein Host ohne die zugehörigen Messungen bekommt bis zu fünf `not_run`-Einträge mehr je Lauf; die Spalten für diese Messungen liefert `a11y-wasm` noch nicht.
+
 ## [0.15.1] - 2026-11-07
 
 ### Changed

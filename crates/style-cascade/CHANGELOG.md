@@ -5,15 +5,13 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
-## [0.1.1] - 2026-11-07
+## [0.1.2] - 2026-11-08
 
 ### Added
 
 - **Geteilter Regelsatz:** `RuleSet` (gelesene, indizierte Regeln; unveränderlich, `Send + Sync`) und `Cascade::with_rules(Arc<RuleSet>)`: Seiten mit denselben Stylesheets bauen den Satz einmal und legen je Seite nur die Zwischenspeicher an. `Cascade::new` bleibt, wie es war (casoon/barrierlab#145).
 - **Import-Auflösung:** `expand_imports`, `Resolution`, `ExpandedImports`, `imports_in` und `wrap_media` (aus `a11y-static` hierher verschoben). `Resolution::Inert` lässt der Host einen Import fallen, von dem er weiß, dass er nur `@font-face` enthält, statt dass er alles unbestimmt macht (casoon/barrierlab#145).
 - **Farbschema:** `Cascade::is_dark` und die Auswertung von `color-scheme` (CSS Color Adjustment 1 §2) samt `<meta name=color-scheme>`; `parse_color` liest die Systemfarben `Canvas`, `CanvasText`, `LinkText`, `VisitedText`, `ActiveText`, `ButtonFace`, `ButtonText`, `Field`, `FieldText` (casoon/barrierlab#145).
-
-- **`@import`:** `Import::parse` und `Import::wrap` legen die Regeln eines gelieferten Imports in die Ebene (`layer`, `layer(x)`, anonym), unter `supports()` und die Medienliste (CSS Cascade 5 §6.4.1); ohne gelieferte Datei bleibt es bei `Unknown`. Siehe `docs/packages/style-cascade.md`.
 
 ### Changed
 
@@ -22,6 +20,15 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 ### Fixed
 
 - **Farbschema:** `color-scheme: dark` kippt jetzt die UA-Standardfarben (Text, Links, Formularfelder, Leinwand); vorher blieb ein Link `#0000ee` auf dunklem Grund, was im Dunkeltest einen Kontrast-Fehlalarm ergab. `light-dark()` folgt dem verwendeten Farbschema des Elements statt der Vorliebe der Umgebung: ohne `color-scheme` gilt der helle Zweig auch bei dunkler Vorliebe (casoon/barrierlab#145).
+
+## [0.1.1] - 2026-11-07
+
+### Added
+
+- **`@import`:** `Import::parse` und `Import::wrap` legen die Regeln eines gelieferten Imports in die Ebene (`layer`, `layer(x)`, anonym), unter `supports()` und die Medienliste (CSS Cascade 5 §6.4.1); ohne gelieferte Datei bleibt es bei `Unknown`. Siehe `docs/packages/style-cascade.md`.
+
+### Fixed
+
 - **Ebenen:** Ebenennamen werden vor dem Vergleich unescaped (CSS Syntax 3 §4.3.7): `@layer \61` und `@layer a` sind dieselbe Ebene, ein maskierter Punkt (`a\.b`) trennt keine Unterebene.
 
 ## [0.1.0] - 2026-11-06

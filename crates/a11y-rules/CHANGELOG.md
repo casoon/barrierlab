@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.28.3] - 2026-11-08
+
 ### Added
 
 - **Rahmen:** `frames/cross-origin` (kein Erfolgskriterium, Abdeckungsnotiz): `UNTESTED` je dargestellten Rahmen, dessen Dokument `Rendering::frame_reachable` als nicht lesbar meldet, mit `src` im Text. Liefert der Host für keinen Rahmen eine Messung, steht die Kennung als `NotRun::CapabilityMissing` mit Grund im Bericht; casoon/barrierlab#132.
