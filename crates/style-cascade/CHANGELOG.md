@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-07
+
 ### Added
 
 - **Geteilter Regelsatz:** `RuleSet` (gelesene, indizierte Regeln; unveränderlich, `Send + Sync`) und `Cascade::with_rules(Arc<RuleSet>)`: Seiten mit denselben Stylesheets bauen den Satz einmal und legen je Seite nur die Zwischenspeicher an. `Cascade::new` bleibt, wie es war (casoon/barrierlab#145).

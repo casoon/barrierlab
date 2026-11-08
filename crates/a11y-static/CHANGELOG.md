@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-07
+
 ### Added
 
 - **Webfont-`@import`:** `Sheet::inert(source)` erklärt ein Blatt als ohne Wirkung auf Stile (nur `@font-face`); der `@import`, den es beantwortet, entfällt, statt jede Farbe unbestimmt zu machen. Der Host entscheidet, das Crate rät nicht aus der URL (casoon/barrierlab#145).

@@ -20,6 +20,8 @@ use a11y_dom::{
 
 /// Welche Knoten eine Regel betrachtet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 pub enum Scope {
     /// Was im Accessibility-Tree steht: ohne `aria-hidden="true"` und ohne
     /// Nicht-Dargestelltes. Der Normalfall.
