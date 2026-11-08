@@ -1011,3 +1011,41 @@ replace = '''
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "manual/text-spacing"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/text-spacing",
+        wcag: &["1.4.12"],
+        severity: Severity::Medium,
+        applies: |a| a.text,
+'''
+replace = '''
+        id: "manual/text-spacing",
+        wcag: &["1.4.12"],
+        severity: Severity::Medium,
+        applies: |a| !a.text,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "manual/content-on-hover-focus"
+file = "src/checklist.rs"
+kind = "invert"
+find = '''
+        id: "manual/content-on-hover-focus",
+        wcag: &["1.4.13"],
+        severity: Severity::Medium,
+        applies: |a| a.hover_content,
+'''
+replace = '''
+        id: "manual/content-on-hover-focus",
+        wcag: &["1.4.13"],
+        severity: Severity::Medium,
+        applies: |a| !a.hover_content,
+'''
+test = "korpus"
+expect = "killed"
