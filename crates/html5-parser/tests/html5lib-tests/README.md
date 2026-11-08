@@ -29,8 +29,16 @@ for the authoritative format description
 harness:
 
 - `#data` — input HTML, passed to `parse()` unchanged.
-- `#errors`/`#new-errors` — expected parse errors. Not applicable: this
-  crate has no diagnostics, these sections are skipped entirely.
+- `#errors`/`#new-errors` — expected parse errors, compared by a second
+  test (`html5lib_parse_errors`), not by the tree comparison. `#errors` is
+  html5lib's own vocabulary and counting (some conditions are reported once
+  per character; positions are not the spec's), so only its presence is
+  gated, with the exact count reported. `#new-errors` lists the tokenizer
+  errors by WHATWG code; those are compared as a multiset of codes, with
+  positions reported but not gated. `processing-instructions.dat` is skipped
+  there (this crate's own extension; the corpus has no error expectations
+  for it). Failures: `../html5lib_errors_known_failures.txt`, whose header
+  explains each group.
 - `#document-fragment` — marks a fragment-parsing test case (context
   element for the HTML fragment parsing algorithm). This crate has no
   fragment parsing (`parse()` only does full-document parsing) — any

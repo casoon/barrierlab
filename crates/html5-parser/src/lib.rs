@@ -1157,4 +1157,235 @@ mod tree_construction_error_tests {
             "not in document order: {errors:?}"
         );
     }
+
+    // --- barrierlab#85: the remaining tree-construction parse errors ---
+
+    /// §13.2.6.4.7, any end tag that closes an element "in scope": after
+    /// generating implied end tags, "if the current node is not an HTML
+    /// element with the same tag name as that of the token, then this is a
+    /// parse error". `<div><span></div>` is the issue's own example.
+    #[test]
+    fn end_tag_closes_element_with_open_children() {
+        for input in [
+            "<!doctype html><div><span></div>",
+            "<!doctype html><ul><li><span></li></ul>",
+            "<!doctype html><dl><dd><span></dd></dl>",
+            "<!doctype html><h1><span></h1>",
+            "<!doctype html><h1>x</h2>",
+            "<!doctype html><form><span></form>",
+            "<!doctype html><template><span></template>",
+            "<!doctype html><button><span></button>",
+            "<!doctype html><table><tr><td><span></td></tr></table>",
+            "<!doctype html><table><caption><span></caption></table>",
+            "<!doctype html><ruby>a<rb>b<span></ruby>",
+            "<!doctype html><svg><g><path></g></svg>",
+        ] {
+            assert_raises(input, ParseErrorKind::ImpliedEndTagWithUnclosedElements);
+        }
+        // Implied end tags (li, dd, p, option, rt, ...) are not unclosed.
+        for input in [
+            "<!doctype html><div>x</div>",
+            "<!doctype html><ul><li>a<li>b</ul>",
+            "<!doctype html><dl><dt>a<dd>b</dl>",
+            "<!doctype html><ruby>a<rt>b</ruby>",
+            "<!doctype html><select><option>a</select>",
+            "<!doctype html><svg><g></g></svg>",
+        ] {
+            assert_does_not_raise(input, ParseErrorKind::ImpliedEndTagWithUnclosedElements);
+        }
+    }
+
+    /// §13.2.6.4.7, "li"/"dd"/"dt" start tag, step 4: after generating
+    /// implied end tags, "if the current node is not an li element, then
+    /// this is a parse error".
+    #[test]
+    fn list_item_start_tag_with_open_children() {
+        assert_raises(
+            "<!doctype html><ul><li><span><li>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+        assert_raises(
+            "<!doctype html><dl><dd><span><dt>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+    }
+
+    /// §13.2.6.4.7: "h1".."h6" start tag directly inside a heading, and a
+    /// "button" start tag with a button in scope, are parse errors.
+    #[test]
+    fn nested_heading_and_button() {
+        assert_raises("<!doctype html><h1><h2>", ParseErrorKind::NestedHeading);
+        assert_does_not_raise(
+            "<!doctype html><h1></h1><h2>",
+            ParseErrorKind::NestedHeading,
+        );
+        assert_raises(
+            "<!doctype html><button><button>",
+            ParseErrorKind::NestedButton,
+        );
+        assert_does_not_raise(
+            "<!doctype html><button></button><button>",
+            ParseErrorKind::NestedButton,
+        );
+    }
+
+    /// §13.2.6.4.7: "option"/"optgroup" start tags (and "hr") with a
+    /// select in scope and an option still open.
+    #[test]
+    fn option_in_scope() {
+        assert_raises(
+            "<!doctype html><select><option><span><option>",
+            ParseErrorKind::OptionInScope,
+        );
+        assert_does_not_raise(
+            "<!doctype html><select><option>a<option>b",
+            ParseErrorKind::OptionInScope,
+        );
+    }
+
+    /// §13.2.6.4.7: "rb"/"rtc" and "rp"/"rt" start tags whose current
+    /// node, after generating implied end tags, is not a ruby (or rtc).
+    #[test]
+    fn ruby_start_tags() {
+        assert_raises(
+            "<!doctype html><ruby><span><rb>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+        assert_raises(
+            "<!doctype html><ruby><span><rt>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+        assert_does_not_raise(
+            "<!doctype html><ruby>a<rt>b<rp>c",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+    }
+
+    /// §13.2.6.4.13 "in table body": a "td"/"th" start tag is a parse
+    /// error before the implied "tr" is inserted.
+    #[test]
+    fn cell_start_tag_in_table_body() {
+        assert_raises(
+            "<!doctype html><table><tbody><td>x",
+            ParseErrorKind::MisplacedTokenInTable,
+        );
+        assert_does_not_raise(
+            "<!doctype html><table><tbody><tr><td>x",
+            ParseErrorKind::MisplacedTokenInTable,
+        );
+    }
+
+    /// §13.2.6.4.7 "in body", any other end tag: "If node is not the
+    /// current node, then this is a parse error" (`</b>`-style formatting
+    /// elements go through the adoption agency algorithm instead).
+    #[test]
+    fn any_other_end_tag_with_open_children() {
+        assert_raises(
+            "<!doctype html><section><span></section>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+        assert_raises(
+            "<!doctype html><custom-el><i></custom-el>",
+            ParseErrorKind::ImpliedEndTagWithUnclosedElements,
+        );
+    }
+
+    /// §13.2.6.4.20 "after after body", "anything else": content after
+    /// `</html>` is a parse error ("switch the insertion mode to 'in body'
+    /// and reprocess the token"). Whitespace, comments and `<html>` are
+    /// not.
+    #[test]
+    fn content_after_html_end_tag() {
+        assert_raises("<!doctype html></html><p>x", ParseErrorKind::TokenAfterBody);
+        assert_raises("<!doctype html></html>x", ParseErrorKind::TokenAfterBody);
+        assert_does_not_raise(
+            "<!doctype html><body></html>\n<!-- c -->\n",
+            ParseErrorKind::TokenAfterBody,
+        );
+    }
+
+    /// §13.2.6.4.18-.21, the frameset insertion modes: "anything else:
+    /// parse error, ignore the token", and EOF with the frameset still
+    /// open ("in frameset": "if the current node is not the root html
+    /// element, then this is a parse error").
+    #[test]
+    fn frameset_modes() {
+        // in frameset
+        assert_raises(
+            "<!doctype html><frameset><p>",
+            ParseErrorKind::StrayStartTag,
+        );
+        assert_raises("<!doctype html><frameset>x", ParseErrorKind::StrayCharacter);
+        assert_raises("<!doctype html><frameset></p>", ParseErrorKind::StrayEndTag);
+        assert_raises(
+            "<!doctype html><frameset><frame>",
+            ParseErrorKind::EofWithUnclosedElements,
+        );
+        // after frameset
+        assert_raises(
+            "<!doctype html><frameset></frameset><p>",
+            ParseErrorKind::StrayStartTag,
+        );
+        assert_raises(
+            "<!doctype html><frameset></frameset>x",
+            ParseErrorKind::StrayCharacter,
+        );
+        // after after frameset
+        assert_raises(
+            "<!doctype html><frameset></frameset></html><p>",
+            ParseErrorKind::StrayStartTag,
+        );
+        // A well-formed frameset document raises nothing.
+        assert!(
+            kinds("<!doctype html><frameset><frame></frameset> \n</html>\n").is_empty(),
+            "unexpected errors"
+        );
+    }
+
+    /// §13.2.6.4.3.. "after head": the head-only start tags are a parse
+    /// error there ("push the head element pointer onto the stack").
+    #[test]
+    fn head_start_tag_after_head() {
+        assert_raises(
+            "<!doctype html><head></head><title>t</title>",
+            ParseErrorKind::StrayStartTag,
+        );
+    }
+
+    /// §13.2.6.5 foreign content: HTML start tags that break out of SVG or
+    /// MathML, and `</br>` / `</p>`, are parse errors; a deeper matching
+    /// end tag closes unclosed elements.
+    #[test]
+    fn foreign_content_errors() {
+        assert_raises(
+            "<!doctype html><svg><div>",
+            ParseErrorKind::ForeignContentBreakout,
+        );
+        assert_raises(
+            "<!doctype html><svg><font size=4>",
+            ParseErrorKind::ForeignContentBreakout,
+        );
+        assert_raises(
+            "<!doctype html><svg></p>",
+            ParseErrorKind::ForeignContentBreakout,
+        );
+        assert_does_not_raise(
+            "<!doctype html><svg><font>",
+            ParseErrorKind::ForeignContentBreakout,
+        );
+        assert_does_not_raise(
+            "<!doctype html><svg><foreignObject><div>",
+            ParseErrorKind::ForeignContentBreakout,
+        );
+    }
+
+    /// §13.2.6.4.16 "in template": EOF with a template open is a parse
+    /// error.
+    #[test]
+    fn eof_in_template() {
+        assert_raises(
+            "<!doctype html><template>",
+            ParseErrorKind::EofWithUnclosedElements,
+        );
+    }
 }

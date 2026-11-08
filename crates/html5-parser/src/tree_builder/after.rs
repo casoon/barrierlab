@@ -114,15 +114,34 @@ impl TreeBuilder {
                 self.process_token_in_head(kind, position)
             }
             TokenKind::Eof => {
-                // The parse-error check ("current node is not the root
-                // html element") has no tree-shape effect; it can only
-                // be false in the fragment case anyway (never reached).
+                // "If the current node is not the root html element,
+                // then this is a parse error." Always true here: the
+                // root-html case is the fragment case (never reached).
+                self.error(ParseErrorKind::EofWithUnclosedElements, position);
                 // "Stop parsing" itself is a driver-loop concern, not
                 // yet built.
                 TokenOutcome::Consumed(None)
             }
-            _ => TokenOutcome::Consumed(None),
+            _ => {
+                // "Anything else: Parse error. Ignore the token."
+                self.report_stray_token(kind, position);
+                TokenOutcome::Consumed(None)
+            }
         }
+    }
+
+    /// Records the parse error for a token a mode's "anything else" rule
+    /// rejects ("Parse error. Ignore the token." in the frameset family,
+    /// "Parse error. Pop the noscript" in "in head noscript"): the kind
+    /// depends only on the token's shape.
+    pub(super) fn report_stray_token(&mut self, kind: &TokenKind, position: Position) {
+        let error = match kind {
+            TokenKind::StartTag(_) => ParseErrorKind::StrayStartTag,
+            TokenKind::EndTag(_) => ParseErrorKind::StrayEndTag,
+            TokenKind::Eof => ParseErrorKind::EofWithUnclosedElements,
+            _ => ParseErrorKind::StrayCharacter,
+        };
+        self.error(error, position);
     }
 
     /// The "after frameset" insertion mode (§13.2.6.4.19).
@@ -165,7 +184,11 @@ impl TreeBuilder {
                 self.process_token_in_head(kind, position)
             }
             TokenKind::Eof => TokenOutcome::Consumed(None),
-            _ => TokenOutcome::Consumed(None),
+            _ => {
+                // "Anything else: Parse error. Ignore the token."
+                self.report_stray_token(kind, position);
+                TokenOutcome::Consumed(None)
+            }
         }
     }
 
@@ -197,6 +220,9 @@ impl TreeBuilder {
             }
             TokenKind::Eof => TokenOutcome::Consumed(None),
             _ => {
+                // "Anything else: Parse error. Switch the insertion
+                // mode to 'in body' and reprocess the token."
+                self.error(ParseErrorKind::TokenAfterBody, position);
                 self.insertion_mode = InsertionMode::InBody;
                 TokenOutcome::Reprocess
             }
@@ -234,7 +260,11 @@ impl TreeBuilder {
             TokenKind::StartTag(tag) if tag.name == "noframes" => {
                 self.process_token_in_head(kind, position)
             }
-            _ => TokenOutcome::Consumed(None),
+            _ => {
+                // "Anything else: Parse error. Ignore the token."
+                self.report_stray_token(kind, position);
+                TokenOutcome::Consumed(None)
+            }
         }
     }
 }

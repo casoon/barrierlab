@@ -7,6 +7,31 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **ParseErrorKind:** `StrayCharacter`, `NestedHeading`, `NestedButton`, `OptionInScope` and
+  `ForeignContentBreakout` for the spec's remaining unnamed parse errors: ignored characters in
+  the frameset modes, a heading or `button` start tag directly inside one, `option`/`optgroup`/`hr`
+  with an option in scope, and HTML tags that break out of SVG/MathML (§13.2.6.5).
+- **Tests:** the html5lib tree-construction harness also compares the reported parse errors with
+  each case's `#errors`/`#new-errors` (presence and WHATWG codes; exact count and positions are
+  reported only). 1,581 of 1,602 cases agree on presence (1,486 before) and 1,560 on the codes;
+  the rest are listed in `tests/html5lib_errors_known_failures.txt`.
+
+### Changed
+
+- **Tree construction:** `parse()` reports more tree-construction parse errors for the same input;
+  the tree is unchanged (html5lib conformance stays at 1,726/1,726).
+- **Tree construction:** an end tag whose element still has open children after implied end tags
+  (`<div><span></div>`; also `li`, `dd`/`dt`, headings, `form`, `button`, `td`/`th`, `caption`,
+  `template`, any other end tag and foreign content) is reported as
+  `ImpliedEndTagWithUnclosedElements`, as are `li`/`dd`/`dt` and `rb`/`rtc`/`rp`/`rt` start tags
+  with an unclosed current node.
+- **Tree construction:** content after `</html>` is `TokenAfterBody`; ignored tokens in the
+  frameset modes are `StrayStartTag`/`StrayEndTag`/`StrayCharacter`, and EOF with a frameset or
+  `template` open is `EofWithUnclosedElements`; a head-only start tag after `</head>` and `input`
+  inside `select` are `StrayStartTag`; `td`/`th` in a table body is `MisplacedTokenInTable`.
+
 ## [0.4.2] - 2026-11-06
 
 ### Added

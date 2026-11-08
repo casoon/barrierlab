@@ -89,6 +89,18 @@ rather than deleted, as the harness's regression-tracking mechanism —
 see that file's header — for whenever a future corpus refresh or code
 change introduces a real one).
 
+The same file also compares the reported parse errors against the corpus's
+`#errors`/`#new-errors` sections (presence of errors, and the WHATWG codes
+of tokenizer errors; see `tests/html5lib-tests/README.md` for what is gated
+and why) — 1,581 of 1,602 cases agree on presence and 1,560 on the codes;
+the 51 failing are listed, with reasons, in
+`tests/html5lib_errors_known_failures.txt`. The html5lib *tokenizer* corpus
+(`tests/html5lib-tests/tokenizer/*.test`) runs from
+`src/tokenizer_conformance.rs`; its token streams all match, its `errors`
+are not compared. Not covered: fragment cases (`#document-fragment`, no
+fragment parsing) and `#script-on`-only cases (scripting is always off).
+Both are counted and printed by the harness, not dropped silently.
+
 ## Normative basis
 
 Implementation decisions are derived from the
