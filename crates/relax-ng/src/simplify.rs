@@ -96,6 +96,21 @@ impl Definitions {
         Self { entries, index }
     }
 
+    /// Every definition with its name, in name order — what [`Definitions::new`] was given.
+    #[cfg(feature = "serialize")]
+    pub(crate) fn named(&self) -> Vec<(&str, &Pattern)> {
+        let mut named: Vec<_> = self
+            .index
+            .iter()
+            .map(|(name, &position)| (position, name.as_str()))
+            .collect();
+        named.sort_unstable();
+        named
+            .into_iter()
+            .map(|(position, name)| (name, &self.entries[position].pattern))
+            .collect()
+    }
+
     fn entry(&self, name: &str) -> Option<&Definition> {
         self.index
             .get(name)
