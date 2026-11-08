@@ -18,8 +18,9 @@
 //! and its stylesheet rules.
 //!
 //! Stylesheets the host could not supply are not skipped silently: the report
-//! carries an [`InputNote`](a11y_report::InputNote) for each, and the contrast
-//! rules come out undecided rather than passed.
+//! carries an [`InputNote`](a11y_report::InputNote) for each (with the reason
+//! from [`Sheet::failed`]), and the contrast rules come out undecided rather
+//! than passed. URLs are never resolved or fetched here; that is the host's job.
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

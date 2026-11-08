@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-07
+
+### Added
+
+- **API:** `CheckReport::to_report()` hands a finding's `FindingDetail` on in `Finding::extra`
+  (`finding.extra.get::<FindingDetail>()`), so hosts can localize schema messages through the
+  shared model instead of the deprecated `Finding` type. `extra` is never serialized; the JSON is
+  unchanged.
+
 ## [0.4.1] - 2026-11-06
 
 ### Added
