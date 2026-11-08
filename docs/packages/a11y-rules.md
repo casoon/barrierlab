@@ -12,8 +12,8 @@ build time, CI and the live page. The result is always a `Report` from
 
 0.26.0 on crates.io. Used by auditmysite (`wcag/shared.rs` calls
 `run_with_semantics`), astro-post-audit and liveaudit. The identifiers are stable across
-all surfaces and declared in `Meta::ids`: 94 in tier 1 (structure),
-35 in tier 2 (semantics), 17 in tier 3 (rendering), 5 over stylesheets. The
+all surfaces and declared in `Meta::ids`: 107 in tier 1 (structure),
+35 in tier 2 (semantics), 22 in tier 3 (rendering), 5 over stylesheets. The
 complete list is in the [rule reference](../a11y/reference/regeln.mdx).
 
 ## Structure

@@ -151,10 +151,8 @@ fn rotate_turns(value: &str) -> Option<bool> {
         v.parse::<f64>().ok()? * 0.9
     } else if let Some(v) = angle.strip_suffix("rad") {
         v.parse::<f64>().ok()?.to_degrees()
-    } else if let Some(v) = angle.strip_suffix("turn") {
-        v.parse::<f64>().ok()? * 360.0
     } else {
-        return None;
+        angle.strip_suffix("turn")?.parse::<f64>().ok()? * 360.0
     };
     let off = degrees.rem_euclid(180.0);
     Some(axis && off > 0.01 && off < 179.99)
