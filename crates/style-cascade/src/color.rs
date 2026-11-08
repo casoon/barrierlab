@@ -56,7 +56,33 @@ pub fn parse_color(text: &str, dark: bool) -> Option<Color> {
             a: 0,
         });
     }
-    benannt(v)
+    system_color(v, dark).or_else(|| benannt(v))
+}
+
+/// Die Systemfarben, die die UA-Standardfarben tragen (CSS Color 4 §6.2).
+/// Die Norm überlässt die Werte dem User Agent und verlangt nur, dass sie dem
+/// verwendeten Farbschema folgen (CSS Color Adjustment 1 §2.2); hier gelten
+/// die Werte von Chromium, einmal für hell, einmal für dunkel.
+fn system_color(v: &str, dark: bool) -> Option<Color> {
+    let (hell, dunkel) = match v {
+        "canvas" => (0xffffff, 0x121212),
+        "canvastext" => (0x000000, 0xffffff),
+        "linktext" => (0x0000ee, 0x9e9eff),
+        "visitedtext" => (0x551a8b, 0xd0adf0),
+        "activetext" => (0xff0000, 0xff9e9e),
+        "buttonface" => (0xefefef, 0x6b6b6b),
+        "buttontext" => (0x000000, 0xffffff),
+        "field" => (0xffffff, 0x3b3b3b),
+        "fieldtext" => (0x000000, 0xffffff),
+        _ => return None,
+    };
+    let rgb: u32 = if dark { dunkel } else { hell };
+    Some(Color {
+        r: (rgb >> 16) as u8,
+        g: (rgb >> 8) as u8,
+        b: rgb as u8,
+        a: 255,
+    })
 }
 
 /// Relative Leuchtdichte nach WCAG 2.2 (sRGB), 0,0 bis 1,0. Alpha bleibt

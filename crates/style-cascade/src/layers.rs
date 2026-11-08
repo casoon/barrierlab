@@ -45,7 +45,7 @@ pub(crate) struct LayerTree {
 const ROOT: usize = 0;
 
 impl LayerTree {
-    pub(crate) fn build(sheets: &[Stylesheet], env: &Environment) -> Self {
+    pub(crate) fn build(sheets: &[&Stylesheet], env: &Environment) -> Self {
         let mut t = LayerTree {
             nodes: vec![Node {
                 children: Vec::new(),

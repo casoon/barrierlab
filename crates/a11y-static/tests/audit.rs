@@ -412,3 +412,39 @@ fn empty_href_is_noted() {
     let page = Page::parse(&doc("<link rel=stylesheet href=\"\">", ""));
     assert!(page.stylesheet_refs().is_empty());
 }
+
+const FONT_IMPORT: &str = "@import url(https://fonts.example/css?family=X);";
+
+#[test]
+fn inert_import_keeps_contrast_decided() {
+    let html = doc(
+        &format!("<style>{FONT_IMPORT} p{{color:#999;background:#fff}}</style>"),
+        LOW,
+    );
+    // Unanswered: the host cannot know what the import sets.
+    let r = audit(&html, &[], Environment::default());
+    assert!(
+        r.inputs
+            .iter()
+            .any(|i| i.kind == InputKind::StylesheetUnresolved)
+    );
+    assert!(!failed(&r, "contrast/text-insufficient"));
+    // Declared by the host as without effect on styles.
+    let sheets = [Sheet::inert("https://fonts.example/css?family=X")];
+    let r = audit(&html, &sheets, Environment::default());
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+}
+
+#[test]
+fn inert_import_inside_a_linked_sheet() {
+    let html = doc("<link rel=stylesheet href=a.css>", LOW);
+    let a = Sheet::new(
+        "a.css",
+        format!("{FONT_IMPORT} p{{color:#999;background:#fff}}"),
+    )
+    .with_imports(vec![Sheet::inert("https://fonts.example/css?family=X")]);
+    let r = audit(&html, &[a], Environment::default());
+    assert!(r.inputs.is_empty(), "{:?}", r.inputs);
+    assert!(failed(&r, "contrast/text-insufficient"));
+}

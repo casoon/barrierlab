@@ -9,7 +9,7 @@
 //! `@import`-Regel stehen und die Kaskade antwortet `Unknown`
 //! ([`Cascade::unresolved_imports`](crate::Cascade::unresolved_imports)).
 
-use stylesheet_parse::{AtRule, GroupRule, MediaRule, Rule};
+use stylesheet_parse::{AtRule, GroupRule, MediaRule, Rule, Stylesheet, parse_stylesheet};
 
 /// Die Ebene, in die ein Import seine Regeln legt (Cascade 5 §6.4.1).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,6 +128,153 @@ impl Import {
         }
         out
     }
+}
+
+/// Was der Host zu einem `@import` weiß, den [`expand_imports`] ihm vorlegt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Resolution {
+    /// Der Text des importierten Blatts. Dessen eigene `@import`-Regeln
+    /// werden demselben Auflöser vorgelegt.
+    Css(String),
+    /// Der Host erklärt: dieses Blatt enthält keine Regeln, die einen Wert
+    /// bestimmen (typisch ein Webfont-Stylesheet, das nur `@font-face`
+    /// enthält). Der `@import` fällt weg und macht nichts unbestimmt. Das ist
+    /// eine Aussage des Hosts, keine Vermutung der Kaskade: sie rät nie aus
+    /// einer URL.
+    Inert,
+    /// Der Host konnte das Blatt nicht liefern; der Grund steht in
+    /// [`ExpandedImports::failures`]. Der `@import` bleibt unaufgelöst.
+    Failed(String),
+    /// Der Host weiß nichts über dieses Blatt. Der `@import` bleibt
+    /// unaufgelöst.
+    Unresolved,
+}
+
+/// Das Ergebnis von [`expand_imports`].
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct ExpandedImports {
+    /// Die Regeln des Blatts, die gelieferten Importe an ihrer Stelle.
+    pub rules: Vec<Rule>,
+    /// Zu jedem `@import`, der offen blieb und einen Grund hat
+    /// ([`Resolution::Failed`], Zyklus, zu tiefe Verschachtelung): der
+    /// Vorspann, wie ihn [`Cascade::unresolved_imports`](crate::Cascade::unresolved_imports)
+    /// nennt, und der Grund.
+    pub failures: Vec<(String, String)>,
+}
+
+const MAX_IMPORT_DEPTH: usize = 16;
+
+/// Liest `css` und ersetzt jeden `@import`, den der Host beantwortet, durch
+/// die Regeln des importierten Blatts — eingewickelt, wie der Import es
+/// verlangt ([`Import::wrap`]: Ebene, `supports()`, Medien).
+///
+/// `resolve` bekommt den gelesenen [`Import`] und die Kette der URLs der
+/// Importe, in denen er steht (außen zuerst, leer auf oberster Ebene); damit
+/// findet ein Host, der importierte Blätter je Blatt verwaltet, das richtige.
+/// Importe ohne lesbare URL, mit [`Resolution::Failed`] oder
+/// [`Resolution::Unresolved`] bleiben stehen; Zyklen und mehr als 16 Ebenen
+/// auch (mit Grund in [`ExpandedImports::failures`]).
+///
+/// ```
+/// use style_cascade::{Resolution, expand_imports};
+///
+/// let out = expand_imports(
+///     "@import url(a.css) layer(base); p { color: red }",
+///     &mut |import, _chain| match import.url.as_str() {
+///         "a.css" => Resolution::Css("a { color: blue }".into()),
+///         _ => Resolution::Unresolved,
+///     },
+/// );
+/// assert_eq!(out.rules.len(), 2);
+/// assert!(out.failures.is_empty());
+/// ```
+pub fn expand_imports(
+    css: &str,
+    resolve: &mut dyn FnMut(&Import, &[String]) -> Resolution,
+) -> ExpandedImports {
+    let mut failures = Vec::new();
+    let rules = expand(css, resolve, &mut Vec::new(), &mut failures);
+    ExpandedImports { rules, failures }
+}
+
+fn expand(
+    css: &str,
+    resolve: &mut dyn FnMut(&Import, &[String]) -> Resolution,
+    chain: &mut Vec<String>,
+    failures: &mut Vec<(String, String)>,
+) -> Vec<Rule> {
+    let mut out = Vec::new();
+    for rule in parse_stylesheet(css).rules {
+        let Rule::Other(at) = &rule else {
+            out.push(rule);
+            continue;
+        };
+        if at.name != "import" {
+            out.push(rule);
+            continue;
+        }
+        let prelude = at.prelude.trim().to_string();
+        let Some(import) = Import::parse(&prelude) else {
+            out.push(rule);
+            continue;
+        };
+        let text = match resolve(&import, chain) {
+            Resolution::Css(text) => text,
+            Resolution::Inert => continue,
+            Resolution::Failed(reason) => {
+                failures.push((prelude, reason));
+                out.push(rule);
+                continue;
+            }
+            Resolution::Unresolved => {
+                out.push(rule);
+                continue;
+            }
+        };
+        if chain.contains(&import.url) || chain.len() >= MAX_IMPORT_DEPTH {
+            failures.push((prelude, "@import cycle or nesting too deep".into()));
+            out.push(rule);
+            continue;
+        }
+        chain.push(import.url.clone());
+        let inner = expand(&text, resolve, chain, failures);
+        chain.pop();
+        // Layer, `supports()` and media of the import become the matching
+        // wrapper rules (Cascade 5 §6.4.1); the cascade ranks them.
+        out.extend(import.wrap(inner));
+    }
+    out
+}
+
+/// Die `@import`-Regeln auf oberster Ebene von `css`, gelesen, in
+/// Reihenfolge. Ein Host, der Importe laden will, erfährt so, was er liefern
+/// muss, ohne selbst zu parsen.
+pub fn imports_in(css: &str) -> Vec<Import> {
+    parse_stylesheet(css)
+        .rules
+        .iter()
+        .filter_map(|r| match r {
+            Rule::Other(at) if at.name == "import" => Import::parse(&at.prelude),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Verpackt die Regeln eines `<link media=…>` oder `<style media=…>` in einen
+/// `@media`-Block. `@import` bleibt auf oberster Ebene, wo die Kaskade ihn
+/// sucht. Ohne Bedingung bleiben die Regeln, wie sie sind.
+pub fn wrap_media(rules: Vec<Rule>, media: Option<&str>) -> Stylesheet {
+    let Some(condition) = media else {
+        return Stylesheet { rules };
+    };
+    let (mut rules, inner): (Vec<_>, Vec<_>) = rules.into_iter().partition(is_import);
+    rules.push(Rule::Media(MediaRule {
+        condition: condition.to_string(),
+        rules: inner,
+    }));
+    Stylesheet { rules }
 }
 
 fn is_import(r: &Rule) -> bool {

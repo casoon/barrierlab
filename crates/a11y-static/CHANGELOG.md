@@ -5,7 +5,12 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-07
+
 ### Added
+
+- **Webfont-`@import`:** `Sheet::inert(source)` erklärt ein Blatt als ohne Wirkung auf Stile (nur `@font-face`); der `@import`, den es beantwortet, entfällt, statt jede Farbe unbestimmt zu machen. Der Host entscheidet, das Crate rät nicht aus der URL (casoon/barrierlab#145).
+- **Import-Auflösung:** Die Expansion steckt jetzt in `style_cascade::expand_imports` und ist dort öffentlich; `a11y-static` benutzt sie selbst (casoon/barrierlab#145).
 
 - **Quellposition:** `Page::audit` setzt `Location::position` (Zeile und Spalte ab 1, Byte-Versatz ab 0, der `<` des Start-Tags) an jedem Befund mit Knoten. Für vom Parser ergänzte Elemente gilt die Stelle des nächsten Vorfahren aus dem Quelltext, sonst bleibt das Feld leer. Welche Befunde keine Position bekommen, steht in der Doku.
 - **Ausfallgrund:** `Sheet::failed(source, reason)`; der Grund steht im `detail` des `StylesheetUnavailable`-Vermerks, die Kontrastregeln bleiben `untested`.
@@ -15,7 +20,7 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ### Changed
 
-- **`Sheet` (inkompatibel zu 0.1.0):** `#[non_exhaustive]` mit den neuen Feldern `failure` und `imports`; Aufbau über `Sheet::new`, `Sheet::failed`, `with_media`, `with_imports`. `media` am `Sheet` ist jetzt das `media` des `<link>`, das es beantwortet, kein Überschreiben mehr; ohne `media` passt es auf jeden Link mit dem `href`.
+- **`Sheet` (inkompatibel zu 0.1.0):** `#[non_exhaustive]` mit den neuen Feldern `failure`, `imports` und `inert`; Aufbau über `Sheet::new`, `Sheet::failed`, `with_media`, `with_imports`. `media` am `Sheet` ist jetzt das `media` des `<link>`, das es beantwortet, kein Überschreiben mehr; ohne `media` passt es auf jeden Link mit dem `href`.
 - **Zuordnung:** Ein `<link>` wird über `href` plus `media` zugeordnet; zwei Links mit gleichem `href` und verschiedenem `media` bekommen je ihr Blatt.
 
 ## [0.1.0] - 2026-11-06

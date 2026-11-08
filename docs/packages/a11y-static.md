@@ -38,8 +38,9 @@ flowchart LR
 | `Page::audit(sheets, env, locale)` | runs all rule tiers and the stylesheet rules, adds input notes |
 | `Sheet::new(source, css)` | a fetched sheet; `source` is the `href` of the link, verbatim |
 | `Sheet::failed(source, reason)` | a sheet the host could not fetch; `reason` becomes the note detail |
+| `Sheet::inert(source)` | a sheet the host declares as without effect on styles (a web-font stylesheet); an `@import` it answers is dropped, nothing stays undetermined |
 | `Sheet::with_media(m)`, `Sheet::with_imports(v)` | the `media` of the link it answers; the sheets it `@import`s |
-| `Sheet { source, css, media, failure, imports }` | the fields behind these; `#[non_exhaustive]`, build through the constructors |
+| `Sheet { source, css, media, failure, imports, inert }` | the fields behind these; `#[non_exhaustive]`, build through the constructors |
 | `Environment`, `Locale` | re-exported from `style-cascade` and `a11y-rules` |
 | feature `de` | German finding texts |
 
@@ -62,6 +63,13 @@ flowchart LR
   (Cascade 5 §6.4.1), `supports()` and a media list become `@supports` and `@media` (see
   `style_cascade::Import`). For an `@import` in an inline `<style>` the top-level `sheets` are
   searched.
+- **Web-font imports.** `@import url(https://fonts.googleapis.com/…)` of a sheet that only holds
+  `@font-face` would leave every colour undetermined. The host, which knows (or decides), answers it
+  with `Sheet::inert(url)` in `Sheet::imports` (or the top-level `sheets` for an inline `<style>`):
+  the import is dropped, no `StylesheetUnresolved` note, the contrast rules decide. The crate never
+  infers this from a URL. `style_cascade::imports_in(css)` lists the imports of a text, if the host
+  needs to see them first. The expansion itself is `style_cascade::expand_imports`, public for hosts
+  with their own adapter.
 - **Missing input.** A `<link>` without a usable `Sheet` gives `InputKind::StylesheetUnavailable`,
   with `Sheet::failure` as detail if the host gave a reason; so does a qualifying `<link>` with
   empty or missing `href` (no subject; it is not in `stylesheet_refs`, there is nothing to fetch).
@@ -107,5 +115,5 @@ Downward: `html5-parser`, `a11y-dom` (feature `html5-parser`), `a11y-report`, `a
 - No layout: no box geometry, so rules that need it do not decide.
 - A sheet supplied for no `<link>` (and no import) is ignored; the host fetches what
   `stylesheet_refs` names.
-- Imports are not followed, only the ones the host hands over are applied.
+- Imports are not followed, only the ones the host hands over are applied (`Sheet::imports`, `Sheet::inert`).
 - An unresolved `@import` in a sheet that has a `media` condition is treated as unconditional.

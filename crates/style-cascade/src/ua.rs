@@ -15,12 +15,15 @@ pub(crate) fn declared<'a, N: Node<'a>>(n: N, prop: &str) -> Option<String> {
     let s = |v: &str| Some(v.to_string());
     match prop {
         "display" => s(display(n, t)),
-        "color" if link => s("#0000ee"),
-        "color" if matches!(t, "input" | "textarea" | "select" | "button") => s("#000000"),
+        // System colours, resolved against the used colour scheme of the
+        // element (`parse_color`), so that `color-scheme: dark` flips them.
+        "color" if link => s("linktext"),
+        "color" if matches!(t, "input" | "textarea" | "select") => s("fieldtext"),
+        "color" if t == "button" => s("buttontext"),
         "color" if t == "mark" => s("#000000"),
         "background-color" if t == "mark" => s("#ffff00"),
-        "background-color" if matches!(t, "input" | "textarea" | "select") => s("#ffffff"),
-        "background-color" if t == "button" => s("#efefef"),
+        "background-color" if matches!(t, "input" | "textarea" | "select") => s("field"),
+        "background-color" if t == "button" => s("buttonface"),
         "text-decoration-line" if link => s("underline"),
         "text-decoration-line" if matches!(t, "u" | "ins") => s("underline"),
         "text-decoration-line" if matches!(t, "s" | "strike" | "del") => s("line-through"),
@@ -85,6 +88,9 @@ pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<Expanded> {
     let tag = n.local_name().to_ascii_lowercase();
     let t = tag.as_str();
     match prop {
+        // HTML, standard metadata names (`color-scheme`): the page's
+        // supported colour schemes act like a `color-scheme` on the root.
+        "color-scheme" if n.parent().is_none() => meta_color_scheme(n).map(Expanded::Set),
         "background-color"
             if matches!(
                 t,
@@ -116,6 +122,21 @@ pub(crate) fn hint<'a, N: Node<'a>>(n: N, prop: &str) -> Option<Expanded> {
         }),
         _ => None,
     }
+}
+
+/// `content` of the first `<meta name=color-scheme>` in the document head.
+fn meta_color_scheme<'a, N: Node<'a>>(root: N) -> Option<String> {
+    root.children()
+        .filter(|h| h.is_element("head"))
+        .flat_map(|h| h.children())
+        .find(|m| {
+            m.is_element("meta")
+                && m.attr("name")
+                    .is_some_and(|v| v.trim().eq_ignore_ascii_case("color-scheme"))
+        })
+        .and_then(|m| m.attr("content"))
+        .map(|c| c.trim().to_string())
+        .filter(|c| !c.is_empty())
 }
 
 fn display<'a, N: Node<'a>>(n: N, t: &str) -> &'static str {
@@ -171,7 +192,7 @@ mod tests {
             .close()
             .build();
         let el: Vec<_> = elements(&d).collect();
-        assert_eq!(declared(el[2], "color").as_deref(), Some("#0000ee"));
+        assert_eq!(declared(el[2], "color").as_deref(), Some("linktext"));
         assert_eq!(declared(el[3], "color"), None);
         assert_eq!(declared(el[4], "font-size").as_deref(), Some("2em"));
         assert_eq!(declared(el[4], "display").as_deref(), Some("block"));

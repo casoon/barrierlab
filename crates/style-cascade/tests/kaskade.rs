@@ -2,45 +2,52 @@
 //! Vererbung, `var()`, Medien, Ebenen und der effektive Hintergrund.
 
 use a11y_dom::{Arena, Color, Node, elements};
-use style_cascade::{Cascade, Environment, Import, Specified};
+use style_cascade::{
+    Cascade, Environment, Import, Resolution, RuleSet, Specified, expand_imports, imports_in,
+};
 use stylesheet_parse::{Rule, Stylesheet, parse_stylesheet};
 
 fn seite(inneres: &str) -> Arena {
-    // Ein Mini-Parser reicht nicht für beliebiges HTML: der Aufbau steht hier
-    // von Hand, je Test eine Kette `<body><p id=...>`.
+    seite_kopf("", inneres)
+}
+
+fn kopiere_baum(
+    d: &html5_parser::Document,
+    id: html5_parser::NodeId,
+    b: a11y_dom::ArenaBuilder,
+) -> a11y_dom::ArenaBuilder {
+    use html5_parser::NodeKind as H;
+    match &d.node(id).kind {
+        H::Element {
+            name, attributes, ..
+        } => {
+            let mut b = b.open(name);
+            for a in attributes {
+                b = b.attr(&a.name, &a.value);
+            }
+            for k in d.children(id) {
+                b = kopiere_baum(d, k, b);
+            }
+            b.close()
+        }
+        H::DocumentFragment => d.children(id).fold(b, |b, k| kopiere_baum(d, k, b)),
+        H::Text { content } => b.text(content),
+        _ => b,
+    }
+}
+
+// Ein Mini-Parser reicht nicht für beliebiges HTML: der Aufbau steht hier
+// von Hand, je Test eine Kette `<body><p id=...>`.
+fn seite_kopf(kopf: &str, inneres: &str) -> Arena {
     let doc = html5_parser::parse(&format!(
-        "<!DOCTYPE html><html><body>{inneres}</body></html>"
+        "<!DOCTYPE html><html><head>{kopf}</head><body>{inneres}</body></html>"
     ))
     .document;
-    fn kopiere(
-        d: &html5_parser::Document,
-        id: html5_parser::NodeId,
-        b: a11y_dom::ArenaBuilder,
-    ) -> a11y_dom::ArenaBuilder {
-        use html5_parser::NodeKind as H;
-        match &d.node(id).kind {
-            H::Element {
-                name, attributes, ..
-            } => {
-                let mut b = b.open(name);
-                for a in attributes {
-                    b = b.attr(&a.name, &a.value);
-                }
-                for k in d.children(id) {
-                    b = kopiere(d, k, b);
-                }
-                b.close()
-            }
-            H::DocumentFragment => d.children(id).fold(b, |b, k| kopiere(d, k, b)),
-            H::Text { content } => b.text(content),
-            _ => b,
-        }
-    }
     let wurzel = doc
         .children(doc.root())
         .find(|&c| matches!(doc.node(c).kind, html5_parser::NodeKind::Element { .. }))
         .unwrap();
-    kopiere(&doc, wurzel, Arena::builder()).build()
+    kopiere_baum(&doc, wurzel, Arena::builder()).build()
 }
 
 fn kaskade(css: &str) -> Cascade {
@@ -669,4 +676,230 @@ fn ebenennamen_werden_nach_unescape_verglichen() {
         &[("x.css", "#p { color: #020202 }")],
     );
     assert_eq!(p_farbe(&c), Some(rgb(2, 2, 2)));
+}
+
+// ---------------------------------------------------------------------------
+// Geteilter Regelsatz (RuleSet)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn regelsatz_ist_send_und_sync_und_teilbar() {
+    fn send_sync<T: Send + Sync>() {}
+    send_sync::<RuleSet>();
+    let sheet = parse_stylesheet("p { color: #010101 }");
+    let rules = std::sync::Arc::new(RuleSet::new(&[&sheet], Environment::default()));
+    let d = seite(r#"<p id="a">t</p>"#);
+    let eins = Cascade::with_rules(std::sync::Arc::clone(&rules));
+    let zwei = Cascade::with_rules(std::sync::Arc::clone(&rules));
+    assert_eq!(farbe(&eins, &d, "a"), Some(rgb(1, 1, 1)));
+    assert_eq!(farbe(&zwei, &d, "a"), Some(rgb(1, 1, 1)));
+    assert!(std::sync::Arc::ptr_eq(eins.rules(), zwei.rules()));
+    // Über Threads: je Thread eine Kaskade, ein Regelsatz.
+    std::thread::scope(|s| {
+        for _ in 0..4 {
+            let rules = std::sync::Arc::clone(&rules);
+            s.spawn(move || {
+                let d = seite(r#"<p id="a">t</p>"#);
+                let c = Cascade::with_rules(rules);
+                assert_eq!(farbe(&c, &d, "a"), Some(rgb(1, 1, 1)));
+            });
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Import-Auflösung
+// ---------------------------------------------------------------------------
+
+#[test]
+fn expand_imports_ersetzt_geliefertes_und_laesst_den_rest_stehen() {
+    let mut gefragt = Vec::new();
+    let out = expand_imports(
+        "@import url(a.css) layer(x); @import url(fehlt.css); @import url(kaputt.css); p { color: red }",
+        &mut |imp, kette| {
+            gefragt.push((imp.url.clone(), kette.to_vec()));
+            match imp.url.as_str() {
+                "a.css" => Resolution::Css("@import url(b.css); a { color: blue }".into()),
+                "b.css" => Resolution::Css("b { color: green }".into()),
+                "kaputt.css" => Resolution::Failed("HTTP 500".into()),
+                _ => Resolution::Unresolved,
+            }
+        },
+    );
+    // b.css wurde mit der Kette [a.css] erfragt.
+    assert!(gefragt.contains(&("b.css".to_string(), vec!["a.css".to_string()])));
+    assert_eq!(
+        out.failures,
+        vec![("url(kaputt.css)".to_string(), "HTTP 500".to_string())]
+    );
+    let sheet = Stylesheet { rules: out.rules };
+    let c = Cascade::new(&[sheet], Environment::default());
+    assert_eq!(
+        c.unresolved_imports(),
+        ["url(fehlt.css)", "url(kaputt.css)"]
+    );
+}
+
+#[test]
+fn expand_imports_inert_faellt_weg_und_macht_nichts_unbestimmt() {
+    let out = expand_imports(
+        "@import url(https://fonts.example/css?family=X); p { color: #010101 }",
+        &mut |_, _| Resolution::Inert,
+    );
+    assert!(out.failures.is_empty());
+    let d = seite(r#"<p id="a">t</p>"#);
+    let c = Cascade::new(&[Stylesheet { rules: out.rules }], Environment::default());
+    assert!(c.unresolved_imports().is_empty());
+    assert_eq!(farbe(&c, &d, "a"), Some(rgb(1, 1, 1)));
+    // Ohne die Erklärung des Hosts bleibt es unbestimmt.
+    let c = kaskade("@import url(https://fonts.example/css?family=X); p { color: #010101 }");
+    assert_eq!(farbe(&c, &d, "a"), None);
+}
+
+#[test]
+fn expand_imports_zyklus_und_imports_in() {
+    let out = expand_imports("@import url(a.css);", &mut |_, _| {
+        Resolution::Css("@import url(a.css);".into())
+    });
+    assert_eq!(out.failures.len(), 1);
+    assert!(out.failures[0].1.contains("cycle"));
+    let imps = imports_in("@import url(a.css) screen; @import 'b.css'; p{}");
+    assert_eq!(imps.len(), 2);
+    assert_eq!(imps[0].url, "a.css");
+    assert_eq!(imps[0].media.as_deref(), Some("screen"));
+}
+
+// ---------------------------------------------------------------------------
+// color-scheme (CSS Color Adjustment 1 §2: Color Scheme; HTML: meta color-scheme)
+// ---------------------------------------------------------------------------
+
+fn kaskade_env(css: &str, dark: bool) -> Cascade {
+    let env = Environment {
+        dark,
+        ..Environment::default()
+    };
+    Cascade::new(&[parse_stylesheet(css)], env)
+}
+
+const LINK: &str = r##"<p id="p">t</p><a id="l" href="#">l</a>"##;
+const LINK_HELL: Color = rgb(0x00, 0x00, 0xee);
+const LINK_DUNKEL: Color = rgb(0x9e, 0x9e, 0xff);
+
+fn standardfarben(c: &Cascade, d: &Arena) -> (Option<Color>, Option<Color>, Option<Color>) {
+    (
+        farbe(c, d, "l"),
+        farbe(c, d, "p"),
+        c.effective_background(finde(d, "p")),
+    )
+}
+
+#[test]
+fn color_scheme_dark_kippt_die_ua_standardfarben() {
+    let d = seite(LINK);
+    // Ohne color-scheme: hell, auch wenn die Umgebung dunkel bevorzugt
+    // (`normal` ist hell; es gibt kein automatisches Abdunkeln).
+    for env_dark in [false, true] {
+        let c = kaskade_env("", env_dark);
+        assert_eq!(
+            standardfarben(&c, &d),
+            (
+                Some(LINK_HELL),
+                Some(rgb(0, 0, 0)),
+                Some(rgb(255, 255, 255))
+            )
+        );
+    }
+    // `dark`: Link, Text und Leinwand kippen, unabhängig von der Vorliebe.
+    for env_dark in [false, true] {
+        let c = kaskade_env("html { color-scheme: dark }", env_dark);
+        assert_eq!(
+            standardfarben(&c, &d),
+            (
+                Some(LINK_DUNKEL),
+                Some(rgb(255, 255, 255)),
+                Some(rgb(0x12, 0x12, 0x12))
+            )
+        );
+    }
+}
+
+#[test]
+fn color_scheme_light_dark_folgt_der_vorliebe_der_umgebung() {
+    let d = seite(LINK);
+    let hell = (
+        Some(LINK_HELL),
+        Some(rgb(0, 0, 0)),
+        Some(rgb(255, 255, 255)),
+    );
+    let dunkel = (
+        Some(LINK_DUNKEL),
+        Some(rgb(255, 255, 255)),
+        Some(rgb(0x12, 0x12, 0x12)),
+    );
+    let css = "html { color-scheme: light dark }";
+    assert_eq!(standardfarben(&kaskade_env(css, false), &d), hell);
+    assert_eq!(standardfarben(&kaskade_env(css, true), &d), dunkel);
+    // Steht die Vorliebe nicht in der Liste, gilt das erste der Liste.
+    let css = "html { color-scheme: light }";
+    assert_eq!(standardfarben(&kaskade_env(css, true), &d), hell);
+    let css = "html { color-scheme: only dark }";
+    assert_eq!(standardfarben(&kaskade_env(css, false), &d), dunkel);
+}
+
+#[test]
+fn color_scheme_erbt_und_gilt_je_element() {
+    let d = seite(r##"<div id="dunkel"><a id="l" href="#">l</a></div><a id="m" href="#">m</a>"##);
+    let c = kaskade_env("#dunkel { color-scheme: dark }", false);
+    assert_eq!(farbe(&c, &d, "l"), Some(LINK_DUNKEL));
+    assert_eq!(farbe(&c, &d, "m"), Some(LINK_HELL));
+    // Die Leinwand gehört dem Wurzelelement: sie bleibt hell.
+    assert_eq!(
+        c.effective_background(finde(&d, "l")),
+        Some(rgb(255, 255, 255))
+    );
+}
+
+#[test]
+fn light_dark_waehlt_nach_dem_farbschema_nicht_nach_der_vorliebe() {
+    let d = seite(r#"<p id="p">t</p>"#);
+    let css = "p { color: light-dark(#111111, #eeeeee) }";
+    // Ohne color-scheme gilt hell, auch bei dunkler Vorliebe.
+    assert_eq!(
+        farbe(&kaskade_env(css, true), &d, "p"),
+        Some(rgb(0x11, 0x11, 0x11))
+    );
+    let css = "html { color-scheme: light dark } p { color: light-dark(#111111, #eeeeee) }";
+    assert_eq!(
+        farbe(&kaskade_env(css, false), &d, "p"),
+        Some(rgb(0x11, 0x11, 0x11))
+    );
+    assert_eq!(
+        farbe(&kaskade_env(css, true), &d, "p"),
+        Some(rgb(0xee, 0xee, 0xee))
+    );
+}
+
+#[test]
+fn meta_color_scheme_wirkt_wie_color_scheme_an_der_wurzel() {
+    let d = seite_kopf(r#"<meta name="color-scheme" content="light dark">"#, LINK);
+    assert_eq!(farbe(&kaskade_env("", true), &d, "l"), Some(LINK_DUNKEL));
+    assert_eq!(farbe(&kaskade_env("", false), &d, "l"), Some(LINK_HELL));
+    // Eine Angabe des Autors geht vor.
+    let c = kaskade_env("html { color-scheme: light }", true);
+    assert_eq!(farbe(&c, &d, "l"), Some(LINK_HELL));
+}
+
+#[test]
+fn formularfelder_folgen_dem_farbschema() {
+    let d = seite(r#"<input id="i"><button id="b">b</button>"#);
+    let c = kaskade_env("html { color-scheme: dark }", false);
+    assert_eq!(farbe(&c, &d, "i"), Some(rgb(255, 255, 255)));
+    assert_eq!(
+        c.computed_style(finde(&d, "i")).own_background_color,
+        Some(rgb(0x3b, 0x3b, 0x3b))
+    );
+    assert_eq!(
+        c.computed_style(finde(&d, "b")).own_background_color,
+        Some(rgb(0x6b, 0x6b, 0x6b))
+    );
 }

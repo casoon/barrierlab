@@ -367,6 +367,29 @@ fn manual(r: &Report) -> Vec<&str> {
 }
 
 #[test]
+fn hover_focus_content_item_needs_a_trigger() {
+    let plain = page()
+        .open("p")
+        .text("Text")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(!manual(&run(&plain)).contains(&"manual/content-on-hover-focus"));
+    assert!(manual(&run(&plain)).contains(&"manual/text-spacing"));
+
+    let tip = page()
+        .open("span")
+        .attr("role", "tooltip")
+        .text("Hinweis")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert!(manual(&run(&tip)).contains(&"manual/content-on-hover-focus"));
+}
+
+#[test]
 fn checklist_appears_only_with_trigger() {
     let empty = page().close().close().build();
     assert!(manual(&run(&empty)).is_empty());
@@ -412,6 +435,7 @@ fn checklist_appears_only_with_trigger() {
             "manual/no-timing",
             "manual/re-authenticating",
             "manual/sensory-characteristics",
+            "manual/text-spacing",
             "manual/timing",
             "manual/unusual-words",
             "manual/use-of-color",

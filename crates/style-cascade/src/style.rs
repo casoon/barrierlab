@@ -11,18 +11,25 @@ use crate::cascade::{Cascade, Specified};
 use crate::color::{luminance, over, parse_color, teile_oberste_ebene};
 use crate::value::{font_size_px, font_weight, laenge, tokens};
 
-const SCHWARZ: Color = Color {
-    r: 0,
-    g: 0,
-    b: 0,
-    a: 255,
-};
-const WEISS: Color = Color {
-    r: 255,
-    g: 255,
-    b: 255,
-    a: 255,
-};
+/// Das verwendete Farbschema aus dem Wert von `color-scheme`.
+fn used_scheme_is_dark(value: &str, prefers_dark: bool) -> bool {
+    let v = value.to_ascii_lowercase();
+    let schemes: Vec<bool> = v
+        .split_ascii_whitespace()
+        .filter_map(|t| match t {
+            "light" => Some(false),
+            "dark" => Some(true),
+            _ => None,
+        })
+        .collect();
+    if schemes.contains(&prefers_dark) {
+        prefers_dark
+    } else {
+        // Das bevorzugte Schema fehlt in der Liste: das erste der Liste,
+        // ohne Liste (`normal`) hell.
+        schemes.first().copied().unwrap_or(false)
+    }
+}
 
 fn element_eltern<'a, N: Node<'a>>(n: N) -> Option<N> {
     n.parent().filter(|p| p.kind() == NodeKind::Element)
@@ -84,15 +91,48 @@ impl Cascade {
     pub fn color<'a, N: Node<'a>>(&self, n: N) -> Option<Color> {
         match self.specified(n, "color") {
             Specified::Unknown => None,
-            Specified::Unset => Some(SCHWARZ),
+            // Der Anfangswert ist `CanvasText` des Farbschemas des Elements.
+            Specified::Unset => self.parse_at(n, "canvastext"),
             Specified::Set(v) if v.trim().eq_ignore_ascii_case("currentcolor") => {
                 match element_eltern(n) {
                     Some(p) => self.color(p),
-                    None => Some(SCHWARZ),
+                    None => self.parse_at(n, "canvastext"),
                 }
             }
-            Specified::Set(v) => parse_color(&v, self.environment().dark),
+            Specified::Set(v) => self.parse_at(n, &v),
         }
+    }
+
+    /// Das verwendete Farbschema am Element, `Some(true)` für dunkel (CSS
+    /// Color Adjustment 1 §2.1 und §2.2): `color-scheme` erbt; `normal`
+    /// (der Anfangswert) ist hell; steht die bevorzugte Seite der Umgebung in
+    /// der Liste, gilt sie, sonst das erste Schema der Liste. `None`, wenn
+    /// `color-scheme` unbestimmt ist.
+    pub fn is_dark<'a, N: Node<'a>>(&self, n: N) -> Option<bool> {
+        match self.specified(n, "color-scheme") {
+            Specified::Unknown => None,
+            Specified::Unset => Some(false),
+            Specified::Set(v) => Some(used_scheme_is_dark(&v, self.environment().dark)),
+        }
+    }
+
+    /// Liest eine Farbe am Element `n`: `light-dark()` und die Systemfarben
+    /// (`canvastext`, `linktext` …) folgen dem Farbschema von `n`.
+    fn parse_at<'a, N: Node<'a>>(&self, n: N, v: &str) -> Option<Color> {
+        // Hängt der Wert nicht vom Schema ab (die meisten), braucht es dessen
+        // Bestimmung nicht: eine unbestimmte `color-scheme`-Angabe macht dann
+        // keine feste Farbe unbestimmt.
+        let (hell, dunkel) = (parse_color(v, false), parse_color(v, true));
+        if hell == dunkel {
+            return hell;
+        }
+        parse_color(v, self.is_dark(n)?)
+    }
+
+    /// Die Leinwand hinter allem: `Canvas` im Farbschema des Wurzelelements
+    /// (CSS Color Adjustment 1 §2.2).
+    fn canvas<'a, N: Node<'a>>(&self, n: N) -> Option<Color> {
+        self.parse_at(wurzel(n), "canvas")
     }
 
     /// Verändern Deckkraft, Filter oder ein Mischmodus an diesem Element oder
@@ -159,7 +199,7 @@ impl Cascade {
                 && matches!(
                     self.specified(a, "background-color"),
                     Specified::Set(v)
-                        if parse_color(&v, self.environment().dark).is_some_and(|c| c.a == 255)
+                        if self.parse_at(a, &v).is_some_and(|c| c.a == 255)
                 );
             if deckend {
                 return false;
@@ -180,6 +220,7 @@ impl Cascade {
         if self.darstellung_unsicher(n) || self.lage_unsicher(n) {
             return None;
         }
+        let grund = self.canvas(n)?;
         let mut schichten = Vec::new();
         for a in std::iter::once(n).chain(ancestors(n)) {
             if a.kind() != NodeKind::Element {
@@ -197,7 +238,7 @@ impl Cascade {
                     let c = if v.trim().eq_ignore_ascii_case("currentcolor") {
                         self.color(a)?
                     } else {
-                        parse_color(&v, self.environment().dark)?
+                        self.parse_at(a, &v)?
                     };
                     schichten.push(c);
                     if c.a == 255 {
@@ -210,7 +251,7 @@ impl Cascade {
             schichten
                 .into_iter()
                 .rev()
-                .fold(WEISS, |unten, c| over(c, unten)),
+                .fold(grund, |unten, c| over(c, unten)),
         )
     }
 
@@ -244,7 +285,7 @@ impl Cascade {
                 Specified::Unknown => return None,
                 Specified::Unset => None,
                 Specified::Set(v) if v.trim().eq_ignore_ascii_case("currentcolor") => self.color(a),
-                Specified::Set(v) => Some(parse_color(&v, self.environment().dark)?),
+                Specified::Set(v) => Some(self.parse_at(a, &v)?),
             };
             if let Some(v) = hat_bild {
                 bild = Some((a, v, farbe));
@@ -255,7 +296,7 @@ impl Cascade {
             }
         }
         let (element, wert, eigene_farbe) = bild?;
-        let stufen = verlaufsstufen(&wert, self.environment().dark)?;
+        let stufen = verlaufsstufen(&wert, self.is_dark(element)?)?;
         // Untergrund: die eigene Farbe des Elements, dann die Vorfahren.
         let mut unten = vec![];
         if let Some(c) = eigene_farbe {
@@ -275,7 +316,7 @@ impl Cascade {
                         let c = if v.trim().eq_ignore_ascii_case("currentcolor") {
                             self.color(a)?
                         } else {
-                            parse_color(&v, self.environment().dark)?
+                            self.parse_at(a, &v)?
                         };
                         unten.push(c);
                         if c.a == 255 {
@@ -285,7 +326,8 @@ impl Cascade {
                 }
             }
         }
-        let grund = unten.into_iter().rev().fold(WEISS, |u, c| over(c, u));
+        let leinwand = self.canvas(n)?;
+        let grund = unten.into_iter().rev().fold(leinwand, |u, c| over(c, u));
         let farben: Vec<Color> = stufen
             .iter()
             .map(|c| vorn.iter().rev().fold(over(*c, grund), |u, v| over(*v, u)))
@@ -344,7 +386,7 @@ impl Cascade {
                 Specified::Unknown => None,
                 Specified::Unset => vorgabe,
                 Specified::Set(v) if v.trim().eq_ignore_ascii_case("currentcolor") => self.color(n),
-                Specified::Set(v) => parse_color(&v, self.environment().dark),
+                Specified::Set(v) => self.parse_at(n, &v),
             }
         };
         ComputedStyle {
