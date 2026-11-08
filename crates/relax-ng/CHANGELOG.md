@@ -7,6 +7,11 @@ in the git history only.
 
 ## [Unreleased]
 
+### Changed
+
+- **Datatypes:** XSD `pattern` facets compile their regular expression once per thread instead of on
+  every value check (barrierlab#70); results are unchanged.
+
 ## [0.2.3] - 2026-10-31
 
 ### Changed
