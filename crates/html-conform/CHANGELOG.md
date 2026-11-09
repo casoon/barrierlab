@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Schema check:** `xlink:href` and the other XLink attributes on SVG elements were rejected as
+  "unexpected attribute"; they now match the schema's `{xlink}href` (barrierlab#172).
+
 ## [0.5.0] - 2026-11-09
 
 ### Added

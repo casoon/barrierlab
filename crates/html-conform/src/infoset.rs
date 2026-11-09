@@ -191,6 +191,18 @@ impl PartialEq for NormalizedNode<'_> {
 
 impl Eq for NormalizedNode<'_> {}
 
+/// Local name of an attribute as the schema layer sees it. html5-parser
+/// keeps the source qualified name (`xlink:href`) as `name` and sets only
+/// `namespace` (WHATWG "adjust foreign attributes" — the table's local name
+/// is `href`), whereas a RELAX NG `attribute xlink:href` pattern matches
+/// `{xlink-ns}href`. Hence the prefix is dropped when a namespace is set.
+fn schema_local_name(name: &ExpandedName) -> String {
+    match (&name.namespace, name.local_name.split_once(':')) {
+        (Some(_), Some((_, local))) => local.to_owned(),
+        _ => name.local_name.clone(),
+    }
+}
+
 impl<'a> NormalizedNode<'a> {
     /// This node's arena slot. Takes `self` by value (not `&self`) so the
     /// returned reference is tied to the arena's lifetime `'a` (borrowed
@@ -607,7 +619,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
                 Kind::Attribute { name, value } => (
                     relax_ng::ExpandedName {
                         namespace: name.namespace.clone(),
-                        local: name.local_name.clone(),
+                        local: schema_local_name(name),
                     },
                     value.clone(),
                 ),

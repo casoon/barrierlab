@@ -192,6 +192,24 @@ mod tests {
     }
 
     #[test]
+    fn svg_xlink_href_is_accepted_but_unknown_foreign_attributes_are_not() {
+        // barrierlab#172: html5-parser keeps `xlink:href` as the source name
+        // with the XLink namespace; the schema expects `{xlink}href`.
+        let page = |svg: &str| {
+            format!("<!doctype html><html lang=\"en\"><title>t</title><body>{svg}</body></html>")
+        };
+        let report = check(&page(
+            r##"<svg><defs><circle id="a" r="1"/></defs><use xlink:href="#a"/></svg>"##,
+        ))
+        .expect("HTML5 parsing should recover");
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+
+        let report = check(&page(r##"<svg><use xlink:bogus="#a"/></svg>"##))
+            .expect("HTML5 parsing should recover");
+        assert!(!report.findings.is_empty());
+    }
+
+    #[test]
     fn whitespace_before_a_leading_optional_child_is_ignored() {
         // barrierlab#41: inter-element whitespace before `legend` (and the
         // other "optionally X first, then flow content" models) is not text.
