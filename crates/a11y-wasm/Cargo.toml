@@ -12,6 +12,11 @@ description = "WASM boundary and arena adapter for the a11y rule set: run the sa
 keywords = ["accessibility", "a11y", "wasm", "webassembly", "aria"]
 readme = "README.md"
 
+[features]
+# Messspalten für die seitenabhängigen Regeln (`Scan::withFrames` und Verwandte).
+# Aus, bis über das Größenbudget des WASM-Artefakts entschieden ist.
+probes = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
