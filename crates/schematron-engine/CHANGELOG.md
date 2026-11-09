@@ -7,6 +7,8 @@ version bump.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-09
+
 ### Added
 
 - **API:** SVRL output (barrierlab#79): `evaluate_trace` / `evaluate_trace_with_phase` return the

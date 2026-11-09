@@ -4,6 +4,8 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-09
+
 ### Added
 
 - **Shadow DOM:** `Scan.withScopes(scopes)` setzt den Baumbereich je Knoten (`0` Dokument, sonst Shadow Root); ID-Verweise treffen nur Ziele im eigenen Bereich, dieselbe ID in zwei Bereichen ist kein Duplikat. `Arena::set_scopes` prüft Länge, Wurzel und Wertebereich (casoon/liveaudit#10).

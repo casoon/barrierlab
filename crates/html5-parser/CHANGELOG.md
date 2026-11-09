@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
 ### Added
 
 - **ParseErrorKind:** `StrayCharacter`, `NestedHeading`, `NestedButton`, `OptionInScope` and
