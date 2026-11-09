@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `xml-adapters` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-08
+
 ### Added
 
 - **roxmltree:** `RngElement` implementiert `relax_ng::Element` für `roxmltree`-Elemente (Text über Kommentare hinweg zusammengefasst, Namensraumbindungen, Fehlerposition) (casoon/barrierlab#75).

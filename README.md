@@ -10,7 +10,7 @@ build time, in a terminal audit or live in the browser.
 [![npm](https://img.shields.io/npm/v/@casoon/a11y-wasm.svg?label=%40casoon%2Fa11y-wasm)](https://www.npmjs.com/package/@casoon/a11y-wasm)
 
 <p align="center">
-  <img src="docs/img/architecture.svg" width="900" alt="Flow chart: parsers and shared models feed a11y-rules and html-conform; those and a11y-perception and web-checks ship as 15 Rust crates on crates.io, a11y-rules additionally as WebAssembly on npm; auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.">
+  <img src="docs/img/architecture.svg" width="900" alt="Flow chart: parsers and shared models feed a11y-rules and html-conform; those and a11y-perception and web-checks ship as 19 Rust crates on crates.io, a11y-rules additionally as WebAssembly on npm; auditmysite, astro-post-audit and Relief use the crates, liveaudit the npm package.">
 </p>
 
 **This repository contains libraries only.** The tools that use them live in their own
