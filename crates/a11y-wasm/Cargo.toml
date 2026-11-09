@@ -13,8 +13,10 @@ keywords = ["accessibility", "a11y", "wasm", "webassembly", "aria"]
 readme = "README.md"
 
 [features]
+default = ["probes"]
 # Messspalten für die seitenabhängigen Regeln (`Scan::withFrames` und Verwandte).
-# Aus, bis über das Größenbudget des WASM-Artefakts entschieden ist.
+# Standardmäßig an (Größenbudget 180 KB gzip, 09.11.2026); mit
+# `--no-default-features` entsteht die schlanke Variante ohne die Spalten.
 probes = []
 
 [lib]

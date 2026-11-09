@@ -75,7 +75,7 @@ duplicate. Without the call every node is in the document. A mismatch (length,
 `scopes[0] != 0`, a value at or above the node count) makes the call throw an
 `Error` naming the column. Call it before `run()`.
 
-## Probe columns (cargo feature `probes`)
+## Probe columns (cargo feature `probes`, default)
 
 Five rules read measurements that only the page can supply: the
 `Rendering` methods `frame_reachable`, `box_transform`, `paste_probe`,
@@ -101,12 +101,11 @@ strictly ascending or outside the arena, flag bits outside the table,
 `covered > points` and a `blocker` outside the arena; it does not trap the module.
 The TypeScript signatures come from the generated `.d.ts`.
 
-The methods exist only when the crate is built with `--features probes`
-(`A11Y_WASM_FEATURES=probes node packages/a11y-wasm/build.mjs`). They pull the
-bodies of the five rules into the artifact and do not fit the 170 KB gzip
-budget together with the current rule set: measured on 2026-11-09, default build
-173,091 bytes, with `probes` 183,142 bytes (budget 174,080). The published npm
-package is built without the feature until that is decided.
+The feature is on by default; `--no-default-features` builds the lean variant
+without the methods. The columns pull the bodies of the five rules into the
+artifact, about 9 KB gzip. Budget decision of 2026-11-09 (liveaudit#16): the gzip
+budget rises from 170 KB to 180 KB (earlier steps: 110, 130, 150, 170 KB) and the
+columns ship in the default build (measured 183,122 bytes gzip, 178.8 KiB).
 
 ## Limits
 
