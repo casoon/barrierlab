@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Shadow DOM:** `Scan.withScopes(scopes)` setzt den Baumbereich je Knoten (`0` Dokument, sonst Shadow Root); ID-Verweise treffen nur Ziele im eigenen Bereich, dieselbe ID in zwei Bereichen ist kein Duplikat. `Arena::set_scopes` prüft Länge, Wurzel und Wertebereich (casoon/liveaudit#10).
+- **Messspalten:** hinter dem Cargo-Feature `probes` `Scan.withFrames`, `withTransforms`, `withPasteProbes`, `withFocusCover` und `withTextSpacing` (dünn besetzt, je Spalte optional; eine fehlende Spalte bleibt „nicht gemessen" und die Regel `NotRun`). Das Feature ist aus, weil es das Größenbudget von 170 KB gzip um 8,8 KiB sprengt (casoon/liveaudit#16).
+- **Build:** `packages/a11y-wasm/build.mjs` liest `A11Y_WASM_FEATURES` für zusätzliche Cargo-Features.
+
 ## [0.15.2] - 2026-11-08
 
 ### Changed
