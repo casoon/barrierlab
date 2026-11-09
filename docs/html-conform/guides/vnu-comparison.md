@@ -32,7 +32,34 @@ agreement:
 | not comparable (`check()` returned an error) | 0 |
 
 CI runs this test on every push (`cargo test --release --test differential -- --ignored`) and
-fails if false positives or false negatives rise above those numbers.
+fails if false positives or false negatives rise above those numbers. The one false negative is
+pinned by name in the test (see CSS below), so another missed fixture cannot hide behind it.
+
+### Finding classes
+
+The same test also compares the *class* of finding for the 3,746 fixtures where vnu expects
+findings. `tests/vnu-class-map.tsv` maps each vnu message (with quoted parts replaced by `“X”`)
+to a class (parser, schema, assertion, scripts, csp, tables, css) and to the html-conform
+`rule_id` prefixes that count as the same class. A fixture is **matched** if html-conform
+reports a finding of vnu's class, **incidental** if it reports findings but none of that
+class, and **missed** if it reports none. vnu messages without a row in the map are listed by
+the test and counted as **unmapped**; there are none at present.
+
+| Corpus tree | matched | incidental | missed | unmapped |
+| --- | --- | --- | --- | --- |
+| `tests/html` | 3,389 | 100 | 1 | 0 |
+| `tests/html-aria` | 253 | 3 | 0 | 0 |
+
+(Matched plus incidental equals the 3,745 true positives.) The baseline is committed in
+`tests/vnu-class-baseline.json`; CI fails if *incidental* rises, *matched* falls, or the
+number of unmapped messages changes.
+
+The class figures still do not say that html-conform reports the *same* problem, only the
+same *kind*: a schema finding on a fixture whose vnu message is a different schema error
+counts as matched. They ignore message text, positions and how many findings vnu expects per
+fixture (the expectation file holds one message per fixture). The class map is coarse and was
+written from vnu's message shapes, not tuned to the results; a wrong row shifts fixtures
+between matched and incidental. The `css` class has no html-conform counterpart.
 
 ### What the numbers do not say
 
@@ -68,13 +95,16 @@ finding-by-finding parity.
 - **CSS inside `<style>`.** vnu hands style sheets to a vendored copy of the W3C CSS
   Validator. html-conform has no CSS parser for this, so a mistyped property such as `colr`
   goes unreported. This is the one false negative
-  (`html/elements/style/css-property-error-novalid.html`), and a deliberate limitation.
+  (`html/elements/style/css-property-error-novalid.html`), and a deliberate limitation:
+  CSS correctness is out of scope (decision A of issue #87; checking property names or whole
+  values would need its own normative basis and corpus). The test pins this fixture by name
+  as the only allowed miss.
 - **Parts of vnu's test suite that are not vendored.** `tests/css`, `tests/xhtml`,
   `tests/svg`, `tests/html-rdfa`, `tests/html-rdfalite`, `tests/html-math`, `tests/html-its`,
   `tests/langdetect`, `tests/normalization` and `tests/schema-validation` are excluded from the
   corpus, so nothing is measured for them.
 - **HTML syntax only.** The input is parsed as HTML with browser-style recovery; there is no
-  XHTML (XML syntax) mode.
+  XHTML (XML syntax) mode, and none is planned.
 - **A library, not a service.** html-conform checks the string you pass it, in-process. It
   makes no HTTP requests, needs no JVM and ships no command-line tool.
 - **Messages and rule IDs are its own.** Wording differs from vnu, and there is no mapping from
