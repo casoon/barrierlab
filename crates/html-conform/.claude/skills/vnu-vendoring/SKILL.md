@@ -31,6 +31,16 @@ MIT-lizenzierter Fremdcode aus `validator/validator` (vnu). Hintergrund:
   Kommentarsyntax (z.B. manche Korpus-XML-Dateien) stattdessen eine
   `.license`-Sidecar-Datei daneben.
 
+- Lokale Abweichungen vom Upstream-Schema sind Patches in
+  `xtask/schema-patches/NNNN-<was>.patch` (Kopfkommentar: was, warum, Datei),
+  die `vendor-schema.sh` nach dem Download anwendet. Ein Patch, der nicht
+  passt, bricht das Skript ab. Beim Anheben des Quell-Commits die Patches
+  gegen den neuen Stand prüfen und ggf. neu erzeugen; Patches nur streichen,
+  wenn Upstream die Abweichung selbst enthält.
+- `xtask/vendor-schema.sh --check` (Netz nötig, nicht in CI) belegt, dass
+  Upstream + Patches den committeten Baum Byte für Byte ergeben. Vor jedem
+  Commit, der Skript, Patches oder `schema/html5/` anfasst, laufen lassen.
+
 ## Ablauf
 
 1. Quell-Commit/Tag von `validator/validator` festlegen, in

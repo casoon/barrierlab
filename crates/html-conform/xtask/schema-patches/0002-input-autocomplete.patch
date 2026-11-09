@@ -1,0 +1,22 @@
+# Local deviation from vnu 26.8.20 (388cb36): input@autocomplete is
+# "on" | "off" | w:autocomplete-any instead of plain `string`.
+#
+# Why: upstream leaves the attribute unchecked in the schema; html-conform
+# implements the datatype itself (src/datatypes/structural.rs,
+# check_autocomplete_any), so the schema can state the constraint. Not a
+# workaround for a missing relax-ng feature.
+# File: schema/html5/web-forms2.rnc.
+#
+--- a/web-forms2.rnc
++++ b/web-forms2.rnc
+@@ -140,7 +140,9 @@
+
+ 	input.attrs.autocomplete =
+ 		attribute autocomplete {
+-			string
++			(	w:string "on" | w:string "off"
++			|	common.data.autocomplete.any
++			)
+ 		}
+
+ ## Hidden String: <input type='hidden'>, Extensions
