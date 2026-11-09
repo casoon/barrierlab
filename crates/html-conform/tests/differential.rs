@@ -8,7 +8,7 @@
 // Reads the deprecated `Finding::rule_id` on purpose: the corpus baseline predates the shared model.
 #![allow(deprecated)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -19,8 +19,9 @@ fn corpus_dir() -> PathBuf {
 }
 
 /// vnu's own expected-message map, trimmed to `html/`/`html-aria/` keys by
-/// `xtask/vendor-corpus.sh`. Only key *presence* is used — message text
-/// isn't compared (different implementations, different wording; see
+/// `xtask/vendor-corpus.sh`. Key presence says whether findings are
+/// expected; the message text is only used to look up the finding class in
+/// `tests/vnu-class-map.tsv`, never compared with ours (see
 /// `tests/corpus/README.md`).
 fn expected_findings_by_path() -> HashMap<String, String> {
     let raw = fs::read_to_string(corpus_dir().join("messages.json"))
@@ -54,15 +55,15 @@ fn collect_html_fixtures(dir: &Path, corpus_root: &Path, out: &mut Vec<String>) 
 }
 
 /// The one fixture whose expected result was generated with the
-/// missing-`lang` check switched ON — see [`has_findings_for_comparison`].
+/// missing-`lang` check switched ON — see [`comparable_findings`].
 const MISSING_LANG_FIXTURE: &str = "html/attributes/lang/missing-lang-attribute-haswarn.html";
 
 /// The rule that check corresponds to here (`rules/elements.sch`'s
 /// `elements-html-missing-lang`, prefixed by `src/assertions.rs`).
 const MISSING_LANG_RULE_ID: &str = "assertion.elements.html-missing-lang";
 
-/// Whether `report` counts as "this crate found something" for the
-/// agreement metrics.
+/// The findings of `report` that count as "this crate found something" for
+/// the agreement metrics (non-empty = found something).
 ///
 /// Normally that is just "the finding list is non-empty". The single
 /// exception is `assertion.elements.html-missing-lang`, and it is a
@@ -79,18 +80,131 @@ const MISSING_LANG_RULE_ID: &str = "assertion.elements.html-missing-lang";
 /// positives for behaviour that is in fact correct.
 ///
 /// So: for every fixture except the one the harness enables the check for,
-/// findings from that one rule are dropped before deciding `has_findings`;
+/// findings from that one rule are dropped before deciding;
 /// for [`MISSING_LANG_FIXTURE`] the findings are used as-is. Deliberately
 /// pinned to this one rule id rather than built out into a general ignore
 /// list — no other rule has this problem.
-fn has_findings_for_comparison(relative_path: &str, report: &CheckReport) -> bool {
-    if relative_path == MISSING_LANG_FIXTURE {
-        return !report.findings.is_empty();
-    }
+fn comparable_findings<'a>(
+    relative_path: &str,
+    report: &'a CheckReport,
+) -> Vec<&'a html_conform::Finding> {
     report
         .findings
         .iter()
-        .any(|finding| finding.rule_id != MISSING_LANG_RULE_ID)
+        .filter(|finding| {
+            relative_path == MISSING_LANG_FIXTURE || finding.rule_id != MISSING_LANG_RULE_ID
+        })
+        .collect()
+}
+
+/// The vendored vnu test trees (`xtask/vendor-corpus.sh`).
+const CORPUS_TREES: [&str; 6] = [
+    "html",
+    "html-aria",
+    "html-math",
+    "html-rdfa",
+    "html-rdfalite",
+    "html-svg",
+];
+
+/// One row of `tests/vnu-class-map.tsv`.
+struct VnuClass {
+    name: String,
+    prefixes: Vec<String>,
+}
+
+/// vnu message template -> class, from `tests/vnu-class-map.tsv`.
+fn load_class_map() -> HashMap<String, VnuClass> {
+    let raw =
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/vnu-class-map.tsv"))
+            .expect("tests/vnu-class-map.tsv should exist");
+    let mut map = HashMap::new();
+    for line in raw.lines().filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let mut columns = line.splitn(3, '\t');
+        let (Some(name), Some(prefixes), Some(template)) =
+            (columns.next(), columns.next(), columns.next())
+        else {
+            panic!("malformed line in vnu-class-map.tsv: {line}");
+        };
+        let class = VnuClass {
+            name: name.to_string(),
+            prefixes: prefixes.split(',').map(str::to_string).collect(),
+        };
+        assert!(
+            map.insert(template.to_string(), class).is_none(),
+            "duplicate template in vnu-class-map.tsv: {template}"
+        );
+    }
+    map
+}
+
+/// Replaces every curly-quoted segment of a vnu message with `“X”`, the form
+/// the templates in `vnu-class-map.tsv` use.
+fn message_template(message: &str) -> String {
+    let mut out = String::new();
+    let mut inside = false;
+    for ch in message.chars() {
+        match (ch, inside) {
+            ('“', false) => {
+                inside = true;
+                out.push_str("“X”");
+            }
+            ('”', true) => inside = false,
+            (_, false) => out.push(ch),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Committed baseline for the class gate, `tests/vnu-class-baseline.json`.
+fn load_class_baseline() -> BTreeMap<String, ClassCounts> {
+    let raw = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/vnu-class-baseline.json"),
+    )
+    .expect("tests/vnu-class-baseline.json should exist");
+    let parsed: BTreeMap<String, BTreeMap<String, usize>> =
+        serde_json::from_str(&raw).expect("vnu-class-baseline.json should be valid JSON");
+    parsed
+        .into_iter()
+        .map(|(tree, c)| {
+            (
+                tree,
+                ClassCounts {
+                    matched: c["matched"],
+                    incidental: c["incidental"],
+                    missed: c["missed"],
+                    unmapped: c["unmapped"],
+                    false_positive: c["false_positive"],
+                },
+            )
+        })
+        .collect()
+}
+
+/// The known false negatives, pinned by name so a regression elsewhere is
+/// not masked by them. vnu validates `<style>` with the W3C CSS Validator;
+/// html-conform does not validate CSS (docs/html-conform/guides/vnu-comparison.md,
+/// issue #87, decision A).
+const PINNED_FALSE_NEGATIVES: [&str; 2] = [
+    "html-svg/svg-a-nested-in-svg-a-novalid.html",
+    "html/elements/style/css-property-error-novalid.html",
+];
+
+/// Per corpus tree: how the true positives split by finding class.
+#[derive(Default, Debug, PartialEq, Eq)]
+struct ClassCounts {
+    /// A finding of the class vnu expects was reported.
+    matched: usize,
+    /// Findings were reported, none of vnu's class.
+    incidental: usize,
+    /// vnu expects findings, none reported.
+    missed: usize,
+    /// vnu's message has no row in the class map (counted in neither of the above).
+    unmapped: usize,
+    /// vnu expects the fixture clean, findings were reported — a measured gap
+    /// of the tree, pinned in `tests/vnu-class-baseline.json`.
+    false_positive: usize,
 }
 
 #[derive(Default)]
@@ -124,8 +238,9 @@ fn differential_against_vendored_vnu_corpus() {
     let corpus_root = corpus_dir();
 
     let mut fixtures = Vec::new();
-    collect_html_fixtures(&corpus_root.join("html"), &corpus_root, &mut fixtures);
-    collect_html_fixtures(&corpus_root.join("html-aria"), &corpus_root, &mut fixtures);
+    for tree in CORPUS_TREES {
+        collect_html_fixtures(&corpus_root.join(tree), &corpus_root, &mut fixtures);
+    }
     fixtures.sort();
 
     assert!(
@@ -135,6 +250,11 @@ fn differential_against_vendored_vnu_corpus() {
         fixtures.len()
     );
 
+    let class_map = load_class_map();
+    let mut class_counts: BTreeMap<String, ClassCounts> = BTreeMap::new();
+    let mut unmapped_messages: BTreeMap<String, usize> = BTreeMap::new();
+    let mut incidental_examples: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut false_negative_fixtures = Vec::new();
     let mut metrics = Metrics::default();
     let mut false_positive_examples = Vec::new();
     let mut false_negative_examples = Vec::new();
@@ -147,12 +267,50 @@ fn differential_against_vendored_vnu_corpus() {
 
         match check(&html) {
             Ok(report) => {
-                let has_findings = has_findings_for_comparison(relative_path, &report);
+                let findings = comparable_findings(relative_path, &report);
+                let has_findings = !findings.is_empty();
+                if let Some(message) = expected.get(relative_path) {
+                    let tree = relative_path.split('/').next().unwrap_or_default();
+                    let counts = class_counts.entry(tree.to_string()).or_default();
+                    let template = message_template(message);
+                    if !has_findings {
+                        counts.missed += 1;
+                        false_negative_fixtures.push(relative_path.clone());
+                    } else if let Some(class) = class_map.get(&template) {
+                        if findings.iter().any(|finding| {
+                            class
+                                .prefixes
+                                .iter()
+                                .any(|prefix| finding.rule_id.starts_with(prefix.as_str()))
+                        }) {
+                            counts.matched += 1;
+                        } else {
+                            counts.incidental += 1;
+                            incidental_examples
+                                .entry(class.name.clone())
+                                .or_default()
+                                .push(relative_path.clone());
+                        }
+                    } else {
+                        counts.unmapped += 1;
+                        *unmapped_messages.entry(template).or_default() += 1;
+                    }
+                }
                 match (expects_findings, has_findings) {
                     (true, true) => metrics.true_positive += 1,
                     (false, false) => metrics.true_negative += 1,
                     (false, true) => {
                         metrics.false_positive += 1;
+                        class_counts
+                            .entry(
+                                relative_path
+                                    .split('/')
+                                    .next()
+                                    .unwrap_or_default()
+                                    .to_string(),
+                            )
+                            .or_default()
+                            .false_positive += 1;
                         if false_positive_examples.len() < 20 {
                             false_positive_examples.push(relative_path.clone());
                         }
@@ -184,6 +342,26 @@ fn differential_against_vendored_vnu_corpus() {
         metrics.false_negative,
         metrics.not_comparable
     );
+    for (tree, counts) in &class_counts {
+        println!(
+            "finding classes {tree}: matched={} incidental={} missed={} unmapped={} false_positive={}",
+            counts.matched,
+            counts.incidental,
+            counts.missed,
+            counts.unmapped,
+            counts.false_positive
+        );
+    }
+    for (class, examples) in &incidental_examples {
+        println!(
+            "incidental by vnu class {class}: {} (e.g. {:?})",
+            examples.len(),
+            &examples[..examples.len().min(3)]
+        );
+    }
+    for (template, count) in &unmapped_messages {
+        println!("unmapped vnu message ({count}x): {template}");
+    }
     if !false_positive_examples.is_empty() {
         println!(
             "false positive examples (expected clean, got findings): {false_positive_examples:?}"
@@ -198,34 +376,53 @@ fn differential_against_vendored_vnu_corpus() {
         println!("not-comparable examples (check() returned Err): {not_comparable_examples:?}");
     }
 
-    // Baseline / regression gate: this corpus is real-world vnu
-    // test material exercising far more than this crate currently
-    // implements (Phase 08's real ARIA assertion rules in particular are
-    // still four reused canary placeholders, not the full rule set) —
-    // 100% agreement isn't the bar yet. This only asserts the checker
-    // never gets WORSE than the first recorded run. Update the constants
-    // below deliberately (with a `DECISIONS.md` entry explaining what
-    // improved) when the checker demonstrably gets better — never to
+    // Baseline / regression gate, per tree: this corpus exercises far more than
+    // this crate implements, so 100% agreement is not the bar. The gate only
+    // asserts the checker never gets WORSE than the recorded run. `html` and
+    // `html-aria` stay at 0 false positives; a tree with a measured gap
+    // (`html-rdfa`, `html-rdfalite`) carries that number in
+    // `tests/vnu-class-baseline.json` and is documented in
+    // docs/html-conform/guides/vnu-comparison.md. Update the baseline file
+    // deliberately when the checker demonstrably gets better — never to
     // silently paper over a regression.
-    // `<=` (not `==`): keeps this a general-purpose "never worse than the
-    // baseline" gate rather than an exact-match assertion, even now that
-    // the baseline has reached 0 (`usize`'s minimum, which is why this
-    // needs an explicit clippy allow — the comparison stops being
-    // "absurd" the moment a regression bumps `false_positive` back above
-    // 0, clippy just can't see that).
-    #[allow(clippy::absurd_extreme_comparisons)]
-    let false_positive_within_baseline = metrics.false_positive <= BASELINE_FALSE_POSITIVE;
-    assert!(
-        false_positive_within_baseline,
-        "false positives regressed: {} > baseline {}",
-        metrics.false_positive, BASELINE_FALSE_POSITIVE
+    assert_eq!(
+        false_negative_fixtures, PINNED_FALSE_NEGATIVES,
+        "the set of missed fixtures differs from the pinned exceptions"
     );
-    assert!(
-        metrics.false_negative <= BASELINE_FALSE_NEGATIVE,
-        "false negatives regressed: {} > baseline {}",
-        metrics.false_negative,
-        BASELINE_FALSE_NEGATIVE
-    );
+    let baseline = load_class_baseline();
+    for (tree, counts) in &class_counts {
+        let base = baseline
+            .get(tree)
+            .unwrap_or_else(|| panic!("no baseline for tree {tree} in vnu-class-baseline.json"));
+        assert!(
+            counts.false_positive <= base.false_positive,
+            "{tree}: false positives regressed, {} > baseline {}",
+            counts.false_positive,
+            base.false_positive
+        );
+        assert!(
+            counts.missed <= base.missed,
+            "{tree}: false negatives regressed, {} > baseline {}",
+            counts.missed,
+            base.missed
+        );
+        assert!(
+            counts.incidental <= base.incidental,
+            "{tree}: incidental rose, {} > baseline {}",
+            counts.incidental,
+            base.incidental
+        );
+        assert!(
+            counts.matched >= base.matched,
+            "{tree}: matched fell, {} < baseline {}",
+            counts.matched,
+            base.matched
+        );
+        assert_eq!(
+            counts.unmapped, base.unmapped,
+            "{tree}: unmapped vnu messages changed — extend tests/vnu-class-map.tsv"
+        );
+    }
     assert_eq!(
         metrics.not_comparable, BASELINE_NOT_COMPARABLE,
         "not-comparable (CheckError) count changed from the baseline — investigate \
@@ -1116,7 +1313,7 @@ fn differential_against_vendored_vnu_corpus() {
 /// `lang` attribute at all; any value including the empty string is silent
 /// there (`htmlElementHasLang` keys off attribute *presence*), and so is it
 /// here.
-/// (2) This file: `has_findings_for_comparison` drops that one rule id from
+/// (2) This file: `comparable_findings` drops that one rule id from
 /// the finding list for every fixture except the one the harness enables the
 /// check for, so the artifact is corrected in the *comparison* rather than
 /// by hand-editing vendored `messages.json` or by not implementing the rule.
@@ -1126,6 +1323,10 @@ fn differential_against_vendored_vnu_corpus() {
 /// `false_positive` unchanged (0), `true_negative` unchanged (909),
 /// `not_comparable` unchanged (0); `false_negative` 2→1.
 /// New baseline: `true_positive=3745 true_negative=909 false_positive=0 false_negative=1 not_comparable=0`.
-const BASELINE_FALSE_POSITIVE: usize = 0;
-const BASELINE_FALSE_NEGATIVE: usize = 1;
+///
+/// Issue #86: the corpus grew by `html-math`, `html-rdfa`, `html-rdfalite` and
+/// the vnu-authored part of `html-svg` (`CORPUS_TREES`), and the false
+/// positive / false negative gates became per tree
+/// (`tests/vnu-class-baseline.json`), so a gap in a new tree cannot hide a
+/// regression in `html` or `html-aria`, which stay at 0 and 1.
 const BASELINE_NOT_COMPARABLE: usize = 0;
