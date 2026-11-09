@@ -66,7 +66,8 @@ erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
 
 ## npm
 
-Nur für Pakete unter `packages/`. Veröffentlicht wird `@casoon/a11y-wasm` über
+Nur für Pakete unter `packages/`. Veröffentlicht werden `@casoon/a11y-wasm` und
+`@casoon/html-conform-wasm` (Tag-Präfix `html-conform-wasm-npm-v`, sonst derselbe Ablauf) über
 **npm Trusted Publishing** (GitHub OIDC, Provenance, kein Token) aus
 `.github/workflows/release-npm.yml`:
 
@@ -80,9 +81,11 @@ Nur für Pakete unter `packages/`. Veröffentlicht wird `@casoon/a11y-wasm` übe
    LICENSE, README und `pkg/` darin liegen. Der Job `publish-npm` wartet auf die
    Freigabe in der GitHub-Umgebung `npm` und veröffentlicht genau dieses Tarball.
 
-Auf npmjs.com trägt das Paket einmalig einen Trusted Publisher ein
+Auf npmjs.com trägt **jedes Paket** einmalig einen Trusted Publisher ein
 (*Settings → Trusted Publisher*): Organisation `casoon`, Repository `barrierlab`,
-Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt.
+Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt. Für
+`@casoon/html-conform-wasm` steht das noch aus; das Paket gibt es auf npm erst nach dem ersten
+Publish.
 
 ## WASM
 
