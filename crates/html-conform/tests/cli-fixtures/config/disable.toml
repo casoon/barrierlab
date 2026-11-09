@@ -1,0 +1,4 @@
+# hide the missing-lang hint
+disable = ["assertion.elements.html-missing-lang"]
+fail-on = "review"
+format = json

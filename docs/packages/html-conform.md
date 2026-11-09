@@ -56,7 +56,7 @@ CSP hash sources); both appear there as `DocumentIncomplete` input notes. The cr
 `Finding` types remain for now.
 
 The `cli` feature (off by default, no extra dependency) adds an `html-conform` binary as a
-thin front end for files, directories and stdin; see `docs/html-conform/guides/cli.md`. It
+thin front end for files, directories and stdin; see `docs/html-conform/guides/cli.md` (encodings, rule selection, config file, prebuilt binaries). It
 lives in the crate rather than in a separate one because it takes data from the local
 filesystem and fetches nothing, and a separate crate would need its own release train.
 

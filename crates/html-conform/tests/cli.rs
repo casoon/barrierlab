@@ -22,6 +22,10 @@ struct Run {
 }
 
 fn run_with(args: &[&str], stdin: Option<&str>, envs: &[(&str, &str)]) -> Run {
+    run_bytes(args, stdin.map(str::as_bytes), envs)
+}
+
+fn run_bytes(args: &[&str], stdin: Option<&[u8]>, envs: &[(&str, &str)]) -> Run {
     let mut command = Command::new(env!("CARGO_BIN_EXE_html-conform"));
     command
         .args(args)
@@ -37,7 +41,7 @@ fn run_with(args: &[&str], stdin: Option<&str>, envs: &[(&str, &str)]) -> Run {
     let mut child = command.spawn().expect("binary starts");
     let mut pipe = child.stdin.take().expect("stdin");
     if let Some(text) = stdin {
-        pipe.write_all(text.as_bytes()).expect("write stdin");
+        pipe.write_all(text).expect("write stdin");
     }
     drop(pipe);
     let output = child.wait_with_output().expect("binary finishes");
@@ -250,6 +254,196 @@ fn fail_on_review_counts_warnings() {
         run_with(&["--fail-on", "review", "-"], Some(html), &[]).code,
         1
     );
+}
+
+const DOC_HEAD: &str = "<!DOCTYPE html><html lang=en><head>";
+
+#[test]
+fn encoding_is_sniffed_from_bom_then_meta_then_utf8() {
+    // windows-1252 declared by <meta charset>: 0xE9 is "e acute" (read as UTF-8 it
+    // would be invalid). The value is quoted in a finding, so it shows the text was
+    // decoded intact. Non-UTF-8 is itself a conformance error, as in vnu.
+    let mut latin1 = format!(
+        "{DOC_HEAD}<meta charset=iso-8859-1><title>t</title></head><body><img src=x alt=a width=\"caf"
+    )
+    .into_bytes();
+    latin1.extend([0xE9, b'"', b'>']);
+    let result = run_bytes(&["-"], Some(&latin1), &[]);
+    assert_eq!(result.code, 1, "{}", result.stdout);
+    assert_eq!(result.stderr, "");
+    assert!(result.stdout.contains("`caf\u{e9}`"), "{}", result.stdout);
+    assert!(result.stdout.contains("meta-charset-not-utf8"));
+    assert!(!result.stdout.contains("not valid"));
+
+    // Shift_JIS: 0x82 0xA0 is one hiragana letter (the http-equiv form is covered by unit tests).
+    let mut sjis = format!(
+        "{DOC_HEAD}<meta charset=shift_jis><title>t</title></head><body><img src=x alt=a width=\""
+    )
+    .into_bytes();
+    sjis.extend([0x82, 0xA0, b'"', b'>']);
+    let result = run_bytes(&["-"], Some(&sjis), &[]);
+    assert_eq!((result.code, result.stderr.as_str()), (1, ""));
+    assert!(result.stdout.contains("`\u{3042}`"), "{}", result.stdout);
+
+    // UTF-16LE with a BOM, no meta.
+    let text = format!("{DOC_HEAD}<title>t</title></head><body><p>x");
+    let mut utf16 = vec![0xFF, 0xFE];
+    for unit in text.encode_utf16() {
+        utf16.extend(unit.to_le_bytes());
+    }
+    assert_eq!(run_bytes(&["-"], Some(&utf16), &[]).code, 0);
+
+    // A BOM outranks the meta declaration; the document is read as UTF-16 and the
+    // declaration still gets its finding.
+    let text = format!("{DOC_HEAD}<meta charset=iso-8859-1><title>t</title></head><body><p>x");
+    let mut utf16 = vec![0xFF, 0xFE];
+    for unit in text.encode_utf16() {
+        utf16.extend(unit.to_le_bytes());
+    }
+    let result = run_bytes(&["-"], Some(&utf16), &[]);
+    assert_eq!(result.code, 1);
+    assert!(result.stdout.contains("meta-charset-not-utf8"));
+}
+
+#[test]
+fn undecodable_bytes_are_reported_in_every_format() {
+    // 0xFF is never valid UTF-8; the second document is cut off inside a Shift_JIS pair.
+    let utf8 = b"<!DOCTYPE html><title>t</title><p>\xFF".to_vec();
+    let sjis = b"<meta charset=shift_jis><p>\x82".to_vec();
+    for bytes in [&utf8, &sjis] {
+        for format in ["text", "json", "sarif", "junit"] {
+            let result = run_bytes(&["--format", format, "-"], Some(bytes), &[]);
+            assert_eq!(result.code, 2, "{format}");
+            assert!(result.stderr.contains("<stdin>: not valid"), "{format}");
+            assert!(
+                result.stdout.contains("not valid"),
+                "{format}: {}",
+                result.stdout
+            );
+            assert!(!result.stdout.contains("no findings"), "{format}");
+        }
+    }
+}
+
+fn rule_ids(run: &Run) -> Vec<String> {
+    let value: serde_json::Value = serde_json::from_str(&run.stdout).unwrap();
+    value["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["rule_id"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[test]
+fn disable_and_only_select_by_rule_id() {
+    let all = run(&["--format", "json", "invalid.html"]);
+    assert!(rule_ids(&all).iter().any(|id| id == "parser.html5"));
+
+    let no_parser = run(&[
+        "--format",
+        "json",
+        "--disable",
+        "parser.html5",
+        "invalid.html",
+    ]);
+    assert!(!rule_ids(&no_parser).is_empty());
+    assert!(rule_ids(&no_parser).iter().all(|id| id != "parser.html5"));
+    assert!(
+        no_parser.stderr.contains("3 finding(s) hidden"),
+        "{}",
+        no_parser.stderr
+    );
+
+    // A group prefix and `--only` with a comma list.
+    let only = run(&[
+        "--format",
+        "json",
+        "--only",
+        "assertion.elements,parser.html5",
+        "invalid.html",
+    ]);
+    assert!(
+        rule_ids(&only)
+            .iter()
+            .all(|id| id == "parser.html5" || id.starts_with("assertion.elements."))
+    );
+
+    // Hiding everything that failed leaves a clean exit code, but says so.
+    let none = run(&["--only", "schema", "invalid.html"]);
+    assert_eq!(none.code, 0);
+    assert!(none.stderr.contains("hidden"));
+}
+
+#[test]
+fn unknown_rule_selector_is_a_usage_error() {
+    let result = run(&["--only", "parsr.html5", "valid/ok.html"]);
+    assert_eq!(result.code, 2);
+    assert!(result.stderr.contains("parsr.html5"));
+}
+
+#[test]
+fn config_file_sets_options_and_the_command_line_wins() {
+    let html = "<!DOCTYPE html><title>t</title><p>x";
+    let with_config = run_with(&["--config", "config/disable.toml", "-"], Some(html), &[]);
+    // format = json and the hidden missing-lang warning: fail-on review still passes.
+    assert_eq!(with_config.code, 0, "{}", with_config.stdout);
+    assert!(with_config.stdout.trim_start().starts_with('{'));
+    assert!(with_config.stderr.contains("1 finding(s) hidden"));
+
+    let overridden = run_with(
+        &[
+            "--config",
+            "config/disable.toml",
+            "--format",
+            "text",
+            "--disable",
+            "parser.html5",
+            "-",
+        ],
+        Some(html),
+        &[],
+    );
+    // The command-line --disable replaces the file's list, so the warning is back.
+    assert_eq!(overridden.code, 1, "{}", overridden.stdout);
+    assert!(overridden.stdout.contains("html-missing-lang"));
+
+    let excluded = run_with(
+        &["--config", "config/disable.toml", "--no-config", "-"],
+        Some(html),
+        &[],
+    );
+    assert_eq!(excluded.code, 2);
+}
+
+#[test]
+fn bad_or_missing_config_is_exit_two() {
+    let bad = run(&["--config", "config/bad.toml", "valid/ok.html"]);
+    assert_eq!(bad.code, 2);
+    assert!(bad.stderr.contains("bad.toml") && bad.stderr.contains("line 1"));
+    assert_eq!(
+        run(&["--config", "config/none.toml", "valid/ok.html"]).code,
+        2
+    );
+}
+
+#[test]
+fn config_file_in_the_working_directory_is_found() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("cli-config-cwd");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("html-conform.toml"), "format = \"json\"\n").unwrap();
+    let bin = |extra: &[&str]| {
+        let output = Command::new(env!("CARGO_BIN_EXE_html-conform"))
+            .args(extra)
+            .arg("-")
+            .current_dir(&dir)
+            .stdin(Stdio::null())
+            .output()
+            .unwrap();
+        String::from_utf8(output.stdout).unwrap()
+    };
+    assert!(bin(&[]).trim_start().starts_with('{'));
+    assert!(!bin(&["--no-config"]).trim_start().starts_with('{'));
 }
 
 #[test]
