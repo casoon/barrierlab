@@ -8,6 +8,24 @@ be run against the **same** vnu commit/tag (documented in each script's
 header) — schema and corpus expectations drift silently out of sync
 otherwise.
 
+## Local deviations from vnu (`schema-patches/`)
+
+`schema/html5/` is upstream plus the patches in `schema-patches/NNNN-<what>.patch`
+(header comment in each: what, why, file). `vendor-schema.sh` applies them after
+the download and aborts if one does not apply. Never edit `schema/html5/*.rnc`
+by hand: change or add a patch, then re-run the script.
+
+- **Reproducibility check:** `xtask/vendor-schema.sh --check` vendors the pinned
+  commit into a temp dir, applies the patches and diffs against the committed
+  tree (exit 1 on any difference). Needs network, not run in CI; run it after
+  every change to the script, a patch or `schema/html5/`.
+- **Offline part:** `cargo test -p html-conform --test schema_patches` checks
+  that each patch targets an existing module and that its added lines are in
+  the committed file.
+- **New patch:** vendor without it, edit the module in a copy, then
+  `diff -u -L a/<f> -L b/<f> upstream-with-SPDX-header patched` (paths relative
+  to `schema/html5/`, `patch -p1`), and put a comment header on top.
+
 After every `vendor-schema.sh`/`vendor-svg-mathml.sh` run, regenerate the compiled schema that
 ships in the crate (`prebuilt/html5.rngc`, loaded instead of compiling the `.rnc` files at
 start-up): `UPDATE_PREBUILT=1 cargo test -p html-conform prebuilt_schema_is_current`. The same
