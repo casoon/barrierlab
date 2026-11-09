@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
+  `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
+  `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`
+  trees fall from 177 and 50 to 2 and 0. vnu's RDFa-Lite-only preset is not offered
+  (barrierlab#173).
+
+### Changed
+
+- **Rules:** a `<link>` may carry `resource` instead of `href`, and a `<link>` with `property`
+  is allowed in the body.
+
 ### Fixed
 
 - **Schema check:** `xlink:href` and the other XLink attributes on SVG elements were rejected as

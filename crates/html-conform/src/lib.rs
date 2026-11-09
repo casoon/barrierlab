@@ -389,6 +389,28 @@ mod tests {
         assert!(report.findings.is_empty(), "{:?}", report.findings);
     }
 
+    /// RDFa 1.1 is part of vnu's default schema (barrierlab#173).
+    #[test]
+    fn rdfa_attributes_are_conforming_and_unknown_ones_are_not() {
+        let page = |body: &str| {
+            format!(
+                "<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\
+                 <title>t</title></head>\n<body vocab=\"http://schema.org/\">{body}</body>\n</html>\n"
+            )
+        };
+        let report = check(&page(
+            "<div typeof=\"Person\" prefix=\"ex: http://example.org/\">\
+             <link property=\"ex:copy\" resource=\"_:a\">\
+             <span property=\"name\" about=\"#me\">A</span></div>",
+        ))
+        .expect("HTML5 parsing should recover");
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+
+        let report =
+            check(&page("<p propertyy=\"x\">A</p>")).expect("HTML5 parsing should recover");
+        assert!(!report.findings.is_empty());
+    }
+
     #[test]
     fn input_type_search_is_conforming() {
         assert!(
