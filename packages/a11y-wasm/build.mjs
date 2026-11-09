@@ -71,9 +71,9 @@ function cli(soll) {
 
 const soll = verlangteVersion();
 
-// Optionale Cargo-Features, kommagetrennt (etwa `probes`, siehe
-// docs/packages/a11y-wasm.md). Ohne sie entsteht das Artefakt, das das
-// Groessenbudget in der CI misst.
+// Zusaetzliche Cargo-Features, kommagetrennt (siehe docs/packages/a11y-wasm.md);
+// die Standard-Features (`probes`) sind immer dabei. Ohne die Variable entsteht
+// das Artefakt, das das Groessenbudget in der CI misst.
 const features = process.env.A11Y_WASM_FEATURES
   ? ["--features", process.env.A11Y_WASM_FEATURES]
   : [];
