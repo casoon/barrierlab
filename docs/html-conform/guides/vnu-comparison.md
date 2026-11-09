@@ -88,7 +88,7 @@ finding-by-finding parity.
 
 - **The same schema.** The RELAX NG schema in `schema/` is vnu's, vendored unchanged,
   including SVG 1.1 and MathML 3. MathML is measured with 48 fixtures (no disagreement); SVG
-  with only 6 (see the triage below and the `xlink:href` gap).
+  with only 6 (see the triage below).
 - **Parser diagnostics, microsyntaxes, co-constraints**: see
   [Findings and rule IDs](../rule-ids/) for each layer.
 - **Import maps, speculation rules and meta CSP**: checked by dedicated Rust code.
@@ -120,12 +120,6 @@ finding-by-finding parity.
   RDFa attributes. Every RDFa attribute (`prefix`, `property`, `typeof`, `about`, `resource`, `vocab`, ...) is reported as
   unexpected: 177 false positives in `tests/html-rdfa` and 50 in `tests/html-rdfalite`
   (measured, see the triage below). The gate pins these numbers; it does not accept more.
-- **`xlink:href` on SVG elements.** A local run over the full upstream `html-svg` tree
-  (see below) reported 479 false positives among the 521 fixtures that vnu considers clean,
-  dominated by `unexpected attribute {xlink}xlink:href`; a minimal
-  `<svg><defs><circle id="a" r="1"/></defs><use xlink:href="#a"/></svg>` reproduces it. The
-  vendored `html-svg` fixtures do not use `xlink:href`, so the committed baseline does not show
-  this gap.
 
 ## Triage of vnu's other test trees
 
