@@ -1,0 +1,26 @@
+[package]
+name = "html-conform-wasm"
+version = "0.1.0"
+edition.workspace = true
+# html-conform verlangt 1.88.
+rust-version = "1.88.0"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+categories.workspace = true
+description = "WASM boundary for html-conform: HTML5 conformance checking in the browser, Node and Workers."
+keywords = ["html", "html5", "validator", "wasm", "webassembly"]
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+a11y-report = { workspace = true }
+html-conform = { workspace = true }
+serde-wasm-bindgen = "0.6"
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+serde_json = { workspace = true }
