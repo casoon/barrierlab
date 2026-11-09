@@ -1,6 +1,6 @@
 //! Die heuristischen Tier-3-Regeln (liveaudit#6): Jede meldet `REVIEW`, nie
 //! `FAIL`, und ohne Layout-Daten des Hosts nichts — außer dem ungemessenen
-//! Fokus, der als `UNTESTED` stehen bleibt.
+//! Fokus, der als `NotRun::CapabilityMissing` im Bericht steht.
 //!
 //! Der Test-Host liest Layout und Geometrie aus `data-*`-Attributen.
 
@@ -117,6 +117,14 @@ fn page() -> ArenaBuilder {
 
 fn findings<'r>(r: &'r Report, id: &str) -> Vec<&'r a11y_report::Finding> {
     r.findings.iter().filter(|f| f.rule_id == id).collect()
+}
+
+/// Der Grund, mit dem `id` als nicht gelaufen vermerkt ist.
+fn not_run_reason(r: &Report, id: &str) -> Option<String> {
+    r.rule_runs
+        .iter()
+        .find(|x| x.rule_id == id && x.not_run == Some(a11y_report::NotRun::CapabilityMissing))
+        .map(|x| x.reason.clone().unwrap_or_default())
 }
 
 fn only_review(r: &Report, id: &str) -> usize {
@@ -330,9 +338,9 @@ fn focus_without_indicator_and_unmeasured() {
         .build();
     let r = run_full(&Host::new(&measured));
     assert_eq!(only_review(&r, "focus/indicator-missing"), 1);
-    assert!(findings(&r, "focus/indicator-unmeasured").is_empty());
+    assert!(not_run_reason(&r, "focus/indicator-missing").is_none());
 
-    // Nicht gemessen ist nicht bestanden: ein UNTESTED für die Seite.
+    // Nicht gemessen ist nicht bestanden: ein Vermerk, kein Befund.
     let unmeasured = page()
         .open("button")
         .text("A")
@@ -341,14 +349,13 @@ fn focus_without_indicator_and_unmeasured() {
         .close()
         .build();
     let r = run_full(&Host::new(&unmeasured));
-    let b = findings(&r, "focus/indicator-unmeasured");
-    assert_eq!(b.len(), 1);
-    assert_eq!(b[0].outcome, Outcome::Untested);
+    assert!(not_run_reason(&r, "focus/indicator-missing").is_some());
+    assert!(findings(&r, "focus/indicator-missing").is_empty());
 }
 
 /// Ohne Layout laufen die Heuristiken nicht — und sagen das: je eine
-/// `UNTESTED`-Meldung für die Seite statt eines stillen Nichts. Bis 0.20.0
-/// meldeten sie hier gar nichts, und der Bericht zählte sie als gelaufen.
+/// `NotRun::CapabilityMissing`-Vermerk mit Grund statt eines stillen Nichts
+/// und ohne Befund am Wurzelknoten.
 #[test]
 fn without_layout_the_heuristics_report_unchecked() {
     let arena = page()
@@ -371,9 +378,8 @@ fn without_layout_the_heuristics_report_unchecked() {
         "reflow/min-width",
         "keyboard/pointer-only",
     ] {
-        let b = findings(&r, id);
-        assert_eq!(b.len(), 1, "{id}: {b:?}");
-        assert_eq!(b[0].outcome, Outcome::Untested, "{id}");
+        assert!(not_run_reason(&r, id).is_some(), "{id}");
+        assert!(findings(&r, id).is_empty(), "{id}");
     }
 }
 

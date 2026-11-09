@@ -6,7 +6,7 @@
 //! Kaskade, Vererbung und Transparenz — ein statischer Parser kann es nicht
 //! rekonstruieren, auch nicht näherungsweise.
 //!
-//! Hosts ohne [`Rendering`] melden diese Regeln als `UNTESTED` — siehe
+//! Hosts ohne [`Rendering`] vermerken diese Regeln als `NotRun::CapabilityMissing` — siehe
 //! [`crate::run`].
 //!
 //! # Was der Host liefern muss

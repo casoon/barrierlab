@@ -7,7 +7,7 @@
 //! Teilbaumtext plus `aria-label` liegt in genau den Fällen falsch, in denen
 //! es darauf ankommt.
 //!
-//! Hosts ohne [`Semantics`] melden diese Regeln als `UNTESTED` — siehe
+//! Hosts ohne [`Semantics`] vermerken diese Regeln als `NotRun::CapabilityMissing` — siehe
 //! [`crate::run`].
 //!
 //! [`Semantics`]: a11y_dom::Semantics
