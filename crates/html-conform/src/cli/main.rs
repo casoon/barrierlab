@@ -4,6 +4,8 @@
 //! never fetches a URL; everything else is `html_conform::check`.
 
 mod args;
+mod config;
+mod encoding;
 mod input;
 mod junit;
 mod output;
@@ -13,7 +15,8 @@ use std::io::Write;
 use std::process::ExitCode;
 
 use a11y_report::Outcome;
-use args::{Command, FailOn, Format, Options};
+use args::{Command, FailOn, Format};
+use config::Settings;
 use input::FileResult;
 
 fn main() -> ExitCode {
@@ -32,11 +35,21 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    ExitCode::from(run(&options))
+    match config::resolve(options) {
+        Ok(settings) => ExitCode::from(run(&settings)),
+        Err(message) => {
+            eprintln!("html-conform: {message}");
+            ExitCode::from(2)
+        }
+    }
 }
 
-fn run(options: &Options) -> u8 {
-    let results = input::check_all(&options.inputs);
+fn run(options: &Settings) -> u8 {
+    let mut results = input::check_all(&options.inputs);
+    let hidden = input::apply_selection(&mut results, &options.selection);
+    if hidden > 0 {
+        eprintln!("html-conform: note: {hidden} finding(s) hidden by --only/--disable");
+    }
     let rendered = match options.format {
         Format::Text => output::text(
             &results,

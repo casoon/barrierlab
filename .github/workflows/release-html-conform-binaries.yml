@@ -1,0 +1,180 @@
+name: Release html-conform binaries
+
+# Tag `html-conform-vX.Y.Z` -> build the `html-conform` binary (feature `cli`) for
+# five targets, attach the archives and a combined SHA256SUMS to the GitHub
+# release of that tag, and attest their build provenance (Sigstore).
+#
+# release-plz sets the tag and the release with the workflow token, and a tag
+# pushed with that token does not start a workflow (see release-npm.yml). So
+# there are two ways in: a tag pushed by hand, or, for a tag release-plz has
+# already set, `gh workflow run release-html-conform-binaries.yml -f tag=html-conform-vX.Y.Z`.
+# The tag must exist, match `crates/html-conform/Cargo.toml`, and is checked out
+# as is; the release is created if release-plz has not made one.
+on:
+  push:
+    tags:
+      - "html-conform-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build, html-conform-vX.Y.Z"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-html-conform-binaries-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Tag name and version
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^html-conform-v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?)$ ]]; then
+            echo "not an html-conform release tag: $TAG"; exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+
+      - name: Tag matches the crate version
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          crate="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/html-conform/Cargo.toml | head -n 1)"
+          test "$crate" = "$VERSION" || { echo "tag says $VERSION, Cargo.toml says $crate"; exit 1; }
+
+  build:
+    needs: prepare
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            musl: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+            musl: true
+          - target: x86_64-apple-darwin
+            os: macos-15
+          - target: aarch64-apple-darwin
+            os: macos-15
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    # Job permissions replace the top-level ones.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ needs.prepare.outputs.tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: musl tools
+        if: matrix.musl
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build
+        run: cargo build --locked --release -p html-conform --features cli --bin html-conform --target "$TARGET"
+
+      - name: Package
+        run: |
+          name="html-conform-v${VERSION}-${TARGET}"
+          exe="html-conform"
+          [[ "$TARGET" == *windows* ]] && exe="html-conform.exe"
+          mkdir -p "dist/$name"
+          cp "target/$TARGET/release/$exe" "dist/$name/"
+          cp crates/html-conform/LICENSE crates/html-conform/README.md "dist/$name/"
+          "dist/$name/$exe" --version
+          cd dist
+          if [[ "$TARGET" == *windows* ]]; then
+            archive="$name.zip"
+            7z a -tzip "$archive" "$name" > /dev/null
+          else
+            archive="$name.tar.gz"
+            tar -czf "$archive" "$name"
+          fi
+          # "hash  name" with two spaces, so `shasum -a 256 -c` works.
+          if command -v sha256sum > /dev/null; then
+            sha256sum "$archive" > "$archive.sha256"
+          else
+            shasum -a 256 "$archive" > "$archive.sha256"
+          fi
+          cat "$archive.sha256"
+          rm -r "$name"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: html-conform-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: html-conform-*
+          merge-multiple: true
+          path: dist
+
+      - name: SHA256SUMS
+        working-directory: dist
+        run: |
+          cat ./*.sha256 > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          ls -l
+
+      # release-plz normally made the release already; otherwise create it.
+      - name: Upload to the release
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes "html-conform binaries. Verify a download with the README of the crate."
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber dist/*.tar.gz dist/*.zip dist/*.sha256 dist/SHA256SUMS

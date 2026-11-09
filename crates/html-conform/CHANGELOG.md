@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
+  else UTF-8); bytes invalid in that encoding are reported as not checked in every format.
+  Details: [Encodings](https://casoon.github.io/barrierlab/docs/html-conform/guides/cli/#encodings)
+  (barrierlab#74).
+- **CLI:** `--disable <rule>` and `--only <rule>` select findings by rule ID or dotted prefix, and
+  `html-conform.toml` (working directory) or `--config <file>` sets `format`, `fail-on`, `color`,
+  `quiet`, `disable` and `only`; `--no-config` ignores it. Hidden findings are counted on standard
+  error, unknown rule IDs and malformed config files are exit code 2 (barrierlab#74).
+- **Release:** `html-conform` binaries for Linux (x86_64, aarch64), macOS (x86_64, aarch64) and
+  Windows (x86_64) are attached to the release with `SHA256SUMS` and a build provenance
+  attestation (barrierlab#74).
+
 ### Fixed
 
 - **Schema check:** `xlink:href` and the other XLink attributes on SVG elements were rejected as

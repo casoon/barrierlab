@@ -10,6 +10,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use a11y_report::{Report, SourcePosition};
 
 use crate::args::Input;
+use crate::config::Selection;
+
+/// The assertion that compares `<meta charset>` with the document encoding.
+const META_CHARSET_RULE: &str = "assertion.elements.meta-charset-not-utf8";
 
 pub const STDIN_NAME: &str = "<stdin>";
 
@@ -85,6 +89,22 @@ pub fn check_all(inputs: &[Input]) -> Vec<FileResult> {
     );
     results.sort_by(|a, b| a.path.cmp(&b.path));
     results
+}
+
+/// Removes the findings the selection does not keep; returns how many.
+pub fn apply_selection(results: &mut [FileResult], selection: &Selection) -> usize {
+    if selection.is_empty() {
+        return 0;
+    }
+    let mut hidden = 0;
+    for result in results {
+        if let State::Checked(report) = &mut result.state {
+            let before = report.findings.len();
+            report.findings.retain(|f| selection.keeps(&f.rule_id));
+            hidden += before - report.findings.len();
+        }
+    }
+    hidden
 }
 
 fn display_of(source: &Source) -> String {
@@ -180,12 +200,19 @@ fn check_source(source: &Source) -> FileResult {
         Ok(bytes) => bytes,
         Err(err) => return FileResult::not_checked(display, err.to_string()),
     };
-    let Ok(html) = String::from_utf8(bytes) else {
-        return FileResult::not_checked(display, "not valid UTF-8; the file was not checked");
+    let decoded = match crate::encoding::decode(&bytes) {
+        Ok(decoded) => decoded,
+        Err(reason) => return FileResult::not_checked(display, reason),
     };
-    match html_conform::check(&html) {
+    match html_conform::check(&decoded.text) {
         Ok(checked) => {
             let mut report = checked.to_report();
+            if decoded.meta_declared_legacy {
+                // The library gets text and takes it for UTF-8, so it calls every
+                // non-UTF-8 `<meta charset>` a mismatch. Here the bytes were read
+                // as exactly the declared encoding, so there is none.
+                report.findings.retain(|f| f.rule_id != META_CHARSET_RULE);
+            }
             for finding in &mut report.findings {
                 finding.location.file = Some(display.clone());
             }
