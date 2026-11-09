@@ -53,10 +53,15 @@ fn run(args: &[&str]) -> Run {
 }
 
 fn golden(name: &str, actual: &str) {
+    // The tool version changes with every release; keep it out of the golden files.
+    let actual = actual.replace(
+        &format!("\"version\": \"{}\"", env!("CARGO_PKG_VERSION")),
+        "\"version\": \"<VERSION>\"",
+    );
     let path = manifest_dir().join("tests/cli-golden").join(name);
     if std::env::var_os("UPDATE_GOLDEN").is_some() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(&path, actual).unwrap();
+        std::fs::write(&path, &actual).unwrap();
     }
     let expected = std::fs::read_to_string(&path)
         .unwrap_or_else(|_| panic!("missing golden {name}; run with UPDATE_GOLDEN=1"));
