@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
 ### Added
 
 - **CLI:** the `cli` feature (off by default, no new dependency) builds an `html-conform` binary
@@ -17,6 +19,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- **Dependencies:** requires `html5-parser` 0.5 (more tree-construction and tokenizer parse errors
+  are reported, so parse-error findings can differ), `relax-ng` 0.2.4 with its `serialize`
+  feature, and `a11y-report` 0.29.
 - **Start-up:** the first `check()` in a process loads the schema from `prebuilt/html5.rngc`
   instead of compiling the `.rnc` files: about 3.7 billion instructions and 146 ms become 0.12
   billion and 7 ms (barrierlab#72). Findings are unchanged. Regenerate with `xtask/README.md`.

@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-09
+
 ### Changed
 
 - **Breaking, nicht gemessen:** Neun bestehende Regeln melden eine fehlende Messung des Hosts als `NotRun::CapabilityMissing` mit Grund in `rule_runs` statt als `UNTESTED`-Befund am Wurzelknoten. Hosts lesen `rule_runs` und müssen nicht mehr nach Ausgang und Wurzelknoten filtern. Welche Regeln, und was als Befund bleibt, steht in `docs/packages/a11y-rules.md`; casoon/barrierlab#145.

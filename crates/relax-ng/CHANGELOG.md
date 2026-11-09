@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-09
+
 ### Added
 
 - **API:** feature `serialize` adds `Schema::to_bytes`/`from_bytes`, a stable, versioned binary
