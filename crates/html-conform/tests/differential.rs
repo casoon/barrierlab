@@ -97,6 +97,16 @@ fn comparable_findings<'a>(
         .collect()
 }
 
+/// The vendored vnu test trees (`xtask/vendor-corpus.sh`).
+const CORPUS_TREES: [&str; 6] = [
+    "html",
+    "html-aria",
+    "html-math",
+    "html-rdfa",
+    "html-rdfalite",
+    "html-svg",
+];
+
 /// One row of `tests/vnu-class-map.tsv`.
 struct VnuClass {
     name: String,
@@ -165,6 +175,7 @@ fn load_class_baseline() -> BTreeMap<String, ClassCounts> {
                     incidental: c["incidental"],
                     missed: c["missed"],
                     unmapped: c["unmapped"],
+                    false_positive: c["false_positive"],
                 },
             )
         })
@@ -175,7 +186,10 @@ fn load_class_baseline() -> BTreeMap<String, ClassCounts> {
 /// not masked by them. vnu validates `<style>` with the W3C CSS Validator;
 /// html-conform does not validate CSS (docs/html-conform/guides/vnu-comparison.md,
 /// issue #87, decision A).
-const PINNED_FALSE_NEGATIVES: [&str; 1] = ["html/elements/style/css-property-error-novalid.html"];
+const PINNED_FALSE_NEGATIVES: [&str; 2] = [
+    "html-svg/svg-a-nested-in-svg-a-novalid.html",
+    "html/elements/style/css-property-error-novalid.html",
+];
 
 /// Per corpus tree: how the true positives split by finding class.
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -188,6 +202,9 @@ struct ClassCounts {
     missed: usize,
     /// vnu's message has no row in the class map (counted in neither of the above).
     unmapped: usize,
+    /// vnu expects the fixture clean, findings were reported — a measured gap
+    /// of the tree, pinned in `tests/vnu-class-baseline.json`.
+    false_positive: usize,
 }
 
 #[derive(Default)]
@@ -221,8 +238,9 @@ fn differential_against_vendored_vnu_corpus() {
     let corpus_root = corpus_dir();
 
     let mut fixtures = Vec::new();
-    collect_html_fixtures(&corpus_root.join("html"), &corpus_root, &mut fixtures);
-    collect_html_fixtures(&corpus_root.join("html-aria"), &corpus_root, &mut fixtures);
+    for tree in CORPUS_TREES {
+        collect_html_fixtures(&corpus_root.join(tree), &corpus_root, &mut fixtures);
+    }
     fixtures.sort();
 
     assert!(
@@ -283,6 +301,16 @@ fn differential_against_vendored_vnu_corpus() {
                     (false, false) => metrics.true_negative += 1,
                     (false, true) => {
                         metrics.false_positive += 1;
+                        class_counts
+                            .entry(
+                                relative_path
+                                    .split('/')
+                                    .next()
+                                    .unwrap_or_default()
+                                    .to_string(),
+                            )
+                            .or_default()
+                            .false_positive += 1;
                         if false_positive_examples.len() < 20 {
                             false_positive_examples.push(relative_path.clone());
                         }
@@ -316,8 +344,12 @@ fn differential_against_vendored_vnu_corpus() {
     );
     for (tree, counts) in &class_counts {
         println!(
-            "finding classes {tree}: matched={} incidental={} missed={} unmapped={}",
-            counts.matched, counts.incidental, counts.missed, counts.unmapped
+            "finding classes {tree}: matched={} incidental={} missed={} unmapped={} false_positive={}",
+            counts.matched,
+            counts.incidental,
+            counts.missed,
+            counts.unmapped,
+            counts.false_positive
         );
     }
     for (class, examples) in &incidental_examples {
@@ -344,34 +376,15 @@ fn differential_against_vendored_vnu_corpus() {
         println!("not-comparable examples (check() returned Err): {not_comparable_examples:?}");
     }
 
-    // Baseline / regression gate: this corpus is real-world vnu
-    // test material exercising far more than this crate currently
-    // implements (Phase 08's real ARIA assertion rules in particular are
-    // still four reused canary placeholders, not the full rule set) —
-    // 100% agreement isn't the bar yet. This only asserts the checker
-    // never gets WORSE than the first recorded run. Update the constants
-    // below deliberately (with a `DECISIONS.md` entry explaining what
-    // improved) when the checker demonstrably gets better — never to
+    // Baseline / regression gate, per tree: this corpus exercises far more than
+    // this crate implements, so 100% agreement is not the bar. The gate only
+    // asserts the checker never gets WORSE than the recorded run. `html` and
+    // `html-aria` stay at 0 false positives; a tree with a measured gap
+    // (`html-rdfa`, `html-rdfalite`) carries that number in
+    // `tests/vnu-class-baseline.json` and is documented in
+    // docs/html-conform/guides/vnu-comparison.md. Update the baseline file
+    // deliberately when the checker demonstrably gets better — never to
     // silently paper over a regression.
-    // `<=` (not `==`): keeps this a general-purpose "never worse than the
-    // baseline" gate rather than an exact-match assertion, even now that
-    // the baseline has reached 0 (`usize`'s minimum, which is why this
-    // needs an explicit clippy allow — the comparison stops being
-    // "absurd" the moment a regression bumps `false_positive` back above
-    // 0, clippy just can't see that).
-    #[allow(clippy::absurd_extreme_comparisons)]
-    let false_positive_within_baseline = metrics.false_positive <= BASELINE_FALSE_POSITIVE;
-    assert!(
-        false_positive_within_baseline,
-        "false positives regressed: {} > baseline {}",
-        metrics.false_positive, BASELINE_FALSE_POSITIVE
-    );
-    assert!(
-        metrics.false_negative <= BASELINE_FALSE_NEGATIVE,
-        "false negatives regressed: {} > baseline {}",
-        metrics.false_negative,
-        BASELINE_FALSE_NEGATIVE
-    );
     assert_eq!(
         false_negative_fixtures, PINNED_FALSE_NEGATIVES,
         "the set of missed fixtures differs from the pinned exceptions"
@@ -381,6 +394,18 @@ fn differential_against_vendored_vnu_corpus() {
         let base = baseline
             .get(tree)
             .unwrap_or_else(|| panic!("no baseline for tree {tree} in vnu-class-baseline.json"));
+        assert!(
+            counts.false_positive <= base.false_positive,
+            "{tree}: false positives regressed, {} > baseline {}",
+            counts.false_positive,
+            base.false_positive
+        );
+        assert!(
+            counts.missed <= base.missed,
+            "{tree}: false negatives regressed, {} > baseline {}",
+            counts.missed,
+            base.missed
+        );
         assert!(
             counts.incidental <= base.incidental,
             "{tree}: incidental rose, {} > baseline {}",
@@ -1298,6 +1323,10 @@ fn differential_against_vendored_vnu_corpus() {
 /// `false_positive` unchanged (0), `true_negative` unchanged (909),
 /// `not_comparable` unchanged (0); `false_negative` 2→1.
 /// New baseline: `true_positive=3745 true_negative=909 false_positive=0 false_negative=1 not_comparable=0`.
-const BASELINE_FALSE_POSITIVE: usize = 0;
-const BASELINE_FALSE_NEGATIVE: usize = 1;
+///
+/// Issue #86: the corpus grew by `html-math`, `html-rdfa`, `html-rdfalite` and
+/// the vnu-authored part of `html-svg` (`CORPUS_TREES`), and the false
+/// positive / false negative gates became per tree
+/// (`tests/vnu-class-baseline.json`), so a gap in a new tree cannot hide a
+/// regression in `html` or `html-aria`, which stay at 0 and 1.
 const BASELINE_NOT_COMPARABLE: usize = 0;

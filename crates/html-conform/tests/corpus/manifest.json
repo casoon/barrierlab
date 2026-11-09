@@ -2,14 +2,22 @@
   "source_repo": "https://github.com/validator/validator",
   "source_commit": "388cb365257d1410d4d32af960dba1cbd1b9af91",
   "source_tag": "26.8.20",
-  "vendored_trees": ["tests/html", "tests/html-aria"],
+  "vendored_trees": [
+    "tests/html", "tests/html-aria", "tests/html-math", "tests/html-rdfa",
+    "tests/html-rdfalite", "tests/html-svg (vnu-authored files only)"
+  ],
   "excluded_trees": [
-    "tests/css", "tests/xhtml", "tests/svg", "tests/html-rdfa",
-    "tests/html-rdfalite", "tests/html-math", "tests/html-its",
-    "tests/langdetect", "tests/normalization", "tests/schema-validation"
+    "tests/css", "tests/xhtml", "tests/svg", "tests/html-its",
+    "tests/langdetect", "tests/normalization", "tests/schema-validation",
+    "tests/html-svg (W3C-copyrighted SVG 1.1 test cases)"
   ],
   "html_fixture_count": 3845,
   "html_aria_fixture_count": 810,
-  "messages_json_entry_count": 3746,
+  "html_math_fixture_count": 48,
+  "html_rdfa_fixture_count": 212,
+  "html_rdfalite_fixture_count": 56,
+  "html_svg_fixture_count": 6,
+  "html_svg_upstream_fixture_count": 522,
+  "messages_json_entry_count": 3795,
   "expectation_model": "a fixture path present as a messages.json key is expected to produce at least one finding; a path absent from messages.json is expected to produce none"
 }

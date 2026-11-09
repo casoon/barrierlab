@@ -76,6 +76,7 @@ assertion	assertion.	Internal encoding declaration “X” disagrees with the ac
 assertion	assertion.	Not all browsers position items appropriately when "tabular markup" is used with the “X” element. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
 assertion	assertion.	Not all browsers position items appropriately when the “X” element is used. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
 assertion	assertion.	Section lacks heading. Consider using “X”-“X” elements to add identifying headings to all sections, or else use a “X” element instead for any cases where no heading is needed.
+assertion	assertion.	The SVG element “X” must not appear as a descendant of another SVG element “X”.
 assertion	assertion.	The element “X” must not appear as a descendant of an element with the attribute “X”.
 assertion	assertion.	The element “X” must not appear as a descendant of the “X” element.
 assertion	assertion.	The element “X” should not appear as a descendant of an element with the attribute “X”.
@@ -210,6 +211,7 @@ parser	parser.html5	Forbidden code point U+000b.
 parser	parser.html5	Forbidden code point U+0091.
 parser	parser.html5	Forbidden code point U+fdd0.
 parser	parser.html5	Garbage after “X”.
+parser	parser.html5	HTML start tag “X” in a foreign namespace context.
 parser	parser.html5	Heading cannot be a child of another heading.
 parser	parser.html5	Misplaced non-space characters inside a table.
 parser	parser.html5	Missing space before doctype name.
@@ -254,6 +256,7 @@ schema	schema.html5	Attribute “X” is only allowed when the input type is “
 schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
 schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
 schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+schema	schema.html5	Attribute “X” not allowed here.
 schema	schema.html5	Attribute “X” not allowed on element “X” at this point.
 schema	schema.html5	Attribute “X” with value “X” must not be specified on elements with “X” attribute value “X”. This combination prevents content from being accessible to assistive technology when revealed through search.
 schema	schema.html5	Bad value “X” for attribute “X” on element “X”
@@ -263,6 +266,7 @@ schema	schema.html5	Discarding superfluous token “X” from value of attribute
 schema	schema.html5	Discarding unrecognized token “X” from value of attribute “X”. Browsers ignore any token that is not a defined ARIA non-abstract role.
 schema	schema.html5	Element “X” is missing a required child element.
 schema	schema.html5	Element “X” is missing a required instance of child element “X”.
+schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”.
 schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”, “X”, “X”.
 schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”.
 schema	schema.html5	Element “X” is missing one or more of the following attributes: “X”, “X”, “X”, “X”.
