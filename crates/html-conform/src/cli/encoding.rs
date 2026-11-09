@@ -8,27 +8,14 @@ use encoding_rs::{Encoding, UTF_8, UTF_16BE, UTF_16LE, WINDOWS_1252};
 /// How many bytes the prescan looks at (HTML Standard, "prescan a byte stream").
 const PRESCAN_LIMIT: usize = 1024;
 
-/// A decoded document.
-#[derive(Debug)]
-pub struct Decoded {
-    pub text: String,
-    /// The encoding is not UTF-8 and came from the document's own `<meta>`
-    /// declaration (not from a byte order mark): the declaration agrees with
-    /// how the bytes were read.
-    pub meta_declared_legacy: bool,
-}
-
 /// Decodes `bytes`, or says why they cannot be decoded without loss.
-pub fn decode(bytes: &[u8]) -> Result<Decoded, String> {
-    let (encoding, bom_len, from_bom) = match Encoding::for_bom(bytes) {
-        Some((encoding, len)) => (encoding, len, true),
-        None => (prescan(bytes).unwrap_or(UTF_8), 0, false),
+pub fn decode(bytes: &[u8]) -> Result<String, String> {
+    let (encoding, bom_len) = match Encoding::for_bom(bytes) {
+        Some((encoding, len)) => (encoding, len),
+        None => (prescan(bytes).unwrap_or(UTF_8), 0),
     };
     match encoding.decode_without_bom_handling_and_without_replacement(&bytes[bom_len..]) {
-        Some(text) => Ok(Decoded {
-            text: text.into_owned(),
-            meta_declared_legacy: !from_bom && encoding != UTF_8,
-        }),
+        Some(text) => Ok(text.into_owned()),
         None => Err(format!(
             "not valid {}; the file was not checked",
             encoding.name()
@@ -272,10 +259,10 @@ mod tests {
         for unit in "<p>é".encode_utf16() {
             bytes.extend(unit.to_le_bytes());
         }
-        assert_eq!(decode(&bytes).unwrap().text, "<p>é");
+        assert_eq!(decode(&bytes).unwrap(), "<p>é");
         let mut utf8 = b"\xEF\xBB\xBF<meta charset=latin1>".to_vec();
         utf8.extend("é".as_bytes());
-        assert!(decode(&utf8).unwrap().text.ends_with('é'));
+        assert!(decode(&utf8).unwrap().ends_with('é'));
     }
 
     #[test]
@@ -312,7 +299,7 @@ mod tests {
         assert!(decode(b"<p>\xFF").unwrap_err().contains("UTF-8"));
         assert!(decode(b"<meta charset=shift_jis><p>\x81").is_err());
         assert_eq!(
-            decode(b"<meta charset=latin1><p>\xE9").unwrap().text,
+            decode(b"<meta charset=latin1><p>\xE9").unwrap(),
             "<meta charset=latin1><p>\u{e9}"
         );
     }

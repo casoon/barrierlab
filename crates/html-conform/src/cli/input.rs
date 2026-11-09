@@ -12,9 +12,6 @@ use a11y_report::{Report, SourcePosition};
 use crate::args::Input;
 use crate::config::Selection;
 
-/// The assertion that compares `<meta charset>` with the document encoding.
-const META_CHARSET_RULE: &str = "assertion.elements.meta-charset-not-utf8";
-
 pub const STDIN_NAME: &str = "<stdin>";
 
 /// The outcome for one document: a report, or the reason it was not checked.
@@ -200,19 +197,13 @@ fn check_source(source: &Source) -> FileResult {
         Ok(bytes) => bytes,
         Err(err) => return FileResult::not_checked(display, err.to_string()),
     };
-    let decoded = match crate::encoding::decode(&bytes) {
-        Ok(decoded) => decoded,
+    let html = match crate::encoding::decode(&bytes) {
+        Ok(html) => html,
         Err(reason) => return FileResult::not_checked(display, reason),
     };
-    match html_conform::check(&decoded.text) {
+    match html_conform::check(&html) {
         Ok(checked) => {
             let mut report = checked.to_report();
-            if decoded.meta_declared_legacy {
-                // The library gets text and takes it for UTF-8, so it calls every
-                // non-UTF-8 `<meta charset>` a mismatch. Here the bytes were read
-                // as exactly the declared encoding, so there is none.
-                report.findings.retain(|f| f.rule_id != META_CHARSET_RULE);
-            }
             for finding in &mut report.findings {
                 finding.location.file = Some(display.clone());
             }

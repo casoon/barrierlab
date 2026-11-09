@@ -9,7 +9,8 @@ All notable changes to this project will be documented in this file. The format 
 ### Added
 
 - **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
-  else UTF-8); bytes invalid in that encoding are reported as not checked in every format.
+  else UTF-8); bytes invalid in that encoding are reported as not checked in every format. A
+  non-UTF-8 file is decoded as declared and still gets `assertion.elements.meta-charset-not-utf8`.
   Details: [Encodings](https://casoon.github.io/barrierlab/docs/html-conform/guides/cli/#encodings)
   (barrierlab#74).
 - **CLI:** `--disable <rule>` and `--only <rule>` select findings by rule ID or dotted prefix, and

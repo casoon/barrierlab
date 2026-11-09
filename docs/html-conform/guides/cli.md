@@ -52,11 +52,10 @@ the standard), else UTF-8. There is no HTTP header to consult, so nothing outran
 Standard input is treated the same.
 
 Bytes that are not valid in the encoding found are not replaced with U+FFFD and not checked
-anyway: the file is reported as not checked, exit code 2, in every format. The library receives
-text and takes it for UTF-8, so it calls every non-UTF-8 `<meta charset>` a mismatch
-(`assertion.elements.meta-charset-not-utf8`). When the CLI read a file as exactly the encoding
-its own `<meta>` declares, it drops that one finding, because there is no mismatch. With a byte
-order mark the declaration is not what decided, and the finding stays.
+anyway: the file is reported as not checked, exit code 2, in every format. A file in
+another encoding is decoded as the one it declares, so the other findings are about the real
+text. HTML requires UTF-8, though, so the declaration itself is reported as
+`assertion.elements.meta-charset-not-utf8`, as vnu does; the finding is not suppressed.
 
 ## Selecting rules and the config file
 

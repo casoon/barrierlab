@@ -260,25 +260,30 @@ const DOC_HEAD: &str = "<!DOCTYPE html><html lang=en><head>";
 
 #[test]
 fn encoding_is_sniffed_from_bom_then_meta_then_utf8() {
-    // windows-1252 declared by <meta charset>: 0xE9 is "e acute", so the
-    // document is clean. Read as UTF-8 it would be invalid.
-    let mut latin1 =
-        format!("{DOC_HEAD}<meta charset=iso-8859-1><title>t</title></head><body><p>caf")
-            .into_bytes();
-    latin1.push(0xE9);
+    // windows-1252 declared by <meta charset>: 0xE9 is "e acute" (read as UTF-8 it
+    // would be invalid). The value is quoted in a finding, so it shows the text was
+    // decoded intact. Non-UTF-8 is itself a conformance error, as in vnu.
+    let mut latin1 = format!(
+        "{DOC_HEAD}<meta charset=iso-8859-1><title>t</title></head><body><img src=x alt=a width=\"caf"
+    )
+    .into_bytes();
+    latin1.extend([0xE9, b'"', b'>']);
     let result = run_bytes(&["-"], Some(&latin1), &[]);
-    assert_eq!(
-        (result.code, result.stderr.as_str()),
-        (0, ""),
-        "{}",
-        result.stdout
-    );
+    assert_eq!(result.code, 1, "{}", result.stdout);
+    assert_eq!(result.stderr, "");
+    assert!(result.stdout.contains("`caf\u{e9}`"), "{}", result.stdout);
+    assert!(result.stdout.contains("meta-charset-not-utf8"));
+    assert!(!result.stdout.contains("not valid"));
 
     // Shift_JIS: 0x82 0xA0 is one hiragana letter (the http-equiv form is covered by unit tests).
-    let mut sjis =
-        format!("{DOC_HEAD}<meta charset=shift_jis><title>t</title></head><body><p>").into_bytes();
-    sjis.extend([0x82, 0xA0]);
-    assert_eq!(run_bytes(&["-"], Some(&sjis), &[]).code, 0);
+    let mut sjis = format!(
+        "{DOC_HEAD}<meta charset=shift_jis><title>t</title></head><body><img src=x alt=a width=\""
+    )
+    .into_bytes();
+    sjis.extend([0x82, 0xA0, b'"', b'>']);
+    let result = run_bytes(&["-"], Some(&sjis), &[]);
+    assert_eq!((result.code, result.stderr.as_str()), (1, ""));
+    assert!(result.stdout.contains("`\u{3042}`"), "{}", result.stdout);
 
     // UTF-16LE with a BOM, no meta.
     let text = format!("{DOC_HEAD}<title>t</title></head><body><p>x");
@@ -288,7 +293,8 @@ fn encoding_is_sniffed_from_bom_then_meta_then_utf8() {
     }
     assert_eq!(run_bytes(&["-"], Some(&utf16), &[]).code, 0);
 
-    // A BOM outranks the meta declaration, which then really disagrees: still a finding.
+    // A BOM outranks the meta declaration; the document is read as UTF-16 and the
+    // declaration still gets its finding.
     let text = format!("{DOC_HEAD}<meta charset=iso-8859-1><title>t</title></head><body><p>x");
     let mut utf16 = vec![0xFF, 0xFE];
     for unit in text.encode_utf16() {
