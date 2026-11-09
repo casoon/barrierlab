@@ -224,7 +224,8 @@ fn enhanced_contrast_govuk_link_color() {
 }
 
 /// Ein Host, der von `Layout` nur `obscured` misst: `focus/obscured` läuft,
-/// die übrigen Heuristiken melden „nicht geprüft" statt still nichts.
+/// die übrigen Heuristiken stehen mit `NotRun::CapabilityMissing` im Bericht,
+/// ohne Befund.
 #[test]
 fn partial_layout_leaves_unmeasured_unchecked() {
     let arena = page(|b| b.open("p").text("Text").close());
@@ -235,9 +236,21 @@ fn partial_layout_leaves_unmeasured_unchecked() {
         "reflow/min-width",
         "keyboard/pointer-only",
     ] {
-        assert_eq!(verdicts(&r, id), [Outcome::Untested], "{id}");
+        assert!(verdicts(&r, id).is_empty(), "{id}");
+        let run = r.rule_runs.iter().find(|x| x.rule_id == id).unwrap();
+        assert_eq!(
+            run.not_run,
+            Some(a11y_report::NotRun::CapabilityMissing),
+            "{id}"
+        );
     }
     assert!(verdicts(&r, "focus/obscured").is_empty());
+    let run = r
+        .rule_runs
+        .iter()
+        .find(|x| x.rule_id == "focus/obscured")
+        .unwrap();
+    assert!(run.did_run());
 }
 
 fn gradient(kind: &'static str) -> Arena {

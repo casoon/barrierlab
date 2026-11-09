@@ -13,7 +13,7 @@ order: 2
 | `fail` | automatically detected problem, unambiguously evidenced |
 | `review` | potential problem, only heuristically suspected, needs human confirmation |
 | `pass` | automated check passed, recorded but not shown by default |
-| `untested` | cannot be judged automatically, either in principle or because the host lacks the data |
+| `untested` | cannot be judged automatically, either in principle or for one element whose value the host could not resolve. A measurement the host does not provide at all is not a finding: the rule is recorded in `rule_runs` as `NotRun::CapabilityMissing` |
 
 `Severity` ranges from `low` through `medium` and `high` to `critical`. For tools that expect the
 axe vocabulary, `Severity::as_axe_impact` returns `minor`, `moderate`, `serious` and

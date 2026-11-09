@@ -176,6 +176,17 @@ fn findings_at(doc: &Arena, r: &Report, rule: &str) -> Vec<String> {
         .collect()
 }
 
+/// `id` steht mit `NotRun::CapabilityMissing` und Grund im Bericht.
+fn assert_not_run(r: &Report, id: &str) {
+    let run = r.rule_runs.iter().find(|x| x.rule_id == id).unwrap();
+    assert_eq!(
+        run.not_run,
+        Some(a11y_report::NotRun::CapabilityMissing),
+        "{id}"
+    );
+    assert!(run.reason.is_some(), "{id}");
+}
+
 fn verdicts(r: &Report, rule: &str) -> Vec<(Outcome, Severity)> {
     r.findings
         .iter()
@@ -216,10 +227,8 @@ fn corpus_redundant_role_list_style_auditmysite_644() {
 #[test]
 fn without_list_style_type_unchecked() {
     let (_, r) = check(LISTS, false);
-    assert_eq!(
-        verdicts(&r, "lists/role-redundant"),
-        [(Outcome::Untested, Severity::Low)]
-    );
+    assert!(verdicts(&r, "lists/role-redundant").is_empty());
+    assert_not_run(&r, "lists/role-redundant");
 }
 
 // --- color/link-indistinct --------------------------------------------------
@@ -273,10 +282,8 @@ fn link_as_block_is_not_running_text() {
 #[test]
 fn without_text_markup_unchecked() {
     let (_, r) = check(LINKS, false);
-    assert_eq!(
-        verdicts(&r, "color/link-indistinct"),
-        [(Outcome::Untested, Severity::Medium)]
-    );
+    assert!(verdicts(&r, "color/link-indistinct").is_empty());
+    assert_not_run(&r, "color/link-indistinct");
 }
 
 // --- keyboard/scrollable-region-not-focusable -------------------------------
@@ -310,8 +317,6 @@ fn corpus_scrollable_region_focusable_auditmysite_717() {
 #[test]
 fn without_scroll_overhang_unchecked() {
     let (_, r) = check(AREAS, false);
-    assert_eq!(
-        verdicts(&r, "keyboard/scrollable-region-not-focusable"),
-        [(Outcome::Untested, Severity::High)]
-    );
+    assert!(verdicts(&r, "keyboard/scrollable-region-not-focusable").is_empty());
+    assert_not_run(&r, "keyboard/scrollable-region-not-focusable");
 }

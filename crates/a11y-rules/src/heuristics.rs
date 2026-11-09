@@ -12,9 +12,9 @@
 //! `div`s ohne Rolle, von fixierten Leisten verdeckter Fokus, zu kleine Ziele.
 //!
 //! Die Daten liefert der Host über [`Rendering::layout`] und
-//! [`Rendering::bounds`]. Ohne sie melden diese Regeln nichts — bis auf die
-//! Fokus-Sichtbarkeit: Die wird nur in einem eigenen Durchgang gemessen, und
-//! ohne ihn steht sie als `UNTESTED` auf der Seite.
+//! [`Rendering::bounds`]. Ohne sie melden diese Regeln keinen Befund, sondern
+//! stehen in `rule_runs` mit `NotRun::CapabilityMissing` und Grund. Das gilt
+//! auch für die Fokus-Sichtbarkeit, die nur ein eigener Durchgang misst.
 //!
 //! [`Rendering::layout`]: a11y_dom::Rendering::layout
 //! [`Rendering::bounds`]: a11y_dom::Rendering::bounds
@@ -28,6 +28,7 @@ use a11y_dom::{
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
+use crate::not_run;
 use crate::registry::Meta;
 use crate::structure::per_tab_reachable;
 use crate::visibility::Scope;
@@ -107,29 +108,17 @@ fn measured<D: Rendering>(doc: &D, field: impl Fn(&Layout) -> bool) -> bool {
     elements(doc).any(|n| doc.layout(n).is_some_and(|l| field(&l)))
 }
 
-/// Nicht gemessen ist nicht bestanden: ein `UNTESTED` für die Seite, wenn
-/// kein Element das Feld trägt, das die Heuristik braucht.
-fn unmeasured<D: Rendering>(
-    doc: &D,
-    id: &str,
-    wcag: &[&str],
-    field: &str,
-    locale: Locale,
-    out: &mut Vec<Finding>,
-) {
-    out.push(
-        Finding::untested(
-            id,
-            tr!(
-                locale,
-                "The host does not measure {field}; this heuristic did not run.",
-                "Der Host misst {field} nicht; diese Heuristik lief nicht."
-            ),
-        )
-        .with_severity(Severity::Low)
-        .with_wcag(wcag.iter().copied())
-        .at(at(doc.root().id())),
-    );
+/// Nicht gemessen ist nicht bestanden: ein Vermerk `NotRun::CapabilityMissing`
+/// (kein Befund), wenn kein Element das Feld trägt, das die Heuristik braucht.
+fn unmeasured(id: &str, field: &str, locale: Locale, out: &mut Vec<Finding>) {
+    out.push(not_run::note(
+        id,
+        tr!(
+            locale,
+            "The host does not measure {field}; this heuristic did not run.",
+            "Der Host misst {field} nicht; diese Heuristik lief nicht."
+        ),
+    ));
 }
 
 /// 1.3.2 / 2.4.3: umgekehrte Flex-Richtung oder `order` über bedienbarem
@@ -137,14 +126,7 @@ fn unmeasured<D: Rendering>(
 fn order<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     if !measured(doc, |l| l.flex_reversed.is_some() || l.order.is_some()) {
         let field = "flex-direction / order";
-        return unmeasured(
-            doc,
-            "order/visual-mismatch",
-            &["1.3.2", "2.4.3"],
-            field,
-            locale,
-            out,
-        );
+        return unmeasured("order/visual-mismatch", field, locale, out);
     }
     for n in elements(doc) {
         let Some(layout) = doc.layout(n) else {
@@ -266,14 +248,7 @@ fn endless_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Findin
     let with_layout = measured(doc, |l| l.infinite_animation.is_some());
     if !with_layout {
         let field = "animation-iteration-count";
-        unmeasured(
-            doc,
-            "motion/infinite-animation",
-            &["2.2.2"],
-            field,
-            locale,
-            out,
-        );
+        unmeasured("motion/infinite-animation", field, locale, out);
     }
     let hit = outermost(elements(doc), |n| {
         n.is_element("marquee")
@@ -329,14 +304,7 @@ fn endless_animation<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Findin
 /// 1.4.10: ein `min-width`, das bei 320 CSS-px waagerechtes Scrollen erzwingt.
 fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     if !measured(doc, |l| l.min_width_px.is_some()) {
-        return unmeasured(
-            doc,
-            "reflow/min-width",
-            &["1.4.10"],
-            "min-width",
-            locale,
-            out,
-        );
+        return unmeasured("reflow/min-width", "min-width", locale, out);
     }
     let hit = outermost(elements(doc), |n| {
         !may_be_wide(n)
@@ -374,8 +342,7 @@ fn reflow<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 fn only_pointer<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Ohne gemessenes `cursor` läuft nur der `onclick`-Teil.
     if !measured(doc, |l| l.cursor_pointer.is_some()) {
-        let wcag = &["2.1.1", "4.1.2"];
-        unmeasured(doc, "keyboard/pointer-only", wcag, "cursor", locale, out);
+        unmeasured("keyboard/pointer-only", "cursor", locale, out);
     }
     for n in elements(doc) {
         // Kartenmuster: `cursor: pointer` auf einem Kasten, der einen Link oder
@@ -429,7 +396,7 @@ fn covered<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let probed = elements(doc).any(|n| doc.focus_cover(n).is_some());
     if !probed && !measured(doc, |l| l.obscured.is_some() || l.hides_focus.is_some()) {
         let field = "overlap with fixed or sticky elements";
-        return unmeasured(doc, "focus/obscured", &["2.4.11"], field, locale, out);
+        return unmeasured("focus/obscured", field, locale, out);
     }
     for n in elements(doc) {
         let cover = doc.focus_cover(n);
@@ -835,22 +802,16 @@ fn focus_visible<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
     }
     // Nicht gemessen ist nicht bestanden.
     if targets > 0 && measured == 0 {
-        out.push(
-            Finding::untested(
-                "focus/indicator-unmeasured",
-                pick!(
-                    locale,
-                    "Focus visibility was not measured — that needs a pass that moves focus. \
-                     Check by hand that every control shows keyboard focus.",
-                    "Die Fokus-Sichtbarkeit wurde nicht gemessen — das braucht einen Durchgang, \
-                     der den Fokus bewegt. Von Hand prüfen, ob jedes Bedienelement den \
-                     Tastaturfokus zeigt.",
-                ),
-            )
-            .with_severity(Severity::High)
-            .with_wcag(["2.4.7"])
-            .at(at(doc.root().id())),
-        );
+        out.push(not_run::note(
+            "focus/indicator-missing",
+            pick!(
+                locale,
+                "The host does not measure focus visibility — that needs a pass that moves \
+                 focus.",
+                "Der Host misst die Fokus-Sichtbarkeit nicht — das braucht einen Durchgang, \
+                 der den Fokus bewegt.",
+            ),
+        ));
     }
 }
 
@@ -954,7 +915,7 @@ pub(crate) const METAS: [Meta; 8] = [
         help_de: de_text!("Erhöhte Zielgröße (AAA): Ziele von mindestens 44 × 44 CSS-Pixeln."),
     },
     Meta {
-        ids: &["focus/indicator-missing", "focus/indicator-unmeasured"],
+        ids: &["focus/indicator-missing"],
         tier: Tier::Rendering,
         scope: Scope::Rendered,
         wcag: &["2.4.7"],
