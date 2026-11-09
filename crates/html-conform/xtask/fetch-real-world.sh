@@ -8,13 +8,23 @@
 # drift over time (redesigns, unrelated markup errors), so this is a
 # separate, best-effort signal, not a regression gate.
 #
+# The snapshot is pinned: an existing page is never overwritten, so repeated
+# runs compare the same bytes. Pass --refresh to re-download everything (the
+# baseline then no longer matches and must be regenerated with
+# compare-real-world.sh --update-baseline). The snapshot stays outside git:
+# third-party pages are not ours to redistribute.
+#
+# Env: RW_SNAPSHOT_DIR overrides the target directory.
+#
 # Requires: curl.
 
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 sites_file="${script_dir}/real-world-sites.txt"
-out_dir="${script_dir}/.cache/real-world"
+out_dir="${RW_SNAPSHOT_DIR:-${script_dir}/.cache/real-world}"
+refresh=0
+[[ "${1:-}" == "--refresh" ]] && refresh=1
 
 for tool in curl; do
     if ! command -v "${tool}" >/dev/null 2>&1; then
@@ -46,13 +56,19 @@ while IFS= read -r url; do
     slug="$(slugify "${url}")"
     dest="${out_dir}/${slug}.html"
 
-    echo "fetching ${url} -> ${dest}"
-    if ! curl --fail --silent --show-error --location --max-time 30 \
-        --output "${dest}" "${url}"; then
-        echo "warning: failed to fetch ${url}, skipping" >&2
-        rm -f "${dest}"
+    if [[ -s "${dest}" && "${refresh}" -eq 0 ]]; then
+        echo "keeping ${dest} (pinned; --refresh to re-download)"
         continue
     fi
+
+    echo "fetching ${url} -> ${dest}"
+    if ! curl --fail --silent --show-error --location --max-time 30 \
+        --output "${dest}.part" "${url}"; then
+        echo "warning: failed to fetch ${url}, skipping" >&2
+        rm -f "${dest}.part"
+        continue
+    fi
+    mv "${dest}.part" "${dest}"
 done <"${sites_file}"
 
 echo "done: fetched pages into ${out_dir}"
