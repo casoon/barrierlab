@@ -12,7 +12,7 @@
 
 use std::cmp::Ordering;
 
-use a11y_dom::{Document, Node, NodeId, NodeKind};
+use a11y_dom::{Document, Node, NodeId, NodeKind, TreeScope};
 
 /// Der Tagname, unter dem der Collector Textknoten interniert. Elemente können
 /// so nicht heißen — `localName` ist nie mit `#` präfigiert.
@@ -44,6 +44,9 @@ pub struct Arena {
     attr_names: Vec<String>,
     /// Die internierte Kennung von [`TEXT_TAG`], sofern das Dokument Text enthält.
     text_tag: Option<u32>,
+    /// Der Baumbereich je Knoten (`TreeScope`, 0 = Dokument). Leer heißt: alle
+    /// Knoten im Dokument — der Fall ohne Shadow DOM.
+    scopes: Vec<u32>,
 }
 
 impl Arena {
@@ -108,7 +111,39 @@ impl Arena {
             tag_names,
             attr_names,
             text_tag,
+            scopes: Vec::new(),
         })
+    }
+
+    /// Setzt den Baumbereich je Knoten, parallel zu den Knotenspalten.
+    ///
+    /// `0` ist das Dokument, jede andere Zahl eine Shadow Root; welche, bestimmt
+    /// der Collector, sie muss nur je Dokument eindeutig sein. Ein per `<slot>`
+    /// eingesetzter Knoten trägt den Bereich des **äußeren** Baums, nicht den
+    /// der Shadow Root, unter der er im flachen Baum hängt (siehe
+    /// [`a11y_dom::Node::tree_scope`]). IDs und ihre Verweise gelten je Bereich.
+    ///
+    /// Prüft: so viele Einträge wie Knoten, Wurzel im Dokument, jeder Bereich
+    /// kleiner als die Knotenzahl (mehr Shadow Roots als Knoten gibt es nicht).
+    pub fn set_scopes(&mut self, scopes: Vec<u32>) -> Result<(), String> {
+        let n = self.entries.len();
+        if scopes.len() != n {
+            return Err(format!("scopes has {} entries, tag has {n}", scopes.len()));
+        }
+        if scopes[0] != 0 {
+            return Err(format!(
+                "scopes[0] is {}, but the root belongs to the document (scope 0)",
+                scopes[0]
+            ));
+        }
+        if let Some(i) = scopes.iter().position(|s| *s as usize >= n) {
+            return Err(format!(
+                "scopes[{i}] = {} is not below the node count ({n})",
+                scopes[i]
+            ));
+        }
+        self.scopes = scopes;
+        Ok(())
     }
 
     pub fn len(&self) -> usize {
@@ -343,6 +378,16 @@ impl<'a> Node<'a> for ArenaNode<'a> {
         }
     }
 
+    fn tree_scope(self) -> TreeScope {
+        TreeScope(
+            self.arena
+                .scopes
+                .get(self.idx as usize)
+                .copied()
+                .unwrap_or(0),
+        )
+    }
+
     fn document_order(self, other: Self) -> Ordering {
         self.idx.cmp(&other.idx)
     }
@@ -567,6 +612,29 @@ mod tests {
         let mut c = gut();
         c.attr_val_off[0] = u32::MAX;
         assert!(fehler(&c).contains("value of attribute 0"));
+    }
+
+    #[test]
+    fn bereiche_werden_geprueft_und_ohne_aufruf_ist_alles_dokument() {
+        let mut d = doc();
+        assert!(d.root().tree_scope() == TreeScope(0));
+        let n = d.len();
+        assert!(
+            d.set_scopes(vec![0; n - 1])
+                .unwrap_err()
+                .contains("scopes has")
+        );
+        let mut s = vec![0; n];
+        s[0] = 1;
+        assert!(d.set_scopes(s).unwrap_err().contains("scopes[0] is 1"));
+        let mut s = vec![0; n];
+        s[2] = n as u32;
+        assert!(d.set_scopes(s).unwrap_err().contains("scopes[2]"));
+        let mut s = vec![0; n];
+        s[2] = 2;
+        d.set_scopes(s).unwrap();
+        let drei = elements(&d).nth(2).unwrap();
+        assert!(drei.tree_scope() == TreeScope(2));
     }
 
     #[test]
