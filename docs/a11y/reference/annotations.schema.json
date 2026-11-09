@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://casoon.github.io/barrierlab/docs/a11y/reference/annotations.schema.json",
+  "title": "Annotation file",
+  "type": "object",
+  "required": [
+    "schema",
+    "annotations"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/annotation"
+      }
+    }
+  },
+  "$defs": {
+    "annotation": {
+      "type": "object",
+      "required": [
+        "author",
+        "assessment",
+        "reasoning"
+      ],
+      "properties": {
+        "scope": {
+          "enum": [
+            "finding",
+            "reading_flow"
+          ],
+          "default": "finding"
+        },
+        "finding_id": {
+          "type": "string",
+          "pattern": "^F-[0-9a-f]{8}$"
+        },
+        "pattern_id": {
+          "type": "string",
+          "pattern": "^RC-[0-9a-f]{8}$"
+        },
+        "url": {
+          "type": "string"
+        },
+        "author": {
+          "type": "object",
+          "required": [
+            "kind",
+            "name"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "agent",
+                "human"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "assessment": {
+          "enum": [
+            "likely_issue",
+            "likely_fine",
+            "undetermined"
+          ]
+        },
+        "reasoning": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "screenshot",
+                  "text",
+                  "link"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "created": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "if": {
+        "not": {
+          "properties": {
+            "scope": {
+              "const": "reading_flow"
+            }
+          },
+          "required": [
+            "scope"
+          ]
+        }
+      },
+      "then": {
+        "required": [
+          "finding_id"
+        ]
+      }
+    }
+  }
+}
