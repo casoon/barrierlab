@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **CLI:** the `cli` feature (off by default, no new dependency) builds an `html-conform` binary
+  that checks files, directories and stdin and writes text, JSON, SARIF 2.1.0 or JUnit; exit code
+  0/1/2 by `--fail-on`. Unchecked content and unreadable files appear in every format, never as a
+  pass. Install with `cargo install html-conform --features cli` (barrierlab#74).
 - **Features:** `runtime-compile` compiles the vendored schema on first use instead of loading
   the prebuilt artefact.
 

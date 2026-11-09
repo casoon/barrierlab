@@ -15,6 +15,8 @@ exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches", "/site", "/docs", "/e
 [features]
 # Compile the vendored RELAX NG schema at first use instead of loading prebuilt/html5.rngc.
 runtime-compile = []
+# Builds the `html-conform` command-line binary. Adds no dependency.
+cli = []
 
 [dependencies]
 a11y-report = { workspace = true }
@@ -35,3 +37,12 @@ criterion = "0.8"
 [[bench]]
 name = "check"
 harness = false
+
+[[bin]]
+name = "html-conform"
+path = "src/cli/main.rs"
+required-features = ["cli"]
+
+[[test]]
+name = "cli"
+required-features = ["cli"]

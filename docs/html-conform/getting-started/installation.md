@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "html-conform is published on crates.io. It is a library crate; there is no binary to install."
+description: "html-conform is published on crates.io, as a library and, with the cli feature, as a command-line tool."
 order: 1
 ---
 
@@ -27,15 +27,14 @@ html-conform = "0.2.1"
 
 ## Command line
 
-html-conform does not ship a command-line tool. The repository contains a small example
-that checks files and prints how many findings each one has:
+The crate also builds a command-line tool, behind the `cli` feature (off by default, no extra
+dependency):
 
 ```sh
-git clone https://github.com/casoon/html-conform
-cd html-conform
-cargo run --example findings
+cargo install html-conform --features cli
+html-conform dist/
 ```
 
-It checks every `examples/showcase/*.html` file and writes the report next to it as JSON. To
-check your own documents, call the library from your code, as the
-[Quickstart](../quickstart/) shows.
+See [Command line](../../guides/cli/) for options, exit codes and the SARIF and JUnit output.
+To check documents from your own code, call the library as the [Quickstart](../quickstart/)
+shows.

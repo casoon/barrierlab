@@ -41,5 +41,7 @@ does not.
   get a first report on screen.
 - [Using html-conform as a dependency](guides/dependency/) covers options, errors and
   typical integrations.
+- [Command line](guides/cli/) checks files and directories and writes text, JSON, SARIF or
+  JUnit.
 - [Findings and rule IDs](guides/rule-ids/) lists what each layer reports.
 - The [API overview](reference/api/) links to the item-level documentation on docs.rs.

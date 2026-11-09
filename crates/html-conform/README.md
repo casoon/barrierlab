@@ -77,6 +77,21 @@ fn main() {
 }
 ```
 
+### Command line
+
+The `cli` feature (off by default, no extra dependency) builds an `html-conform` binary:
+
+```sh
+cargo install html-conform --features cli
+html-conform dist/ --format sarif > html-conform.sarif
+```
+
+It checks files, directories (`*.html`, `*.htm`, recursively) and stdin (`-`); `--format
+text|json|sarif|junit`, `--fail-on fail|review`, `--color auto|always|never`, `-q`. Exit code 0
+is clean, 1 findings at the `--fail-on` level, 2 usage/I/O error or a document that could not
+be checked. Content the checker does not validate is reported in every format, never as a
+pass. Details: [docs/html-conform/guides/cli.md](../../docs/html-conform/guides/cli.md).
+
 ### Fine-Grained Options
 
 ```rust
