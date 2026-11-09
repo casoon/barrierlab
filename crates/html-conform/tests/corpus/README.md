@@ -11,12 +11,16 @@ out of sync otherwise). See `plan/07-corpus-differential.md`.
 
 ## Contents
 
-- `html/`, `html-aria/` — the vendored fixture trees (`*.html`), copied
-  byte-identical from upstream `tests/html`/`tests/html-aria`. Scope
-  decision (why these two trees and not the rest of vnu's `tests/`
-  directory) and exclusion list: `manifest.json`, `plan/DECISIONS.md`.
+- `html/`, `html-aria/`, `html-math/`, `html-rdfa/`, `html-rdfalite/`,
+  `html-svg/` — the vendored fixture trees (`*.html`), copied
+  byte-identical from the upstream trees of the same name under `tests/`.
+  `html-svg/` holds only the 6 files written by the vnu authors; the other
+  516 carry a W3C copyright header and are not vendored. Triage of every
+  vnu test tree (measured, out of scope, open) and the reasons:
+  `docs/html-conform/guides/vnu-comparison.md`; exclusion list:
+  `manifest.json`.
 - `messages.json` — vnu's own expected-message map, trimmed to only the
-  `html/`/`html-aria/` keys. A fixture path present here is expected to
+  keys of the vendored trees. A fixture path present here is expected to
   produce at least one finding; a path absent is expected to produce none
   — verified (see `xtask/vendor-corpus.sh`'s header comment) to be a
   complete, self-consistent signal on its own, without needing to parse
