@@ -9,9 +9,10 @@
 //! berechnete `list-style-type`, die Textauszeichnung eines Links, der
 //! Überhang eines scrollbaren Kastens —, ist gemessen, nicht vermutet.
 //!
-//! Fehlt dem Host ein Feld, steht das im Bericht: je Regel ein `UNTESTED`
-//! für die Seite, sobald es etwas zu prüfen gäbe. Ein stiller Nicht-Befund
-//! wäre ein stilles Bestanden.
+//! Fehlt dem Host ein Feld, steht das im Bericht: die Regel steht in
+//! `rule_runs` mit `NotRun::CapabilityMissing` und Grund, sobald es etwas zu
+//! prüfen gäbe — kein Befund. Ein stiller Nicht-Befund wäre ein stilles
+//! Bestanden.
 
 use a11y_dom::{
     ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, ancestors, descendants, elements,
@@ -20,16 +21,13 @@ use a11y_dom::{
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
+use crate::not_run;
 use crate::registry::Meta;
 use crate::structure::{explicit_role, per_tab_reachable};
 use crate::visibility::Scope;
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
-}
-
-fn page<D: Rendering>(doc: &D) -> Location {
-    at(doc.root().id())
 }
 
 // --- lists/role-redundant -----------------------------------------------------
@@ -66,21 +64,16 @@ pub(crate) fn list_role<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Fin
         }
     }
     if unmeasured {
-        out.push(
-            Finding::untested(
-                "lists/role-redundant",
-                pick!(
-                    locale,
-                    "The host provides no computed list-style-type; whether role=\"list\" on a \
-                     <ul> or <ol> is redundant was not checked.",
-                    "Der Host liefert kein berechnetes list-style-type; ob role=\"list\" an einem \
-                     <ul> oder <ol> überflüssig ist, wurde nicht geprüft.",
-                ),
-            )
-            .with_severity(Severity::Low)
-            .with_wcag(["4.1.2"])
-            .at(page(doc)),
-        );
+        out.push(not_run::note(
+            "lists/role-redundant",
+            pick!(
+                locale,
+                "The host provides no computed list-style-type; whether role=\"list\" on a \
+                 <ul> or <ol> is redundant was not checked.",
+                "Der Host liefert kein berechnetes list-style-type; ob role=\"list\" an einem \
+                 <ul> oder <ol> überflüssig ist, wurde nicht geprüft.",
+            ),
+        ));
     }
 }
 
@@ -389,22 +382,17 @@ pub(crate) fn link_color_only<D: Rendering>(doc: &D, locale: Locale, out: &mut V
         );
     }
     if unmeasured {
-        out.push(
-            Finding::untested(
-                "color/link-indistinct",
-                pick!(
-                    locale,
-                    "The host provides no text decoration, font style, font family or border \
-                     style; whether links in running text differ only by colour was not checked.",
-                    "Der Host liefert keine Textauszeichnung, keinen Schriftschnitt, keine \
-                     Schriftfamilie oder Unterkante; ob Links im Fließtext sich nur durch die \
-                     Farbe abheben, wurde nicht geprüft.",
-                ),
-            )
-            .with_severity(Severity::Medium)
-            .with_wcag(["1.4.1"])
-            .at(page(doc)),
-        );
+        out.push(not_run::note(
+            "color/link-indistinct",
+            pick!(
+                locale,
+                "The host provides no text decoration, font style, font family or border \
+                 style; whether links in running text differ only by colour was not checked.",
+                "Der Host liefert keine Textauszeichnung, keinen Schriftschnitt, keine \
+                 Schriftfamilie oder Unterkante; ob Links im Fließtext sich nur durch die \
+                 Farbe abheben, wurde nicht geprüft.",
+            ),
+        ));
     }
 }
 
@@ -465,21 +453,16 @@ pub(crate) fn scroll_area<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
         );
     }
     if !measured {
-        out.push(
-            Finding::untested(
-                "keyboard/scrollable-region-not-focusable",
-                pick!(
-                    locale,
-                    "The host measures no scroll extents; scrollable regions without keyboard \
-                     access were not checked.",
-                    "Der Host misst keinen Scroll-Überhang; scrollbare Bereiche ohne \
-                     Tastaturzugang wurden nicht geprüft.",
-                ),
-            )
-            .with_severity(Severity::High)
-            .with_wcag(["2.1.1"])
-            .at(page(doc)),
-        );
+        out.push(not_run::note(
+            "keyboard/scrollable-region-not-focusable",
+            pick!(
+                locale,
+                "The host measures no scroll extents; scrollable regions without keyboard \
+                 access were not checked.",
+                "Der Host misst keinen Scroll-Überhang; scrollbare Bereiche ohne \
+                 Tastaturzugang wurden nicht geprüft.",
+            ),
+        ));
     }
 }
 

@@ -12,11 +12,15 @@
 //! Bedienelementen: `getBoundingClientRect()` je Knoten kostet laut derselben
 //! Messung so viel wie der ganze Collector.
 
+#[cfg(feature = "probes")]
+use a11y_dom::{BoxTransform, FocusCover, PasteProbe, SpacingClip};
 use a11y_dom::{
     Color, ComputedStyle, Document, Layout, NameSource, Node, Rect, Rendering, Semantics,
 };
 
 use crate::arena::{Arena, ArenaNode};
+#[cfg(feature = "probes")]
+use crate::probes::ProbeColumns;
 use crate::semantics::SemanticArena;
 
 /// Bit 0: `display: none`. Bit 1: `visibility: hidden`. Bit 2: Stil erfasst.
@@ -78,6 +82,8 @@ pub struct RenderArena<'a> {
     semantik: SemanticArena<'a>,
     spalten: &'a RenderingColumns,
     layout: Option<&'a LayoutColumns>,
+    #[cfg(feature = "probes")]
+    probes: Option<&'a ProbeColumns>,
 }
 
 impl<'a> RenderArena<'a> {
@@ -86,7 +92,18 @@ impl<'a> RenderArena<'a> {
             semantik: SemanticArena::new(arena),
             spalten,
             layout: None,
+            #[cfg(feature = "probes")]
+            probes: None,
         }
+    }
+
+    #[cfg(feature = "probes")]
+    /// Mit den Messungen an der laufenden Seite (Rahmen, Drehung, Einfügen,
+    /// Fokusabdeckung, Textabstand). Eine Spalte, die fehlt, ist nicht
+    /// gemessen.
+    pub fn with_probes(mut self, probes: &'a ProbeColumns) -> Self {
+        self.probes = Some(probes);
+        self
     }
 
     /// Mit den Layout-Spalten für die heuristischen Regeln.
@@ -201,6 +218,31 @@ impl Rendering for RenderArena<'_> {
             animating: None,
         })
     }
+
+    #[cfg(feature = "probes")]
+    fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
+        self.probes?.frame(node.id())
+    }
+
+    #[cfg(feature = "probes")]
+    fn box_transform<'n>(&'n self, node: Self::N<'n>) -> Option<BoxTransform> {
+        self.probes?.transform(node.id())
+    }
+
+    #[cfg(feature = "probes")]
+    fn paste_probe<'n>(&'n self, node: Self::N<'n>) -> Option<PasteProbe> {
+        self.probes?.paste_of(node.id())
+    }
+
+    #[cfg(feature = "probes")]
+    fn focus_cover<'n>(&'n self, node: Self::N<'n>) -> Option<FocusCover> {
+        self.probes?.focus_of(node.id())
+    }
+
+    #[cfg(feature = "probes")]
+    fn text_spacing_clip<'n>(&'n self, node: Self::N<'n>) -> Option<SpacingClip> {
+        self.probes?.spacing_of(node.id())
+    }
 }
 
 #[cfg(test)]
@@ -311,6 +353,14 @@ mod tests {
                     "auth/paste-blocked",
                     "focus/obscured-enhanced",
                     "text-spacing/clipped",
+                    // Ohne Layout-Spalten messen die Heuristiken nichts und
+                    // stehen als nicht gelaufen im Bericht.
+                    "order/visual-mismatch",
+                    "motion/infinite-animation",
+                    "reflow/min-width",
+                    "keyboard/pointer-only",
+                    "focus/obscured",
+                    "keyboard/scrollable-region-not-focusable",
                 ]
                 .contains(&r.rule_id.as_str())
             })

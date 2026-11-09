@@ -13,7 +13,7 @@
 //! | `#313131` auf `#bebebe` | 6,99905:1 |
 //! | `#2a2a2a` auf `#b5b5b5` | 7,00005:1 |
 
-use super::super::{Fall, fail, na, negative, review, untested};
+use super::super::{Fall, fail, na, negative, not_run, review, untested};
 
 const U143: &str = "WCAG 2.2 SC 1.4.3 (4.5:1, large text 3:1); Understanding 1.4.3: ratios are not rounded, 4.499:1 does not meet 4.5:1";
 const U146: &str =
@@ -179,9 +179,8 @@ fn order() -> Vec<Fall> {
             "WCAG 2.2 1.3.2: one item has no sequence to change")
             .variant("ein Kind"),
         na(id, r#"<p>Plain paragraph</p>"#, "1.3.2 / 2.4.3: no CSS reordering"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: flex-reversed order"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "docs/conventions.md: not measured is not passed")
-            .count(1),
+        not_run(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: flex-reversed order"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: not measured is not passed"),
     ]
 }
 
@@ -209,9 +208,8 @@ fn motion() -> Vec<Fall> {
             "WCAG 2.2 2.2.2: content not displayed does not move")
             .variant("versteckt"),
         na(id, r#"<p>Static text</p>"#, "WCAG 2.2 2.2.2: no moving content"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: animation"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "docs/conventions.md: not measured is not passed")
-            .count(1),
+        not_run(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: animation"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: not measured is not passed"),
     ]
 }
 
@@ -230,9 +228,8 @@ fn reflow() -> Vec<Fall> {
         negative(id, r#"<div hidden style="min-width:600px">Hidden</div>"#, "1.4.10: content not rendered does not scroll")
             .variant("versteckt"),
         na(id, r#"<p>Text</p>"#, "1.4.10: no min-width"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: min-width"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "docs/conventions.md: not measured is not passed")
-            .count(1),
+        not_run(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: min-width"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: not measured is not passed"),
     ]
 }
 
@@ -241,24 +238,49 @@ fn only_pointer() -> Vec<Fall> {
     let q = "WCAG 2.2 SC 2.1.1 / 4.1.2: something that looks clickable without role or focusability cannot be operated by keyboard (F54, F59); REVIEW per docs (heuristic)";
     vec![
         review(id, r#"<div style="cursor:pointer">Search</div>"#, q).count(1),
-        review(id, r#"<div style="cursor:pointer"><span>Search</span> <span>now</span></div>"#, q)
-            .variant("vererbtes cursor: nur der Ursprung")
-            .count(1),
-        negative(id, r#"<div style="cursor:pointer"><a href="/s">Search</a></div>"#,
-            "WCAG 2.2 2.1.1: the card's click lands on a keyboard-operable link inside")
-            .variant("Kartenmuster"),
-        negative(id, r#"<button style="cursor:pointer">Search</button>"#, "WCAG 2.2 2.1.1: native button is keyboard operable")
-            .variant("nativ"),
-        negative(id, r#"<div role="button" tabindex="0" style="cursor:pointer">Search</div>"#,
-            "WAI-ARIA 1.2 button role with tabindex: focusable widget")
-            .variant("ARIA-Rolle"),
-        negative(id, r#"<div style="cursor:pointer"></div>"#, "WCAG 2.2 2.1.1: an empty box offers no function to reach")
-            .variant("ohne Inhalt"),
-        negative(id, r#"<div hidden style="cursor:pointer">Search</div>"#, "2.1.1: not rendered").variant("versteckt"),
+        review(
+            id,
+            r#"<div style="cursor:pointer"><span>Search</span> <span>now</span></div>"#,
+            q,
+        )
+        .variant("vererbtes cursor: nur der Ursprung")
+        .count(1),
+        negative(
+            id,
+            r#"<div style="cursor:pointer"><a href="/s">Search</a></div>"#,
+            "WCAG 2.2 2.1.1: the card's click lands on a keyboard-operable link inside",
+        )
+        .variant("Kartenmuster"),
+        negative(
+            id,
+            r#"<button style="cursor:pointer">Search</button>"#,
+            "WCAG 2.2 2.1.1: native button is keyboard operable",
+        )
+        .variant("nativ"),
+        negative(
+            id,
+            r#"<div role="button" tabindex="0" style="cursor:pointer">Search</div>"#,
+            "WAI-ARIA 1.2 button role with tabindex: focusable widget",
+        )
+        .variant("ARIA-Rolle"),
+        negative(
+            id,
+            r#"<div style="cursor:pointer"></div>"#,
+            "WCAG 2.2 2.1.1: an empty box offers no function to reach",
+        )
+        .variant("ohne Inhalt"),
+        negative(
+            id,
+            r#"<div hidden style="cursor:pointer">Search</div>"#,
+            "2.1.1: not rendered",
+        )
+        .variant("versteckt"),
         na(id, r#"<p>Text</p>"#, "2.1.1: nothing looks clickable"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: cursor"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "docs/conventions.md: not measured is not passed")
-            .count(1),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: cursor"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: not measured is not passed",
+        ),
     ]
 }
 
@@ -267,16 +289,39 @@ fn covered() -> Vec<Fall> {
     let q = "WCAG 2.2 SC 2.4.11: a focused component is not entirely hidden by author-created content (sticky/fixed); REVIEW per docs (heuristic)";
     vec![
         review(id, r#"<button style="--obscured:1">Buy</button>"#, q).count(1),
-        review(id, r#"<header style="--hides-focus:1">Sticky bar</header>"#, q).variant("Leiste ohne scroll-padding"),
-        negative(id, r#"<p style="--obscured:1">Covered text</p>"#, "WCAG 2.2 2.4.11 applies to components that receive focus")
-            .variant("nicht fokussierbar"),
-        negative(id, r#"<div tabindex="-1" style="--obscured:1">Panel</div>"#, "2.4.11: not in the sequential focus order")
-            .variant("tabindex=-1"),
-        negative(id, r#"<button>Buy</button>"#, "2.4.11: nothing covers the control"),
-        na(id, r#"<p>Text</p>"#, "2.4.11: no focusable content, nothing fixed"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: obscured hides-focus"><head><title>T</title></head><body><button>Buy</button></body></html>"#,
-            "docs/conventions.md: not measured is not passed")
-            .count(1),
+        review(
+            id,
+            r#"<header style="--hides-focus:1">Sticky bar</header>"#,
+            q,
+        )
+        .variant("Leiste ohne scroll-padding"),
+        negative(
+            id,
+            r#"<p style="--obscured:1">Covered text</p>"#,
+            "WCAG 2.2 2.4.11 applies to components that receive focus",
+        )
+        .variant("nicht fokussierbar"),
+        negative(
+            id,
+            r#"<div tabindex="-1" style="--obscured:1">Panel</div>"#,
+            "2.4.11: not in the sequential focus order",
+        )
+        .variant("tabindex=-1"),
+        negative(
+            id,
+            r#"<button>Buy</button>"#,
+            "2.4.11: nothing covers the control",
+        ),
+        na(
+            id,
+            r#"<p>Text</p>"#,
+            "2.4.11: no focusable content, nothing fixed",
+        ),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: obscured hides-focus"><head><title>T</title></head><body><button>Buy</button></body></html>"#,
+            "docs/conventions.md: not measured is not passed",
+        ),
     ]
 }
 
@@ -351,7 +396,6 @@ fn targets_enhanced() -> Vec<Fall> {
 
 fn focus() -> Vec<Fall> {
     let im = "focus/indicator-missing";
-    let iu = "focus/indicator-unmeasured";
     let q = "WCAG 2.2 SC 2.4.7: keyboard focus indicator visible (F78, F55); REVIEW per docs (heuristic)";
     vec![
         review(im, r#"<button style="--focus-visible:0">Save</button><button>Cancel</button>"#, q).count(1),
@@ -362,15 +406,11 @@ fn focus() -> Vec<Fall> {
             .variant("nicht per Tab erreichbar"),
         negative(im, r#"<button hidden style="--focus-visible:0">Save</button>"#, "2.4.7: not rendered").variant("versteckt"),
         na(im, r#"<p>Text only</p>"#, "2.4.7: no focusable component"),
-        untested(iu, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: focus-visible"><head><title>T</title></head><body><button>Save</button><a href="/x">Link</a></body></html>"#,
-            "docs/conventions.md: focus visibility not measured is not passed")
-            .count(1),
-        untested(iu, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: layout"><head><title>T</title></head><body><button>Save</button></body></html>"#,
+        not_run(im, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: focus-visible"><head><title>T</title></head><body><button>Save</button><a href="/x">Link</a></body></html>"#,
+            "docs/conventions.md: focus visibility not measured is not passed"),
+        not_run(im, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: layout"><head><title>T</title></head><body><button>Save</button></body></html>"#,
             "docs/conventions.md: host without layout data")
             .variant("kein Layout"),
-        negative(iu, r#"<button>Save</button>"#, "2.4.7 measured on the page"),
-        na(iu, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: focus-visible"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "2.4.7: nothing focusable, nothing to measure"),
     ]
 }
 
@@ -385,9 +425,8 @@ fn lists() -> Vec<Fall> {
             .variant("list-style-type: none"),
         negative(id, r#"<ul><li>One</li></ul>"#, "ARIA in HTML: implicit role, nothing redundant"),
         na(id, r#"<div role="list"><div role="listitem">One</div></div>"#, "ARIA in HTML: only ul/ol have an implicit list role"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><ul role="list"><li>One</li></ul></body></html>"#,
-            "docs/conventions.md: list-style-type not measured is not passed")
-            .count(1),
+        not_run(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><ul role="list"><li>One</li></ul></body></html>"#,
+            "docs/conventions.md: list-style-type not measured is not passed"),
     ]
 }
 
@@ -415,9 +454,8 @@ fn links() -> Vec<Fall> {
             "1.4.1: not rendered")
             .variant("versteckt"),
         na(id, r#"<p>A paragraph without links.</p>"#, "1.4.1 / F73: no link"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><p>Please read the <a href="/terms">terms of service</a> before you continue.</p></body></html>"#,
-            "docs/conventions.md: text decoration not measured is not passed")
-            .count(1),
+        not_run(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><p>Please read the <a href="/terms">terms of service</a> before you continue.</p></body></html>"#,
+            "docs/conventions.md: text decoration not measured is not passed"),
     ]
 }
 
@@ -426,24 +464,57 @@ fn scroll_area() -> Vec<Fall> {
     let q = "WCAG 2.2 SC 2.1.1; ACT 0ssw9k: scrollable content must be reachable with sequential focus navigation";
     let p = "axe scrollable-region-focusable: overflow up to 13 px is layout noise (subpixel, padding), not scrollable content";
     vec![
-        fail(id, r#"<div style="--scroll-overflow:100px">Long terms and conditions text</div>"#, q).count(1),
-        fail(id, r#"<div style="--scroll-overflow:13.5px">Long text</div>"#, p).variant("Grenze: 13,5 px"),
-        negative(id, r#"<div style="--scroll-overflow:13px">Long text</div>"#, p).variant("Grenze: 13 px"),
-        negative(id, r#"<div tabindex="0" style="--scroll-overflow:100px">Long text</div>"#,
-            "ACT 0ssw9k: the region itself is in the focus order")
-            .variant("tabindex=0"),
-        negative(id, r#"<div style="--scroll-overflow:100px">Long text <a href="/more">more</a></div>"#,
-            "ACT 0ssw9k: a focusable descendant makes the content reachable")
-            .variant("fokussierbarer Nachfahre"),
-        negative(id, r#"<div style="--scroll-overflow:100px"><img src="a.png" alt=""></div>"#,
-            "ACT 0ssw9k: no visible text content to reach")
-            .variant("ohne Text"),
-        negative(id, r#"<div inert style="--scroll-overflow:100px">Long text</div>"#,
-            "HTML inert: the region is not operable at all")
-            .variant("inert"),
-        na(id, r#"<p>Short text</p>"#, "ACT 0ssw9k: no scroll container"),
-        untested(id, r#"<!DOCTYPE html><html lang="en" style="--unmeasured: scroll"><head><title>T</title></head><body><p>Text</p></body></html>"#,
-            "docs/conventions.md: scroll extents not measured is not passed")
-            .count(1),
+        fail(
+            id,
+            r#"<div style="--scroll-overflow:100px">Long terms and conditions text</div>"#,
+            q,
+        )
+        .count(1),
+        fail(
+            id,
+            r#"<div style="--scroll-overflow:13.5px">Long text</div>"#,
+            p,
+        )
+        .variant("Grenze: 13,5 px"),
+        negative(
+            id,
+            r#"<div style="--scroll-overflow:13px">Long text</div>"#,
+            p,
+        )
+        .variant("Grenze: 13 px"),
+        negative(
+            id,
+            r#"<div tabindex="0" style="--scroll-overflow:100px">Long text</div>"#,
+            "ACT 0ssw9k: the region itself is in the focus order",
+        )
+        .variant("tabindex=0"),
+        negative(
+            id,
+            r#"<div style="--scroll-overflow:100px">Long text <a href="/more">more</a></div>"#,
+            "ACT 0ssw9k: a focusable descendant makes the content reachable",
+        )
+        .variant("fokussierbarer Nachfahre"),
+        negative(
+            id,
+            r#"<div style="--scroll-overflow:100px"><img src="a.png" alt=""></div>"#,
+            "ACT 0ssw9k: no visible text content to reach",
+        )
+        .variant("ohne Text"),
+        negative(
+            id,
+            r#"<div inert style="--scroll-overflow:100px">Long text</div>"#,
+            "HTML inert: the region is not operable at all",
+        )
+        .variant("inert"),
+        na(
+            id,
+            r#"<p>Short text</p>"#,
+            "ACT 0ssw9k: no scroll container",
+        ),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: scroll"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: scroll extents not measured is not passed",
+        ),
     ]
 }

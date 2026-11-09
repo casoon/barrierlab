@@ -234,7 +234,7 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
-id = "focus/indicator-unmeasured"
+id = "focus/indicator-missing"
 file = "src/heuristics.rs"
 kind = "invert"
 find = '''    if targets > 0 && measured == 0 {'''
@@ -243,7 +243,7 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
-id = "focus/indicator-unmeasured"
+id = "focus/indicator-missing"
 file = "src/heuristics.rs"
 kind = "drop-condition"
 find = '''    if targets > 0 && measured == 0 {'''

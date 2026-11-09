@@ -12,6 +12,13 @@ description = "WASM boundary and arena adapter for the a11y rule set: run the sa
 keywords = ["accessibility", "a11y", "wasm", "webassembly", "aria"]
 readme = "README.md"
 
+[features]
+default = ["probes"]
+# Messspalten für die seitenabhängigen Regeln (`Scan::withFrames` und Verwandte).
+# Standardmäßig an (Größenbudget 180 KB gzip, 09.11.2026); mit
+# `--no-default-features` entsteht die schlanke Variante ohne die Spalten.
+probes = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

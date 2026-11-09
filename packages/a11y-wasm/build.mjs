@@ -71,6 +71,13 @@ function cli(soll) {
 
 const soll = verlangteVersion();
 
+// Zusaetzliche Cargo-Features, kommagetrennt (siehe docs/packages/a11y-wasm.md);
+// die Standard-Features (`probes`) sind immer dabei. Ohne die Variable entsteht
+// das Artefakt, das das Groessenbudget in der CI misst.
+const features = process.env.A11Y_WASM_FEATURES
+  ? ["--features", process.env.A11Y_WASM_FEATURES]
+  : [];
+
 run("cargo", [
   "build",
   "--profile",
@@ -79,6 +86,7 @@ run("cargo", [
   "wasm32-unknown-unknown",
   "-p",
   "a11y-wasm",
+  ...features,
 ]);
 
 mkdirSync(pkg, { recursive: true });

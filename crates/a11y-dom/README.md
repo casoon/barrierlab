@@ -25,7 +25,7 @@ names. This is deliberate: most rules need attributes (`tabindex`, `id`, `role`,
 
 A flat trait with `Option` return values would make rules silently not run on
 some hosts. Instead a host implements the traits it can serve — and a rule whose
-tier is not met is recorded as `Untested` rather than staying silent.
+tier is not met is recorded as `NotRun::CapabilityMissing` rather than staying silent.
 
 ```rust
 use a11y_dom::{elements, subtree_text, Arena, Document, Node};

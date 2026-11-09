@@ -2,7 +2,7 @@
 //! gefunden hat (casoon/auditmysite#783, Sammlung „783-shared-bugs").
 //! Jeder Fall scheitert an der Regel vor der Korrektur.
 
-use super::super::{Fall, fail, na, negative, review, untested};
+use super::super::{Fall, fail, na, negative, not_run, review};
 
 pub fn cases() -> Vec<Fall> {
     vec![
@@ -204,13 +204,12 @@ pub fn cases() -> Vec<Fall> {
             "WCAG 1.4.1 betrifft Dargestelltes; liefert der Host Stile (body), wird ein Link ohne Stil nicht dargestellt und ist nicht ungemessen — auch wenn das object selbst keinen Stil hat",
         )
         .variant("Regression: Ersatzlink eines geladenen object, Host ohne Stil für Unsichtbares"),
-        untested(
+        not_run(
             "color/link-indistinct",
             r#"<!DOCTYPE html><html lang="en" style="--unmeasured: style"><head><title>T</title></head><body><p>Read the <a href="/terms">terms</a> before you order.</p></body></html>"#,
             "docs/conventions.md: liefert der Host keine Stile, ist der Fall ungemessen, nicht bestanden",
         )
-        .variant("Host ohne jeden Stil")
-        .count(1),
+        .variant("Host ohne jeden Stil"),
         negative(
             "color/link-indistinct",
             r#"<!DOCTYPE html><html lang="en" style="--unmeasured: unrendered-fields"><head><title>T</title></head><body><p>Get the <object data="/catalogue.pdf" type="application/pdf"><a href="/catalogue.pdf" style="display:none">catalogue</a></object> before the visit.</p></body></html>"#,

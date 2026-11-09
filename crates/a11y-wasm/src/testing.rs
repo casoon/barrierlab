@@ -20,6 +20,11 @@ pub struct ColumnBuilder {
     tag_names: Vec<String>,
     attr_names: Vec<String>,
     open_nodes: Vec<i32>,
+    /// Der Baumbereich je Knoten und die offenen Bereiche (oben der aktuelle;
+    /// Bereich 0 ist das Dokument), wie bei `a11y_dom::ArenaBuilder`.
+    scopes: Vec<u32>,
+    open_scopes: Vec<u32>,
+    next_scope: u32,
 }
 
 impl ColumnBuilder {
@@ -47,6 +52,8 @@ impl ColumnBuilder {
         self.text_off.push(text.0);
         self.text_len.push(text.1);
         self.attr_start.push(self.attr_name.len() as u32);
+        self.scopes
+            .push(self.open_scopes.last().copied().unwrap_or(0));
         idx
     }
 
@@ -54,6 +61,27 @@ impl ColumnBuilder {
         let tag = Self::intern(&mut self.tag_names, local_name);
         let idx = self.push(tag, (self.blob.len() as u32, 0));
         self.open_nodes.push(idx);
+        self
+    }
+
+    /// Beginnt eine Shadow Root unter dem offenen Host (neuer Baumbereich).
+    pub fn shadow_root(&mut self) -> &mut Self {
+        self.next_scope += 1;
+        self.open_scopes.push(self.next_scope);
+        self
+    }
+
+    /// Beginnt eingesetzten Inhalt: Er gehört zum Bereich außen um die
+    /// aktuelle Shadow Root.
+    pub fn slotted(&mut self) -> &mut Self {
+        let n = self.open_scopes.len();
+        let aussen = if n >= 2 { self.open_scopes[n - 2] } else { 0 };
+        self.open_scopes.push(aussen);
+        self
+    }
+
+    pub fn end_scope(&mut self) -> &mut Self {
+        self.open_scopes.pop();
         self
     }
 
@@ -80,7 +108,7 @@ impl ColumnBuilder {
 
     fn build(mut self) -> Arena {
         self.attr_start.push(self.attr_name.len() as u32);
-        Arena::from_columns(
+        let mut arena = Arena::from_columns(
             &self.tag,
             &self.parent,
             &self.text_off,
@@ -93,7 +121,11 @@ impl ColumnBuilder {
             self.tag_names,
             self.attr_names,
         )
-        .expect("Testspalten sind gültig")
+        .expect("Testspalten sind gültig");
+        arena
+            .set_scopes(self.scopes)
+            .expect("Testbereiche sind gültig");
+        arena
     }
 }
 
