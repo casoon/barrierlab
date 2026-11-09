@@ -1,0 +1,9 @@
+invalid.html:2:1: warning[assertion.elements.html-missing-lang] Consider adding a "lang" attribute to the "html" start tag to declare the language of this document.
+invalid.html:8:15: error[parser.html5] an unknown named character reference
+invalid.html:8:21: error[parser.html5] an implied "p" end tag with elements still open
+invalid.html:8:25: error[parser.html5] a stray end tag with no matching open element
+invalid.html:9:1: error[assertion.elements.img-missing-alt] An "img" element must have an "alt" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.
+style.html: no findings
+style.html: not fully checked (style-element-css): the document has <style> elements; their CSS is not validated
+valid/ok.html: no findings
+checked 3 files: 4 errors, 1 warning, 0 info

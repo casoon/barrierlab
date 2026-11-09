@@ -1,0 +1,191 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "descriptor": {
+                "id": "style-element-css"
+              },
+              "level": "note",
+              "locations": [
+                {
+                  "physicalLocation": {
+                    "artifactLocation": {
+                      "uri": "style.html",
+                      "uriBaseId": "%SRCROOT%"
+                    }
+                  }
+                }
+              ],
+              "message": {
+                "text": "not fully checked: the document has <style> elements; their CSS is not validated"
+              }
+            }
+          ]
+        }
+      ],
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "invalid.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startColumn": 1,
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Consider adding a \"lang\" attribute to the \"html\" start tag to declare the language of this document."
+          },
+          "partialFingerprints": {
+            "htmlConform/v1": "9e98bef476ddb619:1"
+          },
+          "ruleId": "assertion.elements.html-missing-lang",
+          "ruleIndex": 0
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "invalid.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startColumn": 15,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "an unknown named character reference"
+          },
+          "partialFingerprints": {
+            "htmlConform/v1": "347988b1aeb41a24:1"
+          },
+          "ruleId": "parser.html5",
+          "ruleIndex": 2
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "invalid.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startColumn": 21,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "an implied \"p\" end tag with elements still open"
+          },
+          "partialFingerprints": {
+            "htmlConform/v1": "0686c327a7c2d229:1"
+          },
+          "ruleId": "parser.html5",
+          "ruleIndex": 2
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "invalid.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startColumn": 25,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "a stray end tag with no matching open element"
+          },
+          "partialFingerprints": {
+            "htmlConform/v1": "f3775543dfc62a47:1"
+          },
+          "ruleId": "parser.html5",
+          "ruleIndex": 2
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "invalid.html",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startColumn": 1,
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "An \"img\" element must have an \"alt\" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images."
+          },
+          "partialFingerprints": {
+            "htmlConform/v1": "63eff76f673d8b18:1"
+          },
+          "ruleId": "assertion.elements.img-missing-alt",
+          "ruleIndex": 1
+        }
+      ],
+      "tool": {
+        "driver": {
+          "informationUri": "https://github.com/casoon/barrierlab",
+          "name": "html-conform",
+          "rules": [
+            {
+              "helpUri": "https://casoon.github.io/html-conform/docs/guides/rule-ids/",
+              "id": "assertion.elements.html-missing-lang",
+              "shortDescription": {
+                "text": "Co-constraint the schema cannot express"
+              }
+            },
+            {
+              "helpUri": "https://casoon.github.io/html-conform/docs/guides/rule-ids/",
+              "id": "assertion.elements.img-missing-alt",
+              "shortDescription": {
+                "text": "Co-constraint the schema cannot express"
+              }
+            },
+            {
+              "helpUri": "https://casoon.github.io/html-conform/docs/guides/rule-ids/",
+              "id": "parser.html5",
+              "shortDescription": {
+                "text": "HTML5 tokenizer or tree-construction parse error"
+              }
+            }
+          ],
+          "version": "0.4.2"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

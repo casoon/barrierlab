@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="html-conform" tests="8" failures="4" errors="0" skipped="2">
+  <testsuite name="invalid.html" tests="5" failures="4" errors="0" skipped="1">
+    <testcase classname="invalid.html" name="assertion.elements.html-missing-lang at 2:1">
+      <skipped message="warning: Consider adding a &quot;lang&quot; attribute to the &quot;html&quot; start tag to declare the language of this document."/>
+    </testcase>
+    <testcase classname="invalid.html" name="parser.html5 at 8:15">
+      <failure message="an unknown named character reference" type="parser.html5">invalid.html at 8:15: an unknown named character reference</failure>
+    </testcase>
+    <testcase classname="invalid.html" name="parser.html5 at 8:21">
+      <failure message="an implied &quot;p&quot; end tag with elements still open" type="parser.html5">invalid.html at 8:21: an implied &quot;p&quot; end tag with elements still open</failure>
+    </testcase>
+    <testcase classname="invalid.html" name="parser.html5 at 8:25">
+      <failure message="a stray end tag with no matching open element" type="parser.html5">invalid.html at 8:25: a stray end tag with no matching open element</failure>
+    </testcase>
+    <testcase classname="invalid.html" name="assertion.elements.img-missing-alt at 9:1">
+      <failure message="An &quot;img&quot; element must have an &quot;alt&quot; attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images." type="assertion.elements.img-missing-alt">invalid.html at 9:1: An &quot;img&quot; element must have an &quot;alt&quot; attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="style.html" tests="2" failures="0" errors="0" skipped="1">
+    <testcase classname="style.html" name="conformance"/>
+    <testcase classname="style.html" name="not checked: style-element-css">
+      <skipped message="the document has &lt;style&gt; elements; their CSS is not validated"/>
+    </testcase>
+  </testsuite>
+  <testsuite name="valid/ok.html" tests="1" failures="0" errors="0" skipped="0">
+    <testcase classname="valid/ok.html" name="conformance"/>
+  </testsuite>
+</testsuites>
