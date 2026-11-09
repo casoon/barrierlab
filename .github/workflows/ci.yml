@@ -39,12 +39,12 @@ jobs:
         run: cargo check -p a11y-rules --no-default-features
       - if: steps.members.outputs.present == 'true'
         run: cargo check -p a11y-static --no-default-features
-      # Die Messspalten von a11y-wasm liegen hinter einem Feature (Groessenbudget);
-      # ohne diese Schritte baute und testete sie niemand.
+      # Die Messspalten von a11y-wasm sind ein Standard-Feature; die schlanke
+      # Variante ohne sie soll weiter bauen und testen.
       - if: steps.members.outputs.present == 'true'
-        run: cargo clippy -p a11y-wasm --all-targets --features probes -- -D warnings
+        run: cargo clippy -p a11y-wasm --all-targets --no-default-features -- -D warnings
       - if: steps.members.outputs.present == 'true'
-        run: cargo test -p a11y-wasm --features probes
+        run: cargo test -p a11y-wasm --no-default-features
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
@@ -94,6 +94,9 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
+      # 180 KB seit 09.11.2026 (Entscheidung des Nutzers, liveaudit#16): die
+      # Messspalten fuer die seitenabhaengigen Regeln (Feature `probes`) sind im
+      # Standardbau, sie brauchen rund 9 KB gzip.
       # 170 KB seit #47 (05.10.2026, Entscheidung des Nutzers): gemessen
       # 149,0 KB gzip mit Kontrast-AAA, Stylesheet- und Darstellungsregeln.
       # 150 KB seit B5-B7 und #22 (03.10.2026, Entscheidung des Nutzers):
@@ -102,7 +105,7 @@ jobs:
       # angehoben (Entscheidung vom 01.10.2026): alle Regeln sollen auch in der
       # laufenden Seite (LiveAudit) greifen, die deutschen Texte bleiben drin.
       # Vorher 110 KB seit B1 (30.09.2026).
-      - name: Groessenbudget (170 KB gzip)
+      - name: Groessenbudget (180 KB gzip)
         run: |
           python3 - <<'EOF'
           import gzip, sys
@@ -110,8 +113,8 @@ jobs:
           raw = open(p, "rb").read()
           gz = len(gzip.compress(raw, 9)) / 1024
           print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
-          if gz > 170:
-              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 170 KB")
+          if gz > 180:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 180 KB")
           EOF
 
   node:
