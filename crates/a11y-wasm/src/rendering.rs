@@ -353,6 +353,14 @@ mod tests {
                     "auth/paste-blocked",
                     "focus/obscured-enhanced",
                     "text-spacing/clipped",
+                    // Ohne Layout-Spalten messen die Heuristiken nichts und
+                    // stehen als nicht gelaufen im Bericht.
+                    "order/visual-mismatch",
+                    "motion/infinite-animation",
+                    "reflow/min-width",
+                    "keyboard/pointer-only",
+                    "focus/obscured",
+                    "keyboard/scrollable-region-not-focusable",
                 ]
                 .contains(&r.rule_id.as_str())
             })

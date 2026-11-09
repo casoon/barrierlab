@@ -10,6 +10,10 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - **Messspalten:** hinter dem Cargo-Feature `probes` `Scan.withFrames`, `withTransforms`, `withPasteProbes`, `withFocusCover` und `withTextSpacing` (dünn besetzt, je Spalte optional; eine fehlende Spalte bleibt „nicht gemessen" und die Regel `NotRun`). Das Feature ist aus, weil es das Größenbudget von 170 KB gzip um 8,8 KiB sprengt (casoon/liveaudit#16).
 - **Build:** `packages/a11y-wasm/build.mjs` liest `A11Y_WASM_FEATURES` für zusätzliche Cargo-Features.
 
+### Changed
+
+- **Breaking, nicht gemessen:** Ohne Layout-Spalten stehen die Heuristiken mit `NotRun::CapabilityMissing` in `rule_runs` statt mit `untested`-Befund am Wurzelknoten; Folge aus `a11y-rules`; casoon/barrierlab#145.
+
 ## [0.15.2] - 2026-11-08
 
 ### Changed
