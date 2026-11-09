@@ -39,6 +39,12 @@ jobs:
         run: cargo check -p a11y-rules --no-default-features
       - if: steps.members.outputs.present == 'true'
         run: cargo check -p a11y-static --no-default-features
+      # Die Messspalten von a11y-wasm liegen hinter einem Feature (Groessenbudget);
+      # ohne diese Schritte baute und testete sie niemand.
+      - if: steps.members.outputs.present == 'true'
+        run: cargo clippy -p a11y-wasm --all-targets --features probes -- -D warnings
+      - if: steps.members.outputs.present == 'true'
+        run: cargo test -p a11y-wasm --features probes
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
