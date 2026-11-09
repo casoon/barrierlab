@@ -1,14 +1,16 @@
 name: Release npm
 
-# Tag `a11y-wasm-npm-vX.Y.Z` → build `@casoon/a11y-wasm`, then publish it to
-# npm with Trusted Publishing (provenance, no stored token) after approval in
-# the `npm` environment. The tag must match `packages/a11y-wasm/package.json`.
-# A separate tag prefix: release-plz sets `a11y-wasm-vX.Y.Z` for the crate with
+# Tag `<package>-npm-vX.Y.Z` (a11y-wasm or html-conform-wasm) → build
+# `@casoon/<package>`, then publish it to npm with Trusted Publishing
+# (provenance, no stored token) after approval in the `npm` environment. The
+# tag must match `packages/<package>/package.json`.
+# A separate tag prefix: release-plz sets `<package>-vX.Y.Z` for the crate with
 # the workflow token, and such a tag would not start this workflow.
 on:
   push:
     tags:
       - "a11y-wasm-npm-v*"
+      - "html-conform-wasm-npm-v*"
 
 permissions:
   contents: read
@@ -17,11 +19,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # `a11y-wasm-npm-v0.16.0` -> `a11y-wasm`
+      PKG: ${{ startsWith(github.ref_name, 'html-conform-wasm-npm-v') && 'html-conform-wasm' || 'a11y-wasm' }}
     steps:
       - uses: actions/checkout@v5
 
       - name: Tag matches the package version
-        run: test "${GITHUB_REF_NAME#a11y-wasm-npm-v}" = "$(node -p "require('./packages/a11y-wasm/package.json').version")"
+        run: test "${GITHUB_REF_NAME#"$PKG"-npm-v}" = "$(node -p "require('./packages/$PKG/package.json').version")"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -33,23 +38,24 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
 
-      - run: node packages/a11y-wasm/build.mjs
+      - run: node "packages/$PKG/build.mjs"
 
       - name: Pack
-        working-directory: packages/a11y-wasm
+        working-directory: packages/${{ env.PKG }}
         run: npm pack --pack-destination "$RUNNER_TEMP"
 
       - name: Tarball contents
         run: |
-          tar -tzf "$RUNNER_TEMP"/casoon-a11y-wasm-*.tgz | sort
-          for f in package/LICENSE package/README.md package/package.json package/pkg/a11y_wasm.js package/pkg/a11y_wasm_bg.wasm package/pkg/a11y_wasm.d.ts; do
-            tar -tzf "$RUNNER_TEMP"/casoon-a11y-wasm-*.tgz | grep -qx "$f" || { echo "missing: $f"; exit 1; }
+          tar -tzf "$RUNNER_TEMP/casoon-$PKG"-[0-9]*.tgz | sort
+          mod="${PKG//-/_}"
+          for f in package/LICENSE package/README.md package/package.json "package/pkg/$mod.js" "package/pkg/${mod}_bg.wasm" "package/pkg/$mod.d.ts"; do
+            tar -tzf "$RUNNER_TEMP/casoon-$PKG"-[0-9]*.tgz | grep -qx "$f" || { echo "missing: $f"; exit 1; }
           done
 
       - uses: actions/upload-artifact@v4
         with:
-          name: a11y-wasm-tarball
-          path: ${{ runner.temp }}/casoon-a11y-wasm-*.tgz
+          name: ${{ env.PKG }}-tarball
+          path: ${{ runner.temp }}/casoon-${{ env.PKG }}-[0-9]*.tgz
           if-no-files-found: error
 
   publish-npm:
@@ -57,13 +63,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
+    env:
+      PKG: ${{ startsWith(github.ref_name, 'html-conform-wasm-npm-v') && 'html-conform-wasm' || 'a11y-wasm' }}
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: a11y-wasm-tarball
+          name: ${{ env.PKG }}-tarball
           path: ${{ runner.temp }}/tarball
 
       - uses: actions/setup-node@v7
@@ -76,4 +84,4 @@ jobs:
 
       # Absolute path: npm 12 reads a bare `dist/x.tgz` as a GitHub repo.
       - name: Publish
-        run: npm publish --access public "$RUNNER_TEMP"/tarball/casoon-a11y-wasm-*.tgz
+        run: npm publish --access public "$RUNNER_TEMP"/tarball/casoon-"$PKG"-[0-9]*.tgz

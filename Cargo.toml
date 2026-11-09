@@ -23,6 +23,7 @@ members = [
     "crates/web-checks",
     # L3 — Auslieferung
     "crates/a11y-wasm",
+    "crates/html-conform-wasm",
 ]
 # Eigene Workspaces, die vor dem Umzug schon getrennt waren: Fuzz-Ziele, das
 # xtask-Hilfsprogramm und der Beispielgenerator.

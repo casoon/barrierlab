@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use a11y_report::{Report, SourcePosition};
 
 use crate::args::Input;
+use crate::config::Selection;
 
 pub const STDIN_NAME: &str = "<stdin>";
 
@@ -85,6 +86,22 @@ pub fn check_all(inputs: &[Input]) -> Vec<FileResult> {
     );
     results.sort_by(|a, b| a.path.cmp(&b.path));
     results
+}
+
+/// Removes the findings the selection does not keep; returns how many.
+pub fn apply_selection(results: &mut [FileResult], selection: &Selection) -> usize {
+    if selection.is_empty() {
+        return 0;
+    }
+    let mut hidden = 0;
+    for result in results {
+        if let State::Checked(report) = &mut result.state {
+            let before = report.findings.len();
+            report.findings.retain(|f| selection.keeps(&f.rule_id));
+            hidden += before - report.findings.len();
+        }
+    }
+    hidden
 }
 
 fn display_of(source: &Source) -> String {
@@ -180,8 +197,9 @@ fn check_source(source: &Source) -> FileResult {
         Ok(bytes) => bytes,
         Err(err) => return FileResult::not_checked(display, err.to_string()),
     };
-    let Ok(html) = String::from_utf8(bytes) else {
-        return FileResult::not_checked(display, "not valid UTF-8; the file was not checked");
+    let html = match crate::encoding::decode(&bytes) {
+        Ok(html) => html,
+        Err(reason) => return FileResult::not_checked(display, reason),
     };
     match html_conform::check(&html) {
         Ok(checked) => {

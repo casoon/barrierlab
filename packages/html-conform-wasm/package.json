@@ -1,0 +1,34 @@
+{
+  "name": "@casoon/html-conform-wasm",
+  "version": "0.1.0",
+  "description": "HTML5 conformance checking as WebAssembly: check(html) returns findings in the shared a11y-report model.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/casoon/barrierlab.git",
+    "directory": "packages/html-conform-wasm"
+  },
+  "homepage": "https://casoon.github.io/barrierlab",
+  "types": "./pkg/html_conform_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./pkg/html_conform_wasm.d.ts",
+      "default": "./pkg/html_conform_wasm.js"
+    },
+    "./html_conform_wasm_bg.wasm": "./pkg/html_conform_wasm_bg.wasm"
+  },
+  "files": [
+    "pkg/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test",
+    "prepublishOnly": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
