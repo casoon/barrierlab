@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
+### Breaking
+
+- **Abhängigkeit:** baut auf `a11y-dom` 0.29.0. Die Typen und Traits von `a11y-dom` stehen in der öffentlichen Fläche (`Document`, `Node`, `ComputedStyle`), 0.1.2 war an `a11y-dom` 0.28 gebunden und lässt sich mit `a11y-rules` 0.29.0 nicht kombinieren, weil dann zwei Kopien von `a11y-dom` im Graphen liegen. Keine eigene API-Änderung.
+
 ## [0.1.2] - 2026-11-08
 
 ### Added
