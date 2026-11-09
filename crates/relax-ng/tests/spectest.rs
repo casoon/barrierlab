@@ -16,7 +16,7 @@ use std::ops::Range;
 
 use relax_ng::{
     Content, DatatypeRegistry, Element, ExpandedName, ResolveError, SchemaResolver, SchemaSource,
-    SchemaSyntax, parse, simplify, validate,
+    SchemaSyntax, ValidationOptions, parse, simplify, validate, validate_with_options,
 };
 use roxmltree::Node;
 
@@ -408,4 +408,57 @@ fn spec_test_suite_instance_validation() {
         checked - failures.len(),
         checked
     );
+}
+
+/// Error recovery after an unexpected element is a reporting choice, never
+/// a validity decision: for every instance of the suite, a run with it
+/// finds exactly the errors a run without it finds (recovered ones aside)
+/// and is empty exactly when that one is.
+#[test]
+fn recovery_does_not_change_the_verdict_on_the_spec_test_suite() {
+    let text = load_suite_text();
+    let registry = DatatypeRegistry::new();
+    let options = ValidationOptions::default().recover_after_unexpected_element(true);
+
+    let (mut checked, mut recovered_errors) = (0usize, 0usize);
+    for case in collect_cases(&text) {
+        if !matches!(case.expectation, Expectation::Correct) {
+            continue;
+        }
+        let resolver = MultiFileResolver {
+            resources: &case.resources,
+        };
+        let source = SchemaSource::new(case.schema_xml.clone(), "", SchemaSyntax::Xml);
+        let Ok(document) = parse(&source) else {
+            continue;
+        };
+        let Ok(compiled) = simplify(&document, &resolver) else {
+            continue;
+        };
+        for instance_xml in case
+            .valid_instances
+            .iter()
+            .chain(case.invalid_instances.iter())
+        {
+            let instance_document =
+                roxmltree::Document::parse(instance_xml).expect("instance is well-formed XML");
+            let root = RoxmlElement(instance_document.root_element());
+            let plain = validate(&compiled, &registry, &root);
+            let recovering = validate_with_options(&compiled, &registry, &root, options);
+            let (Ok(plain), Ok(recovering)) = (plain, recovering) else {
+                continue;
+            };
+            checked += 1;
+            recovered_errors += recovering.iter().filter(|e| e.is_recovered()).count();
+            let kept: Vec<_> = recovering
+                .iter()
+                .filter(|error| !error.is_recovered())
+                .cloned()
+                .collect();
+            assert_eq!(kept, plain, "jing-spectest-{:04}", case.index);
+            assert_eq!(recovering.is_empty(), plain.is_empty());
+        }
+    }
+    assert!(checked > 500, "the suite has instances ({checked})");
+    eprintln!("{checked} instances, {recovered_errors} recovered errors");
 }

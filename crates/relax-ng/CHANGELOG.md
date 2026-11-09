@@ -13,6 +13,11 @@ in the git history only.
   form of the compiled schema that a host can build once and load instead of compiling
   (barrierlab#72). Malformed input is a `LoadError`; no new dependencies.
 
+- **API:** `validate_with_options`/`Schema::validate_with_options` with `ValidationOptions` add an
+  opt-in recovery after an unexpected element: its subtree is checked against the element's
+  definitions elsewhere in the schema, and the extra errors report `is_recovered()`. Off by
+  default; the verdict and the plain error list are unchanged (barrierlab#76).
+
 ### Changed
 
 - **Datatypes:** XSD `pattern` facets compile their regular expression once per thread instead of on

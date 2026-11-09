@@ -263,6 +263,10 @@ pub(crate) struct Interner<'s> {
     /// Seeds the hashes of attribute values, shared by all value maps.
     value_state: RandomState,
     attribute_derivs: IdMap<(Id, u32, u32), KeyedMap<Box<str>, Id>>,
+    /// Recovery only ([`Self::recovery_contents`]): every `element` pattern
+    /// of the schema, collected on first use.
+    all_elements: Option<Vec<&'s Pattern>>,
+    recovery_contents: IdMap<u32, Option<Id>>,
 }
 
 impl<'s> Interner<'s> {
@@ -282,6 +286,8 @@ impl<'s> Interner<'s> {
             attribute_known: IdMap::default(),
             value_state: RandomState::new(),
             attribute_derivs: IdMap::default(),
+            all_elements: None,
+            recovery_contents: IdMap::default(),
         };
         for node in [Node::Empty, Node::NotAllowed, Node::Text] {
             interner.node_id(node);
@@ -1090,6 +1096,69 @@ impl<'s> Interner<'s> {
         let result = (!found.is_empty()).then(|| self.choice(found));
         self.element_contents.insert((id, name_id), result);
         result
+    }
+
+    /// Error recovery after an element no position allowed: the union (a
+    /// `choice`) of the content of *every* `element` pattern in the schema
+    /// — wherever it sits, not only where the parent would allow it —
+    /// whose name class matches `name`, or `None` if the schema has no
+    /// such element. A document that is valid against this union is valid
+    /// against at least one definition of the name; an error against it is
+    /// an error against all of them. `start` is the schema's start
+    /// pattern, which `definitions` does not hold.
+    pub(crate) fn recovery_contents(
+        &mut self,
+        start: &'s Pattern,
+        name: &ExpandedName,
+    ) -> Option<Id> {
+        let name_id = self.name_id(name);
+        if let Some(&known) = self.recovery_contents.get(&name_id) {
+            return known;
+        }
+        if self.all_elements.is_none() {
+            let mut elements = Vec::new();
+            collect_elements(start, &mut elements);
+            for pattern in self.definitions.values() {
+                collect_elements(pattern, &mut elements);
+            }
+            self.all_elements = Some(elements);
+        }
+        let mut found = Vec::new();
+        let candidates = self.all_elements.take().unwrap_or_default();
+        for &pattern in &candidates {
+            if let Pattern::Element {
+                name: name_class,
+                body,
+                ..
+            } = pattern
+                && name_class_matches(name_class, &name.namespace, &name.local)
+            {
+                found.push(self.intern(&body[0]));
+            }
+        }
+        self.all_elements = Some(candidates);
+        let result = (!found.is_empty()).then(|| self.choice(found));
+        self.recovery_contents.insert(name_id, result);
+        result
+    }
+}
+
+/// Every `element` pattern in `pattern`, nested ones included, in document
+/// order. Does not follow `ref`: [`Interner::recovery_contents`] visits all
+/// definitions itself.
+fn collect_elements<'s>(pattern: &'s Pattern, out: &mut Vec<&'s Pattern>) {
+    match pattern {
+        Pattern::Element { body, .. } => {
+            out.push(pattern);
+            body.iter().for_each(|child| collect_elements(child, out));
+        }
+        Pattern::Group(values)
+        | Pattern::Interleave(values)
+        | Pattern::Choice(values)
+        | Pattern::OneOrMore(values) => {
+            values.iter().for_each(|child| collect_elements(child, out))
+        }
+        _ => {}
     }
 }
 

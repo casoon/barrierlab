@@ -53,6 +53,22 @@ See [`examples/validate.rs`](examples/validate.rs) for a complete,
 runnable version (`cargo run --example validate`), and the `Schema`/
 `Element` rustdoc for the full contract.
 
+## Error recovery (opt-in)
+
+By default an element the pattern does not allow is reported once and its subtree is skipped,
+so nothing inside it is checked. `validate_with_options` with
+`ValidationOptions::default().recover_after_unexpected_element(true)` also checks the skipped
+subtree against the union of every `element` definition of that name anywhere in the schema
+(a child is accepted if any definition accepts it). Names the schema does not define stay
+skipped. Errors found this way report `ValidationError::is_recovered()`.
+
+This is a reporting choice, not part of RELAX NG, which defines validity only. The verdict
+never changes: without the recovered errors the list equals the plain run's, and it is empty
+in exactly the same cases. The definition found is a guess at what the author meant, so
+context-dependent restrictions are unknown inside the subtree. The skipped element never
+advances its parent's pattern, so siblings are matched as if it were absent. Details in the
+`ValidationOptions` rustdoc.
+
 ## Datatype libraries
 
 - The RELAX NG built-in library (empty `datatypeLibrary`, `string`/
