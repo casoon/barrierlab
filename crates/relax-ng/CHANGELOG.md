@@ -7,6 +7,11 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **Datatypes:** `pattern` facets accept the XSD name escapes `\i`, `\I`, `\c`, `\C` and
+  character-class subtraction (`[\i-[:]]`); the `regex` crate knows neither (barrierlab#173).
+
 ## [0.2.4] - 2026-11-09
 
 ### Added

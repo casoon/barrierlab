@@ -902,6 +902,51 @@ fn is_base64_binary(value: &str) -> bool {
 // Facets.
 // ---------------------------------------------------------------------
 
+/// XML `NameStartChar` (XML 1.0, fifth edition), the set `\i` stands for.
+/// The colon is written as an escape: a literal `[:` would read as a POSIX
+/// class inside a nested class.
+const NAME_START_CHARS: &str = "\\x{3A}A-Z_a-z\\x{C0}-\\x{D6}\\x{D8}-\\x{F6}\\x{F8}-\\x{2FF}\\x{370}-\\x{37D}\\x{37F}-\\x{1FFF}\\x{200C}-\\x{200D}\\x{2070}-\\x{218F}\\x{2C00}-\\x{2FEF}\\x{3001}-\\x{D7FF}\\x{F900}-\\x{FDCF}\\x{FDF0}-\\x{FFFD}\\x{10000}-\\x{EFFFF}";
+
+/// XML `NameChar`, the set `\c` stands for: `NameStartChar` plus `-`, `.`, digits, and the
+/// combining ranges.
+const NAME_CHAR_EXTRA: &str = "\\-.0-9\\x{B7}\\x{300}-\\x{36F}\\x{203F}-\\x{2040}";
+
+/// Translates the two XSD regular-expression constructs the `regex` crate lacks into its
+/// syntax: the name escapes `\i`, `\I`, `\c`, `\C` and character-class subtraction
+/// (`[a-z-[aeiou]]`, XSD 1.0 Appendix F, written `--` there). Everything else is passed on
+/// unchanged. The vnu schema uses both (`rdfa.rnc`).
+fn xsd_regex_to_rust(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut chars = pattern.chars().peekable();
+    let mut class_depth = 0usize;
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => match chars.next() {
+                Some('i') => out.push_str(&format!("[{NAME_START_CHARS}]")),
+                Some('I') => out.push_str(&format!("[^{NAME_START_CHARS}]")),
+                Some('c') => out.push_str(&format!("[{NAME_START_CHARS}{NAME_CHAR_EXTRA}]")),
+                Some('C') => out.push_str(&format!("[^{NAME_START_CHARS}{NAME_CHAR_EXTRA}]")),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            },
+            '[' => {
+                class_depth += 1;
+                out.push('[');
+            }
+            ']' => {
+                class_depth = class_depth.saturating_sub(1);
+                out.push(']');
+            }
+            '-' if class_depth > 0 && chars.peek() == Some(&'[') => out.push_str("--"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
 fn is_ordered(kind: TypeKind) -> bool {
     matches!(
         kind,
@@ -919,7 +964,7 @@ fn has_length(kind: TypeKind) -> bool {
 
 fn validate_facet(kind: TypeKind, name: &str, value: &str) -> Result<(), String> {
     match name {
-        "pattern" => Regex::new(&format!("^(?:{value})$"))
+        "pattern" => Regex::new(&format!("^(?:{})$", xsd_regex_to_rust(value)))
             .map(drop)
             .map_err(|error| format!("invalid `pattern` facet: {error}")),
         "enumeration" => Ok(()),
@@ -1050,7 +1095,8 @@ fn compiled_pattern(pattern: &str) -> Regex {
         if let Some(regex) = cache.get(pattern) {
             return regex.clone();
         }
-        let regex = Regex::new(&format!("^(?:{pattern})$")).expect("validated by validate_params");
+        let regex = Regex::new(&format!("^(?:{})$", xsd_regex_to_rust(pattern)))
+            .expect("validated by validate_params");
         if cache.len() >= PATTERN_CACHE_LIMIT {
             cache.clear();
         }
@@ -1263,6 +1309,23 @@ mod tests {
             &[("enumeration", "a"), ("enumeration", "b")],
             "c"
         ));
+    }
+
+    #[test]
+    fn pattern_facet_supports_name_escapes_and_class_subtraction() {
+        // The shapes `rdfa.rnc` uses (barrierlab#173).
+        let term = [("pattern", "[\\i-[:]][/\\c-[:]]*")];
+        assert!(matches("string", &term, "license"));
+        assert!(matches("string", &term, "_a-b.c/d"));
+        assert!(!matches("string", &term, "a:b"));
+        assert!(!matches("string", &term, "1a"));
+        let curie = [("pattern", "(([\\i-[:]][\\c-[:]]*)?:)[^\\s]*")];
+        assert!(matches("string", &curie, "dc:title"));
+        assert!(matches("string", &curie, ":x"));
+        assert!(!matches("string", &curie, "dc"));
+        let not_name = [("pattern", "\\I\\C*")];
+        assert!(matches("string", &not_name, "1"));
+        assert!(!matches("string", &not_name, "a"));
     }
 
     #[test]

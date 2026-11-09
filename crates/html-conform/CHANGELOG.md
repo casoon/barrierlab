@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
+  `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
+  `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`
+  trees fall from 177 and 50 to 2 and 0. vnu's RDFa-Lite-only preset is not offered
+  (barrierlab#173).
 - **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
   else UTF-8); bytes invalid in that encoding are reported as not checked in every format. A
   non-UTF-8 file is decoded as declared and still gets `assertion.elements.meta-charset-not-utf8`.
@@ -20,6 +25,11 @@ All notable changes to this project will be documented in this file. The format 
 - **Release:** `html-conform` binaries for Linux (x86_64, aarch64), macOS (x86_64, aarch64) and
   Windows (x86_64) are attached to the release with `SHA256SUMS` and a build provenance
   attestation (barrierlab#74).
+
+### Changed
+
+- **Rules:** a `<link>` may carry `resource` instead of `href`, and a `<link>` with `property`
+  is allowed in the body.
 
 ### Fixed
 

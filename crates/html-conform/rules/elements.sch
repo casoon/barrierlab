@@ -60,9 +60,10 @@
     </rule>
   </pattern>
 
+  <!-- RDFa (schema/html5/rdfa.rnc): `resource` stands in for `href` on <link>. -->
   <pattern id="elements-link-href">
     <rule context="h:link">
-      <assert id="elements.link-missing-href" role="error" test="@href or @imagesrcset">
+      <assert id="elements.link-missing-href" role="error" test="@href or @imagesrcset or @resource">
         A "link" element must have an "href" attribute or an "imagesrcset" attribute, or both.
       </assert>
     </rule>
@@ -917,9 +918,10 @@
         A "link" element with a "sizes" attribute must have a "rel" attribute that contains the value "icon" or the value "apple-touch-icon" or the value "apple-touch-icon-precomposed".
       </assert>
     </rule>
+    <!-- RDFa: <link property="..."> is phrasing content (rdfa.rnc, link.rdfa.elem.phrasing). -->
     <rule context="h:link[ancestor::h:body]">
       <assert id="elements.link-in-body-rel" role="error"
-        test="@itemprop or contains(concat(' ', normalize-space(@rel), ' '), ' dns-prefetch ') or contains(concat(' ', normalize-space(@rel), ' '), ' modulepreload ') or contains(concat(' ', normalize-space(@rel), ' '), ' pingback ') or contains(concat(' ', normalize-space(@rel), ' '), ' preconnect ') or contains(concat(' ', normalize-space(@rel), ' '), ' prefetch ') or contains(concat(' ', normalize-space(@rel), ' '), ' preload ') or contains(concat(' ', normalize-space(@rel), ' '), ' prerender ') or contains(concat(' ', normalize-space(@rel), ' '), ' stylesheet ')">
+        test="@itemprop or @property or contains(concat(' ', normalize-space(@rel), ' '), ' dns-prefetch ') or contains(concat(' ', normalize-space(@rel), ' '), ' modulepreload ') or contains(concat(' ', normalize-space(@rel), ' '), ' pingback ') or contains(concat(' ', normalize-space(@rel), ' '), ' preconnect ') or contains(concat(' ', normalize-space(@rel), ' '), ' prefetch ') or contains(concat(' ', normalize-space(@rel), ' '), ' preload ') or contains(concat(' ', normalize-space(@rel), ' '), ' prerender ') or contains(concat(' ', normalize-space(@rel), ' '), ' stylesheet ')">
         A "link" element must not appear as a descendant of a "body" element unless the "link" element has an "itemprop" attribute or has a "rel" attribute whose value contains "dns-prefetch", "modulepreload", "pingback", "preconnect", "prefetch", "preload", "prerender", or "stylesheet".
       </assert>
     </rule>

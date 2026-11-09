@@ -5,8 +5,8 @@
 
 use relax_ng::{CompileError, ResolveError, Schema, SchemaResolver, SchemaSource, SchemaSyntax};
 
-/// The 19 vendored `schema/html5/*.rnc` modules `html5/html5.rnc`
-/// `include`s, embedded at compile time. Keyed by the relative href
+/// The 20 vendored `schema/html5/*.rnc` modules `html5/html5.rnc`
+/// `include`s (plus `rdfa.rnc`, which [`ROOT_ENTRY`] includes), embedded at compile time. Keyed by the relative href
 /// exactly as it appears in `html5.rnc`'s own `include` statements (e.g.
 /// `"common.rnc"`) — bare, since every one of these is a same-directory
 /// sibling include.
@@ -35,6 +35,7 @@ const HTML5_FILES: &[(&str, &str)] = &[
         include_str!("../schema/html5/microdata.rnc"),
     ),
     ("phrase.rnc", include_str!("../schema/html5/phrase.rnc")),
+    ("rdfa.rnc", include_str!("../schema/html5/rdfa.rnc")),
     ("revision.rnc", include_str!("../schema/html5/revision.rnc")),
     ("ruby.rnc", include_str!("../schema/html5/ruby.rnc")),
     (
@@ -265,29 +266,25 @@ const MML3_ROOT_MODULE: (&str, &str) = (
 );
 
 /// A small, hand-composed (**not** vendored — no upstream file matches it
-/// verbatim) entry point that just `include`s the real entry points of
-/// the two vendored pieces, mirroring vnu's actual runtime schema
-/// assembly (`http://s.validator.nu/html5-all.rnc`) semantically. It
-/// can't be vendored verbatim: vnu's own literal driver chain
-/// (`schema/.drivers/html5-all.rnc` -> `schema/html5/html5full-rdfa.rnc`)
-/// references a `html5full-rdfa.rnc` file that doesn't exist anywhere in
-/// the `validator/validator` source tree at the pinned commit (confirmed
-/// by a full-repo file listing) — presumably assembled by a build step
-/// outside the repo. This two-line composition is the smallest faithful
-/// substitute: `html5/html5.rnc` unchanged, patched by
-/// `html5-svg-mathml.rnc` unchanged, exactly like the real driver does.
-///
-/// Note on that missing file's own name: vnu's real default schema entry
-/// point is literally `html5full-**rdfa**`, not `html5full` — i.e. vnu's
-/// actual default schema does ship RDFa awareness baked in, which this
-/// vendoring couldn't capture since the generating file isn't in the
-/// source tree. `meta.rnc`'s own `RDFa Lite Property Metadata` block
-/// (appended at the end of that file, not vendored) closes that specific,
-/// confirmed gap for `<meta property>` (Open Graph) — see its own doc
-/// comment for why it lives there instead of in a separate module here
-/// (a cross-file `|=` combine for it did not actually take effect, A/B
-/// tested directly; combining it into `meta.rnc` itself did).
-const ROOT_ENTRY: &str = "include \"html5/html5.rnc\"\ninclude \"html5-svg-mathml.rnc\"\n";
+/// verbatim) entry point that `include`s the vendored pieces, mirroring
+/// vnu's default schema assembly (`http://s.validator.nu/html5-all.rnc`,
+/// `TestRunner.java`'s `DEFAULT_SCHEMA`) semantically. It can't be vendored
+/// verbatim: `schema/.drivers/html5-all.rnc` includes
+/// `html5/html5full-rdfa.rnc`, which `build/build.py` generates at the
+/// pinned commit (it is not in the source tree): `html5full.rnc` (the
+/// modular `html5.rnc` plus microdata, legacy, ITS) with
+/// `include "rdfa.rnc"` appended. This composition is the smallest faithful
+/// substitute: `html5/html5.rnc` and `html5-svg-mathml.rnc` unchanged, plus
+/// `rdfa.rnc` unchanged, so RDFa (full RDFa 1.1, not RDFa Lite) is accepted
+/// by default, as in vnu (barrierlab#173). The default namespace is declared
+/// here because a compact-syntax `include` passes it on to the included
+/// file, and `rdfa.rnc` declares none of its own (the generated vnu driver
+/// starts with this same declaration). vnu's separate `html5-rdfalite`
+/// preset (the same include with `nonRDFaLite = notAllowed`) is not offered.
+const ROOT_ENTRY: &str = "default namespace = \"http://www.w3.org/1999/xhtml\"\n\
+     include \"html5/html5.rnc\"\n\
+     include \"html5-svg-mathml.rnc\"\n\
+     include \"rdfa.rnc\"\n";
 
 /// Resolves every `include` href in the combined schema against the
 /// embedded module groups above — no file-system access. Flat (no real

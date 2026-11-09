@@ -10,6 +10,8 @@ This project contains third-party components and vendored assets from external p
 - **Commit / Tag:** `388cb36`
 - **Vendored Locations:**
   - `schema/` (RelaxNG schemas: `html5/`, `svg11/`, `mathml3-inc.rnc`, `html5-all.rnc`)
+    (including `html5/rdfa.rnc`, the RDFa 1.1 attributes and `<link>`/`<meta>` patterns of vnu's default
+    schema, MIT under `schema/html5/LICENSE`; `xtask/vendor-schema.sh`)
   - `tests/corpus/` (differential test suite: vnu's `tests/html`, `html-aria`, `html-math`,
     `html-rdfa`, `html-rdfalite`, and the 6 vnu-authored files of `html-svg`)
   - `prebuilt/html5.rngc` (generated: the vendored schemas compiled and serialized, see `src/schema.rs`)
