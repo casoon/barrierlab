@@ -201,10 +201,14 @@ There is no option to turn it off.
 
 vnu checks `tests/html-rdfalite` against a separate preset, `html5-rdfalite`: the same include
 with `nonRDFaLite = notAllowed`, which drops `about`, `content`, `datatype`, `rel`, `rev` and
-`inlist` from the RDFa attributes. html-conform does not offer that preset; it would need a
-second compiled schema (about 225 KB more embedded data) and the corpus cannot tell the two apart:
-none of the 56 fixtures is invalid only because of a non-Lite attribute. `html-rdfalite` is
-therefore checked against full RDFa.
+`inlist` from the RDFa attributes. html-conform offers it behind the `rdfa-lite` feature
+(`SchemaPreset::RdfaLite`, `check_with_preset`): `src/schema_source.rs` composes the same entry point
+with `include "rdfa.rnc" { nonRDFaLite = notAllowed }` (vnu's `schemaDriverHtml5RDFaLite`), and the
+result is `prebuilt/html5-rdfalite.rngc`, a second compiled schema of about 246 KB. The default build
+does not contain it. The corpus cannot tell the two presets apart: none of the 56 fixtures is invalid
+only because of a non-Lite attribute, so `html-rdfalite` measures 0 false positives and 0 false
+negatives under both. With the feature, `tests/differential.rs` runs the tree under the Lite preset
+as vnu's `TestRunner` does and gates it with its own baseline.
 
 Differences measured on the two trees (before issue #173: 177 and 50 false positives; before
 issue #181: 2 and 0 false positives, 5 and 2 false negatives): none.

@@ -47,6 +47,23 @@ pub(crate) fn html5_schema() -> Result<&'static Schema, &'static str> {
     HTML5_SCHEMA.as_ref().map_err(String::as_str)
 }
 
+/// The serialized `html5-rdfalite` preset (`rdfa-lite` feature), generated like [`PREBUILT_SCHEMA`].
+#[cfg(all(feature = "rdfa-lite", not(feature = "runtime-compile")))]
+const PREBUILT_RDFA_LITE_SCHEMA: &[u8] = include_bytes!("../prebuilt/html5-rdfalite.rngc");
+
+#[cfg(all(feature = "rdfa-lite", not(feature = "runtime-compile")))]
+fn load_rdfa_lite_schema() -> Result<Schema, String> {
+    Schema::from_bytes(PREBUILT_RDFA_LITE_SCHEMA).map_err(|error| error.to_string())
+}
+
+#[cfg(all(feature = "rdfa-lite", feature = "runtime-compile"))]
+fn load_rdfa_lite_schema() -> Result<Schema, String> {
+    crate::schema_source::compile_html5_rdfa_lite_schema().map_err(|error| error.to_string())
+}
+
+#[cfg(feature = "rdfa-lite")]
+static RDFA_LITE_SCHEMA: LazyLock<Result<Schema, String>> = LazyLock::new(load_rdfa_lite_schema);
+
 /// The `datatypeLibrary` URI the vendored schema's custom `w:*` types are
 /// declared under (`schema/html5/html5.rnc`: `datatypes w =
 /// "http://whattf.org/datatype-draft"`).
@@ -80,7 +97,22 @@ static DATATYPE_REGISTRY: LazyLock<relax_ng::DatatypeRegistry> = LazyLock::new(|
 pub(crate) fn validate_document(
     document: &crate::infoset::NormalizedHtmlDocument,
 ) -> Result<Vec<relax_ng::ValidationError<crate::finding::SourceLocation>>, String> {
-    let schema = html5_schema().map_err(str::to_owned)?;
+    validate_against(html5_schema(), document)
+}
+
+/// [`validate_document`] against the `html5-rdfalite` preset.
+#[cfg(feature = "rdfa-lite")]
+pub(crate) fn validate_document_rdfa_lite(
+    document: &crate::infoset::NormalizedHtmlDocument,
+) -> Result<Vec<relax_ng::ValidationError<crate::finding::SourceLocation>>, String> {
+    validate_against(RDFA_LITE_SCHEMA.as_ref().map_err(String::as_str), document)
+}
+
+fn validate_against(
+    schema: Result<&'static Schema, &'static str>,
+    document: &crate::infoset::NormalizedHtmlDocument,
+) -> Result<Vec<relax_ng::ValidationError<crate::finding::SourceLocation>>, String> {
+    let schema = schema.map_err(str::to_owned)?;
     let Some(root) = document.root_element() else {
         return Ok(Vec::new());
     };
@@ -190,6 +222,26 @@ mod tests {
         assert!(
             stored == fresh,
             "prebuilt/html5.rngc is stale; regenerate it with `UPDATE_PREBUILT=1 cargo test -p html-conform prebuilt_schema_is_current`"
+        );
+    }
+
+    /// Same guard for the `rdfa-lite` preset's artefact; `UPDATE_PREBUILT=1` rewrites it.
+    #[cfg(feature = "rdfa-lite")]
+    #[test]
+    fn prebuilt_rdfa_lite_schema_is_current() {
+        let fresh = crate::schema_source::compile_html5_rdfa_lite_schema()
+            .expect("the vendored schema compiles with nonRDFaLite = notAllowed")
+            .to_bytes()
+            .expect("the simplified schema serializes");
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/prebuilt/html5-rdfalite.rngc");
+        if std::env::var_os("UPDATE_PREBUILT").is_some() {
+            std::fs::write(path, &fresh).expect("write prebuilt/html5-rdfalite.rngc");
+            return;
+        }
+        let stored = std::fs::read(path).expect("prebuilt/html5-rdfalite.rngc exists");
+        assert!(
+            stored == fresh,
+            "prebuilt/html5-rdfalite.rngc is stale; regenerate it with `UPDATE_PREBUILT=1 cargo test -p html-conform --features rdfa-lite prebuilt_`"
         );
     }
 
