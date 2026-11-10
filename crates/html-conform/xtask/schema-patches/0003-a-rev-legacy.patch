@@ -1,0 +1,25 @@
+# Local deviation from vnu 26.8.20 (388cb36): `rev` on <a> is accepted (any
+# string), as in vnu's default schema.
+#
+# Why: rdfa.rnc leaves `rel` and `rev` out of the RDFa attributes of <a>
+# (common.attrs.rdfa.no-rel-rev). vnu gets `rev` back from its driver file
+# schema/.drivers/legacy.rnc (`a.attrs.rev = attribute rev { string }`,
+# `a.attrs &= a.attrs.rev?`), which is not vendored. The definition is copied
+# here verbatim. Needed by html-rdfa/0006 and 0007 (expected clean). Not a
+# workaround for a missing relax-ng feature.
+# File: schema/html5/rdfa.rnc.
+#
+--- a/rdfa.rnc
++++ b/rdfa.rnc
+@@ -170,6 +170,11 @@
+ common.attrs &= common.attrs.rdfa
+
+ a.attrs &= common.attrs.rdfa.no-rel-rev
++a.attrs.rev =
++	attribute rev {
++		string
++	}
++a.attrs &= a.attrs.rev?
+ area.attrs &= common.attrs.rdfa.no-rel
+ base.attrs &= common.attrs.rdfa.no-rel
+

@@ -185,18 +185,8 @@ fn load_class_baseline() -> BTreeMap<String, ClassCounts> {
 /// The known false negatives, pinned by name so a regression elsewhere is
 /// not masked by them. vnu validates `<style>` with the W3C CSS Validator;
 /// html-conform does not validate CSS (docs/html-conform/guides/vnu-comparison.md,
-/// issue #87, decision A). The seven `xmlns:*` fixtures of the two RDFa trees
-/// are `xmlns:prefix` declarations on HTML elements, which vnu rejects and
-/// the infoset layer drops (`src/infoset.rs`); before RDFa was in the schema
-/// they counted as matches only because every RDFa attribute was a finding.
-const PINNED_FALSE_NEGATIVES: [&str; 9] = [
-    "html-rdfa/0147-novalid.html",
-    "html-rdfa/0179-novalid.html",
-    "html-rdfa/0183-novalid.html",
-    "html-rdfa/0258-novalid.html",
-    "html-rdfa/0319-novalid.html",
-    "html-rdfalite/0147.novalid.html",
-    "html-rdfalite/0319-novalid.html",
+/// issue #87, decision A).
+const PINNED_FALSE_NEGATIVES: [&str; 2] = [
     "html-svg/svg-a-nested-in-svg-a-novalid.html",
     "html/elements/style/css-property-error-novalid.html",
 ];

@@ -170,6 +170,11 @@ common.attrs.rdfa.no-content-noproperty &=
 common.attrs &= common.attrs.rdfa
 
 a.attrs &= common.attrs.rdfa.no-rel-rev
+a.attrs.rev =
+	attribute rev {
+		string
+	}
+a.attrs &= a.attrs.rev?
 area.attrs &= common.attrs.rdfa.no-rel
 base.attrs &= common.attrs.rdfa.no-rel
 

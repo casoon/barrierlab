@@ -31,18 +31,17 @@ agreement:
 | --- | --- |
 | Result | `html` + `html-aria` | `html-math` | `html-rdfa` | `html-rdfalite` | `html-svg` | All |
 | --- | --- | --- | --- | --- | --- | --- |
-| true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 23 | 0 | 0 | 3,786 |
-| true negatives (both clean) | 909 | 30 | 182 | 54 | 5 | 1,180 |
-| false positives (vnu clean, html-conform reports something) | 0 | 0 | 2 | 0 | 0 | 2 |
-| false negatives (vnu expects findings, html-conform reports none) | 1 | 0 | 5 | 2 | 1 | 9 |
+| true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 28 | 2 | 0 | 3,793 |
+| true negatives (both clean) | 909 | 30 | 184 | 54 | 5 | 1,182 |
+| false positives (vnu clean, html-conform reports something) | 0 | 0 | 0 | 0 | 0 | 0 |
+| false negatives (vnu expects findings, html-conform reports none) | 1 | 0 | 0 | 0 | 1 | 2 |
 | not comparable (`check()` returned an error) | 0 | 0 | 0 | 0 | 0 | 0 |
 
 CI runs this test on every push (`cargo test --release --test differential -- --ignored`) and
 fails if false positives or false negatives of a tree rise above its committed baseline. `html`
-and `html-aria` stay at 0 false positives; the 2 false positives are the measured gap of
-`html-rdfa` (see below), so they cannot hide a regression elsewhere. The nine false negatives
-are pinned by name in the test (CSS below, the nested SVG `<a>` of `html-svg`, and seven `xmlns:*`
-fixtures of the RDFa trees, see below), so another missed fixture cannot hide behind them.
+and `html-aria` stay at 0 false positives, and so does every other tree. The two false negatives
+are pinned by name in the test (CSS below and the nested SVG `<a>` of `html-svg`), so another
+missed fixture cannot hide behind them.
 
 ### Finding classes
 
@@ -59,11 +58,11 @@ the test and counted as **unmapped**; there are none at present.
 | `tests/html` | 3,389 | 100 | 1 | 0 |
 | `tests/html-aria` | 253 | 3 | 0 | 0 |
 | `tests/html-math` | 18 | 0 | 0 | 0 |
-| `tests/html-rdfa` | 23 | 0 | 5 | 0 |
-| `tests/html-rdfalite` | 0 | 0 | 2 | 0 |
+| `tests/html-rdfa` | 28 | 0 | 0 | 0 |
+| `tests/html-rdfalite` | 2 | 0 | 0 | 0 |
 | `tests/html-svg` | 0 | 0 | 1 | 0 |
 
-(Matched plus incidental equals the 3,786 true positives.) The baseline is committed in
+(Matched plus incidental equals the 3,793 true positives.) The baseline is committed in
 `tests/vnu-class-baseline.json`; CI fails if *incidental* rises, *matched* falls, or the
 number of unmapped messages changes.
 
@@ -113,11 +112,8 @@ finding-by-finding parity.
   CSS correctness is out of scope (decision A of issue #87; checking property names or whole
   values would need its own normative basis and corpus). The test pins this fixture by name
   as the only allowed miss.
-- **RDFa leftovers.** vnu's default schema includes RDFa 1.1 and so does html-conform (issue #173,
-  see [RDFa](#rdfa) below). Two false positives remain in `tests/html-rdfa`: `rev` on `<a>`, which
-  vnu accepts through its `legacy.rnc` driver (not vendored). Seven false negatives in the two
-  RDFa trees are `xmlns:prefix` declarations on HTML elements, which vnu rejects and html-conform's
-  infoset layer drops. `tests/html-rdfalite` has no false positive.
+- **RDFa.** vnu's default schema includes RDFa 1.1 and so does html-conform (issue #173, see
+  [RDFa](#rdfa) below). Both RDFa trees match vnu with no false positive and no false negative.
 
 ## Triage of vnu's other test trees
 
@@ -127,8 +123,8 @@ three outcomes:
 | Tree | Files | Outcome | Why |
 | --- | --- | --- | --- |
 | `tests/html-math` | 48 | measured | 0 false positives, 0 false negatives |
-| `tests/html-rdfa` | 212 | measured, gap | 2 false positives (`rev` on `<a>`), 5 false negatives (`xmlns:*`) |
-| `tests/html-rdfalite` | 56 | measured, gap | 0 false positives, 2 false negatives (`xmlns:*`) |
+| `tests/html-rdfa` | 212 | measured | 0 false positives, 0 false negatives |
+| `tests/html-rdfalite` | 56 | measured | 0 false positives, 0 false negatives |
 | `tests/html-svg` (not in the issue's list) | 522 | 6 measured, 516 not vendored | the 516 embed W3C SVG 1.1 test cases, see below |
 | `tests/css` | 16 | out of scope | stand-alone style sheets for vnu's CSS checker; html-conform checks HTML only and has no CSS validation (issue #87) |
 | `tests/xhtml` | 129 | out of scope | XML syntax; html-conform parses HTML only and plans no XHTML mode |
@@ -210,23 +206,18 @@ with `nonRDFaLite = notAllowed`, which drops `about`, `content`, `datatype`, `re
 `inlist` from the RDFa attributes. html-conform does not offer that preset; it would need a
 second compiled schema (about 225 KB more embedded data) and the corpus cannot tell the two apart:
 none of the 56 fixtures is invalid only because of a non-Lite attribute. `html-rdfalite` is
-therefore checked against full RDFa. The two `xmlns:*` fixtures of that tree are missed for the reason below.
+therefore checked against full RDFa.
 
-Remaining differences, measured on the two trees (before issue #173: 177 and 50 false positives):
+Differences measured on the two trees (before issue #173: 177 and 50 false positives; before
+issue #181: 2 and 0 false positives, 5 and 2 false negatives): none.
 
-| Tree | false positives | false negatives |
-| --- | --- | --- |
-| `tests/html-rdfa` (212) | 2 | 5 |
-| `tests/html-rdfalite` (56) | 0 | 2 |
-
-- **`rev` on `<a>`** (`html-rdfa/0006`, `0007`, false positives). `rdfa.rnc` leaves `rel` and `rev`
-  out of the RDFa attributes of `<a>`; vnu accepts `rev` there from `legacy.rnc`
-  (`a.attrs.rev`), a driver html-conform does not vendor.
+- **`rev` on `<a>`** (`html-rdfa/0006`, `0007`). `rdfa.rnc` leaves `rel` and `rev` out of the RDFa
+  attributes of `<a>`; vnu accepts `rev` there from `legacy.rnc` (`a.attrs.rev`), a driver html-conform
+  does not vendor. Local patch `xtask/schema-patches/0003-a-rev-legacy.patch` copies that definition.
 - **`xmlns:prefix` on HTML elements** (`html-rdfa/0147`, `0179`, `0183`, `0258`, `0319` and
-  `html-rdfalite/0147`, `0319`, false negatives). vnu reports "Attribute `xmlns:xmlzzz` not
-  allowed here". The infoset layer drops namespace declarations before schema validation (they
-  are needed on foreign elements), so the schema never sees them. Before RDFa was in the schema,
-  these seven counted as matches only because every RDFa attribute was a finding.
+  `html-rdfalite/0147`, `0319`). vnu reports "Attribute `xmlns:xmlzzz` not allowed here", and so
+  does html-conform: the infoset layer keeps `xmlns:*` on HTML elements and drops it only on SVG and
+  MathML elements, where it is a namespace declaration.
 - **`link` and `meta`.** `<link property resource>` without `rel`/`href` is valid in the body, and
   `resource` replaces `href` on `<link>`; `rules/elements.sch` accepts both.
 
