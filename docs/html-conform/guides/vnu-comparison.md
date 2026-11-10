@@ -135,12 +135,55 @@ three outcomes:
 | `tests/svg` | 1 | out of scope | a stand-alone `.svg` document, not HTML syntax (inline SVG is `html-svg`) |
 | `tests/langdetect` | 11 | out of scope | vnu's language-detection heuristics (character statistics over about 1.4 MB of text); html-conform has no language detector |
 | `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform has no such check |
-| `tests/html-its` | 320 | needs a decision | HTML plus external ITS rule files in XML; vnu's own `make` skips it (`--ignore=html-its`), so there is no expected-result file to measure against |
-| `tests/schema-validation` | 3 | needs a decision | exercises vnu's `--schema` option on XML files with an arbitrary schema (DocBook); html-conform's command line has no schema option |
+| `tests/html-its` | 320 (90 `.html`) | not vendored, measured locally | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
+| `tests/schema-validation` | 3 | out of scope | exercises vnu's `--schema` option on XML files against a remote DocBook schema; see below |
 
 A local run (not part of the test, nothing committed) of the out-of-scope trees that hold
 `.html` files gave: `langdetect` 0 true positives, 4 true negatives, 1 false positive, 5 false
 negatives; `normalization` 1 false negative. These are not gated.
+
+### `html-its` and `schema-validation` (issue #175)
+
+**`tests/html-its`** holds 320 files: 90 `.html` documents and 230 XML files (ITS rule files and
+XML test documents, which html-conform does not read). The files carry no licence header. They
+are the input files of the W3C ITS 2.0 test suite
+([`w3c/its-2.0-testsuite`](https://github.com/w3c/its-2.0-testsuite)), which that repository
+licenses under the W3C Test Suite License, not MIT; vnu's `LICENSE` does not cover them
+(vnu has since edited some, for example added headings). vnu's `make` passes
+`--ignore=html-its` to its test runner and `tests/messages.json` has no key for the tree, so
+there is no expected result per file. Decision: **not vendored.** Taking the files would need a
+licence decision for the repository (REUSE entries and a notice for a second licence), and
+without an expected-result file the tree would only measure against our own guess that every
+document is valid. The tree stays measurable locally from a checkout of the tag.
+
+Local run (`html-conform` CLI on `tests/html-its` of a shallow clone at 26.8.20; nothing
+committed, not gated, no vnu run): of the 90 `.html` files, 65 are clean and 25 get findings,
+90 findings in all, every one `schema.html5` "unexpected attribute `its-…`"
+(`its-annotators-ref` 17, `its-loc-quality-issue-type` 6, `its-locale-filter-list` 5, and 17
+other `its-*` names). Besides these, 46 files get the missing-`lang` warning, which the
+differential test ignores (see "Not covered, or different").
+
+The cause is a schema gap, not a parser one. vnu's default schema (`html5-all`) includes
+`its20-html5.rnc` (`build/build.py`: `include "its20-html5.rnc"` and
+`common.attrs &= its-html-attributes`), which allows the `its-*` attributes in HTML. That file
+is MIT-licensed (Jirka Kosek, in vnu's `schema/its2/`) but `xtask/vendor-schema.sh` does not
+vendor it, so html-conform rejects HTML-native ITS markup that vnu accepts. This is the same
+kind of difference as the RDFa one before issue #173. The 25 files are therefore probable
+false positives against vnu; that is inferred from the schema driver, not confirmed by a vnu
+run. Closing the gap means vendoring `its20-html5.rnc` and
+`its20-html5-types.rnc` and including them from `src/schema_source.rs`, a schema change that
+this triage does not make.
+
+If the maintainer wants the tree as a gated measurement, the options are: (1) vendor the 90
+`.html` files with the W3C Test Suite License as a second licence and treat all as expected
+clean, after the ITS schema is vendored and checked against a vnu run; (2) fetch them on demand
+into a gitignored cache, as for the real-world pages; (3) leave it out. Until then (3) holds.
+
+**`tests/schema-validation`** has 3 files: a README and two XML documents (valid and invalid
+DocBook 5), checked by `vnu --schema https://docbook.org/xml/5.1/rng/docbook.rng --xml`. The
+test is for vnu's arbitrary-schema option and XML mode. html-conform parses HTML only, has no
+schema option and does not vendor the DocBook schema, so the tree is **out of scope**. There is
+nothing to measure.
 
 ### `html-svg` and the W3C copyright
 
