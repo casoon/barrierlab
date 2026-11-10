@@ -21,6 +21,7 @@ by hand: change or add a patch, then re-run the script.
   every change to the script, a patch or `schema/html5/`.
   `xtask/vendor-svg-mathml.sh --check` does the same for the unpatched
   `schema/html5-svg-mathml.rnc`, `schema/svg11/` and `schema/mml3/`.
+  `xtask/vendor-corpus.sh --check` does it for `tests/corpus/` (shallow clone of the tag).
 - **Offline part:** `cargo test -p html-conform --test schema_patches` checks
   that each patch targets an existing module and that its added lines are in
   the committed file.

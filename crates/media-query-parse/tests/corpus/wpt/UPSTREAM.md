@@ -7,8 +7,8 @@ Unmodified HTML test files from
 - Upstream revision: `fc7c47fcb9172a216914879460e98018348ee3c5`
 - License: BSD-3-Clause; see the unmodified upstream `LICENSE.md`
   (SPDX header in `REUSE.toml`)
-- Refresh procedure: remove this directory deliberately, then run
-  `xtask/vendor-wpt-mediaqueries.sh` from `crates/media-query-parse`; changing
+- Refresh procedure: run `xtask/vendor-wpt-mediaqueries.sh` (`--check` compares
+  without writing); changing
   the pinned revision requires re-blessing `tests/wpt_known_failures.txt`
   (`WPT_BLESS=1 cargo test -p media-query-parse --test wpt`).
 - Used by `tests/wpt.rs`: every call with a single string literal argument is
