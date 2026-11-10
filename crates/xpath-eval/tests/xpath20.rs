@@ -604,9 +604,7 @@ fn syntax_errors() {
 #[test]
 fn unsupported_features_are_reported_as_such() {
     for expr in [
-        "matches('a', 'a')",
-        "replace('a', 'a', 'b')",
-        "tokenize('a b', ' ')",
+        "matches('aa', '(a)\\1')",
         "round-half-to-even(2.5)",
         "string-to-codepoints('a')",
         "'a' instance of xs:string",

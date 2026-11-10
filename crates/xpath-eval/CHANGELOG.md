@@ -13,8 +13,14 @@ in the git history only.
   `parse_versioned`, `evaluate_versioned`, `evaluate_boolean_versioned`, `VersionedError`); slice 1
   of the e-invoice rule sets, unsupported features are named errors. Design and remaining slices
   in `docs/packages/xpath-eval.md` (casoon/barrierlab#62).
+- **XPath 2.0:** `fn:matches`, `fn:replace` and `fn:tokenize` (all arities, flags `s m i x`, errors
+  `FORX0001` to `FORX0004`) on an own regular-expression engine without a dependency: an NFA run as
+  a Pike VM, so matching is O(pattern x input) and cannot backtrack catastrophically or overflow
+  the stack. Back-references, Unicode categories and name characters beyond U+00FF, unknown blocks
+  and programs over 10,000 instructions are named `Unsupported`, never a guess. Supported subset
+  and limits in `docs/packages/xpath-eval.md` (casoon/barrierlab#62).
 - **Conformance:** XPath 2.0 own tests and an opt-in measurement against the EN 16931 validation
-  Schematron (`tests/en16931.rs`, `xtask/vendor-en16931.sh`; not kept in the repository): 2008 of
+  Schematron (`tests/en16931.rs`, `xtask/vendor-en16931.sh`; not kept in the repository): 2009 of
   2010 expressions evaluate in 2.0 mode, 1780 in 1.0 mode. Details in `CONFORMANCE.md`
   (casoon/barrierlab#62).
 - **Conformance:** The Jaxen XPath test cases run as an opt-in, externally fetched corpus

@@ -7,6 +7,7 @@
 use super::atomic::{Arithmetic, Atomic, AtomicType, arithmetic, compare_values};
 use super::decimal::Decimal;
 use super::eval::{Env, FN_NAMESPACE, XS_NAMESPACE, atomize, effective_boolean_value};
+use super::regex::{Regex, RegexError};
 use super::{Item, Sequence, VersionedError};
 use crate::ast::QName;
 use crate::document::Node;
@@ -272,6 +273,46 @@ fn string_or_empty<'ctx, N: Node<'ctx>>(
     Ok(opt_string(arg, function)?.unwrap_or_default())
 }
 
+/// An argument declared `xs:string` (exactly one): the empty sequence is a
+/// type error.
+fn required_string<'ctx, N: Node<'ctx>>(
+    arg: &[Item<N>],
+    function: &str,
+) -> Result<String, VersionedError> {
+    opt_string(arg, function)?.ok_or_else(|| {
+        VersionedError::dynamic(
+            "XPTY0004",
+            format!("{function}: an xs:string is required, got the empty sequence"),
+        )
+    })
+}
+
+/// Pattern and optional flags of `matches`, `replace`, `tokenize`, compiled.
+fn regex_arg<'ctx, N: Node<'ctx>>(
+    pattern: &[Item<N>],
+    flags: Option<&Sequence<N>>,
+    function: &str,
+) -> Result<Regex, VersionedError> {
+    let pattern = required_string(pattern, function)?;
+    let flags = match flags {
+        Some(f) => required_string(f, function)?,
+        None => String::new(),
+    };
+    Regex::new(&pattern, &flags).map_err(regex_error)
+}
+
+fn regex_error(e: RegexError) -> VersionedError {
+    match e {
+        RegexError::InvalidFlags(m) => VersionedError::dynamic("FORX0001", m),
+        RegexError::InvalidPattern(m) => VersionedError::dynamic("FORX0002", m),
+        RegexError::ZeroLength => {
+            VersionedError::dynamic("FORX0003", "the pattern matches the zero-length string")
+        }
+        RegexError::InvalidReplacement(m) => VersionedError::dynamic("FORX0004", m),
+        RegexError::Unsupported(what) => VersionedError::Unsupported(what),
+    }
+}
+
 /// An argument declared `numeric?`: untyped values become `xs:double`.
 fn opt_numeric<'ctx, N: Node<'ctx>>(
     arg: &[Item<N>],
@@ -517,6 +558,30 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
         ("lower-case", 1) => Ok(string_seq(
             string_or_empty(&args[0], "lower-case")?.to_lowercase(),
         )),
+        ("matches", 2 | 3) => {
+            let input = string_or_empty(&args[0], local)?;
+            let regex = regex_arg(&args[1], args.get(2), local)?;
+            Ok(boolean_seq(regex.is_match(&input).map_err(regex_error)?))
+        }
+        ("replace", 3 | 4) => {
+            let input = string_or_empty(&args[0], local)?;
+            let regex = regex_arg(&args[1], args.get(3), local)?;
+            let replacement = required_string(&args[2], local)?;
+            Ok(string_seq(
+                regex.replace(&input, &replacement).map_err(regex_error)?,
+            ))
+        }
+        ("tokenize", 2 | 3) => {
+            let input = string_or_empty(&args[0], local)?;
+            let regex = regex_arg(&args[1], args.get(2), local)?;
+            // An empty input has no tokens, but a bad pattern is still an error.
+            Ok(regex
+                .tokenize(&input)
+                .map_err(regex_error)?
+                .into_iter()
+                .map(|t| Item::Atomic(Atomic::String(t)))
+                .collect())
+        }
         ("contains", 2) | ("starts-with", 2) | ("ends-with", 2) => {
             let haystack = string_or_empty(&args[0], local)?;
             let needle = string_or_empty(&args[1], local)?;
