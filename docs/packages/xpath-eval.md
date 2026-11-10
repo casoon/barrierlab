@@ -76,12 +76,34 @@ static error in 2.0 mode; the 1.0 evaluator keeps its "matches nothing" policy.
 ### Never a silent success
 
 Anything valid XPath 2.0 that is not implemented fails with
-`XPath2Error::Unsupported("<feature>")` (`is_unsupported()`), at parse time
+`VersionedError::Unsupported("<feature>")` (`is_unsupported()`), at parse time
 where the syntax is recognised (`instance of`, `treat as`, `element()` tests,
 `*:name`, the namespace axis, unsupported atomic types) and at evaluation time
 for functions and values (`fn:matches`, `xs:dateTime(...)`, date arithmetic).
 `schematron-engine` reports such a check as `NotRun` with that reason. Genuine
 errors (`XPTY0004`, ...) are errors, not "false".
+
+`VersionedError` is the one error type of the versioned entry points for both
+versions (it also wraps the 1.0 `EvalError`). A function that F&O 1.0 or XSLT 2.0
+defines, at an arity it defines, but that is not implemented (including
+`key`, `document`, `current`, `format-number`, collation arguments) is
+`Unsupported`; `XPST0017` is only for names and arities in neither (an explicit
+table in `src/xpath2/functions.rs`).
+
+### Limits
+
+- `xs:decimal` holds at most 38 digits (fraction digits included). A literal,
+  cast or constructor beyond that is `Unsupported`; an operation whose result
+  does not fit is `FOAR0002`; `div` keeps 18 fractional digits, fewer if the
+  scaled dividend does not fit.
+- `xs:integer` is 64-bit; overflow is `FOAR0002`.
+- Nesting: the 2.0 parser rejects an expression whose syntax tree would be
+  deeper than 256 levels with a parse error. A parenthesis, function argument,
+  predicate or `if`/`for` branch counts 8 levels (about 32 nested levels), each
+  link of a left-leaning `+`, `*`, `|`, `/` chain counts 1 (the sum of nesting
+  and chain length is bounded); `or`/`and` chains are evaluated without
+  recursion and limited to 4096 operands. This keeps the recursive parser and
+  evaluator inside a debug-build stack. (The 1.0 parser has no such limit.)
 
 ### Inventory: EN 16931 validation artefacts 1.3.17
 

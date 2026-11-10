@@ -6,7 +6,7 @@ mod common;
 
 use common::{N, parse_xml};
 use xpath_eval::{
-    Document, EvaluationContext, Item, Node, QName, Value, XPath2Error, XPathVersion,
+    Document, EvaluationContext, Item, Node, QName, Value, VersionedError, XPathVersion,
     evaluate_boolean_versioned, evaluate_versioned, parse_versioned,
 };
 
@@ -27,7 +27,7 @@ fn run_in(
     version: XPathVersion,
     xml: &str,
     expr: &str,
-) -> Result<Vec<Item<N<'static>>>, XPath2Error> {
+) -> Result<Vec<Item<N<'static>>>, VersionedError> {
     // The document must outlive the nodes: leak it (test-only).
     let doc: &'static _ = Box::leak(Box::new(parse_xml(xml)));
     let root = doc.root();
@@ -77,16 +77,16 @@ fn one(expr: &str) -> String {
     v.into_iter().next().unwrap()
 }
 
-fn err(expr: &str) -> XPath2Error {
+fn err(expr: &str) -> VersionedError {
     match run_in(XPathVersion::V2, DOC, expr) {
         Ok(v) => panic!("{expr}: expected an error, got {:?}", render(v)),
         Err(e) => e,
     }
 }
 
-fn code(e: &XPath2Error) -> &'static str {
+fn code(e: &VersionedError) -> &'static str {
     match e {
-        XPath2Error::Static { code, .. } | XPath2Error::Dynamic { code, .. } => code,
+        VersionedError::Static { code, .. } | VersionedError::Dynamic { code, .. } => code,
         other => panic!("no error code: {other}"),
     }
 }
@@ -120,7 +120,7 @@ fn xpath_2_syntax_is_a_parse_error_in_1_0_mode() {
     for expr in ["if (1) then 2 else 3", "1 to 3", "for $x in (1) return $x"] {
         assert!(matches!(
             parse_versioned(expr, XPathVersion::V1),
-            Err(XPath2Error::Parse(_))
+            Err(VersionedError::Parse(_))
         ));
     }
 }
@@ -545,11 +545,11 @@ fn lexical_forms() {
     assert_eq!(typed("1.0"), ["xs:decimal:1"]);
     assert!(matches!(
         parse_versioned("1 (: open", XPathVersion::V2),
-        Err(XPath2Error::Parse(_))
+        Err(VersionedError::Parse(_))
     ));
     assert!(matches!(
         parse_versioned("'open", XPathVersion::V2),
-        Err(XPath2Error::Parse(_))
+        Err(VersionedError::Parse(_))
     ));
 }
 
@@ -592,7 +592,7 @@ fn syntax_errors() {
         assert!(
             matches!(
                 parse_versioned(expr, XPathVersion::V2),
-                Err(XPath2Error::Parse(_))
+                Err(VersionedError::Parse(_))
             ),
             "{expr:?}"
         );
@@ -649,4 +649,124 @@ fn static_errors() {
 fn xs_and_fn_prefixes_are_predefined() {
     assert_eq!(one("fn:upper-case('a')"), "A");
     assert_eq!(one("xs:string(1)"), "1");
+}
+
+// ---- review fixes ---------------------------------------------------------
+
+// F&O 17.1.2 / XML Schema: decimal to double is one correctly rounded conversion.
+#[test]
+fn decimal_to_double_rounds_once() {
+    assert!(is_true("0.000000000000000000000000000001 = 1e-30"));
+    assert_eq!(typed("xs:decimal(1e-30) * 1e0"), ["xs:double:1.0E-30"]);
+}
+
+// XPath 2.0 3.1.5: a function with an arity that F&O or XSLT 2.0 defines but this
+// crate lacks is unsupported; XPST0017 only for what exists in neither.
+#[test]
+fn known_functions_without_implementation_are_unsupported() {
+    for expr in [
+        "contains('a', 'a', 'http://collation')",
+        "max((1, 2), 'http://collation')",
+        "distinct-values((1, 2), 'http://collation')",
+        "key('k', 'v')",
+        "document('x.xml')",
+        "current()",
+        "format-number(1, '0.00')",
+        "fn:round-half-to-even(2.5, 1)",
+    ] {
+        match run_in(XPathVersion::V2, DOC, expr) {
+            Err(e) => assert!(e.is_unsupported(), "{expr}: {e}"),
+            Ok(v) => panic!("{expr}: got {:?}", render(v)),
+        }
+    }
+    assert_eq!(code(&err("concat('a')")), "XPST0017");
+    assert_eq!(code(&err("contains('a')")), "XPST0017");
+    assert_eq!(code(&err("max()")), "XPST0017");
+    assert_eq!(code(&err("not-a-function(1)")), "XPST0017");
+}
+
+// F&O 6.3.2 fn:number takes at most one item.
+#[test]
+fn number_of_a_sequence_is_a_type_error() {
+    assert_eq!(code(&err("number((1, 2))")), "XPTY0004");
+    assert_eq!(typed("number(())"), ["xs:double:NaN"]);
+}
+
+// F&O 17.1.3: -2^63 is a valid xs:integer, 2^63 is not.
+#[test]
+fn integer_range_edges() {
+    assert_eq!(
+        typed("xs:integer(-9223372036854775808e0)"),
+        ["xs:integer:-9223372036854775808"]
+    );
+    assert_eq!(code(&err("xs:integer(9223372036854775808e0)")), "FOAR0002");
+    assert_eq!(code(&err("xs:integer(-9223372036854777856e0)")), "FOAR0002");
+}
+
+// Beyond 38 places is the limit of this implementation: never FORG0001 or FOAR0002.
+#[test]
+fn decimal_beyond_the_implementation_limit_is_unsupported() {
+    let lit = "0.000000000000000000000000000000000000001";
+    let long = "1".repeat(40);
+    for expr in [
+        format!("{lit} + 1"),
+        format!("xs:decimal('{lit}')"),
+        format!("xs:decimal('{long}')"),
+        format!("{long}.5"),
+        "xs:decimal(1e-40)".to_owned(),
+    ] {
+        let e = err(&expr);
+        assert!(e.is_unsupported(), "{expr}: {e}");
+    }
+    assert_eq!(
+        typed("0.00000000000000000000000000000000000001 + 1"),
+        ["xs:decimal:1.00000000000000000000000000000000000001"]
+    );
+}
+
+// F&O 6.4.4 fn:round: -0.5e0 rounds to negative zero.
+#[test]
+fn round_keeps_the_sign_of_zero() {
+    assert_eq!(typed("round(-0.5e0)"), ["xs:double:-0"]);
+    assert_eq!(typed("round(-0.4e0)"), ["xs:double:-0"]);
+    assert_eq!(typed("round(0.5e0)"), ["xs:double:1"]);
+}
+
+// Nesting and chain limits: a parse error, never a stack overflow.
+#[test]
+fn deep_expressions_are_rejected_not_fatal() {
+    let parse_fails = |expr: String| {
+        assert!(
+            matches!(
+                parse_versioned(&expr, XPathVersion::V2),
+                Err(VersionedError::Parse(_))
+            ),
+            "{}",
+            &expr[..expr.len().min(40)]
+        );
+    };
+    parse_fails(format!("{}1{}", "(".repeat(600), ")".repeat(600)));
+    parse_fails(format!("{}1{}", "not(".repeat(600), ")".repeat(600)));
+    parse_fails(format!("1{}", "+1".repeat(2000)));
+    parse_fails(format!("1{}", " * 1".repeat(2000)));
+    parse_fails(format!("a{}", "/a".repeat(2000)));
+    parse_fails(format!("{}1", "if (1) then 1 else ".repeat(600)));
+    parse_fails(format!("for {} return 1", vec!["$a in 1"; 600].join(", ")));
+    // Within the limit it works, in the default test-thread stack.
+    assert_eq!(one(&format!("1{}", "+1".repeat(100))), "101");
+    assert_eq!(one(&format!("{}1{}", "(".repeat(20), ")".repeat(20))), "1");
+    assert_eq!(
+        one(&format!("{}true(){}", "not(".repeat(20), ")".repeat(20))),
+        "true"
+    );
+    // `or`/`and` chains are walked without recursion.
+    assert!(is_true(&format!(
+        "false(){} or true()",
+        " or false()".repeat(3000)
+    )));
+    assert!(!is_true(&format!(
+        "true(){} and false()",
+        " and true()".repeat(3000)
+    )));
+    parse_fails(format!("true(){}", " and true()".repeat(5000)));
 }

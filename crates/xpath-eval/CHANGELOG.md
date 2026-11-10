@@ -10,7 +10,7 @@ in the git history only.
 ### Added
 
 - **API:** Opt-in XPath 2.0 mode next to the unchanged 1.0 default (`XPathVersion`,
-  `parse_versioned`, `evaluate_versioned`, `evaluate_boolean_versioned`, `XPath2Error`); slice 1
+  `parse_versioned`, `evaluate_versioned`, `evaluate_boolean_versioned`, `VersionedError`); slice 1
   of the e-invoice rule sets, unsupported features are named errors. Design and remaining slices
   in `docs/packages/xpath-eval.md` (casoon/barrierlab#62).
 - **Conformance:** XPath 2.0 own tests and an opt-in measurement against the EN 16931 validation

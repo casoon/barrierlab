@@ -1,79 +1,168 @@
 //! The function library of the XPath 2.0 mode: the `fn:` functions (XQuery 1.0
 //! and XPath 2.0 Functions and Operators) and the `xs:` constructor functions
 //! that the target rule sets use. Functions that exist in F&O but are not
-//! implemented here fail with [`Error::Unsupported`]; a name that is no F&O
+//! implemented here fail with [`VersionedError::Unsupported`]; a name that is no F&O
 //! function at all is the static error `XPST0017`.
 
 use super::atomic::{Arithmetic, Atomic, AtomicType, arithmetic, compare_values};
 use super::decimal::Decimal;
 use super::eval::{Env, FN_NAMESPACE, XS_NAMESPACE, atomize, effective_boolean_value};
-use super::{Error, Item, Sequence};
+use super::{Item, Sequence, VersionedError};
 use crate::ast::QName;
 use crate::document::Node;
 use std::cmp::Ordering;
 
-/// Standard functions of F&O 1.0 that this crate does not implement yet.
-/// `matches`, `replace` and `tokenize` wait for a regular-expression engine.
-const KNOWN_UNIMPLEMENTED: &[&str] = &[
-    "matches",
-    "replace",
-    "tokenize",
-    "round-half-to-even",
-    "string-to-codepoints",
-    "codepoints-to-string",
-    "compare",
-    "codepoint-equal",
-    "normalize-unicode",
-    "encode-for-uri",
-    "iri-to-uri",
-    "escape-html-uri",
-    "resolve-uri",
-    "base-uri",
-    "document-uri",
-    "static-base-uri",
-    "default-collation",
-    "lang",
-    "id",
-    "idref",
-    "root",
-    "doc",
-    "doc-available",
-    "collection",
-    "current-date",
-    "current-dateTime",
-    "current-time",
-    "dateTime",
-    "implicit-timezone",
-    "one-or-more",
-    "zero-or-one",
-    "exactly-one",
-    "insert-before",
-    "remove",
-    "subsequence",
-    "index-of",
-    "unordered",
-    "deep-equal",
-    "error",
-    "trace",
-    "nilled",
-    "node-name",
-    "resolve-QName",
-    "QName",
-    "namespace-uri-for-prefix",
-    "in-scope-prefixes",
-    "adjust-date-to-timezone",
+/// Every function F&O 1.0 defines in `fn:` and XSLT 2.0 defines for XPath
+/// (name, fewest and most arguments). A call that matches an entry but is not
+/// implemented here is `Unsupported`; a name or arity in neither is `XPST0017`.
+/// An explicit table, not a guess from the name.
+const KNOWN_FUNCTIONS: &[(&str, usize, usize)] = &[
+    // F&O 1.0 §2 accessors, §3 errors and tracing
+    ("node-name", 1, 1),
+    ("nilled", 1, 1),
+    ("string", 0, 1),
+    ("data", 1, 1),
+    ("base-uri", 0, 1),
+    ("document-uri", 1, 1),
+    ("error", 0, 3),
+    ("trace", 2, 2),
+    // §6 numeric
+    ("number", 0, 1),
+    ("abs", 1, 1),
+    ("ceiling", 1, 1),
+    ("floor", 1, 1),
+    ("round", 1, 1),
+    ("round-half-to-even", 1, 2),
+    // §7 strings
+    ("codepoints-to-string", 1, 1),
+    ("string-to-codepoints", 1, 1),
+    ("compare", 2, 3),
+    ("codepoint-equal", 2, 2),
+    ("concat", 2, usize::MAX),
+    ("string-join", 2, 2),
+    ("substring", 2, 3),
+    ("string-length", 0, 1),
+    ("normalize-space", 0, 1),
+    ("normalize-unicode", 1, 2),
+    ("upper-case", 1, 1),
+    ("lower-case", 1, 1),
+    ("translate", 3, 3),
+    ("encode-for-uri", 1, 1),
+    ("iri-to-uri", 1, 1),
+    ("escape-html-uri", 1, 1),
+    ("contains", 2, 3),
+    ("starts-with", 2, 3),
+    ("ends-with", 2, 3),
+    ("substring-before", 2, 3),
+    ("substring-after", 2, 3),
+    ("matches", 2, 3),
+    ("replace", 3, 4),
+    ("tokenize", 2, 3),
+    // §8 boolean
+    ("true", 0, 0),
+    ("false", 0, 0),
+    ("not", 1, 1),
+    ("boolean", 1, 1),
+    // §10 date, time and duration
+    ("years-from-duration", 1, 1),
+    ("months-from-duration", 1, 1),
+    ("days-from-duration", 1, 1),
+    ("hours-from-duration", 1, 1),
+    ("minutes-from-duration", 1, 1),
+    ("seconds-from-duration", 1, 1),
+    ("dateTime", 2, 2),
+    ("year-from-dateTime", 1, 1),
+    ("month-from-dateTime", 1, 1),
+    ("day-from-dateTime", 1, 1),
+    ("hours-from-dateTime", 1, 1),
+    ("minutes-from-dateTime", 1, 1),
+    ("seconds-from-dateTime", 1, 1),
+    ("timezone-from-dateTime", 1, 1),
+    ("year-from-date", 1, 1),
+    ("month-from-date", 1, 1),
+    ("day-from-date", 1, 1),
+    ("timezone-from-date", 1, 1),
+    ("hours-from-time", 1, 1),
+    ("minutes-from-time", 1, 1),
+    ("seconds-from-time", 1, 1),
+    ("timezone-from-time", 1, 1),
+    ("adjust-dateTime-to-timezone", 1, 2),
+    ("adjust-date-to-timezone", 1, 2),
+    ("adjust-time-to-timezone", 1, 2),
+    ("current-dateTime", 0, 0),
+    ("current-date", 0, 0),
+    ("current-time", 0, 0),
+    ("implicit-timezone", 0, 0),
+    // §11 QNames
+    ("resolve-QName", 2, 2),
+    ("QName", 2, 2),
+    ("prefix-from-QName", 1, 1),
+    ("local-name-from-QName", 1, 1),
+    ("namespace-uri-from-QName", 1, 1),
+    ("namespace-uri-for-prefix", 2, 2),
+    ("in-scope-prefixes", 1, 1),
+    // §14 nodes
+    ("name", 0, 1),
+    ("local-name", 0, 1),
+    ("namespace-uri", 0, 1),
+    ("lang", 1, 2),
+    ("root", 0, 1),
+    // §15 sequences
+    ("index-of", 2, 3),
+    ("empty", 1, 1),
+    ("exists", 1, 1),
+    ("distinct-values", 1, 2),
+    ("insert-before", 3, 3),
+    ("remove", 2, 2),
+    ("reverse", 1, 1),
+    ("subsequence", 2, 3),
+    ("unordered", 1, 1),
+    ("zero-or-one", 1, 1),
+    ("one-or-more", 1, 1),
+    ("exactly-one", 1, 1),
+    ("deep-equal", 2, 3),
+    ("count", 1, 1),
+    ("avg", 1, 1),
+    ("max", 1, 2),
+    ("min", 1, 2),
+    ("sum", 1, 2),
+    ("id", 1, 2),
+    ("idref", 1, 2),
+    ("doc", 1, 1),
+    ("doc-available", 1, 1),
+    ("collection", 0, 1),
+    ("position", 0, 0),
+    ("last", 0, 0),
+    ("static-base-uri", 0, 0),
+    ("default-collation", 0, 0),
+    ("resolve-uri", 1, 2),
+    // XSLT 2.0 §16 additional functions
+    ("current", 0, 0),
+    ("document", 1, 2),
+    ("key", 2, 3),
+    ("format-number", 2, 3),
+    ("format-dateTime", 2, 5),
+    ("format-date", 2, 5),
+    ("format-time", 2, 5),
+    ("generate-id", 0, 1),
+    ("system-property", 1, 1),
+    ("unparsed-entity-uri", 1, 2),
+    ("unparsed-entity-public-id", 1, 2),
+    ("unparsed-text", 1, 2),
+    ("unparsed-text-available", 1, 2),
+    ("function-available", 1, 2),
+    ("element-available", 1, 1),
+    ("type-available", 1, 1),
+    ("regex-group", 1, 1),
+    ("current-group", 0, 0),
+    ("current-grouping-key", 0, 0),
 ];
-
-/// Component and timezone functions of the date/time and duration types.
-fn is_date_time_function(name: &str) -> bool {
-    name.contains("-from-") || name.ends_with("-timezone")
-}
 
 pub(super) fn call<'e, 'ctx, 'hook, N: Node<'ctx>>(
     env: &Env<'e, 'ctx, 'hook, N>,
     name: &QName,
     args: Vec<Sequence<N>>,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     let namespace = match &name.prefix {
         None => FN_NAMESPACE.to_owned(),
         Some(prefix) => env.resolve_prefix(prefix)?,
@@ -85,7 +174,7 @@ pub(super) fn call<'e, 'ctx, 'hook, N: Node<'ctx>>(
     match namespace.as_str() {
         XS_NAMESPACE => constructor(&name.local, &shown, args),
         FN_NAMESPACE => library(env, &name.local, &shown, args),
-        _ => Err(Error::static_error(
+        _ => Err(VersionedError::static_error(
             "XPST0017",
             format!("no function `{shown}` in that namespace"),
         )),
@@ -98,15 +187,19 @@ fn constructor<'ctx, N: Node<'ctx>>(
     local: &str,
     shown: &str,
     mut args: Vec<Sequence<N>>,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     let Some(ty) = AtomicType::from_local_name(local) else {
         return Err(match local {
             "float" | "dateTime" | "time" | "duration" | "dayTimeDuration"
             | "yearMonthDuration" | "gYear" | "gYearMonth" | "gMonth" | "gMonthDay" | "gDay"
             | "anyURI" | "QName" | "NCName" | "token" | "normalizedString" | "long" | "int"
             | "short" | "byte" | "nonNegativeInteger" | "positiveInteger" | "base64Binary"
-            | "hexBinary" => Error::Unsupported(format!("the constructor function {shown}")),
-            _ => Error::static_error("XPST0017", format!("no constructor function {shown}")),
+            | "hexBinary" => {
+                VersionedError::Unsupported(format!("the constructor function {shown}"))
+            }
+            _ => {
+                VersionedError::static_error("XPST0017", format!("no constructor function {shown}"))
+            }
         });
     };
     if args.len() != 1 {
@@ -116,15 +209,15 @@ fn constructor<'ctx, N: Node<'ctx>>(
     match atoms.as_slice() {
         [] => Ok(Vec::new()),
         [single] => Ok(vec![Item::Atomic(single.cast(ty)?)]),
-        _ => Err(Error::dynamic(
+        _ => Err(VersionedError::dynamic(
             "XPTY0004",
             format!("{shown} needs a single item"),
         )),
     }
 }
 
-fn arity(shown: &str, got: usize) -> Error {
-    Error::static_error(
+fn arity(shown: &str, got: usize) -> VersionedError {
+    VersionedError::static_error(
         "XPST0017",
         format!("no function {shown} with {got} argument(s)"),
     )
@@ -151,10 +244,10 @@ fn integer_seq<N>(n: usize) -> Sequence<N> {
 fn opt_string<'ctx, N: Node<'ctx>>(
     arg: &[Item<N>],
     function: &str,
-) -> Result<Option<String>, Error> {
+) -> Result<Option<String>, VersionedError> {
     let mut atoms = atomize(arg);
     if atoms.len() > 1 {
-        return Err(Error::dynamic(
+        return Err(VersionedError::dynamic(
             "XPTY0004",
             format!(
                 "{function}: a single string is expected, got {} items",
@@ -165,14 +258,17 @@ fn opt_string<'ctx, N: Node<'ctx>>(
     match atoms.pop() {
         None => Ok(None),
         Some(Atomic::String(s) | Atomic::Untyped(s)) => Ok(Some(s)),
-        Some(other) => Err(Error::dynamic(
+        Some(other) => Err(VersionedError::dynamic(
             "XPTY0004",
             format!("{function}: expected xs:string, got {}", other.type_name()),
         )),
     }
 }
 
-fn string_or_empty<'ctx, N: Node<'ctx>>(arg: &[Item<N>], function: &str) -> Result<String, Error> {
+fn string_or_empty<'ctx, N: Node<'ctx>>(
+    arg: &[Item<N>],
+    function: &str,
+) -> Result<String, VersionedError> {
     Ok(opt_string(arg, function)?.unwrap_or_default())
 }
 
@@ -180,10 +276,10 @@ fn string_or_empty<'ctx, N: Node<'ctx>>(arg: &[Item<N>], function: &str) -> Resu
 fn opt_numeric<'ctx, N: Node<'ctx>>(
     arg: &[Item<N>],
     function: &str,
-) -> Result<Option<Atomic>, Error> {
+) -> Result<Option<Atomic>, VersionedError> {
     let mut atoms = atomize(arg);
     if atoms.len() > 1 {
-        return Err(Error::dynamic(
+        return Err(VersionedError::dynamic(
             "XPTY0004",
             format!(
                 "{function}: a single number is expected, got {} items",
@@ -195,7 +291,7 @@ fn opt_numeric<'ctx, N: Node<'ctx>>(
         None => Ok(None),
         Some(a @ Atomic::Untyped(_)) => Ok(Some(a.cast(AtomicType::Double)?)),
         Some(a) if a.is_numeric() => Ok(Some(a)),
-        Some(other) => Err(Error::dynamic(
+        Some(other) => Err(VersionedError::dynamic(
             "XPTY0004",
             format!("{function}: expected a number, got {}", other.type_name()),
         )),
@@ -211,11 +307,14 @@ fn to_f64(a: &Atomic) -> f64 {
     }
 }
 
-fn opt_node<'ctx, N: Node<'ctx>>(arg: &[Item<N>], function: &str) -> Result<Option<N>, Error> {
+fn opt_node<'ctx, N: Node<'ctx>>(
+    arg: &[Item<N>],
+    function: &str,
+) -> Result<Option<N>, VersionedError> {
     match arg {
         [] => Ok(None),
         [Item::Node(n)] => Ok(Some(*n)),
-        _ => Err(Error::dynamic(
+        _ => Err(VersionedError::dynamic(
             "XPTY0004",
             format!("{function}: a single node is expected"),
         )),
@@ -228,7 +327,13 @@ fn round_double(x: f64) -> f64 {
         return x;
     }
     let floor = x.floor();
-    if x - floor >= 0.5 { floor + 1.0 } else { floor }
+    let rounded = if x - floor >= 0.5 { floor + 1.0 } else { floor };
+    // F&O fn:round: a negative argument that rounds to zero gives negative zero.
+    if rounded == 0.0 && x < 0.0 {
+        -0.0
+    } else {
+        rounded
+    }
 }
 
 fn collapse_whitespace(s: &str) -> String {
@@ -245,12 +350,12 @@ fn numeric_function<N>(
     integer: impl Fn(i64) -> Option<i64>,
     decimal: impl Fn(Decimal) -> Decimal,
     double: impl Fn(f64) -> f64,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     Ok(match value {
         None => Vec::new(),
         Some(Atomic::Integer(i)) => {
             atom(Atomic::Integer(integer(i).ok_or_else(|| {
-                Error::dynamic("FOAR0002", "numeric overflow")
+                VersionedError::dynamic("FOAR0002", "numeric overflow")
             })?))
         }
         Some(Atomic::Decimal(d)) => atom(Atomic::Decimal(decimal(d))),
@@ -261,7 +366,7 @@ fn numeric_function<N>(
 
 /// Items of `arg` as numbers for `sum`, `avg`, `min`, `max`: untyped becomes
 /// `xs:double` (F&O §15.4).
-fn aggregate_operands<'ctx, N: Node<'ctx>>(arg: &[Item<N>]) -> Result<Vec<Atomic>, Error> {
+fn aggregate_operands<'ctx, N: Node<'ctx>>(arg: &[Item<N>]) -> Result<Vec<Atomic>, VersionedError> {
     atomize(arg)
         .into_iter()
         .map(|a| match a {
@@ -271,13 +376,13 @@ fn aggregate_operands<'ctx, N: Node<'ctx>>(arg: &[Item<N>]) -> Result<Vec<Atomic
         .collect()
 }
 
-fn sum_of(operands: Vec<Atomic>, function: &str) -> Result<Option<Atomic>, Error> {
+fn sum_of(operands: Vec<Atomic>, function: &str) -> Result<Option<Atomic>, VersionedError> {
     let mut iter = operands.into_iter();
     let Some(first) = iter.next() else {
         return Ok(None);
     };
     if !first.is_numeric() {
-        return Err(Error::dynamic(
+        return Err(VersionedError::dynamic(
             "FORG0006",
             format!("{function}: expected numbers, got {}", first.type_name()),
         ));
@@ -303,10 +408,10 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
     local: &str,
     shown: &str,
     mut args: Vec<Sequence<N>>,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     let n = args.len();
     // Zero-argument forms default to the context item.
-    let arg_or_context = |args: &mut Vec<Sequence<N>>| -> Result<Sequence<N>, Error> {
+    let arg_or_context = |args: &mut Vec<Sequence<N>>| -> Result<Sequence<N>, VersionedError> {
         if args.is_empty() {
             Ok(vec![env.context_item()?.clone()])
         } else {
@@ -325,7 +430,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
             let focus = env
                 .focus
                 .as_ref()
-                .ok_or_else(|| Error::dynamic("XPDY0002", "the context item is absent"))?;
+                .ok_or_else(|| VersionedError::dynamic("XPDY0002", "the context item is absent"))?;
             Ok(integer_seq(if local == "position" {
                 focus.position
             } else {
@@ -355,7 +460,10 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
                 [] => Ok(string_seq(String::new())),
                 [Item::Node(node)] => Ok(string_seq(node.string_value())),
                 [Item::Atomic(a)] => Ok(string_seq(a.to_xpath_string())),
-                _ => Err(Error::dynamic("XPTY0004", "string() needs a single item")),
+                _ => Err(VersionedError::dynamic(
+                    "XPTY0004",
+                    "string() needs a single item",
+                )),
             }
         }
         ("concat", 2..) => {
@@ -365,7 +473,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
                     [] => {}
                     [single] => out.push_str(&single.to_xpath_string()),
                     _ => {
-                        return Err(Error::dynamic(
+                        return Err(VersionedError::dynamic(
                             "XPTY0004",
                             "concat() takes single items as arguments",
                         ));
@@ -381,7 +489,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
                 match a {
                     Atomic::String(s) | Atomic::Untyped(s) => parts.push(s),
                     other => {
-                        return Err(Error::dynamic(
+                        return Err(VersionedError::dynamic(
                             "XPTY0004",
                             format!("string-join: expected xs:string, got {}", other.type_name()),
                         ));
@@ -477,10 +585,16 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
             let value = match atomize(&arg).as_slice() {
                 [single] => match single.cast(AtomicType::Double) {
                     Ok(Atomic::Double(d)) => d,
-                    Err(e @ Error::Unsupported(_)) => return Err(e),
+                    Err(e @ VersionedError::Unsupported(_)) => return Err(e),
                     _ => f64::NAN,
                 },
-                _ => f64::NAN,
+                [] => f64::NAN,
+                _ => {
+                    return Err(VersionedError::dynamic(
+                        "XPTY0004",
+                        "number() needs a single item",
+                    ));
+                }
             };
             Ok(atom(Atomic::Double(value)))
         }
@@ -587,8 +701,13 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
             Ok(string_seq(text))
         }
 
-        _ if KNOWN_UNIMPLEMENTED.contains(&local) || is_date_time_function(local) => {
-            Err(Error::Unsupported(format!("the function fn:{local}")))
+        _ if KNOWN_FUNCTIONS
+            .iter()
+            .any(|&(name, min, max)| name == local && (min..=max).contains(&n)) =>
+        {
+            Err(VersionedError::Unsupported(format!(
+                "the function {shown} with {n} argument(s)"
+            )))
         }
         _ => Err(arity(shown, n)),
     }

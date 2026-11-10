@@ -11,6 +11,18 @@ use std::fmt;
 /// Fractional digits kept by `div` (F&O §6.2.4: "at least 18 digits").
 const DIVISION_DIGITS: u32 = 18;
 
+/// Most fractional digits a value may have; also the digit limit of the mantissa.
+const MAX_SCALE: u32 = 38;
+
+/// Why a text or double is no `Decimal` of this implementation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DecimalParseError {
+    /// Not in the lexical space of `xs:decimal`.
+    Invalid,
+    /// Valid, but beyond the 38 digits this implementation holds.
+    TooPrecise,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Decimal {
     mantissa: i128,
@@ -38,7 +50,7 @@ impl Decimal {
         Decimal { mantissa, scale }
     }
 
-    pub fn from_i64(n: i64) -> Decimal {
+    pub(crate) fn from_i64(n: i64) -> Decimal {
         Decimal {
             mantissa: n as i128,
             scale: 0,
@@ -47,61 +59,63 @@ impl Decimal {
 
     /// XML Schema `xs:decimal` lexical space: `[+-]? (digits ('.' digits?)? | '.' digits)`;
     /// no exponent, no whitespace (the caller collapses it).
-    pub fn parse(text: &str) -> Option<Decimal> {
-        let (negative, rest) = match text.as_bytes().first()? {
-            b'-' => (true, &text[1..]),
-            b'+' => (false, &text[1..]),
-            _ => (false, text),
+    pub(crate) fn parse(text: &str) -> Result<Decimal, DecimalParseError> {
+        let (negative, rest) = match text.as_bytes().first() {
+            None => return Err(DecimalParseError::Invalid),
+            Some(b'-') => (true, &text[1..]),
+            Some(b'+') => (false, &text[1..]),
+            Some(_) => (false, text),
         };
-        let (int_part, frac_part) = match rest.split_once('.') {
-            Some((i, f)) => (i, f),
-            None => (rest, ""),
-        };
+        let (int_part, frac_part) = rest.split_once('.').unwrap_or((rest, ""));
         if int_part.is_empty() && frac_part.is_empty() {
-            return None;
+            return Err(DecimalParseError::Invalid);
         }
         if !int_part
             .bytes()
             .chain(frac_part.bytes())
             .all(|b| b.is_ascii_digit())
         {
-            return None;
+            return Err(DecimalParseError::Invalid);
         }
         let mut mantissa: i128 = 0;
         for b in int_part.bytes().chain(frac_part.bytes()) {
-            mantissa = mantissa.checked_mul(10)?.checked_add((b - b'0') as i128)?;
+            mantissa = mantissa
+                .checked_mul(10)
+                .and_then(|m| m.checked_add((b - b'0') as i128))
+                .ok_or(DecimalParseError::TooPrecise)?;
         }
         if negative {
             mantissa = -mantissa;
         }
-        Some(Decimal::normalized(mantissa, frac_part.len() as u32))
+        let result = Decimal::normalized(mantissa, frac_part.len() as u32);
+        if result.scale > MAX_SCALE {
+            return Err(DecimalParseError::TooPrecise);
+        }
+        Ok(result)
     }
 
     /// The exact decimal expansion of the shortest decimal that round-trips
-    /// `value` (what `xs:decimal(xs:double)` yields in practice); `None` for
-    /// NaN, infinities and values beyond 38 digits.
-    pub fn from_f64(value: f64) -> Option<Decimal> {
-        if !value.is_finite() {
-            return None;
-        }
+    /// `value` (what `xs:decimal(xs:double)` yields in practice). The caller
+    /// excludes NaN and infinities; a value beyond 38 digits is `TooPrecise`.
+    pub(crate) fn from_f64(value: f64) -> Result<Decimal, DecimalParseError> {
         // Rust's `Display` for f64 never uses an exponent.
         Decimal::parse(&format!("{value}"))
     }
 
-    pub fn to_f64(self) -> f64 {
-        self.mantissa as f64 / 10f64.powi(self.scale as i32)
+    pub(crate) fn to_f64(self) -> f64 {
+        self.to_string().parse().unwrap_or(f64::NAN)
     }
 
-    pub fn is_zero(self) -> bool {
+    pub(crate) fn is_zero(self) -> bool {
         self.mantissa == 0
     }
 
-    pub fn signum(self) -> i32 {
+    pub(crate) fn signum(self) -> i32 {
         self.mantissa.signum() as i32
     }
 
     /// `Some(n)` when the value is a whole number that fits `i64`.
-    pub fn to_i64_exact(self) -> Option<i64> {
+    pub(crate) fn to_i64_exact(self) -> Option<i64> {
         if self.scale == 0 {
             i64::try_from(self.mantissa).ok()
         } else {
@@ -110,7 +124,7 @@ impl Decimal {
     }
 
     /// The whole-number part, truncated toward zero.
-    pub fn trunc(self) -> Decimal {
+    pub(crate) fn trunc(self) -> Decimal {
         if self.scale == 0 {
             return self;
         }
@@ -120,21 +134,21 @@ impl Decimal {
         }
     }
 
-    pub fn negated(self) -> Decimal {
+    pub(crate) fn negated(self) -> Decimal {
         Decimal {
             mantissa: -self.mantissa,
             scale: self.scale,
         }
     }
 
-    pub fn abs(self) -> Decimal {
+    pub(crate) fn abs(self) -> Decimal {
         Decimal {
             mantissa: self.mantissa.abs(),
             scale: self.scale,
         }
     }
 
-    pub fn floor(self) -> Decimal {
+    pub(crate) fn floor(self) -> Decimal {
         let t = self.trunc();
         if self.signum() < 0 && t != self {
             Decimal::normalized(t.mantissa - 1, 0)
@@ -143,7 +157,7 @@ impl Decimal {
         }
     }
 
-    pub fn ceiling(self) -> Decimal {
+    pub(crate) fn ceiling(self) -> Decimal {
         let t = self.trunc();
         if self.signum() > 0 && t != self {
             Decimal::normalized(t.mantissa + 1, 0)
@@ -154,7 +168,7 @@ impl Decimal {
 
     /// `fn:round` (F&O §6.4.4): nearest whole number, ties toward positive
     /// infinity.
-    pub fn round(self) -> Decimal {
+    pub(crate) fn round(self) -> Decimal {
         let half = Decimal {
             mantissa: 5,
             scale: 1,
@@ -172,24 +186,28 @@ impl Decimal {
         Some((a, b, scale))
     }
 
-    pub fn checked_add(self, other: Decimal) -> Option<Decimal> {
+    pub(crate) fn checked_add(self, other: Decimal) -> Option<Decimal> {
         let (a, b, scale) = self.aligned(other)?;
         Some(Decimal::normalized(a.checked_add(b)?, scale))
     }
 
-    pub fn checked_sub(self, other: Decimal) -> Option<Decimal> {
+    pub(crate) fn checked_sub(self, other: Decimal) -> Option<Decimal> {
         let (a, b, scale) = self.aligned(other)?;
         Some(Decimal::normalized(a.checked_sub(b)?, scale))
     }
 
-    pub fn checked_mul(self, other: Decimal) -> Option<Decimal> {
+    pub(crate) fn checked_mul(self, other: Decimal) -> Option<Decimal> {
         let mantissa = self.mantissa.checked_mul(other.mantissa)?;
-        Some(Decimal::normalized(mantissa, self.scale + other.scale))
+        let result = Decimal::normalized(mantissa, self.scale + other.scale);
+        (result.scale <= MAX_SCALE).then_some(result)
     }
 
-    /// Division with 18 fractional digits, truncated. `None` for a zero
-    /// divisor (the caller raises `FOAR0001`) and for overflow.
-    pub fn checked_div(self, other: Decimal) -> Option<Decimal> {
+    /// Division with 18 fractional digits, truncated. When the scaled dividend
+    /// does not fit 38 digits, fewer fractional digits are kept (down to none).
+    /// `None` for a zero
+    /// divisor (the caller raises `FOAR0001`) and when not even the integer
+    /// part fits.
+    pub(crate) fn checked_div(self, other: Decimal) -> Option<Decimal> {
         if other.is_zero() {
             return None;
         }
@@ -211,7 +229,7 @@ impl Decimal {
     }
 
     /// `idiv`: the quotient truncated toward zero, as a whole number.
-    pub fn checked_idiv(self, other: Decimal) -> Option<Decimal> {
+    pub(crate) fn checked_idiv(self, other: Decimal) -> Option<Decimal> {
         if other.is_zero() {
             return None;
         }
@@ -220,7 +238,7 @@ impl Decimal {
     }
 
     /// `mod`: `self - other * trunc(self / other)`, the sign of the dividend.
-    pub fn checked_rem(self, other: Decimal) -> Option<Decimal> {
+    pub(crate) fn checked_rem(self, other: Decimal) -> Option<Decimal> {
         if other.is_zero() {
             return None;
         }
@@ -294,10 +312,10 @@ mod tests {
         assert_eq!(d("-.25").to_string(), "-0.25");
         assert_eq!(d("5.").to_string(), "5");
         assert_eq!(d("-0.0").to_string(), "0");
-        assert!(Decimal::parse("1e3").is_none());
-        assert!(Decimal::parse(".").is_none());
-        assert!(Decimal::parse("").is_none());
-        assert!(Decimal::parse("1 2").is_none());
+        assert!(Decimal::parse("1e3") == Err(DecimalParseError::Invalid));
+        assert!(Decimal::parse(".") == Err(DecimalParseError::Invalid));
+        assert!(Decimal::parse("") == Err(DecimalParseError::Invalid));
+        assert!(Decimal::parse("1 2") == Err(DecimalParseError::Invalid));
     }
 
     // F&O §6.2: op:numeric-add on xs:decimal is exact (no binary rounding).
@@ -345,6 +363,25 @@ mod tests {
     fn comparison_ignores_scale() {
         assert_eq!(d("1.0"), d("1"));
         assert!(d("-0.5") < d("0.25"));
+    }
+
+    // One correctly rounded conversion, not mantissa / 10^scale in two roundings.
+    #[test]
+    fn to_f64_is_correctly_rounded() {
+        assert_eq!(d("0.000000000000000000000000000001").to_f64(), 1e-30);
+        assert_eq!(d("0.1").to_f64(), 0.1);
+        assert_eq!(d("-12345.678").to_f64(), -12345.678);
+    }
+
+    #[test]
+    fn more_than_38_places_is_too_precise_not_invalid() {
+        let places = format!("0.{}1", "0".repeat(38));
+        assert_eq!(Decimal::parse(&places), Err(DecimalParseError::TooPrecise));
+        assert_eq!(
+            Decimal::parse(&"9".repeat(40)),
+            Err(DecimalParseError::TooPrecise)
+        );
+        assert!(Decimal::parse(&format!("0.{}1", "0".repeat(37))).is_ok());
     }
 
     #[test]

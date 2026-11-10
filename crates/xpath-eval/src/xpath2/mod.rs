@@ -7,7 +7,7 @@
 //! Normative: W3C XPath 2.0 (Second Edition) and XQuery 1.0 and XPath 2.0
 //! Functions and Operators. Supported are the constructs listed in
 //! `docs/packages/xpath-eval.md`; everything else fails with
-//! [`Error::Unsupported`] naming the feature, never with a silent result.
+//! [`VersionedError::Unsupported`] naming the feature, never with a silent result.
 
 mod ast;
 mod atomic;
@@ -64,7 +64,7 @@ pub type Sequence<N> = Vec<Item<N>>;
 /// Why an expression could not be parsed or evaluated in a given
 /// [`XPathVersion`].
 #[derive(Debug, Clone, PartialEq)]
-pub enum Error {
+pub enum VersionedError {
     /// Syntax error.
     Parse(ParseError),
     /// The expression uses a language feature or function that this crate does
@@ -82,42 +82,43 @@ pub enum Error {
     Eval(EvalError),
 }
 
-impl Error {
-    pub(crate) fn dynamic(code: &'static str, message: impl Into<String>) -> Error {
-        Error::Dynamic {
+impl VersionedError {
+    pub(crate) fn dynamic(code: &'static str, message: impl Into<String>) -> VersionedError {
+        VersionedError::Dynamic {
             code,
             message: message.into(),
         }
     }
 
-    pub(crate) fn static_error(code: &'static str, message: impl Into<String>) -> Error {
-        Error::Static {
+    pub(crate) fn static_error(code: &'static str, message: impl Into<String>) -> VersionedError {
+        VersionedError::Static {
             code,
             message: message.into(),
         }
     }
 
-    /// `true` for [`Error::Unsupported`]: the expression is valid XPath 2.0
+    /// `true` for [`VersionedError::Unsupported`]: the expression is valid XPath 2.0
     /// that this crate does not evaluate yet.
     pub fn is_unsupported(&self) -> bool {
-        matches!(self, Error::Unsupported(_))
+        matches!(self, VersionedError::Unsupported(_))
     }
 }
 
-impl std::fmt::Display for Error {
+impl std::fmt::Display for VersionedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Parse(e) => e.fmt(f),
-            Error::Unsupported(what) => write!(f, "unsupported XPath 2.0 feature: {what}"),
-            Error::Static { code, message } | Error::Dynamic { code, message } => {
+            VersionedError::Parse(e) => e.fmt(f),
+            VersionedError::Unsupported(what) => write!(f, "unsupported XPath 2.0 feature: {what}"),
+            VersionedError::Static { code, message }
+            | VersionedError::Dynamic { code, message } => {
                 write!(f, "{code}: {message}")
             }
-            Error::Eval(e) => e.fmt(f),
+            VersionedError::Eval(e) => e.fmt(f),
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for VersionedError {}
 
 /// A parsed expression together with the language it was parsed in.
 #[derive(Debug, Clone, PartialEq)]
@@ -140,9 +141,9 @@ impl Expression {
 
 /// Parses `source` as XPath 1.0 (`XPathVersion::V1`, same as [`crate::parse`])
 /// or as XPath 2.0.
-pub fn parse_versioned(source: &str, version: XPathVersion) -> Result<Expression, Error> {
+pub fn parse_versioned(source: &str, version: XPathVersion) -> Result<Expression, VersionedError> {
     Ok(Expression(match version {
-        XPathVersion::V1 => Inner::V1(crate::parser::parse(source).map_err(Error::Parse)?),
+        XPathVersion::V1 => Inner::V1(crate::parser::parse(source).map_err(VersionedError::Parse)?),
         XPathVersion::V2 => Inner::V2(parser::parse(source)?),
     }))
 }
@@ -153,10 +154,10 @@ pub fn parse_versioned(source: &str, version: XPathVersion) -> Result<Expression
 pub fn evaluate_versioned<'ctx, 'hook, N: Node<'ctx>>(
     expression: &Expression,
     ctx: &EvaluationContext<'ctx, 'hook, N>,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     match &expression.0 {
         Inner::V1(expr) => {
-            let value = crate::eval::evaluate(expr, ctx).map_err(Error::Eval)?;
+            let value = crate::eval::evaluate(expr, ctx).map_err(VersionedError::Eval)?;
             Ok(from_value(value))
         }
         Inner::V2(expr) => eval::evaluate(expr, ctx),
@@ -168,9 +169,9 @@ pub fn evaluate_versioned<'ctx, 'hook, N: Node<'ctx>>(
 pub fn evaluate_boolean_versioned<'ctx, 'hook, N: Node<'ctx>>(
     expression: &Expression,
     ctx: &EvaluationContext<'ctx, 'hook, N>,
-) -> Result<bool, Error> {
+) -> Result<bool, VersionedError> {
     match &expression.0 {
-        Inner::V1(expr) => crate::eval::evaluate_boolean(expr, ctx).map_err(Error::Eval),
+        Inner::V1(expr) => crate::eval::evaluate_boolean(expr, ctx).map_err(VersionedError::Eval),
         Inner::V2(expr) => eval::effective_boolean_value(&eval::evaluate(expr, ctx)?),
     }
 }

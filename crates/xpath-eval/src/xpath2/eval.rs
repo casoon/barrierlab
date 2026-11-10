@@ -7,7 +7,7 @@ use super::ast::{AxisStep, Expr, NodeComparison, SetOp};
 use super::atomic::{
     Arithmetic, Atomic, AtomicType, Comparison, arithmetic, compare_values, general_pair,
 };
-use super::{Error, Item, Sequence, from_value, functions};
+use super::{Item, Sequence, VersionedError, from_value, functions};
 use crate::ast::{Axis, NodeTest, QName};
 use crate::axes;
 use crate::document::{Node, NodeKind};
@@ -24,7 +24,7 @@ const MAX_RANGE: i64 = 10_000_000;
 pub(super) fn evaluate<'ctx, 'hook, N: Node<'ctx>>(
     expr: &Expr,
     ctx: &EvaluationContext<'ctx, 'hook, N>,
-) -> Result<Sequence<N>, Error> {
+) -> Result<Sequence<N>, VersionedError> {
     let env = Env {
         ctx,
         focus: Some(Focus {
@@ -72,12 +72,12 @@ pub(super) fn atomize<'ctx, N: Node<'ctx>>(sequence: &[Item<N>]) -> Vec<Atomic> 
 /// Effective boolean value (XPath 2.0 §2.4.3).
 pub(super) fn effective_boolean_value<'ctx, N: Node<'ctx>>(
     sequence: &[Item<N>],
-) -> Result<bool, Error> {
+) -> Result<bool, VersionedError> {
     match sequence {
         [] => Ok(false),
         [Item::Node(_), ..] => Ok(true),
         [Item::Atomic(a)] => a.effective_boolean(),
-        _ => Err(Error::dynamic(
+        _ => Err(VersionedError::dynamic(
             "FORG0006",
             "no effective boolean value for a sequence of several atomic values",
         )),
@@ -93,10 +93,10 @@ fn boolean<N>(b: bool) -> Sequence<N> {
 fn single_atomic<'ctx, N: Node<'ctx>>(
     sequence: &[Item<N>],
     what: &str,
-) -> Result<Option<Atomic>, Error> {
+) -> Result<Option<Atomic>, VersionedError> {
     let mut atoms = atomize(sequence);
     if atoms.len() > 1 {
-        return Err(Error::dynamic(
+        return Err(VersionedError::dynamic(
             "XPTY0004",
             format!(
                 "{what} needs a single item, got a sequence of {}",
@@ -116,12 +116,12 @@ fn nodes_only<'ctx, N: Node<'ctx>>(
     sequence: Sequence<N>,
     code: &'static str,
     what: &str,
-) -> Result<Vec<N>, Error> {
+) -> Result<Vec<N>, VersionedError> {
     sequence
         .into_iter()
         .map(|item| match item {
             Item::Node(n) => Ok(n),
-            Item::Atomic(a) => Err(Error::dynamic(
+            Item::Atomic(a) => Err(VersionedError::dynamic(
                 code,
                 format!("{what} needs nodes, got {}", a.type_name()),
             )),
@@ -205,17 +205,17 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         }
     }
 
-    pub(super) fn context_item(&self) -> Result<&Item<N>, Error> {
+    pub(super) fn context_item(&self) -> Result<&Item<N>, VersionedError> {
         self.focus
             .as_ref()
             .map(|f| &f.item)
-            .ok_or_else(|| Error::dynamic("XPDY0002", "the context item is absent"))
+            .ok_or_else(|| VersionedError::dynamic("XPDY0002", "the context item is absent"))
     }
 
-    fn context_node(&self, what: &str) -> Result<N, Error> {
+    fn context_node(&self, what: &str) -> Result<N, VersionedError> {
         match self.context_item()? {
             Item::Node(n) => Ok(*n),
-            Item::Atomic(a) => Err(Error::dynamic(
+            Item::Atomic(a) => Err(VersionedError::dynamic(
                 "XPTY0020",
                 format!("{what} needs a node as context item, got {}", a.type_name()),
             )),
@@ -226,7 +226,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     /// prefixes every XPath 2.0 static context predefines (`xml`, `xs`, `fn`).
     /// An unbound prefix is a static error (`XPST0081`), not a name that
     /// silently matches nothing.
-    pub(super) fn resolve_prefix(&self, prefix: &str) -> Result<String, Error> {
+    pub(super) fn resolve_prefix(&self, prefix: &str) -> Result<String, VersionedError> {
         if let Some(uri) = self.ctx.namespaces.and_then(|lookup| lookup(prefix)) {
             return Ok(uri);
         }
@@ -234,14 +234,14 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             "xml" => Ok(XML_NAMESPACE.into()),
             "xs" => Ok(XS_NAMESPACE.into()),
             "fn" => Ok(FN_NAMESPACE.into()),
-            _ => Err(Error::static_error(
+            _ => Err(VersionedError::static_error(
                 "XPST0081",
                 format!("namespace prefix `{prefix}` is not bound"),
             )),
         }
     }
 
-    pub(super) fn eval(&self, expr: &Expr) -> Result<Sequence<N>, Error> {
+    pub(super) fn eval(&self, expr: &Expr) -> Result<Sequence<N>, VersionedError> {
         match expr {
             Expr::Literal(a) => Ok(vec![Item::Atomic(a.clone())]),
             Expr::Variable(name) => self.variable(name),
@@ -269,8 +269,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             Expr::Quantified(every, bindings, body) => {
                 Ok(boolean(self.quantified(*every, bindings, body)?))
             }
-            Expr::Or(a, b) => Ok(boolean(self.truth(a)? || self.truth(b)?)),
-            Expr::And(a, b) => Ok(boolean(self.truth(a)? && self.truth(b)?)),
+            Expr::Or(..) | Expr::And(..) => Ok(boolean(self.logical(expr)?)),
             Expr::General(a, op, b) => self.general(a, *op, b),
             Expr::Value(a, op, b) => self.value_comparison(a, *op, b),
             Expr::Node(a, op, b) => self.node_comparison(a, *op, b),
@@ -310,11 +309,40 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         }
     }
 
-    pub(super) fn truth(&self, expr: &Expr) -> Result<bool, Error> {
+    /// `or`/`and` (§3.6) with short-circuit, walking a left-leaning chain
+    /// iteratively so a long chain does not recurse.
+    fn logical(&self, expr: &Expr) -> Result<bool, VersionedError> {
+        let is_or = matches!(expr, Expr::Or(..));
+        let mut rights = Vec::new();
+        let mut leftmost = expr;
+        loop {
+            match leftmost {
+                Expr::Or(a, b) if is_or => {
+                    rights.push(&**b);
+                    leftmost = a;
+                }
+                Expr::And(a, b) if !is_or => {
+                    rights.push(&**b);
+                    leftmost = a;
+                }
+                _ => break,
+            }
+        }
+        let mut value = self.truth(leftmost)?;
+        for right in rights.into_iter().rev() {
+            if value == is_or {
+                break;
+            }
+            value = self.truth(right)?;
+        }
+        Ok(value)
+    }
+
+    pub(super) fn truth(&self, expr: &Expr) -> Result<bool, VersionedError> {
         effective_boolean_value(&self.eval(expr)?)
     }
 
-    fn variable(&self, name: &QName) -> Result<Sequence<N>, Error> {
+    fn variable(&self, name: &QName) -> Result<Sequence<N>, VersionedError> {
         let mut binding = self.vars.as_ref();
         while let Some(b) = binding {
             if b.name == *name {
@@ -329,15 +357,15 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             Some(p) => format!("{p}:{}", name.local),
             None => name.local.clone(),
         };
-        Err(Error::static_error(
+        Err(VersionedError::static_error(
             "XPST0008",
             format!("variable `${shown}` is not bound"),
         ))
     }
 
     /// `a to b` (§3.3.1).
-    fn range(&self, from: &Expr, to: &Expr) -> Result<Sequence<N>, Error> {
-        let bound = |expr: &Expr| -> Result<Option<i64>, Error> {
+    fn range(&self, from: &Expr, to: &Expr) -> Result<Sequence<N>, VersionedError> {
+        let bound = |expr: &Expr| -> Result<Option<i64>, VersionedError> {
             let Some(atom) = single_atomic(&self.eval(expr)?, "the operand of `to`")? else {
                 return Ok(None);
             };
@@ -347,7 +375,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             };
             match atom {
                 Atomic::Integer(i) => Ok(Some(i)),
-                other => Err(Error::dynamic(
+                other => Err(VersionedError::dynamic(
                     "XPTY0004",
                     format!("`to` needs xs:integer operands, got {}", other.type_name()),
                 )),
@@ -357,7 +385,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             return Ok(Vec::new());
         };
         if to >= from && (to - from) >= MAX_RANGE {
-            return Err(Error::dynamic(
+            return Err(VersionedError::dynamic(
                 "FOAR0002",
                 "the range is too large for this implementation",
             ));
@@ -373,7 +401,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         bindings: &[(QName, Expr)],
         body: &Expr,
         out: &mut Sequence<N>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), VersionedError> {
         let Some(((name, source), rest)) = bindings.split_first() else {
             out.extend(self.eval(body)?);
             return Ok(());
@@ -391,7 +419,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         every: bool,
         bindings: &[(QName, Expr)],
         body: &Expr,
-    ) -> Result<bool, Error> {
+    ) -> Result<bool, VersionedError> {
         let Some(((name, source), rest)) = bindings.split_first() else {
             return self.truth(body);
         };
@@ -407,7 +435,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     }
 
     /// §3.5.2: true if some pair of atomized items compares true.
-    fn general(&self, a: &Expr, op: Comparison, b: &Expr) -> Result<Sequence<N>, Error> {
+    fn general(&self, a: &Expr, op: Comparison, b: &Expr) -> Result<Sequence<N>, VersionedError> {
         let left = atomize(&self.eval(a)?);
         let right = atomize(&self.eval(b)?);
         for x in &left {
@@ -421,7 +449,12 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     }
 
     /// §3.5.1: empty operand gives the empty sequence, otherwise a boolean.
-    fn value_comparison(&self, a: &Expr, op: Comparison, b: &Expr) -> Result<Sequence<N>, Error> {
+    fn value_comparison(
+        &self,
+        a: &Expr,
+        op: Comparison,
+        b: &Expr,
+    ) -> Result<Sequence<N>, VersionedError> {
         let left = single_atomic(&self.eval(a)?, "a value comparison")?;
         let right = single_atomic(&self.eval(b)?, "a value comparison")?;
         let (Some(x), Some(y)) = (left, right) else {
@@ -443,13 +476,13 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         a: &Expr,
         op: NodeComparison,
         b: &Expr,
-    ) -> Result<Sequence<N>, Error> {
-        let operand = |expr: &Expr| -> Result<Option<N>, Error> {
+    ) -> Result<Sequence<N>, VersionedError> {
+        let operand = |expr: &Expr| -> Result<Option<N>, VersionedError> {
             let mut nodes = nodes_only(self.eval(expr)?, "XPTY0004", "a node comparison")?;
             match nodes.len() {
                 0 => Ok(None),
                 1 => Ok(nodes.pop()),
-                _ => Err(Error::dynamic(
+                _ => Err(VersionedError::dynamic(
                     "XPTY0004",
                     "a node comparison needs a single node",
                 )),
@@ -466,7 +499,12 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     }
 
     /// §3.4: an empty operand gives the empty sequence.
-    fn binary_arithmetic(&self, a: &Expr, op: Arithmetic, b: &Expr) -> Result<Sequence<N>, Error> {
+    fn binary_arithmetic(
+        &self,
+        a: &Expr,
+        op: Arithmetic,
+        b: &Expr,
+    ) -> Result<Sequence<N>, VersionedError> {
         let left = single_atomic(&self.eval(a)?, "an arithmetic operand")?;
         let right = single_atomic(&self.eval(b)?, "an arithmetic operand")?;
         let (Some(x), Some(y)) = (left, right) else {
@@ -475,7 +513,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         Ok(vec![Item::Atomic(arithmetic(&x, op, &y)?)])
     }
 
-    fn unary(&self, negative: bool, operand: &Expr) -> Result<Sequence<N>, Error> {
+    fn unary(&self, negative: bool, operand: &Expr) -> Result<Sequence<N>, VersionedError> {
         let Some(value) = single_atomic(&self.eval(operand)?, "a unary operator")? else {
             return Ok(Vec::new());
         };
@@ -487,12 +525,12 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             v if !negative && v.is_numeric() => v,
             Atomic::Integer(i) => Atomic::Integer(
                 i.checked_neg()
-                    .ok_or_else(|| Error::dynamic("FOAR0002", "numeric overflow"))?,
+                    .ok_or_else(|| VersionedError::dynamic("FOAR0002", "numeric overflow"))?,
             ),
             Atomic::Decimal(d) => Atomic::Decimal(d.negated()),
             Atomic::Double(d) => Atomic::Double(-d),
             other => {
-                return Err(Error::dynamic(
+                return Err(VersionedError::dynamic(
                     "XPTY0004",
                     format!("unary arithmetic needs a number, got {}", other.type_name()),
                 ));
@@ -502,7 +540,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     }
 
     /// §3.3.3: set operators work on nodes and return document order.
-    fn set_operation(&self, a: &Expr, op: SetOp, b: &Expr) -> Result<Sequence<N>, Error> {
+    fn set_operation(&self, a: &Expr, op: SetOp, b: &Expr) -> Result<Sequence<N>, VersionedError> {
         let left = nodes_only(self.eval(a)?, "XPTY0004", "a set operator")?;
         let right = nodes_only(self.eval(b)?, "XPTY0004", "a set operator")?;
         let mut result = match op {
@@ -521,15 +559,18 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         ty: AtomicType,
         optional: bool,
         castable: bool,
-    ) -> Result<Sequence<N>, Error> {
+    ) -> Result<Sequence<N>, VersionedError> {
         let atoms = atomize(&self.eval(operand)?);
         let attempt = match atoms.as_slice() {
             [] if optional => {
                 return Ok(if castable { boolean(true) } else { Vec::new() });
             }
-            [] => Err(Error::dynamic("XPTY0004", "cast of an empty sequence")),
+            [] => Err(VersionedError::dynamic(
+                "XPTY0004",
+                "cast of an empty sequence",
+            )),
             [single] => single.cast(ty),
-            _ => Err(Error::dynamic(
+            _ => Err(VersionedError::dynamic(
                 "XPTY0004",
                 "cast of a sequence of several items",
             )),
@@ -537,7 +578,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         match (attempt, castable) {
             (Ok(_), true) => Ok(boolean(true)),
             (Ok(value), false) => Ok(vec![Item::Atomic(value)]),
-            (Err(e @ Error::Unsupported(_)), _) => Err(e),
+            (Err(e @ VersionedError::Unsupported(_)), _) => Err(e),
             (Err(_), true) => Ok(boolean(false)),
             (Err(e), false) => Err(e),
         }
@@ -546,7 +587,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     /// §3.2 `E1/E2`: `E2` runs once per node of `E1`. All-node results are
     /// returned in document order without duplicates; all-atomic results are
     /// concatenated in order; a mixture is `XPTY0018`.
-    fn path(&self, left: &Expr, right: &Expr) -> Result<Sequence<N>, Error> {
+    fn path(&self, left: &Expr, right: &Expr) -> Result<Sequence<N>, VersionedError> {
         let nodes = nodes_only(self.eval(left)?, "XPTY0019", "the left side of `/`")?;
         let size = nodes.len();
         let mut results: Sequence<N> = Vec::new();
@@ -561,7 +602,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             return Ok(results);
         }
         if node_count != results.len() {
-            return Err(Error::dynamic(
+            return Err(VersionedError::dynamic(
                 "XPTY0018",
                 "the result of `/` mixes nodes and atomic values",
             ));
@@ -577,7 +618,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         Ok(nodes.into_iter().map(Item::Node).collect())
     }
 
-    fn resolve_test(&self, test: &NodeTest, axis: Axis) -> Result<Test, Error> {
+    fn resolve_test(&self, test: &NodeTest, axis: Axis) -> Result<Test, VersionedError> {
         let principal = if axis == Axis::Attribute {
             NodeKind::Attribute
         } else {
@@ -606,7 +647,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     /// §3.2.1: the nodes on the axis that pass the test, then each predicate
     /// with positions counted along the axis direction; the result is in
     /// document order.
-    fn axis_step(&self, step: &AxisStep, node: N) -> Result<Vec<N>, Error> {
+    fn axis_step(&self, step: &AxisStep, node: N) -> Result<Vec<N>, VersionedError> {
         let test = self.resolve_test(&step.test, step.axis)?;
         let mut nodes: Vec<N> = axis_nodes(step.axis, node)
             .into_iter()
@@ -630,7 +671,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
     }
 
     /// §3.2.2 predicate on a sequence.
-    fn filter(&self, items: Sequence<N>, predicate: &Expr) -> Result<Sequence<N>, Error> {
+    fn filter(&self, items: Sequence<N>, predicate: &Expr) -> Result<Sequence<N>, VersionedError> {
         let size = items.len();
         let mut kept = Vec::new();
         for (i, item) in items.into_iter().enumerate() {
@@ -648,7 +689,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
 fn predicate_holds<'ctx, N: Node<'ctx>>(
     result: &[Item<N>],
     position: usize,
-) -> Result<bool, Error> {
+) -> Result<bool, VersionedError> {
     if let [Item::Atomic(number)] = result
         && number.is_numeric()
     {

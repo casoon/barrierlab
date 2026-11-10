@@ -22,6 +22,6 @@ pub use eval::{EvalError, EvaluationContext, evaluate, evaluate_boolean};
 pub use parser::{ParseError, parse};
 pub use value::Value;
 pub use xpath2::{
-    Atomic, AtomicType, Date, Decimal, Error as XPath2Error, Expression, Item, Sequence,
-    XPathVersion, evaluate_boolean_versioned, evaluate_versioned, parse_versioned,
+    Atomic, AtomicType, Date, Decimal, Expression, Item, Sequence, VersionedError, XPathVersion,
+    evaluate_boolean_versioned, evaluate_versioned, parse_versioned,
 };

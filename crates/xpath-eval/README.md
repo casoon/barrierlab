@@ -51,7 +51,7 @@ let result = evaluate_versioned(&expr, &EvaluationContext::new(node))?;
 # }
 ```
 
-Anything outside the subset fails with `XPath2Error::Unsupported` naming the
+Anything outside the subset fails with `VersionedError::Unsupported` naming the
 feature; it never evaluates to a guessed result. See
 [`docs/packages/xpath-eval.md`](https://github.com/casoon/barrierlab/blob/main/docs/packages/xpath-eval.md)
 for the supported constructs and the planned slices.

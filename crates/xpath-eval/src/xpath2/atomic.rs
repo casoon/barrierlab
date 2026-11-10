@@ -3,8 +3,8 @@
 //! `xs:decimal`, `xs:double`, `xs:date`) with casting (XPath 2.0 §17 of F&O,
 //! "Casting"), value comparison (§3.5.1) and arithmetic (§3.4).
 
-use super::Error;
-use super::decimal::Decimal;
+use super::VersionedError;
+use super::decimal::{Decimal, DecimalParseError};
 use std::cmp::Ordering;
 
 /// An `xs:date` without timezone (XML Schema Part 2 §3.2.9). A timezone in
@@ -18,8 +18,9 @@ pub struct Date {
 }
 
 impl Date {
-    pub fn parse(text: &str) -> Result<Date, Error> {
-        let invalid = || Error::dynamic("FORG0001", format!("`{text}` is not a valid xs:date"));
+    pub fn parse(text: &str) -> Result<Date, VersionedError> {
+        let invalid =
+            || VersionedError::dynamic("FORG0001", format!("`{text}` is not a valid xs:date"));
         let (negative, rest) = match text.strip_prefix('-') {
             Some(r) => (true, r),
             None => (false, text),
@@ -36,7 +37,7 @@ impl Date {
                     && matches!(zone.as_bytes()[0], b'+' | b'-')
                     && zone.as_bytes()[3] == b':');
             return Err(if looks_like_zone {
-                Error::Unsupported("xs:date with a timezone".into())
+                VersionedError::Unsupported("xs:date with a timezone".into())
             } else {
                 invalid()
             });
@@ -158,14 +159,14 @@ impl Atomic {
     }
 
     /// Effective boolean value of a single atomic (XPath 2.0 §2.4.3).
-    pub fn effective_boolean(&self) -> Result<bool, Error> {
+    pub fn effective_boolean(&self) -> Result<bool, VersionedError> {
         match self {
             Atomic::Boolean(b) => Ok(*b),
             Atomic::Untyped(s) | Atomic::String(s) => Ok(!s.is_empty()),
             Atomic::Integer(i) => Ok(*i != 0),
             Atomic::Decimal(d) => Ok(!d.is_zero()),
             Atomic::Double(d) => Ok(*d != 0.0 && !d.is_nan()),
-            Atomic::Date(_) => Err(Error::dynamic(
+            Atomic::Date(_) => Err(VersionedError::dynamic(
                 "FORG0006",
                 "xs:date has no effective boolean value",
             )),
@@ -173,11 +174,11 @@ impl Atomic {
     }
 
     /// `cast as` (XPath 2.0 §3.10.2, F&O §17).
-    pub fn cast(&self, to: AtomicType) -> Result<Atomic, Error> {
+    pub fn cast(&self, to: AtomicType) -> Result<Atomic, VersionedError> {
         let text_source = matches!(self, Atomic::Untyped(_) | Atomic::String(_));
         let lexical = || collapse(&self.to_xpath_string());
         let invalid = |what: &str| {
-            Error::dynamic(
+            VersionedError::dynamic(
                 "FORG0001",
                 format!(
                     "cannot cast {} `{}` to {what}",
@@ -212,32 +213,41 @@ impl Atomic {
             AtomicType::Decimal => match self {
                 Atomic::Decimal(_) => self.clone(),
                 Atomic::Integer(i) => Atomic::Decimal(Decimal::from_i64(*i)),
-                Atomic::Double(d) => Atomic::Decimal(Decimal::from_f64(*d).ok_or_else(|| {
-                    Error::dynamic("FOCA0002", format!("cannot cast {d} to xs:decimal"))
-                })?),
+                Atomic::Double(d) => {
+                    if !d.is_finite() {
+                        return Err(VersionedError::dynamic(
+                            "FOCA0002",
+                            format!("cannot cast {} to xs:decimal", double_to_string(*d)),
+                        ));
+                    }
+                    Atomic::Decimal(Decimal::from_f64(*d).map_err(|_| too_precise())?)
+                }
                 Atomic::Boolean(b) => Atomic::Decimal(Decimal::from_i64(*b as i64)),
-                _ if text_source => Atomic::Decimal(
-                    Decimal::parse(&lexical()).ok_or_else(|| invalid("xs:decimal"))?,
-                ),
+                _ if text_source => {
+                    Atomic::Decimal(Decimal::parse(&lexical()).map_err(|e| match e {
+                        DecimalParseError::Invalid => invalid("xs:decimal"),
+                        DecimalParseError::TooPrecise => too_precise(),
+                    })?)
+                }
                 _ => return Err(type_error(self, "xs:decimal")),
             },
             AtomicType::Integer => match self {
                 Atomic::Integer(_) => self.clone(),
-                Atomic::Decimal(d) => Atomic::Integer(
-                    d.trunc()
-                        .to_i64_exact()
-                        .ok_or_else(|| Error::dynamic("FOAR0002", "xs:integer overflow"))?,
-                ),
+                Atomic::Decimal(d) => {
+                    Atomic::Integer(d.trunc().to_i64_exact().ok_or_else(|| {
+                        VersionedError::dynamic("FOAR0002", "xs:integer overflow")
+                    })?)
+                }
                 Atomic::Double(d) => {
                     if !d.is_finite() {
-                        return Err(Error::dynamic(
+                        return Err(VersionedError::dynamic(
                             "FOCA0002",
                             format!("cannot cast {} to xs:integer", double_to_string(*d)),
                         ));
                     }
                     let t = d.trunc();
-                    if t >= i64::MAX as f64 || t <= i64::MIN as f64 {
-                        return Err(Error::dynamic("FOAR0002", "xs:integer overflow"));
+                    if t >= i64::MAX as f64 || t < i64::MIN as f64 {
+                        return Err(VersionedError::dynamic("FOAR0002", "xs:integer overflow"));
                     }
                     Atomic::Integer(t as i64)
                 }
@@ -248,10 +258,9 @@ impl Atomic {
                     if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
                         return Err(invalid("xs:integer"));
                     }
-                    Atomic::Integer(
-                        s.parse()
-                            .map_err(|_| Error::dynamic("FOAR0002", "xs:integer beyond 64 bits"))?,
-                    )
+                    Atomic::Integer(s.parse().map_err(|_| {
+                        VersionedError::dynamic("FOAR0002", "xs:integer beyond 64 bits")
+                    })?)
                 }
                 _ => return Err(type_error(self, "xs:integer")),
             },
@@ -264,8 +273,12 @@ impl Atomic {
     }
 }
 
-fn type_error(value: &Atomic, target: &str) -> Error {
-    Error::dynamic(
+fn too_precise() -> VersionedError {
+    VersionedError::Unsupported("an xs:decimal beyond 38 digits".into())
+}
+
+fn type_error(value: &Atomic, target: &str) -> VersionedError {
+    VersionedError::dynamic(
         "XPTY0004",
         format!("cannot cast {} to {target}", value.type_name()),
     )
@@ -356,7 +369,7 @@ fn promote_decimal(a: &Atomic) -> Decimal {
 /// §6.2). `Ok(None)` is "unordered" (a NaN is involved). Untyped operands are
 /// cast to `xs:string` by the caller of `eq`; general comparison casts them
 /// first (see `general_pair`).
-pub fn compare_values(a: &Atomic, b: &Atomic) -> Result<Option<Ordering>, Error> {
+pub fn compare_values(a: &Atomic, b: &Atomic) -> Result<Option<Ordering>, VersionedError> {
     use Atomic::*;
     Ok(match (a, b) {
         (x, y) if x.is_numeric() && y.is_numeric() => match (x, y) {
@@ -368,7 +381,7 @@ pub fn compare_values(a: &Atomic, b: &Atomic) -> Result<Option<Ordering>, Error>
         (Boolean(x), Boolean(y)) => Some(x.cmp(y)),
         (Date(x), Date(y)) => Some(x.cmp(y)),
         _ => {
-            return Err(Error::dynamic(
+            return Err(VersionedError::dynamic(
                 "XPTY0004",
                 format!("cannot compare {} with {}", a.type_name(), b.type_name()),
             ));
@@ -405,7 +418,7 @@ impl Comparison {
 /// cast to the type of the other (to `xs:double` against a number, to
 /// `xs:string` against a string or another untyped value), then the pair is
 /// compared as typed values.
-pub fn general_pair(a: &Atomic, b: &Atomic, op: Comparison) -> Result<bool, Error> {
+pub fn general_pair(a: &Atomic, b: &Atomic, op: Comparison) -> Result<bool, VersionedError> {
     use Atomic::Untyped;
     let (a, b) = match (a, b) {
         (Untyped(_), Untyped(_)) => (
@@ -419,7 +432,7 @@ pub fn general_pair(a: &Atomic, b: &Atomic, op: Comparison) -> Result<bool, Erro
     Ok(op.holds(compare_values(&a, &b)?))
 }
 
-fn cast_untyped_like(untyped: &Atomic, other: &Atomic) -> Result<Atomic, Error> {
+fn cast_untyped_like(untyped: &Atomic, other: &Atomic) -> Result<Atomic, VersionedError> {
     match other {
         o if o.is_numeric() => untyped.cast(AtomicType::Double),
         Atomic::String(_) => untyped.cast(AtomicType::String),
@@ -439,18 +452,18 @@ pub enum Arithmetic {
     Mod,
 }
 
-fn overflow() -> Error {
-    Error::dynamic("FOAR0002", "numeric overflow")
+fn overflow() -> VersionedError {
+    VersionedError::dynamic("FOAR0002", "numeric overflow")
 }
 
-fn division_by_zero() -> Error {
-    Error::dynamic("FOAR0001", "division by zero")
+fn division_by_zero() -> VersionedError {
+    VersionedError::dynamic("FOAR0001", "division by zero")
 }
 
 /// Binary arithmetic on two atomics (XPath 2.0 §3.4, F&O §6.2). Untyped
 /// operands become `xs:double`; integer, decimal and double promote in that
 /// order; `integer div integer` is a decimal.
-pub fn arithmetic(a: &Atomic, op: Arithmetic, b: &Atomic) -> Result<Atomic, Error> {
+pub fn arithmetic(a: &Atomic, op: Arithmetic, b: &Atomic) -> Result<Atomic, VersionedError> {
     use Atomic::*;
     let a = match a {
         Untyped(_) => a.cast(AtomicType::Double)?,
@@ -461,12 +474,12 @@ pub fn arithmetic(a: &Atomic, op: Arithmetic, b: &Atomic) -> Result<Atomic, Erro
         _ => b.clone(),
     };
     if matches!(a, Date(_)) || matches!(b, Date(_)) {
-        return Err(Error::Unsupported(
+        return Err(VersionedError::Unsupported(
             "arithmetic on xs:date (date and duration arithmetic)".into(),
         ));
     }
     if !a.is_numeric() || !b.is_numeric() {
-        return Err(Error::dynamic(
+        return Err(VersionedError::dynamic(
             "XPTY0004",
             format!(
                 "arithmetic needs numeric operands, got {} and {}",
@@ -489,7 +502,10 @@ pub fn arithmetic(a: &Atomic, op: Arithmetic, b: &Atomic) -> Result<Atomic, Erro
                 }
                 let q = (x / y).trunc();
                 if !q.is_finite() {
-                    return Err(Error::dynamic("FOAR0002", "idiv result is not finite"));
+                    return Err(VersionedError::dynamic(
+                        "FOAR0002",
+                        "idiv result is not finite",
+                    ));
                 }
                 Atomic::Double(q).cast(AtomicType::Integer)?
             }
@@ -603,7 +619,7 @@ mod tests {
         assert!(untyped("yes").cast(AtomicType::Boolean).is_err());
         assert!(matches!(
             untyped("x").cast(AtomicType::Double),
-            Err(Error::Dynamic {
+            Err(VersionedError::Dynamic {
                 code: "FORG0001",
                 ..
             })
@@ -622,7 +638,7 @@ mod tests {
         assert!(Date::parse("2026-1-1").is_err());
         assert!(matches!(
             Date::parse("2026-01-01Z"),
-            Err(Error::Unsupported(_))
+            Err(VersionedError::Unsupported(_))
         ));
     }
 
@@ -673,7 +689,7 @@ mod tests {
         );
         assert!(matches!(
             arithmetic(&Atomic::Integer(1), Arithmetic::IDiv, &Atomic::Integer(0)),
-            Err(Error::Dynamic {
+            Err(VersionedError::Dynamic {
                 code: "FOAR0001",
                 ..
             })
@@ -692,7 +708,7 @@ mod tests {
                 Arithmetic::Sub,
                 &Atomic::Integer(1)
             ),
-            Err(Error::Unsupported(_))
+            Err(VersionedError::Unsupported(_))
         ));
     }
 }
