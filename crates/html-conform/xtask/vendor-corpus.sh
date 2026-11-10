@@ -45,7 +45,10 @@
 #
 # Requires: git, jq.
 #
-# Usage: xtask/vendor-corpus.sh
+# Usage: xtask/vendor-corpus.sh [--check]
+#   no argument  replaces tests/corpus/ with the pinned vnu commit
+#   --check      vendors into a temp dir and diffs it against the committed
+#                corpus (exit 1 on any difference); needs network
 
 set -euo pipefail
 
@@ -57,6 +60,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEST_DIR="${REPO_ROOT}/tests/corpus"
 
+MODE="update"
+case "${1:-}" in
+  '') ;;
+  --check) MODE="check" ;;
+  *)
+    echo "usage: $0 [--check]" >&2
+    exit 2
+    ;;
+esac
+
 for tool in git jq; do
   if ! command -v "${tool}" >/dev/null 2>&1; then
     echo "error: ${tool} not found on PATH" >&2
@@ -64,8 +77,13 @@ for tool in git jq; do
   fi
 done
 
-CLONE_DIR="$(mktemp -d)"
-trap 'rm -rf "${CLONE_DIR}"' EXIT
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "${WORK_DIR}"' EXIT
+CLONE_DIR="${WORK_DIR}/clone"
+OUT_DIR="${WORK_DIR}/corpus"
+mkdir -p "${OUT_DIR}"
+# README.md is written by hand, not taken from upstream.
+cp "${DEST_DIR}/README.md" "${OUT_DIR}/"
 
 echo "==> cloning validator/validator@${VNU_TAG} (shallow)"
 git clone --quiet --depth 1 --branch "${VNU_TAG}" "${VNU_REPO}" "${CLONE_DIR}"
@@ -78,39 +96,37 @@ if [[ "${ACTUAL_COMMIT}" != "${VNU_COMMIT}" ]]; then
 fi
 
 echo "==> copying tests/html, html-aria, html-math, html-rdfa, html-rdfalite"
-rm -rf "${DEST_DIR}/html" "${DEST_DIR}/html-aria" "${DEST_DIR}/html-math" \
-       "${DEST_DIR}/html-rdfa" "${DEST_DIR}/html-rdfalite" "${DEST_DIR}/html-svg"
 for tree in html html-aria html-math html-rdfa html-rdfalite; do
-  cp -R "${CLONE_DIR}/tests/${tree}" "${DEST_DIR}/${tree}"
+  cp -R "${CLONE_DIR}/tests/${tree}" "${OUT_DIR}/${tree}"
 done
 
 echo "==> copying the vnu-authored files of tests/html-svg (no W3C copyright header)"
-mkdir -p "${DEST_DIR}/html-svg"
+mkdir -p "${OUT_DIR}/html-svg"
 SVG_TOTAL="$(find "${CLONE_DIR}/tests/html-svg" -name '*.html' | wc -l | tr -d ' ')"
 while IFS= read -r file; do
-  cp "${file}" "${DEST_DIR}/html-svg/"
+  cp "${file}" "${OUT_DIR}/html-svg/"
 done < <(grep -L "World Wide Web Consortium" "${CLONE_DIR}"/tests/html-svg/*.html)
 
-HTML_COUNT="$(find "${DEST_DIR}/html" -name '*.html' | wc -l | tr -d ' ')"
-ARIA_COUNT="$(find "${DEST_DIR}/html-aria" -name '*.html' | wc -l | tr -d ' ')"
-MATH_COUNT="$(find "${DEST_DIR}/html-math" -name '*.html' | wc -l | tr -d ' ')"
-RDFA_COUNT="$(find "${DEST_DIR}/html-rdfa" -name '*.html' | wc -l | tr -d ' ')"
-RDFALITE_COUNT="$(find "${DEST_DIR}/html-rdfalite" -name '*.html' | wc -l | tr -d ' ')"
-SVG_COUNT="$(find "${DEST_DIR}/html-svg" -name '*.html' | wc -l | tr -d ' ')"
+HTML_COUNT="$(find "${OUT_DIR}/html" -name '*.html' | wc -l | tr -d ' ')"
+ARIA_COUNT="$(find "${OUT_DIR}/html-aria" -name '*.html' | wc -l | tr -d ' ')"
+MATH_COUNT="$(find "${OUT_DIR}/html-math" -name '*.html' | wc -l | tr -d ' ')"
+RDFA_COUNT="$(find "${OUT_DIR}/html-rdfa" -name '*.html' | wc -l | tr -d ' ')"
+RDFALITE_COUNT="$(find "${OUT_DIR}/html-rdfalite" -name '*.html' | wc -l | tr -d ' ')"
+SVG_COUNT="$(find "${OUT_DIR}/html-svg" -name '*.html' | wc -l | tr -d ' ')"
 
 echo "==> trimming tests/messages.json to the vendored trees' keys"
 # html-svg is only partly vendored, so its keys are limited to files that exist.
-SVG_KEYS="$(cd "${DEST_DIR}" && find html-svg -name '*.html' | jq -R . | jq -s .)"
+SVG_KEYS="$(cd "${OUT_DIR}" && find html-svg -name '*.html' | jq -R . | jq -s .)"
 jq --argjson svg "${SVG_KEYS}" \
   'with_entries(select((.key | test("^(html|html-aria|html-math|html-rdfa|html-rdfalite)/")) or (.key as $k | $svg | index($k) != null)))' \
-  "${CLONE_DIR}/tests/messages.json" > "${DEST_DIR}/messages.json"
-MESSAGE_COUNT="$(jq 'length' "${DEST_DIR}/messages.json")"
+  "${CLONE_DIR}/tests/messages.json" > "${OUT_DIR}/messages.json"
+MESSAGE_COUNT="$(jq 'length' "${OUT_DIR}/messages.json")"
 
 echo "==> copying LICENSE"
-cp "${CLONE_DIR}/LICENSE" "${DEST_DIR}/LICENSE"
+cp "${CLONE_DIR}/LICENSE" "${OUT_DIR}/LICENSE"
 
 echo "==> writing manifest.json"
-cat > "${DEST_DIR}/manifest.json" <<EOF
+cat > "${OUT_DIR}/manifest.json" <<EOF
 {
   "source_repo": "${VNU_REPO}",
   "source_commit": "${VNU_COMMIT}",
@@ -135,5 +151,18 @@ cat > "${DEST_DIR}/manifest.json" <<EOF
   "expectation_model": "a fixture path present as a messages.json key is expected to produce at least one finding; a path absent from messages.json is expected to produce none"
 }
 EOF
+
+if [[ "${MODE}" == "check" ]]; then
+  if ! diff -r "${OUT_DIR}" "${DEST_DIR}"; then
+    echo "error: tests/corpus/ differs from ${VNU_COMMIT}" >&2
+    exit 1
+  fi
+  echo "==> ok: tests/corpus/ equals ${VNU_COMMIT}"
+  exit 0
+fi
+
+rm -rf "${DEST_DIR}"
+mkdir -p "${DEST_DIR}"
+cp -R "${OUT_DIR}/." "${DEST_DIR}/"
 
 echo "==> done: ${HTML_COUNT} html/ + ${ARIA_COUNT} html-aria/ + ${MATH_COUNT} html-math/ + ${RDFA_COUNT} html-rdfa/ + ${RDFALITE_COUNT} html-rdfalite/ + ${SVG_COUNT}/${SVG_TOTAL} html-svg/ fixtures, ${MESSAGE_COUNT} messages.json entries in ${DEST_DIR}"

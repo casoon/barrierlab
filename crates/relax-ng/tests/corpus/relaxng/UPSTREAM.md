@@ -10,8 +10,8 @@ This directory vendors the unmodified `spectest.xml` test suite from
   `spectest.xml.license`
 - Integrity: SHA-256 is recorded in `spectest.xml.sha256` and verified by
   `xtask/vendor-testsuite.sh`
-- Refresh procedure: remove this directory deliberately, then run
-  `xtask/vendor-testsuite.sh`; changing the pinned revision or checksum
+- Refresh procedure: run `xtask/vendor-testsuite.sh` (`--check` compares
+  without writing); changing the pinned revision or checksum
   requires a corresponding decision entry.
 
 The source is one XML manifest, not a directory-per-case corpus. It contains

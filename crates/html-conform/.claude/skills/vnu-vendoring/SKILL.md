@@ -42,6 +42,7 @@ MIT-lizenzierter Fremdcode aus `validator/validator` (vnu). Hintergrund:
   Commit, der Skript, Patches oder `schema/html5/` anfasst, laufen lassen.
   `xtask/vendor-svg-mathml.sh --check` leistet dasselbe für
   `schema/html5-svg-mathml.rnc`, `schema/svg11/` und `schema/mml3/` (ohne Patches).
+  `xtask/vendor-corpus.sh --check` prüft `tests/corpus/` auf dieselbe Weise.
 
 ## Ablauf
 
