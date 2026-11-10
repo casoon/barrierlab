@@ -16,7 +16,10 @@
 #
 # vnu: set VNU_JAR to a local vnu.jar (needs java), or VNU_JSON_DIR to a
 # directory of pre-recorded `<slug>.json` outputs (vnu --format json). With
-# neither, the vnu column is "-" (NotRun, not 0) and only html-conform is
+# neither, xtask/.cache/vnu.jar is used if present (gitignored) and java works. The jar is
+# verified against the pinned SHA-256 below (vnu 26.8.20, the version the
+# vendored schema is pinned to; npm package vnu-jar@26.8.20, build/dist/vnu.jar);
+# a mismatch aborts. With none of these, the vnu column is "-" (NotRun, not 0) and only html-conform is
 # compared. A "-" never overwrites a recorded vnu count in the baseline.
 #
 # Output is deterministic for a given snapshot: no timings, no paths, sorted
@@ -56,6 +59,12 @@ if [[ -z "$(find "${cache_dir}" -maxdepth 1 -name '*.html' -print -quit 2>/dev/n
     exit 1
 fi
 
+VNU_JAR_SHA256="582b3506ab5bb76a7cb7c78930c427720856e79497084f69847a4ebf3f9d217f"
+if [[ -z "${VNU_JAR:-}" && -z "${VNU_JSON_DIR:-}" && -f "${script_dir}/.cache/vnu.jar" ]] \
+    && java -version >/dev/null 2>&1; then
+    VNU_JAR="${script_dir}/.cache/vnu.jar"
+fi
+
 vnu_mode=none
 if [[ -n "${VNU_JSON_DIR:-}" ]]; then
     vnu_mode=json
@@ -65,6 +74,11 @@ elif [[ -n "${VNU_JAR:-}" ]]; then
         exit 1
     fi
     [[ -f "${VNU_JAR}" ]] || { echo "error: VNU_JAR (${VNU_JAR}) does not exist" >&2; exit 1; }
+    jar_sha="$( (sha256sum "${VNU_JAR}" 2>/dev/null || shasum -a 256 "${VNU_JAR}") | cut -d' ' -f1)"
+    if [[ "${jar_sha}" != "${VNU_JAR_SHA256}" ]]; then
+        echo "error: ${VNU_JAR} has sha256 ${jar_sha}, expected ${VNU_JAR_SHA256} (vnu 26.8.20)" >&2
+        exit 1
+    fi
     vnu_mode=jar
 fi
 

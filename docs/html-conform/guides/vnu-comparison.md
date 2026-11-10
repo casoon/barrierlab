@@ -131,7 +131,7 @@ three outcomes:
 | `tests/svg` | 1 | out of scope | a stand-alone `.svg` document, not HTML syntax (inline SVG is `html-svg`) |
 | `tests/langdetect` | 11 | out of scope | vnu's language-detection heuristics (character statistics over about 1.4 MB of text); html-conform has no language detector |
 | `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform has no such check |
-| `tests/html-its` | 320 (90 `.html`) | not vendored, measured locally | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
+| `tests/html-its` | 320 (90 `.html`) | not vendored, measured locally (matches vnu per file) | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
 | `tests/schema-validation` | 3 | out of scope | exercises vnu's `--schema` option on XML files against a remote DocBook schema; see below |
 
 A local run (not part of the test, nothing committed) of the out-of-scope trees that hold
@@ -152,27 +152,25 @@ licence decision for the repository (REUSE entries and a notice for a second lic
 without an expected-result file the tree would only measure against our own guess that every
 document is valid. The tree stays measurable locally from a checkout of the tag.
 
-Local run (`html-conform` CLI on `tests/html-its` of a shallow clone at 26.8.20; nothing
-committed, not gated, no vnu run): of the 90 `.html` files, 65 are clean and 25 get findings,
-90 findings in all, every one `schema.html5` "unexpected attribute `its-…`"
+Local run (nothing committed, not gated; `html-conform` CLI and the vnu 26.8.20 jar on
+`tests/html-its` of a shallow clone at the tag): of the 90 `.html` files, vnu reports nothing
+but the missing-`lang` warning (46 files, 46 messages). Before issue #188 html-conform got 90
+more findings in 25 files, every one `schema.html5` "unexpected attribute `its-…`"
 (`its-annotators-ref` 17, `its-loc-quality-issue-type` 6, `its-locale-filter-list` 5, and 17
-other `its-*` names). Besides these, 46 files get the missing-`lang` warning, which the
-differential test ignores (see "Not covered, or different").
-
-The cause is a schema gap, not a parser one. vnu's default schema (`html5-all`) includes
+other `its-*` names). These were false positives: vnu's default schema (`html5-all`) includes
 `its20-html5.rnc` (`build/build.py`: `include "its20-html5.rnc"` and
-`common.attrs &= its-html-attributes`), which allows the `its-*` attributes in HTML. That file
-is MIT-licensed (Jirka Kosek, in vnu's `schema/its2/`) but `xtask/vendor-schema.sh` does not
-vendor it, so html-conform rejects HTML-native ITS markup that vnu accepts. This is the same
-kind of difference as the RDFa one before issue #173. The 25 files are therefore probable
-false positives against vnu; that is inferred from the schema driver, not confirmed by a vnu
-run. Closing the gap means vendoring `its20-html5.rnc` and
-`its20-html5-types.rnc` and including them from `src/schema_source.rs`, a schema change that
-this triage does not make.
+`common.attrs &= its-html-attributes`), which allows the `its-*` attributes in HTML.
+
+Since issue #188 `xtask/vendor-schema.sh` vendors `its20-html5.rnc` and `its20-html5-types.rnc`
+(MIT, Jirka Kosek, in vnu's `schema/its2/`) into `schema/its2/`, and `src/schema_source.rs`
+includes them the way vnu's driver does. After that, html-conform reports only the
+missing-`lang` warning on the same 46 files as vnu and nothing on the other 44: per-file
+agreement with vnu is 90 of 90 (clean vs. findings). That compares presence of findings per
+file, not their messages.
 
 If the maintainer wants the tree as a gated measurement, the options are: (1) vendor the 90
 `.html` files with the W3C Test Suite License as a second licence and treat all as expected
-clean, after the ITS schema is vendored and checked against a vnu run; (2) fetch them on demand
+clean (the ITS schema is vendored and checked against a vnu run, see above); (2) fetch them on demand
 into a gitignored cache, as for the real-world pages; (3) leave it out. Until then (3) holds.
 
 **`tests/schema-validation`** has 3 files: a README and two XML documents (valid and invalid

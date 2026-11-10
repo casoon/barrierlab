@@ -16,6 +16,13 @@
 # issues filed against jonwiggins/xmloxide: #52, #53, #54, #55, #56) —
 # that whole detour is moot now that xmloxide isn't the RelaxNG engine.
 #
+# Also vendored, into schema/its2/: its20-html5.rnc and its20-html5-types.rnc
+# (schema/its2/ upstream, MIT, (c) 2012 Jirka Kosek; the licence text is in
+# each file's own header, there is no LICENSE file in that directory).
+# vnu's default schema includes them (`build/build.py`: `include
+# "its20-html5.rnc"` and `common.attrs &= its-html-attributes`); src/
+# schema_source.rs does the same (barrierlab#188).
+#
 # Local deviations from upstream are kept as patch files in
 # xtask/schema-patches/NNNN-<what>.patch (each starts with a comment saying
 # what, why and which file). They are applied in name order after the
@@ -39,6 +46,8 @@ RAW_BASE="https://raw.githubusercontent.com/validator/validator/${VNU_COMMIT}/sc
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEST_DIR="${REPO_ROOT}/schema/html5"
+ITS_DEST_DIR="${REPO_ROOT}/schema/its2"
+ITS_RAW_BASE="https://raw.githubusercontent.com/validator/validator/${VNU_COMMIT}/schema/its2"
 PATCH_DIR="${SCRIPT_DIR}/schema-patches"
 
 MODE="write"
@@ -90,6 +99,11 @@ MODULES=(
   web-forms2.rnc
 )
 
+ITS_MODULES=(
+  its20-html5.rnc
+  its20-html5-types.rnc
+)
+
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "${WORK_DIR}"' EXIT
 
@@ -102,6 +116,15 @@ for module in "${MODULES[@]}"; do
   rm "${WORK_DIR}/${module}.raw"
 done
 curl -sSf -o "${WORK_DIR}/LICENSE" "${RAW_BASE}/LICENSE"
+
+mkdir -p "${WORK_DIR}/its2"
+for module in "${ITS_MODULES[@]}"; do
+  curl -sSf -o "${WORK_DIR}/its2/${module}.raw" "${ITS_RAW_BASE}/${module}"
+  # REUSE-IgnoreStart
+  { printf '# SPDX-License-Identifier: MIT\n'; cat "${WORK_DIR}/its2/${module}.raw"; } > "${WORK_DIR}/its2/${module}"
+  # REUSE-IgnoreEnd
+  rm "${WORK_DIR}/its2/${module}.raw"
+done
 
 if [ ! -d "${PATCH_DIR}" ]; then
   echo "error: ${PATCH_DIR} missing" >&2
@@ -121,6 +144,17 @@ if [ "${MODE}" = "check" ]; then
   status=0
   for module in "${MODULES[@]}" LICENSE; do
     if ! diff -u "${DEST_DIR}/${module}" "${WORK_DIR}/${module}"; then
+      status=1
+    fi
+  done
+  for module in "${ITS_MODULES[@]}"; do
+    if ! diff -u "${ITS_DEST_DIR}/${module}" "${WORK_DIR}/its2/${module}"; then
+      status=1
+    fi
+  done
+  for committed in "${ITS_DEST_DIR}"/*.rnc; do
+    if [ ! -f "${WORK_DIR}/its2/$(basename "${committed}")" ]; then
+      echo "only in committed tree: its2/$(basename "${committed}")" >&2
       status=1
     fi
   done
@@ -144,5 +178,10 @@ rm -f "${DEST_DIR}"/*.rnc
 for module in "${MODULES[@]}" LICENSE; do
   cp "${WORK_DIR}/${module}" "${DEST_DIR}/${module}"
 done
+mkdir -p "${ITS_DEST_DIR}"
+rm -f "${ITS_DEST_DIR}"/*.rnc
+for module in "${ITS_MODULES[@]}"; do
+  cp "${WORK_DIR}/its2/${module}" "${ITS_DEST_DIR}/${module}"
+done
 
-echo "==> done: ${#MODULES[@]} .rnc modules in ${DEST_DIR}"
+echo "==> done: ${#MODULES[@]} .rnc modules in ${DEST_DIR}, ${#ITS_MODULES[@]} in ${ITS_DEST_DIR}"
