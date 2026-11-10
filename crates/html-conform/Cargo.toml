@@ -16,7 +16,7 @@ exclude = ["/tests/corpus", "/xtask", "/fuzz", "/benches", "/site", "/docs", "/e
 # Compile the vendored RELAX NG schema at first use instead of loading prebuilt/html5.rngc.
 runtime-compile = []
 # Adds `SchemaPreset` and `check_with_preset` (vnu's `html5-rdfalite` preset, RDFa Lite 1.1 only) and
-# embeds a second compiled schema, `prebuilt/html5-rdfalite.rngc` (about 225 KB). The file is part of
+# embeds a second compiled schema, `prebuilt/html5-rdfalite.rngc` (about 247 KB). The file is part of
 # the crate tarball either way; without the feature it is not compiled in.
 rdfa-lite = []
 # Builds the `html-conform` command-line binary. Adds no dependency.
