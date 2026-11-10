@@ -191,6 +191,18 @@ impl PartialEq for NormalizedNode<'_> {
 
 impl Eq for NormalizedNode<'_> {}
 
+/// Local name of an attribute as the schema layer sees it. html5-parser
+/// keeps the source qualified name (`xlink:href`) as `name` and sets only
+/// `namespace` (WHATWG "adjust foreign attributes" — the table's local name
+/// is `href`), whereas a RELAX NG `attribute xlink:href` pattern matches
+/// `{xlink-ns}href`. Hence the prefix is dropped when a namespace is set.
+fn schema_local_name(name: &ExpandedName) -> String {
+    match (&name.namespace, name.local_name.split_once(':')) {
+        (Some(_), Some((_, local))) => local.to_owned(),
+        _ => name.local_name.clone(),
+    }
+}
+
 impl<'a> NormalizedNode<'a> {
     /// This node's arena slot. Takes `self` by value (not `&self`) so the
     /// returned reference is tied to the arena's lifetime `'a` (borrowed
@@ -601,13 +613,20 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         let is_th = matches!(&self.data().kind, Kind::Element { name, .. }
             if name.namespace.as_deref() == Some(XHTML_NAMESPACE) && name.local_name == "th");
 
+        // `xmlns:prefix` is not allowed on HTML elements (HTML §13.1.2.3 allows
+        // only `xmlns` with the XHTML namespace); vnu reports it, so it stays
+        // visible to the schema there. On foreign elements it is a namespace
+        // declaration and is dropped below.
+        let is_html_element = matches!(&self.data().kind, Kind::Element { name, .. }
+            if name.namespace.as_deref() == Some(XHTML_NAMESPACE));
+
         let raw: Vec<(relax_ng::ExpandedName, String)> = (*self)
             .attribute_nodes()
             .map(|attribute| match &attribute.data().kind {
                 Kind::Attribute { name, value } => (
                     relax_ng::ExpandedName {
                         namespace: name.namespace.clone(),
-                        local: name.local_name.clone(),
+                        local: schema_local_name(name),
                     },
                     value.clone(),
                 ),
@@ -627,7 +646,9 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         };
 
         raw.into_iter().filter_map(move |(name, value)| {
-            if name.namespace.is_none() && name.local == "xml:lang" {
+            if is_html_element && name.namespace.is_none() && name.local.starts_with("xmlns:") {
+                Some((name, value))
+            } else if name.namespace.is_none() && name.local == "xml:lang" {
                 Some((split_xml_lang_name(), value))
             } else if name.namespace.is_none() && name.local == "lang" {
                 if has_literal_xml_lang {

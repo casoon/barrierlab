@@ -1,0 +1,335 @@
+# Zuordnung vnu-Meldungsklasse -> html-conform-Finding-Quelle (Issue #84).
+# Spalten (TAB-getrennt): Klasse, akzeptierte rule_id-Praefixe (Komma), vnu-Meldungsvorlage.
+# Die Vorlage ist der Text aus tests/corpus/messages.json, bei dem jedes „...“-Zitat durch „X“ ersetzt ist;
+# der Vergleich ist exakt. Eine Meldung ohne Zeile hier wird vom Differential-Test als unmapped gelistet.
+# Klassen: parser = Tokenizer/Tree-Construction, schema = RELAX NG (Inhaltsmodell, Attribute, Datentypen),
+# assertion = Schematron-Regeln, scripts = Import Map / Speculation Rules, csp = Meta-CSP,
+# tables = Zellraster, css = CSS-Validator (in html-conform nicht vorhanden, Praefix css. wird nie gemeldet).
+assertion	assertion.	A document must not include both a “X” element with an “X” attribute whose value is “X”, and a “X” element with a “X” attribute.
+assertion	assertion.	A document must not include more than one visible “X” element.
+assertion	assertion.	A document must not include more than one “X” element with a “X” attribute.
+assertion	assertion.	A document must not include more than one “X” element with its “X” attribute set to the value “X”.
+assertion	assertion.	A document should not include more than one visible element with “X”.
+assertion	assertion.	A “X” attribute on a “X” element found after the first 1024 bytes.
+assertion	assertion.	A “X” child of a “X” element must not have any “X” value other than “X” or “X”.
+assertion	assertion.	A “X” element is only allowed as a child of a “X” element that is a drop-down box (one without a “X” attribute greater than 1 and without a “X” attribute).
+assertion	assertion.	A “X” element must have an “X” or “X” attribute, or both.
+assertion	assertion.	A “X” element must not appear as a descendant of a “X” element unless the “X” element has an “X” attribute or has a “X” attribute whose value contains “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+assertion	assertion.	A “X” element that has a following sibling “X” element or “X” element with a “X” attribute must have a “X” attribute and/or “X” attribute.
+assertion	assertion.	A “X” element with a “X” attribute must have a “X” attribute that contains the value “X” or the value “X” or the value “X”.
+assertion	assertion.	A “X” element with a “X” attribute must have a “X” attribute that contains the value “X”.
+assertion	assertion.	A “X” element with a “X” attribute must have a “X” attribute whose value is “X”.
+assertion	assertion.	A “X” element with a “X” attribute must not have a “X” attribute with the value “X”.
+assertion	assertion.	A “X” element with a “X” attribute that contains both the values “X” and “X” must have a “X” attribute with a non-empty value.
+assertion	assertion.	A “X” element with a “X” attribute that contains the value “X” must have an “X” attribute.
+assertion	assertion.	A “X” element with a “X” attribute whose value is neither a JavaScript MIME type, “X”, “X”, nor “X” (i.e., a data block) must not have a “X” attribute.
+assertion	assertion.	A “X” element with a “X” attribute whose value is neither a JavaScript MIME type, “X”, “X”, nor “X” (i.e., a data block) must not have an “X” attribute.
+assertion	assertion.	A “X” element with a “X” attribute whose value is “X” must not have a “X” attribute.
+assertion	assertion.	A “X” element with a “X” attribute, and without a “X” attribute, and without a “X” attribute whose value is greater than “X”, must have a child “X” element.
+assertion	assertion.	A “X” element with a “X” descendant must not have a “X” attribute.
+assertion	assertion.	A “X” element with an “X” attribute must have a “X” attribute that contains the value “X” or the value “X” or the value “X”.
+assertion	assertion.	A “X” element with an “X” attribute must have a “X” attribute that contains the value “X” or the value “X”.
+assertion	assertion.	A “X” element with an “X” attribute must have a “X” attribute that contains the value “X”.
+assertion	assertion.	A “X” element with an “X” attribute must have an “X” attribute with value “X”.
+assertion	assertion.	A “X” element with an “X” attribute whose value is “X” must have a “X” attribute with the value “X”.
+assertion	assertion.	A “X” element with the “X” attribute set must not have a “X” attribute whose value is not “X”.
+assertion	assertion.	A “X” element with “X” must not have a “X” attribute.
+assertion	assertion.	A “X” element with “X” must not have an “X” attribute.
+assertion	assertion.	An element that is a child of an element with “X” must have “X”.
+assertion	assertion.	An element with the attribute “X” must not appear as a descendant of an “X”, “X”, “X”, “X”, “X”, or “X” element.
+assertion	assertion.	An element with the attribute “X” should not appear as a descendant of an element with the attribute “X”.
+assertion	assertion.	An element with “X” must be contained in, or owned by, an element with the “X” value “X”, “X”, “X”, or “X”.
+assertion	assertion.	An element with “X” must be contained in, or owned by, an element with the “X” value “X”.
+assertion	assertion.	An element with “X” must not be a child of an element with “X”.
+assertion	assertion.	An element with “X” that is a descendant of an element with “X” must contain only elements with “X”.
+assertion	assertion.	An element with “X” that is a descendant of an element with “X” or “X” must contain only elements with “X”, “X”, or “X”.
+assertion	assertion.	An inline classic “X” element (i.e., a “X” element without a “X” attribute and with a “X” attribute that is either unspecified, empty, or a JavaScript MIME type) must not have a “X” attribute.
+assertion	assertion.	An inline classic “X” element (i.e., a “X” element without a “X” attribute and with a “X” attribute that is either unspecified, empty, or a JavaScript MIME type) must not have an “X” attribute.
+assertion	assertion.	An inline “X” element (i.e., a “X” element without a “X” attribute and with a “X” attribute that is either unspecified, empty, or a JavaScript MIME type) must not have a “X” attribute.
+assertion	assertion.	An inline “X” element with “X” must not have a “X” attribute.
+assertion	assertion.	An inline “X” element with “X” must not have an “X” attribute.
+assertion	assertion.	An “X” attribute whose value is “X” should not be specified on an “X” element that has an “X” attribute.
+assertion	assertion.	An “X” element must have an “X” attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.
+assertion	assertion.	An “X” element that is a descendant of a “X” element must not have any “X” value other than “X”.
+assertion	assertion.	An “X” element that is a descendant of a “X” element or “X” element must not have any “X” value other than “X” or “X”.
+assertion	assertion.	An “X” element that is a descendant of a “X” element or “X” element must not have any “X” value other than “X”, “X”, “X”, “X”, or “X”.
+assertion	assertion.	An “X” element with a “X” attribute must also have an accessible name (e.g., an “X” attribute).
+assertion	assertion.	An “X” element with a “X” attribute must not have an “X” attribute whose value is the empty string.
+assertion	assertion.	An “X” element with a “X” attribute whose value is “X” and with a “X” attribute whose value is “X” must have an “X” attribute.
+assertion	assertion.	An “X” element with a “X” attribute whose value is “X” must not have an “X” attribute whose value is “X” or “X”.
+assertion	assertion.	An “X” element with a “X” attribute whose value is “X” must not have any “X” attributes.
+assertion	assertion.	An “X” element with any “X” attributes other than “X” must also have an accessible name. (e.g., an “X” attribute).
+assertion	assertion.	An “X” element with no child “X” element must have a “X” attribute.
+assertion	assertion.	Any “X” descendant of a “X” element with a “X” attribute must have an ID value that matches that “X” attribute.
+assertion	assertion.	Article lacks heading. Consider using “X”-“X” elements to add identifying headings to all articles.
+assertion	assertion.	Attribute “X” is unnecessary for elements that have attribute “X”.
+assertion	assertion.	Autonomous custom elements must not specify the “X” attribute.
+assertion	assertion.	Consider adding a “X” attribute to the “X” start tag to declare the language of this document.
+assertion	assertion.	Consider avoiding viewport values that prevent users from resizing documents.
+assertion	assertion.	Duplicate ID “X”.
+assertion	assertion.	Duplicate “X” name “X” in “X” element. Within a single “X” element, there should not be more than one “X” element for each name.
+assertion	assertion.	Element “X” does not need a “X” attribute.
+assertion	assertion.	Empty heading.
+assertion	assertion.	Every active “X” element must have a corresponding “X” element.
+assertion	assertion.	Internal encoding declaration named an unsupported chararacter encoding “X”.
+assertion	assertion.	Internal encoding declaration “X” disagrees with the actual encoding of the document (“X”).
+assertion	assertion.	Not all browsers position items appropriately when "tabular markup" is used with the “X” element. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
+assertion	assertion.	Not all browsers position items appropriately when the “X” element is used. See https://www.w3.org/International/articles/ruby/markup.en.html#visual for more guidance.
+assertion	assertion.	Section lacks heading. Consider using “X”-“X” elements to add identifying headings to all sections, or else use a “X” element instead for any cases where no heading is needed.
+assertion	assertion.	The SVG element “X” must not appear as a descendant of another SVG element “X”.
+assertion	assertion.	The element “X” must not appear as a descendant of an element with the attribute “X”.
+assertion	assertion.	The element “X” must not appear as a descendant of the “X” element.
+assertion	assertion.	The element “X” should not appear as a descendant of an element with the attribute “X”.
+assertion	assertion.	The element “X” with the attribute “X” must not appear as a descendant of the “X” element.
+assertion	assertion.	The element “X” with the attribute “X” should not appear as a descendant of an element with the attribute “X”.
+assertion	assertion.	The first child “X” element of a “X” element with a “X” attribute, and without a “X” attribute, and without a “X” attribute whose value is greater than “X”, must have either an empty “X” attribute, or must have no text content. Consider either adding a placeholder option label, or adding a “X” attribute with a value equal to the number of “X” elements.
+assertion	assertion.	The hash-name reference in attribute “X” referred to “X”, but there is no “X” element with a “X” attribute with that value.
+assertion	assertion.	The heading “X” (with computed level 3) follows the heading “X” (with computed level 1), skipping 1 heading level.
+assertion	assertion.	The only allowed value for the “X” attribute for the “X” element is “X” (with no parameters). (But the attribute is not needed and should be omitted altogether.)
+assertion	assertion.	The only allowed value for the “X” attribute for the “X” element is “X”.
+assertion	assertion.	The only allowed value for the “X” attribute for the “X” element is “X”. (But the attribute is not needed and should be omitted altogether.)
+assertion	assertion.	The value of the  “X” attribute must be less than or equal to one when the “X” attribute is absent.
+assertion	assertion.	The value of the  “X” attribute must be less than or equal to the value of the “X” attribute.
+assertion	assertion.	The value of the “X” attribute for the “X” element must not contain “X”.
+assertion	assertion.	The value of the “X” attribute must be less than or equal to the value of the “X” attribute.
+assertion	assertion.	The value of the “X” attribute of the “X” element must be the ID of a non-hidden form control.
+assertion	assertion.	The value of the “X” attribute of the “X” element must be the ID of an element in the same tree as the “X” with the “X” attribute.
+assertion	assertion.	The value of “X” attribute for the “X” element must not be “X”.
+assertion	assertion.	The value “X” for the “X” attribute of the “X” element is not allowed.
+assertion	assertion.	The value “X” is not a valid value for the “X” attribute of a “X” element with “X”.
+assertion	assertion.	The “X” attribute contained redundant references.
+assertion	assertion.	The “X” attribute for the “X” element is not needed and should be omitted.
+assertion	assertion.	The “X” attribute is deprecated and should not be used. Support for it is poor and is unlikely to improve.
+assertion	assertion.	The “X” attribute is unnecessary for JavaScript resources.
+assertion	assertion.	The “X” attribute must not be specified on an “X” element that does not have an “X” attribute, or whose “X” attribute’s value is the empty string.
+assertion	assertion.	The “X” attribute must not be specified on an “X” element whose “X” attribute has the value “X”.
+assertion	assertion.	The “X” attribute must not be specified on any “X” element unless the element has a “X” value other than “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+assertion	assertion.	The “X” attribute must not be specified on elements that do not have an “X” attribute specified.
+assertion	assertion.	The “X” attribute must not be specified on elements that do not have both an “X” attribute and an “X” attribute specified.
+assertion	assertion.	The “X” attribute must not be specified on elements that have a “X” attribute.
+assertion	assertion.	The “X” attribute must not be used on a “X” element inside the “X” part of a customizable “X” element.
+assertion	assertion.	The “X” attribute must not be used on a “X” element that is a child of a “X” element.
+assertion	assertion.	The “X” attribute must not be used on a “X” element which has a “X” ancestor with no “X” attribute, or with a “X” attribute whose value is “X”, “X”, or “X”.
+assertion	assertion.	The “X” attribute must not be used on an element which has a “X” attribute.
+assertion	assertion.	The “X” attribute must not be used on an “X” element which has a “X” attribute whose value is “X”.
+assertion	assertion.	The “X” attribute must not be used on any element which has a “X” attribute.
+assertion	assertion.	The “X” attribute must not be used on any “X” element that is a summary for its parent “X” element.
+assertion	assertion.	The “X” attribute must not be used on any “X” element that is an ancestor of a labelable element.
+assertion	assertion.	The “X” attribute must not be used on any “X” element that is associated with a labelable element.
+assertion	assertion.	The “X” attribute must not occur on more than one “X” element within the same “X” or “X” element.
+assertion	assertion.	The “X” attribute must only be specified if the “X” attribute is also specified.
+assertion	assertion.	The “X” attribute must refer to a form element.
+assertion	assertion.	The “X” attribute of the “X” element must refer to a “X” element.
+assertion	assertion.	The “X” attribute on a “X” element must have an the same value as the “X” attribute.
+assertion	assertion.	The “X” attribute on the element “X” refers to the ID “X”, but there is no “X” element with that ID in the same table.
+assertion	assertion.	The “X” attribute on the “X” element is obsolete. Consider putting an “X” attribute on the nearest container instead.
+assertion	assertion.	The “X” attribute on the “X” element is obsolete. Consider specifying “X” in CSS instead.
+assertion	assertion.	The “X” attribute on the “X” element is obsolete. To declare which “X” terms are used in the document, instead register the names as meta extensions. To trigger specific UA behaviors, use a “X” element instead.
+assertion	assertion.	The “X” attribute on the “X” element is obsolete. Use the “X” attribute instead.
+assertion	assertion.	The “X” attribute referenced “X”, but there is no element with an “X” attribute with that value.
+assertion	assertion.	The “X” attribute references “X”, which is not the ID of any element in this document.
+assertion	assertion.	The “X” attribute should not be used on a “X” element.
+assertion	assertion.	The “X” attribute should not be used on an “X” element that has a “X” attribute and whose type is “X”.
+assertion	assertion.	The “X” attribute should not be used on an “X” element which has a “X” attribute whose value is “X”.
+assertion	assertion.	The “X” attribute should not be used on any element which has “X”.
+assertion	assertion.	The “X” attribute should not be used on the “X” element.
+assertion	assertion.	The “X” attribute should not be used with the “X” element.
+assertion	assertion.	The “X” attribute value starting with “X” is only valid for lazy-loaded images. Add “X”“X” to this element.
+assertion	assertion.	The “X” attribute value starting with “X” is only valid for lazy-loaded images. The “X” element must have a “X” attribute set to “X”.
+assertion	assertion.	The “X” attribute was specified, but the element is not a property of any item.
+assertion	assertion.	The “X” element cannot have more than one selected “X” descendant unless the “X” attribute is specified.
+assertion	assertion.	The “X” element is a completely-unknown element that is not allowed anywhere in any HTML content.
+assertion	assertion.	The “X” element is obsolete.
+assertion	assertion.	The “X” element is obsolete. Use CSS instead.
+assertion	assertion.	The “X” element is obsolete. Use the “X” attribute of the “X” element to set the URL of the external resource.
+assertion	assertion.	The “X” element is obsolete. Use the “X” element and CSS instead, or use server-side includes.
+assertion	assertion.	The “X” element is obsolete. Use the “X” element instead.
+assertion	assertion.	The “X” element is obsolete. Use “X” or “X” element instead.
+assertion	assertion.	The “X” element may contain at most one “X”, “X”, “X”, “X”, “X”, “X”, or “X” descendant.
+assertion	assertion.	The “X” element must come before any “X” or “X” elements in the document.
+assertion	assertion.	The “X” element must have a “X” ancestor.
+assertion	assertion.	The “X” element must not appear as a descendant of the “X” element.
+assertion	assertion.	The “X” element with the “X” attribute set must have an “X” ancestor with the “X” attribute.
+assertion	assertion.	The “X” role does not affect elements that have a “X” attribute and global ARIA attributes.
+assertion	assertion.	The “X” role does not affect elements that have a “X” attribute.
+assertion	assertion.	The “X” role does not affect elements that have global ARIA attributes.
+assertion	assertion.	The “X” role is not allowed for element “X” without a “X” attribute and without a “X” attribute whose value is greater than 1.
+assertion	assertion.	The “X” role is unnecessary for an “X” element that has no “X” attribute and whose type is “X”.
+assertion	assertion.	The “X” role is unnecessary for element “X” whose type is “X”.
+assertion	assertion.	The “X” role is unnecessary for element “X” with a “X” attribute or with a “X” attribute whose value is greater than 1.
+assertion	assertion.	The “X” role is unnecessary for element “X” with attribute “X”.
+assertion	assertion.	The “X” role is unnecessary for element “X” without a “X” attribute and without a “X” attribute whose value is greater than 1.
+assertion	assertion.	The “X” role is unnecessary for element “X”.
+assertion	assertion.	There must not be two elements with the same "nearest ancestor autofocus scoping root element" that both have the “X” attribute specified.
+assertion	assertion.	This document has heading elements but none of them has a computed heading level of 1.
+assertion	assertion.	Using the “X” element to specify the document-wide default language is obsolete. Consider specifying the language on the root element instead.
+assertion	assertion.	When a “X” element is the only content in a “X” element other than the “X”, the “X” element should be omitted in favor of the “X”.
+assertion	assertion.	When the “X” attribute has any image candidate string with a width descriptor, the “X” attribute must also be specified.
+assertion	assertion.	“X” must not be used on the “X” element.
+csp	csp.	Event handler attribute “X” violates Content Security Policy (meta tag): blocked by “X” directive.
+csp	csp.	Inline script violates Content Security Policy (meta tag): blocked by “X” directive (missing “X” or nonce/hash).
+csp	csp.	Inline style violates Content Security Policy (meta tag): blocked by “X” directive (missing “X” or nonce/hash).
+csp	csp.	The “X” attribute violates Content Security Policy (meta tag): blocked by “X” directive.
+css	css.	CSS: “X”: Property “X” doesn't exist.
+parser	parser.html5	A numeric character reference expanded to carriage return.
+parser	parser.html5	A numeric character reference expanded to the C1 controls range.
+parser	parser.html5	A slash was not immediately followed by “X”.
+parser	parser.html5	Almost standards mode doctype. Expected “X”.
+parser	parser.html5	Astral non-character.
+parser	parser.html5	Attribute value missing.
+parser	parser.html5	Bad character “X” after “X”. Probable cause: Unescaped “X”. Try escaping it as “X”.
+parser	parser.html5	Bad start tag in “X” in “X” in “X”.
+parser	parser.html5	Bogus comment.
+parser	parser.html5	Bogus doctype.
+parser	parser.html5	Character reference expands to a control character (U+0001).
+parser	parser.html5	Character reference expands to a control character (U+000b).
+parser	parser.html5	Character reference expands to a control character (U+007f).
+parser	parser.html5	Character reference expands to a non-character (U+fffe).
+parser	parser.html5	Character reference expands to a permanently unassigned code point.
+parser	parser.html5	Character reference expands to a surrogate.
+parser	parser.html5	Character reference expands to an astral non-character (U+10ffff).
+parser	parser.html5	Character reference expands to an astral non-character (U+1fffe).
+parser	parser.html5	Character reference expands to zero.
+parser	parser.html5	Character reference outside the permissible Unicode range.
+parser	parser.html5	Character reference was not terminated by a semicolon.
+parser	parser.html5	Duplicate attribute “X”.
+parser	parser.html5	End of file after “X”.
+parser	parser.html5	End of file inside comment.
+parser	parser.html5	End of file inside public identifier.
+parser	parser.html5	End of file inside system identifier.
+parser	parser.html5	End of file occurred in an attribute name. Ignoring tag.
+parser	parser.html5	End of file reached when inside an attribute value. Ignoring tag.
+parser	parser.html5	End of file seen and there were open elements.
+parser	parser.html5	End of file seen when expecting text or an end tag.
+parser	parser.html5	End of file seen when looking for tag name. Ignoring tag.
+parser	parser.html5	End tag had attributes.
+parser	parser.html5	End tag “X” implied, but there were open elements.
+parser	parser.html5	End tag “X”.
+parser	parser.html5	Expected a public identifier but the doctype ended.
+parser	parser.html5	Expected a system identifier but the doctype ended.
+parser	parser.html5	Forbidden code point U+000b.
+parser	parser.html5	Forbidden code point U+0091.
+parser	parser.html5	Forbidden code point U+fdd0.
+parser	parser.html5	Garbage after “X”.
+parser	parser.html5	HTML start tag “X” in a foreign namespace context.
+parser	parser.html5	Heading cannot be a child of another heading.
+parser	parser.html5	Misplaced non-space characters inside a table.
+parser	parser.html5	Missing space before doctype name.
+parser	parser.html5	Named character reference was not terminated by a semicolon. (Or “X” should have been escaped as “X”.)
+parser	parser.html5	No digits after “X”.
+parser	parser.html5	No space between attributes.
+parser	parser.html5	No space between the doctype public and system identifiers.
+parser	parser.html5	No space between the doctype “X” keyword and the quote.
+parser	parser.html5	No “X” element in scope but a “X” end tag seen.
+parser	parser.html5	Non-space character after body.
+parser	parser.html5	Non-space character inside “X” inside “X”.
+parser	parser.html5	Obsolete doctype. Expected “X”.
+parser	parser.html5	Quote “X” in attribute name. Probable cause: Matching quote missing somewhere earlier.
+parser	parser.html5	Saw a start tag “X”.
+parser	parser.html5	Saw a “X” start tag, but there was already an active “X” element. Nested forms are not allowed. Ignoring the tag.
+parser	parser.html5	Saw an end tag after “X” had been closed.
+parser	parser.html5	Saw “X” when expecting an attribute name. Probable cause: Attribute name missing.
+parser	parser.html5	Saw “X” when expecting an attribute name. Probable cause: Missing “X” immediately before.
+parser	parser.html5	Saw “X” within a comment. Probable cause: Nested comment (not allowed).
+parser	parser.html5	Saw “X”. Probable cause: Attempt to use an XML processing instruction in HTML. (XML processing instructions are not supported in HTML.)
+parser	parser.html5	Saw “X”. Probable causes: Unescaped “X” (escape as “X”) or mistyped end tag.
+parser	parser.html5	Saw “X”. Probable causes: Unescaped “X” (escape as “X”) or mistyped start tag.
+parser	parser.html5	Self-closing syntax (“X”) used on a non-void HTML element. Ignoring the slash and treating as a start tag.
+parser	parser.html5	Start tag for “X” seen but the previous “X” is still open.
+parser	parser.html5	Start tag seen without seeing a doctype first. Expected “X”.
+parser	parser.html5	Start tag “X” seen in “X”.
+parser	parser.html5	Stray doctype.
+parser	parser.html5	Stray end tag “X”.
+parser	parser.html5	Stray start tag “X”.
+parser	parser.html5	Stray “X” at the end of an end tag.
+parser	parser.html5	“X” at the start of an unquoted attribute value. Probable cause: Missing “X” immediately before.
+parser	parser.html5	“X” at the start of an unquoted attribute value. Probable cause: Stray duplicate equals sign.
+parser	parser.html5	“X” at the start of an unquoted attribute value. Probable cause: Using the wrong character as a quote.
+parser	parser.html5	“X” in an unquoted attribute value. Probable cause: Missing “X” immediately before.
+parser	parser.html5	“X” in an unquoted attribute value. Probable cause: Using the wrong character as a quote.
+parser	parser.html5	“X” in an unquoted attribute value. Probable causes: Attributes running together or a URL query string in an unquoted attribute value.
+parser	parser.html5	“X” in attribute name. Probable cause: “X” missing immediately before.
+parser	parser.html5	“X” in public identifier.
+parser	parser.html5	“X” in system identifier.
+schema	schema.html5	Attribute “X” for element “X” must have non-empty value.
+schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, or “X”.
+schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+schema	schema.html5	Attribute “X” is only allowed when the input type is “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, or “X”.
+schema	schema.html5	Attribute “X” not allowed here.
+schema	schema.html5	Attribute “X” not allowed on element “X” at this point.
+schema	schema.html5	Attribute “X” with value “X” must not be specified on elements with “X” attribute value “X”. This combination prevents content from being accessible to assistive technology when revealed through search.
+schema	schema.html5	Bad value “X” for attribute “X” on element “X”
+schema	schema.html5	Bad value “X” for attribute “X” on element “X”.
+schema	schema.html5	Bad value “X” for attribute “X” on element “X”: Bad list of link-type keywords:  Typo for “X”?
+schema	schema.html5	Discarding superfluous token “X” from value of attribute “X”. Browsers only process the first token found that is a defined ARIA non-abstract role.
+schema	schema.html5	Discarding unrecognized token “X” from value of attribute “X”. Browsers ignore any token that is not a defined ARIA non-abstract role.
+schema	schema.html5	Element “X” is missing a required child element.
+schema	schema.html5	Element “X” is missing a required instance of child element “X”.
+schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”, “X”.
+schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”, “X”, “X”.
+schema	schema.html5	Element “X” is missing a required instance of one or more of the following child elements: “X”.
+schema	schema.html5	Element “X” is missing one or more of the following attributes: “X”, “X”, “X”, “X”.
+schema	schema.html5	Element “X” is missing one or more of the following attributes: “X”, “X”, “X”.
+schema	schema.html5	Element “X” is missing one or more of the following attributes: “X”, “X”.
+schema	schema.html5	Element “X” is missing required attribute “X”.
+schema	schema.html5	Element “X” must have attribute “X”.
+schema	schema.html5	Element “X” must not be empty.
+schema	schema.html5	Element “X” must not have attribute “X” unless attribute “X” is also specified.
+schema	schema.html5	Element “X” not allowed as child of “X” in this context.
+schema	schema.html5	Element “X” not allowed as child of “X” in this context. Note: The “X” element has a transparent content model; its allowed content is inherited from its parent element.
+schema	schema.html5	Element “X” not allowed.
+schema	schema.html5	Element “X” with attribute “X” whose value is “X” must have non-empty attribute “X”.
+schema	schema.html5	Element “X” without attribute “X” must not be empty.
+schema	schema.html5	Text not allowed in “X” in this context.
+schema	schema.html5	The value of the “X” attribute must be a number between “X” and “X”.
+schema	schema.html5	The value of the “X” attribute must be greater than or equal to zero when the “X” attribute is absent.
+schema	schema.html5	The value of the “X” attribute must be less than or equal to 1000.
+schema	schema.html5	The value of the “X” attribute must be less than or equal to 65534.
+schema	schema.html5	The value of the “X” attribute must be less than or equal to one when the “X” attribute is absent.
+schema	schema.html5	Value of “X” attribute here must not be empty.
+schema	schema.html5	Value of “X” attribute here must not be “X”.
+schema	schema.html5	When the attribute “X” in no namespace is specified, the element must also have the attribute “X” present with the same value.
+scripts	scripts.	A document rule predicate must have one of the properties “X”, “X”, “X”, “X”, or “X”.
+scripts	scripts.	A document rule predicate must have only one of the properties “X”, “X”, “X”, “X”, or “X”.
+scripts	scripts.	A script “X” with a “X” attribute whose value is “X” must have valid JSON content.
+scripts	scripts.	A specifier map defined in a “X” property within the content of a “X” element with a “X” attribute whose value is “X” must have values that end with “X” when its corresponding key ends with “X”.
+scripts	scripts.	A specifier map defined in a “X” property within the content of a “X” element with a “X” attribute whose value is “X” must only contain non-empty keys.
+scripts	scripts.	A specifier map defined in a “X” property within the content of a “X” element with a “X” attribute whose value is “X” must only contain string values.
+scripts	scripts.	A specifier map defined in a “X” property within the content of a “X” element with a “X” attribute whose value is “X” must only contain valid URL values.
+scripts	scripts.	A speculation rule must have a “X” property, or a “X” property (for list rules), or a “X” property (for document rules).
+scripts	scripts.	A speculation rule with “X” set to “X” must have a “X” property.
+scripts	scripts.	A speculation rule with “X” set to “X” must not have a “X” property.
+scripts	scripts.	A “X” element with a “X” attribute whose value is “X” must contain a JSON object with at least one of the properties “X” or “X”.
+scripts	scripts.	A “X” element with a “X” attribute whose value is “X” must contain a JSON object with no properties other than “X”, “X”, and “X”.
+scripts	scripts.	A “X” element with a “X” attribute whose value is “X” must contain a JSON object with only “X” and/or “X” as properties.
+scripts	scripts.	A “X” element with a “X” attribute whose value is “X” must contain a JSON object.
+scripts	scripts.	A “X” element with a “X” attribute whose value is “X” must have valid JSON content.
+scripts	scripts.	Each URL in the “X” array must be a non-empty string.
+scripts	scripts.	Each item in the “X” array must be a string.
+scripts	scripts.	Each item in the “X” array within the content of a “X” element with a “X” attribute whose value is “X” must be a JSON object.
+scripts	scripts.	Each rule in the “X” array must only contain the properties “X”, “X”, “X”, and “X”.
+scripts	scripts.	The value of the “X” property within the content of a “X” element with a “X” attribute whose value is “X” must be a JSON object whose keys are valid URL strings.
+scripts	scripts.	The value of the “X” property within the content of a “X” element with a “X” attribute whose value is “X” must be a JSON object whose values are also JSON objects.
+scripts	scripts.	The value of the “X” property within the content of a “X” element with a “X” attribute whose value is “X” must be a JSON object.
+scripts	scripts.	The “X” property in a document rule must be a JSON array.
+scripts	scripts.	The “X” property in a document rule must be a non-empty string.
+scripts	scripts.	The “X” property in a document rule must be a string or an array of strings.
+scripts	scripts.	The “X” property in a document rule must contain at least one item.
+scripts	scripts.	The “X” property in a document rule must contain at least one pattern.
+scripts	scripts.	The “X” property in a speculation rule must be a JSON array.
+scripts	scripts.	The “X” property in a speculation rule must be a JSON object.
+scripts	scripts.	The “X” property in a speculation rule must be a string.
+scripts	scripts.	The “X” property in a speculation rule must be either “X” or “X”.
+scripts	scripts.	The “X” property in a speculation rule must be one of “X”, “X”, or “X”.
+scripts	scripts.	The “X” property in a speculation rule must contain at least one URL.
+scripts	scripts.	The “X” property within the content of a “X” element with a “X” attribute whose value is “X” must be a JSON array.
+tables	tables.	A table row was 2 columns wide, which is less than the column count established by the first row (3).
+tables	tables.	A table row was 2 columns wide, which is less than the column count established using column markup (3).
+tables	tables.	A table row was 3 columns wide and exceeded the column count established by the first row (2).
+tables	tables.	A table row was 3 columns wide and exceeded the column count established using column markup (2).
+tables	tables.	Row 2 of a row group established by a “X” element has no cells beginning on it.
+tables	tables.	Table cell is overlapped by later table cell.
+tables	tables.	Table cell spans past the end of its row group established by a “X” element; clipped to the end of the row group.
+tables	tables.	Table column 3 established by element “X” has no cells beginning in it.
+tables	tables.	Table columns in range 3…6 established by element “X” have no cells beginning in them.

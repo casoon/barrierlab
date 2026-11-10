@@ -10,9 +10,19 @@ This project contains third-party components and vendored assets from external p
 - **Commit / Tag:** `388cb36`
 - **Vendored Locations:**
   - `schema/` (RelaxNG schemas: `html5/`, `svg11/`, `mathml3-inc.rnc`, `html5-all.rnc`)
-  - `tests/corpus/` (W3C HTML / HTML-ARIA differential test suite)
+    (including `html5/rdfa.rnc`, the RDFa 1.1 attributes and `<link>`/`<meta>` patterns of vnu's default
+    schema, MIT under `schema/html5/LICENSE`; `xtask/vendor-schema.sh`)
+  - `tests/corpus/` (differential test suite: vnu's `tests/html`, `html-aria`, `html-math`,
+    `html-rdfa`, `html-rdfalite`, and the 6 vnu-authored files of `html-svg`)
   - `prebuilt/html5.rngc` (generated: the vendored schemas compiled and serialized, see `src/schema.rs`)
+- **Local changes:** `schema/html5/` equals the pinned commit plus the patches in
+  `xtask/schema-patches/` (`srcset`/`imagesrcset` checked with `w:image-candidate-strings`,
+  `input@autocomplete` checked with `w:autocomplete-any`); `xtask/vendor-schema.sh --check` verifies it.
 - **License:** MIT License (Copyright (c) 2007-2026 Mozilla Foundation, Henri Sivonen, and W3C)
+- **Not vendored:** the other 516 files of vnu's `tests/html-svg`. They embed W3C SVG 1.1 test
+  cases ("Copyright 2009 World Wide Web Consortium ... All Rights Reserved"), which W3C
+  distributes under its document license, not under MIT. `xtask/vendor-corpus.sh` copies only
+  the files without that header.
 
 ---
 

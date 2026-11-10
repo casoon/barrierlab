@@ -16,7 +16,8 @@ use std::ops::Range;
 
 use relax_ng::{
     Content, DatatypeRegistry, Element, ExpandedName, ResolveError, SchemaResolver, SchemaSource,
-    SchemaSyntax, ValidationOptions, parse, simplify, validate, validate_with_options,
+    SchemaSyntax, StreamValidator, ValidationOptions, parse, simplify, validate,
+    validate_with_options,
 };
 use roxmltree::Node;
 
@@ -318,6 +319,34 @@ impl<'a, 'input> Element for RoxmlElement<'a, 'input> {
     }
 }
 
+/// Feeds `element` and its subtree to `validator` as push events — what a
+/// streaming caller (an XML pull parser) does, here driven by walking the
+/// tree. Text runs arrive split in two halves to exercise the merging.
+fn push_events(validator: &mut StreamValidator<'_, ()>, element: &RoxmlElement<'_, '_>) {
+    validator
+        .start_element(
+            element.name(),
+            element.attributes(),
+            element.namespace_bindings(),
+            None,
+        )
+        .expect("well-formed events");
+    for child in element.children() {
+        match child {
+            Content::Text(text) => {
+                let mut middle = text.len() / 2;
+                while !text.is_char_boundary(middle) {
+                    middle += 1;
+                }
+                validator.text(&text[..middle]).expect("text");
+                validator.text(&text[middle..]).expect("text");
+            }
+            Content::Element(child) => push_events(validator, &child),
+        }
+    }
+    validator.end_element().expect("well-formed events");
+}
+
 #[test]
 fn spec_test_suite_instance_validation() {
     let text = load_suite_text();
@@ -326,6 +355,7 @@ fn spec_test_suite_instance_validation() {
 
     let mut checked = 0usize;
     let mut failures: Vec<String> = Vec::new();
+    let mut stream_mismatches: Vec<String> = Vec::new();
     let previous_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));
     for case in &cases {
@@ -365,7 +395,16 @@ fn spec_test_suite_instance_validation() {
                 let instance_document =
                     roxmltree::Document::parse(instance_xml).expect("instance is well-formed XML");
                 let root = RoxmlElement(instance_document.root_element());
-                validate(&compiled, &registry, &root)
+                let tree = validate(&compiled, &registry, &root);
+                let stream = StreamValidator::new(&compiled, &registry).map(|mut validator| {
+                    push_events(&mut validator, &root);
+                    validator.finish().expect("complete document")
+                });
+                // Findings, not just verdicts: same errors in the same order.
+                if format!("{tree:?}") != format!("{stream:?}") {
+                    stream_mismatches.push(format!("{tree:?} != {stream:?}"));
+                }
+                tree
             }));
             let (accepted, panicked) = match outcome {
                 Ok(Ok(errors)) => (errors.is_empty(), false),
@@ -398,6 +437,16 @@ fn spec_test_suite_instance_validation() {
     for failure in &failures {
         eprintln!("  {failure}");
     }
+    eprintln!(
+        "spectest (push validation): {}/{} instances with findings identical to the tree path",
+        checked - stream_mismatches.len(),
+        checked
+    );
+    assert_eq!(
+        stream_mismatches,
+        Vec::<String>::new(),
+        "push validation diverges from the tree path"
+    );
 
     // Same completeness-check convention as schema classification
     // (100% of the usable cases).

@@ -8,11 +8,54 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
+  `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
+  `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`
+  trees fall from 177 and 50 to 2 and 0. vnu's RDFa-Lite-only preset is not offered
+  (barrierlab#173).
+- **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
+  else UTF-8); bytes invalid in that encoding are reported as not checked in every format. A
+  non-UTF-8 file is decoded as declared and still gets `assertion.elements.meta-charset-not-utf8`.
+  Details: [Encodings](https://casoon.github.io/barrierlab/docs/html-conform/guides/cli/#encodings)
+  (barrierlab#74).
+- **CLI:** `--disable <rule>` and `--only <rule>` select findings by rule ID or dotted prefix, and
+  `html-conform.toml` (working directory) or `--config <file>` sets `format`, `fail-on`, `color`,
+  `quiet`, `disable` and `only`; `--no-config` ignores it. Hidden findings are counted on standard
+  error, unknown rule IDs and malformed config files are exit code 2 (barrierlab#74).
+- **Release:** `html-conform` binaries for Linux (x86_64, aarch64), macOS (x86_64, aarch64) and
+  Windows (x86_64) are attached to the release with `SHA256SUMS` and a build provenance
+  attestation (barrierlab#74).
+
+### Changed
+
+- **Rules:** a `<link>` may carry `resource` instead of `href`, and a `<link>` with `property`
+  is allowed in the body.
+
+### Fixed
+
+- **Schema check:** `xmlns:prefix` on an HTML element is reported (it stays visible to the schema;
+  on SVG and MathML elements it is still a namespace declaration), and `rev` on `<a>` is accepted
+  as in vnu's `legacy.rnc` (patch `0003-a-rev-legacy`). Differences to vnu on the `html-rdfa` and
+  `html-rdfalite` trees fall from 2 false positives and 7 false negatives to none (barrierlab#181).
+- **Schema check:** `xlink:href` and the other XLink attributes on SVG elements were rejected as
+  "unexpected attribute"; they now match the schema's `{xlink}href` (barrierlab#172).
+
+## [0.5.0] - 2026-11-09
+
+### Added
+
+- **CLI:** the `cli` feature (off by default, no new dependency) builds an `html-conform` binary
+  that checks files, directories and stdin and writes text, JSON, SARIF 2.1.0 or JUnit; exit code
+  0/1/2 by `--fail-on`. Unchecked content and unreadable files appear in every format, never as a
+  pass. Install with `cargo install html-conform --features cli` (barrierlab#74).
 - **Features:** `runtime-compile` compiles the vendored schema on first use instead of loading
   the prebuilt artefact.
 
 ### Changed
 
+- **Dependencies:** requires `html5-parser` 0.5 (more tree-construction and tokenizer parse errors
+  are reported, so parse-error findings can differ), `relax-ng` 0.2.4 with its `serialize`
+  feature, and `a11y-report` 0.29.
 - **Start-up:** the first `check()` in a process loads the schema from `prebuilt/html5.rngc`
   instead of compiling the `.rnc` files: about 3.7 billion instructions and 146 ms become 0.12
   billion and 7 ms (barrierlab#72). Findings are unchanged. Regenerate with `xtask/README.md`.

@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
 ### Added
 
 - **ParseErrorKind:** `StrayCharacter`, `NestedHeading`, `NestedButton`, `OptionInScope` and
@@ -15,8 +17,8 @@ in the git history only.
   with an option in scope, and HTML tags that break out of SVG/MathML (§13.2.6.5).
 - **Tests:** the html5lib tree-construction harness also compares the reported parse errors with
   each case's `#errors`/`#new-errors` (presence and WHATWG codes; exact count and positions are
-  reported only). 1,581 of 1,602 cases agree on presence (1,486 before) and 1,560 on the codes;
-  the rest are listed in `tests/html5lib_errors_known_failures.txt`.
+  reported only). 1,591 of 1,602 cases agree on presence (1,486 before); the 11 exceptions
+  (files without error expectations) are listed in `tests/html5lib_errors_known_failures.txt`.
 
 ### Changed
 
@@ -31,6 +33,11 @@ in the git history only.
   frameset modes are `StrayStartTag`/`StrayEndTag`/`StrayCharacter`, and EOF with a frameset or
   `template` open is `EofWithUnclosedElements`; a head-only start tag after `</head>` and `input`
   inside `select` are `StrayStartTag`; `td`/`th` in a table body is `MisplacedTokenInTable`.
+
+- **Tokenizer:** `UnexpectedNullCharacter` is reported in every state the spec lists it for (RCDATA,
+  RAWTEXT, PLAINTEXT, script data, tag/attribute/comment/DOCTYPE states), plus
+  `EofInScriptHtmlCommentLikeText` and `MissingQuoteBeforeDoctypeSystemIdentifier` where they were
+  missing. Token streams are unchanged.
 
 ## [0.4.2] - 2026-11-06
 

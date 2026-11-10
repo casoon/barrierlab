@@ -192,6 +192,24 @@ mod tests {
     }
 
     #[test]
+    fn svg_xlink_href_is_accepted_but_unknown_foreign_attributes_are_not() {
+        // barrierlab#172: html5-parser keeps `xlink:href` as the source name
+        // with the XLink namespace; the schema expects `{xlink}href`.
+        let page = |svg: &str| {
+            format!("<!doctype html><html lang=\"en\"><title>t</title><body>{svg}</body></html>")
+        };
+        let report = check(&page(
+            r##"<svg><defs><circle id="a" r="1"/></defs><use xlink:href="#a"/></svg>"##,
+        ))
+        .expect("HTML5 parsing should recover");
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+
+        let report = check(&page(r##"<svg><use xlink:bogus="#a"/></svg>"##))
+            .expect("HTML5 parsing should recover");
+        assert!(!report.findings.is_empty());
+    }
+
+    #[test]
     fn whitespace_before_a_leading_optional_child_is_ignored() {
         // barrierlab#41: inter-element whitespace before `legend` (and the
         // other "optionally X first, then flow content" models) is not text.
@@ -369,6 +387,39 @@ mod tests {
         .expect("HTML5 parsing should recover");
 
         assert!(report.findings.is_empty(), "{:?}", report.findings);
+    }
+
+    /// RDFa 1.1 is part of vnu's default schema (barrierlab#173).
+    #[test]
+    fn rdfa_attributes_are_conforming_and_unknown_ones_are_not() {
+        let page = |body: &str| {
+            format!(
+                "<!DOCTYPE html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\
+                 <title>t</title></head>\n<body vocab=\"http://schema.org/\">{body}</body>\n</html>\n"
+            )
+        };
+        let report = check(&page(
+            "<div typeof=\"Person\" prefix=\"ex: http://example.org/\">\
+             <link property=\"ex:copy\" resource=\"_:a\">\
+             <span property=\"name\" about=\"#me\">A</span></div>",
+        ))
+        .expect("HTML5 parsing should recover");
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+
+        let report =
+            check(&page("<p propertyy=\"x\">A</p>")).expect("HTML5 parsing should recover");
+        assert!(!report.findings.is_empty());
+    }
+
+    /// barrierlab#181: `xmlns:prefix` is reported on HTML elements (vnu does
+    /// too), `rev` on `<a>` is accepted (vnu's legacy.rnc).
+    #[test]
+    fn xmlns_prefix_on_html_is_reported_and_rev_on_a_is_not() {
+        assert!(
+            !rule_ids_for_body(r#"<p xmlns:x="http://example.org/">A</p>"#).is_empty(),
+            "xmlns:x on <p>"
+        );
+        assert!(rule_ids_for_body(r#"<a href="/" rev="made">A</a>"#).is_empty());
     }
 
     #[test]

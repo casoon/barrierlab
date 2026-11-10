@@ -237,7 +237,7 @@ fn xpath_lang<'a, N: Node<'a>>(n: N, arg: &str) -> bool {
 /// namespace URI, no matching namespace node in scope (e.g. a caller's tree
 /// that doesn't populate namespace nodes), or the matching namespace node's
 /// prefix is empty (the default namespace, §5.4).
-fn qname_string<'a, N: Node<'a>>(node: N) -> String {
+pub(crate) fn qname_string<'a, N: Node<'a>>(node: N) -> String {
     let Some(en) = node.expanded_name() else {
         return String::new();
     };

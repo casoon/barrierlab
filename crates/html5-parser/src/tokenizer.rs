@@ -1145,6 +1145,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_tag_mut().name.push('\u{FFFD}');
                     false
                 }
@@ -1205,6 +1208,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_attribute_name.push('\u{FFFD}');
                     false
                 }
@@ -1280,6 +1286,9 @@ impl Tokenizer {
                 }
                 Some('>') => self.close_tag(out),
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.push_attribute_value_char('\u{FFFD}');
                     false
                 }
@@ -1525,6 +1534,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_comment_data.push('\u{FFFD}');
                     false
                 }
@@ -1586,6 +1598,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_comment_data.push('\u{FFFD}');
                     false
                 }
@@ -1759,6 +1774,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_doctype = Some(DoctypeToken {
                         name: Some("\u{FFFD}".to_owned()),
                         ..Default::default()
@@ -1810,6 +1828,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // U+0000 NULL: unexpected-null-character parse error; the
+                    // character is replaced by U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     self.current_doctype_mut()
                         .name
                         .as_mut()
@@ -1946,7 +1967,17 @@ impl Tokenizer {
                     self.start_doctype_system_identifier(quoted_state)
                 }
                 None => self.eof_in_doctype(out, position),
-                Some(_) => self.bogus_doctype_with_quirks(),
+                Some(_) => {
+                    // After DOCTYPE public identifier state, anything else:
+                    // missing-quote-before-doctype-system-identifier parse
+                    // error, force-quirks, reconsume in the bogus DOCTYPE
+                    // state.
+                    self.error(
+                        ParseErrorKind::MissingQuoteBeforeDoctypeSystemIdentifier,
+                        position,
+                    );
+                    self.bogus_doctype_with_quirks()
+                }
             },
             State::BetweenDoctypePublicAndSystemIdentifiers => match ch {
                 Some(c) if Self::is_whitespace(c) => false,
@@ -1958,7 +1989,17 @@ impl Tokenizer {
                     self.start_doctype_system_identifier(State::DoctypeSystemIdentifierSingleQuoted)
                 }
                 None => self.eof_in_doctype(out, position),
-                Some(_) => self.bogus_doctype_with_quirks(),
+                Some(_) => {
+                    // Between DOCTYPE public and system identifiers state, anything else:
+                    // missing-quote-before-doctype-system-identifier parse
+                    // error, force-quirks, reconsume in the bogus DOCTYPE
+                    // state.
+                    self.error(
+                        ParseErrorKind::MissingQuoteBeforeDoctypeSystemIdentifier,
+                        position,
+                    );
+                    self.bogus_doctype_with_quirks()
+                }
             },
             State::AfterDoctypeSystemKeyword => match ch {
                 Some(c) if Self::is_whitespace(c) => {
@@ -2051,7 +2092,12 @@ impl Tokenizer {
             },
             State::BogusDoctype => match ch {
                 Some('>') => self.close_doctype(out),
-                Some('\0') => false,
+                Some('\0') => {
+                    // Bogus DOCTYPE state: U+0000 NULL is an
+                    // unexpected-null-character parse error; ignored.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
+                    false
+                }
                 None => {
                     self.emit_doctype(out);
                     push_eof(out, position);
@@ -2194,6 +2240,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // RCDATA state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2230,6 +2279,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // RAWTEXT state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2261,6 +2313,9 @@ impl Tokenizer {
             }
             State::PlainText => match ch {
                 Some('\0') => {
+                    // PLAINTEXT state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2280,6 +2335,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // script data state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2355,6 +2413,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // script data escaped state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2382,10 +2443,16 @@ impl Tokenizer {
                 }
                 Some('\0') => {
                     self.state = State::ScriptDataEscaped;
+                    // script data escaped dash state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
                 None => {
+                    // script data escaped dash state: EOF is an eof-in-script-html-comment-like-text
+                    // parse error; then emit an end-of-file token.
+                    self.error(ParseErrorKind::EofInScriptHtmlCommentLikeText, position);
                     push_eof(out, position);
                     false
                 }
@@ -2412,10 +2479,16 @@ impl Tokenizer {
                 }
                 Some('\0') => {
                     self.state = State::ScriptDataEscaped;
+                    // script data escaped dash dash state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
                 None => {
+                    // script data escaped dash dash state: EOF is an eof-in-script-html-comment-like-text
+                    // parse error; then emit an end-of-file token.
+                    self.error(ParseErrorKind::EofInScriptHtmlCommentLikeText, position);
                     push_eof(out, position);
                     false
                 }
@@ -2491,6 +2564,9 @@ impl Tokenizer {
                     false
                 }
                 Some('\0') => {
+                    // script data double escaped state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
@@ -2499,6 +2575,9 @@ impl Tokenizer {
                     false
                 }
                 None => {
+                    // script data double escaped state: EOF is an eof-in-script-html-comment-like-text
+                    // parse error; then emit an end-of-file token.
+                    self.error(ParseErrorKind::EofInScriptHtmlCommentLikeText, position);
                     push_eof(out, position);
                     false
                 }
@@ -2516,10 +2595,16 @@ impl Tokenizer {
                 }
                 Some('\0') => {
                     self.state = State::ScriptDataDoubleEscaped;
+                    // script data double escaped dash state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
                 None => {
+                    // script data double escaped dash state: EOF is an eof-in-script-html-comment-like-text
+                    // parse error; then emit an end-of-file token.
+                    self.error(ParseErrorKind::EofInScriptHtmlCommentLikeText, position);
                     push_eof(out, position);
                     false
                 }
@@ -2546,10 +2631,16 @@ impl Tokenizer {
                 }
                 Some('\0') => {
                     self.state = State::ScriptDataDoubleEscaped;
+                    // script data double escaped dash dash state: U+0000 NULL is an unexpected-null-character
+                    // parse error; emit U+FFFD.
+                    self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                     push_character(out, '\u{FFFD}', position);
                     false
                 }
                 None => {
+                    // script data double escaped dash dash state: EOF is an eof-in-script-html-comment-like-text
+                    // parse error; then emit an end-of-file token.
+                    self.error(ParseErrorKind::EofInScriptHtmlCommentLikeText, position);
                     push_eof(out, position);
                     false
                 }
@@ -2688,6 +2779,9 @@ impl Tokenizer {
                 false
             }
             Some('\0') => {
+                // U+0000 NULL: unexpected-null-character parse error; the
+                // character is replaced by U+FFFD.
+                self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                 self.push_attribute_value_char('\u{FFFD}');
                 false
             }
@@ -2870,6 +2964,9 @@ impl Tokenizer {
                 false
             }
             Some('\0') => {
+                // U+0000 NULL: unexpected-null-character parse error; the
+                // character is replaced by U+FFFD.
+                self.error(ParseErrorKind::UnexpectedNullCharacter, position);
                 self.doctype_identifier_mut(kind).push('\u{FFFD}');
                 false
             }

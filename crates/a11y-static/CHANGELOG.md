@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-09
+
+### Changed
+
+- **Breaking, Abhängigkeiten:** baut auf `a11y-dom`, `a11y-report`, `a11y-rules` und `accname` 0.29.0 auf; die öffentlichen Berichtstypen stammen aus `a11y-report` 0.29, und Regeln ohne Voraussetzung stehen als `NotRun` in `rule_runs` statt als `UNTESTED`-Befund (Folge aus `a11y-rules`; casoon/barrierlab#145).
+
 ## [0.2.1] - 2026-11-08
 
 ### Added

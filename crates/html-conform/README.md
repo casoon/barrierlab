@@ -77,6 +77,38 @@ fn main() {
 }
 ```
 
+### Command line
+
+The `cli` feature (off by default, no extra dependency) builds an `html-conform` binary:
+
+```sh
+cargo install html-conform --features cli
+html-conform dist/ --format sarif > html-conform.sarif
+```
+
+It checks files, directories (`*.html`, `*.htm`, recursively) and stdin (`-`); `--format
+text|json|sarif|junit`, `--fail-on fail|review`, `--color auto|always|never`, `-q`,
+`--disable <rule>` / `--only <rule>` and an `html-conform.toml`. Files are decoded by BOM, then
+`<meta charset>`, then UTF-8. Exit code 0
+is clean, 1 findings at the `--fail-on` level, 2 usage/I/O error or a document that could not
+be checked. Content the checker does not validate is reported in every format, never as a
+pass. Details: [docs/html-conform/guides/cli.md](../../docs/html-conform/guides/cli.md).
+
+#### Prebuilt binaries
+
+Official binaries (Linux x86_64 and aarch64 as musl, macOS x86_64 and aarch64, Windows x86_64)
+come only from the [GitHub releases](https://github.com/casoon/barrierlab/releases) tagged
+`html-conform-vX.Y.Z` of `casoon/barrierlab`, built there by the release workflow, never on a
+developer machine. To verify a download by hand, check the hash and the signed build
+provenance:
+
+```bash
+shasum -a 256 -c html-conform-vX.Y.Z-<target>.tar.gz.sha256
+gh attestation verify html-conform-vX.Y.Z-<target>.tar.gz --repo casoon/barrierlab
+```
+
+`SHA256SUMS` in the same release lists all archives (`.zip` on Windows).
+
 ### Fine-Grained Options
 
 ```rust

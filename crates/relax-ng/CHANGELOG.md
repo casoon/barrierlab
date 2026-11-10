@@ -9,14 +9,23 @@ in the git history only.
 
 ### Added
 
-- **API:** feature `serialize` adds `Schema::to_bytes`/`from_bytes`, a stable, versioned binary
-  form of the compiled schema that a host can build once and load instead of compiling
-  (barrierlab#72). Malformed input is a `LoadError`; no new dependencies.
-
+- **API:** `StreamValidator` (also `Schema::stream_validator`) and `StreamError` validate a
+  document from `start_element`/`text`/`end_element` events without an `Element` tree; the findings
+  equal those of `validate` (barrierlab#77). No new dependencies.
+- **Datatypes:** `pattern` facets accept the XSD name escapes `\i`, `\I`, `\c`, `\C` and
+  character-class subtraction (`[\i-[:]]`); the `regex` crate knows neither (barrierlab#173).
 - **API:** `validate_with_options`/`Schema::validate_with_options` with `ValidationOptions` add an
   opt-in recovery after an unexpected element: its subtree is checked against the element's
   definitions elsewhere in the schema, and the extra errors report `is_recovered()`. Off by
-  default; the verdict and the plain error list are unchanged (barrierlab#76).
+  default; the verdict and the plain error list are unchanged. The tree walk only; `StreamValidator` has no recovery (barrierlab#76).
+
+## [0.2.4] - 2026-11-09
+
+### Added
+
+- **API:** feature `serialize` adds `Schema::to_bytes`/`from_bytes`, a stable, versioned binary
+  form of the compiled schema that a host can build once and load instead of compiling
+  (barrierlab#72). Malformed input is a `LoadError`; no new dependencies.
 
 ### Changed
 

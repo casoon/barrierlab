@@ -118,3 +118,62 @@ earlier vendoring (PR #119) remain in the git history.
 `roxmltree` (arena in document order, the `xml` namespace node on every
 element, no ID attributes). It is test-only code; the crate itself has no
 document model and no XML dependency.
+
+# XPath 2.0 mode
+
+The opt-in XPath 2.0 mode (`XPathVersion::V2`, design in
+[`docs/packages/xpath-eval.md`](../../docs/packages/xpath-eval.md)) is checked
+two ways.
+
+## Own tests
+
+`tests/xpath20.rs` and the unit tests in `src/xpath2/` are written from XPath 2.0
+(Second Edition) and XQuery 1.0 and XPath 2.0 Functions and Operators, with the
+section named in the comments: version switch and default, conditional,
+quantified, `for` and range expressions, general/value/node comparison,
+arithmetic and exact decimals, path steps that are expressions, set operators,
+casts and constructors, dates, the function library, lexical forms and
+precedence, syntax errors, and the three failure classes (unsupported feature,
+static error, dynamic error). Run with `cargo test -p xpath-eval` (also in CI).
+
+## EN 16931 coverage
+
+Source of expressions: the preprocessed UBL and CII validation Schematron of
+`ConnectingEurope/eInvoicing-EN16931`, tag `validation-1.3.17`
+(`queryBinding="xslt2"`, EUPL-1.2, fetched into the gitignored
+`tests/corpus/en16931` and never committed).
+
+| | |
+|---|---|
+| Files | `ubl/schematron/preprocessed/EN16931-UBL-validation-preprocessed.sch` SHA-256 `64b93f26acadd19de9792cec9e085628271c6fe3870ecacbf4e7271272f2ef08`, `cii/schematron/preprocessed/EN16931-CII-validation-preprocessed.sch` SHA-256 `74fa94df0513881b9c8e369650bb2282f9c8a30bb52ce4ce43d1219e88ccedc2` |
+| Run on | 2026-11-10, `xpath-eval` 0.2.3 plus the XPath 2.0 mode (unreleased) |
+| Runner | `tests/en16931.rs` (`#[ignore]`) |
+
+Every `@test` (assert/report) and rule `@context`, 2010 expressions, is parsed
+and evaluated against a small own sample invoice per syntax (UBL, CII), the
+document element as context node for tests and the root for contexts.
+"Evaluates" means it returns a value instead of an error. The sample is not a
+conforming invoice, so the results are not judged; a rule run on the wrong
+context (for example a `.` comparison on the document element) can legitimately
+fail, and in XPath 1.0 mode an unknown function only fails when the evaluation
+reaches it (`and`/`or` short-circuit), so the 1.0 evaluate figure is an upper
+bound.
+
+| Expressions | 1.0 mode: parse | 1.0 mode: evaluate | 2.0 mode: parse | 2.0 mode: evaluate |
+|---|---:|---:|---:|---:|
+| UBL (1085) | 981 | 903 | 1085 | 1085 |
+| CII (925) | 890 | 877 | 925 | 923 |
+| **Total (2010)** | **1871 (93.1 %)** | **1780 (88.6 %)** | **2010 (100 %)** | **2008 (99.9 %)** |
+
+2.0 mode, the 2 that do not evaluate: one is `matches()` (reported as
+*unsupported*, regular expressions are slice 2), the other a `. = ...` amount
+comparison evaluated on the document element instead of the amount element it
+belongs to (a type error `FORG0001`, which is correct: the harness context, not
+the engine). 261 of the 2010 expressions contain a construct that exists only
+in XPath 2.0; none of them can give a correct result in 1.0 mode.
+
+```sh
+cd crates/xpath-eval
+xtask/vendor-en16931.sh                            # fetch into tests/corpus/en16931
+cargo test -p xpath-eval --test en16931 -- --ignored --nocapture
+```

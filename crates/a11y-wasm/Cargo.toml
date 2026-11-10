@@ -1,6 +1,6 @@
 [package]
 name = "a11y-wasm"
-version = "0.15.2"
+version = "0.16.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -11,6 +11,13 @@ categories.workspace = true
 description = "WASM boundary and arena adapter for the a11y rule set: run the same accessibility rules inside a live page."
 keywords = ["accessibility", "a11y", "wasm", "webassembly", "aria"]
 readme = "README.md"
+
+[features]
+default = ["probes"]
+# Messspalten für die seitenabhängigen Regeln (`Scan::withFrames` und Verwandte).
+# Standardmäßig an (Größenbudget 180 KB gzip, 09.11.2026); mit
+# `--no-default-features` entsteht die schlanke Variante ohne die Spalten.
+probes = []
 
 [lib]
 crate-type = ["cdylib", "rlib"]

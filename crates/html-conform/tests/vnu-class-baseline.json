@@ -1,0 +1,8 @@
+{
+  "html": { "matched": 3389, "incidental": 100, "missed": 1, "unmapped": 0, "false_positive": 0 },
+  "html-aria": { "matched": 253, "incidental": 3, "missed": 0, "unmapped": 0, "false_positive": 0 },
+  "html-math": { "matched": 18, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
+  "html-rdfa": { "matched": 28, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
+  "html-rdfalite": { "matched": 2, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
+  "html-svg": { "matched": 0, "incidental": 0, "missed": 1, "unmapped": 0, "false_positive": 0 }
+}

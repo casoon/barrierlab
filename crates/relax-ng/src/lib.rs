@@ -24,6 +24,6 @@ pub use serialize::{FORMAT_VERSION, LoadError, SerializeError};
 pub use simplify::{CompiledSchema, SchemaError, simplify};
 pub use syntax::{ParseError, parse};
 pub use validator::{
-    Content, Element, ExpandedName, ValidationError, ValidationErrorKind, ValidationOptions,
-    validate, validate_with_options,
+    Content, Element, ExpandedName, StreamError, StreamValidator, ValidationError,
+    ValidationErrorKind, ValidationOptions, validate, validate_with_options,
 };

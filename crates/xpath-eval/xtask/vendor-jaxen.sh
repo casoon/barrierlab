@@ -5,7 +5,7 @@ set -euo pipefail
 # tests/corpus/jaxen on demand. The directory is gitignored: the sample
 # documents carry no licence notice of their own, so the corpus is
 # intentionally NOT part of this repository (see CONFORMANCE.md).
-# Run from crates/xpath-eval, then:
+# Then:
 #   cargo test -p xpath-eval --test jaxen -- --ignored
 #
 # Source: https://github.com/jaxen-xpath/jaxen, path core/xml/
@@ -14,7 +14,8 @@ set -euo pipefail
 readonly upstream_repository='https://github.com/jaxen-xpath/jaxen.git'
 readonly upstream_revision='e675b18efa486234ed364483184ae8ce493c48d1'
 readonly tests_sha256='46c5c8f4acf69f1d3ce5e4773fc91ad4901d64e5379ef152a8d8f7d37eef204b'
-readonly destination='tests/corpus/jaxen'
+script_directory=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+readonly destination="$script_directory/../tests/corpus/jaxen"
 
 if [[ -e "$destination/tests.xml" ]]; then
   echo "$destination already present; remove it to fetch again" >&2

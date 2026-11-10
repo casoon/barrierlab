@@ -10,6 +10,8 @@ importers:
 
   packages/a11y-wasm: {}
 
+  packages/html-conform-wasm: {}
+
   site:
     dependencies:
       '@casoon/chartlet':

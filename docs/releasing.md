@@ -66,7 +66,8 @@ erste Version eine Veröffentlichung von Hand. Erst danach greift der Weg oben.
 
 ## npm
 
-Nur für Pakete unter `packages/`. Veröffentlicht wird `@casoon/a11y-wasm` über
+Nur für Pakete unter `packages/`. Veröffentlicht werden `@casoon/a11y-wasm` und
+`@casoon/html-conform-wasm` (Tag-Präfix `html-conform-wasm-npm-v`, sonst derselbe Ablauf) über
 **npm Trusted Publishing** (GitHub OIDC, Provenance, kein Token) aus
 `.github/workflows/release-npm.yml`:
 
@@ -80,9 +81,11 @@ Nur für Pakete unter `packages/`. Veröffentlicht wird `@casoon/a11y-wasm` übe
    LICENSE, README und `pkg/` darin liegen. Der Job `publish-npm` wartet auf die
    Freigabe in der GitHub-Umgebung `npm` und veröffentlicht genau dieses Tarball.
 
-Auf npmjs.com trägt das Paket einmalig einen Trusted Publisher ein
+Auf npmjs.com trägt **jedes Paket** einmalig einen Trusted Publisher ein
 (*Settings → Trusted Publisher*): Organisation `casoon`, Repository `barrierlab`,
-Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt.
+Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt. Für
+`@casoon/html-conform-wasm` steht das noch aus; das Paket gibt es auf npm erst nach dem ersten
+Publish.
 
 ## WASM
 
@@ -98,7 +101,28 @@ wasm-bindgen --target web --out-dir packages/a11y-wasm/pkg <artefakt>
 
 statt über `wasm-pack build --release`.
 
-## Was hier nicht veröffentlicht wird
+## Binaries: `html-conform`
 
-Keine Binärauslieferung. Plattform-Binaries und die npm-Pakete, die sie
+Das Crate `html-conform` baut mit dem Feature `cli` ein Kommandozeilenwerkzeug. Seine
+Binaries entstehen in `.github/workflows/release-html-conform-binaries.yml`: je Ziel
+(Linux x86_64 und aarch64 als musl, macOS x86_64 und aarch64, Windows x86_64) ein Archiv mit
+`.sha256`, dazu eine kombinierte `SHA256SUMS` und eine Build-Provenance-Attestation
+(`actions/attest-build-provenance`). Alles landet am GitHub-Release des Tags
+`html-conform-vX.Y.Z`; wo release-plz noch keines angelegt hat, legt der Workflow es an.
+
+Der Tag kommt weiterhin von release-plz (unverändert). Ein mit dem Workflow-Token gesetzter Tag
+startet allerdings keinen Workflow (wie bei `release-npm.yml`). Deshalb nach dem
+release-plz-Lauf von Hand anstoßen:
+
+```
+gh workflow run release-html-conform-binaries.yml -f tag=html-conform-vX.Y.Z
+```
+
+Ein von Hand gepushter Tag `html-conform-v*` startet den Workflow selbst. Der Tag muss zur
+Version in `crates/html-conform/Cargo.toml` passen. Im README des Crates steht, wie ein
+Download zu prüfen ist (`shasum -a 256 -c`, `gh attestation verify`).
+
+## Was hier sonst nicht veröffentlicht wird
+
+Keine weitere Binärauslieferung. Plattform-Binaries und die npm-Pakete, die sie
 nachladen, bleiben bei den Werkzeugen (astro-post-audit, auditmysite).

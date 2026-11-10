@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.28.3"
+version = "0.29.0"
 dependencies = [
  "html5-parser",
 ]
@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.28.3"
+version = "0.29.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.28.3"
+version = "0.29.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-static"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.15.2"
+version = "0.16.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -66,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.28.3"
+version = "0.29.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",
@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.4.2"
+version = "0.5.0"
 dependencies = [
  "a11y-report",
  "criterion",
@@ -360,8 +360,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "html-conform-wasm"
+version = "0.1.0"
+dependencies = [
+ "a11y-report",
+ "html-conform",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "html5-parser"
-version = "0.4.2"
+version = "0.5.0"
 
 [[package]]
 name = "icu_collections"
@@ -665,7 +676,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "relax-ng"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "regex",
  "roxmltree",
@@ -698,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "schematron-engine"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "roxmltree",
  "xpath-eval",
@@ -784,7 +795,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "style-cascade"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",

@@ -11,6 +11,10 @@
 #![forbid(unsafe_code)]
 
 mod arena;
+#[cfg(all(test, feature = "probes"))]
+mod probe_rules;
+#[cfg_attr(not(feature = "probes"), allow(dead_code))]
+mod probes;
 mod rendering;
 mod semantics;
 #[cfg(test)]
@@ -19,6 +23,9 @@ mod testing;
 use wasm_bindgen::prelude::*;
 
 pub use arena::{Arena, ArenaNode};
+pub use probes::{
+    PASTE_CANCELLED, PASTE_INSERTED, ProbeColumns, SPACING_AFTER, SPACING_BEFORE, Sparse,
+};
 pub use rendering::{LayoutColumns, RenderArena, RenderingColumns};
 pub use semantics::SemanticArena;
 
@@ -39,6 +46,16 @@ pub struct Scan {
     /// Layout und Geometrie für die heuristischen Regeln. Fehlen sie, melden
     /// diese Regeln nichts.
     layout: Option<LayoutColumns>,
+    /// Messungen an der laufenden Seite, je Spalte optional. Eine fehlende
+    /// Spalte ist „nicht gemessen"; die Regel dazu steht als nicht gelaufen im
+    /// Bericht.
+    #[cfg(feature = "probes")]
+    probes: ProbeColumns,
+}
+
+/// Der Fehler an der JS-Grenze: ein `Error` mit Angabe der Spalte.
+fn invalid(what: &str, msg: String) -> JsValue {
+    JsValue::from(JsError::new(&format!("invalid {what} columns: {msg}")))
 }
 
 #[wasm_bindgen]
@@ -89,6 +106,8 @@ impl Scan {
         Ok(Scan {
             rendering: None,
             layout: None,
+            #[cfg(feature = "probes")]
+            probes: ProbeColumns::default(),
             arena,
         })
     }
@@ -148,19 +167,112 @@ impl Scan {
         });
     }
 
+    /// Der Baumbereich je Knoten, damit ID-Verweise (`aria-labelledby`,
+    /// `label[for]`, …) nur Ziele im eigenen Bereich treffen.
+    ///
+    /// `scopes` hat einen Eintrag je Knoten: `0` ist das Dokument, jede andere
+    /// Zahl eine Shadow Root (je Dokument eindeutig, vom Collector gewählt).
+    /// Per `<slot>` eingesetzte Knoten tragen den Bereich des äußeren Baums.
+    /// Ohne diesen Aufruf liegen alle Knoten im Dokument. Wirft einen `Error`,
+    /// wenn die Länge nicht zur Arena passt oder ein Wert außerhalb liegt.
+    #[wasm_bindgen(js_name = withScopes)]
+    pub fn with_scopes(&mut self, scopes: Vec<u32>) -> Result<(), JsValue> {
+        self.arena
+            .set_scopes(scopes)
+            .map_err(|msg| invalid("scope", msg))
+    }
+}
+
+/// Messspalten für die seitenabhängigen Regeln (Feature `probes`): Sie ziehen
+/// den Rumpf der fünf Regeln in das Artefakt und liegen deshalb hinter einem
+/// Feature, bis über das Größenbudget entschieden ist.
+#[cfg(feature = "probes")]
+#[wasm_bindgen]
+impl Scan {
+    /// Messung `frame_reachable` je `<iframe>`/`<frame>`: `nodes` sind
+    /// Knotenindizes (streng aufsteigend), `reachable` je Knoten 1 (Dokument
+    /// lesbar) oder 0 (nicht lesbar). Nur zusammen mit `withRendering`
+    /// wirksam, wie alle Messspalten.
+    #[wasm_bindgen(js_name = withFrames)]
+    pub fn with_frames(&mut self, nodes: Vec<u32>, reachable: Vec<u8>) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self.probes.set_frames(n, nodes, &reachable)).map_err(|m| invalid("frame", m))
+    }
+
+    /// Messung `box_transform` (mindestens `html` und `body`): berechnetes
+    /// `transform` und `rotate` als Zeichenketten, wie der Browser sie
+    /// serialisiert. Eine leere Zeichenkette heißt: Feld nicht gemessen.
+    #[wasm_bindgen(js_name = withTransforms)]
+    pub fn with_transforms(
+        &mut self,
+        nodes: Vec<u32>,
+        transform: Vec<String>,
+        rotate: Vec<String>,
+    ) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self.probes.set_transforms(n, nodes, transform, rotate))
+            .map_err(|m| invalid("transform", m))
+    }
+
+    /// Messung `paste_probe` je Passwort- oder Codefeld. `flags`: Bit 0 =
+    /// Ereignis abgebrochen (`cancelled`), Bit 1 = Probetext stand danach im
+    /// Feld (`inserted`).
+    #[wasm_bindgen(js_name = withPasteProbes)]
+    pub fn with_paste_probes(&mut self, nodes: Vec<u32>, flags: Vec<u8>) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self.probes.set_paste(n, nodes, &flags)).map_err(|m| invalid("paste", m))
+    }
+
+    /// Messung `focus_cover` je fokussiertem Bedienelement: Abtastpunkte,
+    /// davon überdeckte, und der Knotenindex des obersten überdeckenden
+    /// Elements (`-1`: keines).
+    #[wasm_bindgen(js_name = withFocusCover)]
+    pub fn with_focus_cover(
+        &mut self,
+        nodes: Vec<u32>,
+        points: Vec<u32>,
+        covered: Vec<u32>,
+        blocker: Vec<i32>,
+    ) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self.probes.set_focus(n, nodes, &points, &covered, &blocker))
+            .map_err(|m| invalid("focus", m))
+    }
+
+    /// Messung `text_spacing_clip` je Textcontainer. `flags`: Bit 0 = vor dem
+    /// Überschreiben des Textabstands abgeschnitten, Bit 1 = danach.
+    #[wasm_bindgen(js_name = withTextSpacing)]
+    pub fn with_text_spacing(&mut self, nodes: Vec<u32>, flags: Vec<u8>) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self.probes.set_spacing(n, nodes, &flags)).map_err(|m| invalid("spacing", m))
+    }
+}
+
+#[wasm_bindgen]
+impl Scan {
     #[wasm_bindgen(unchecked_return_type = "Report")]
     pub fn run(&self) -> Result<JsValue, JsValue> {
-        let report = match &self.rendering {
+        serde_wasm_bindgen::to_value(&self.report()).map_err(JsValue::from)
+    }
+}
+
+impl Scan {
+    /// Der Bericht, bevor er über die Grenze geht — auch ohne WASM prüfbar.
+    fn report(&self) -> a11y_report::Report {
+        match &self.rendering {
             Some(spalten) => {
-                let host = RenderArena::new(&self.arena, spalten);
-                match &self.layout {
-                    Some(layout) => a11y_rules::run_full(&host.with_layout(layout)),
-                    None => a11y_rules::run_full(&host),
+                let mut host = RenderArena::new(&self.arena, spalten);
+                #[cfg(feature = "probes")]
+                {
+                    host = host.with_probes(&self.probes);
                 }
+                if let Some(layout) = &self.layout {
+                    host = host.with_layout(layout);
+                }
+                a11y_rules::run_full(&host)
             }
             None => a11y_rules::run_with_semantics(&SemanticArena::new(&self.arena)),
-        };
-        serde_wasm_bindgen::to_value(&report).map_err(JsValue::from)
+        }
     }
 }
 
@@ -345,6 +457,14 @@ mod tests {
             "auth/paste-blocked",
             "focus/obscured-enhanced",
             "text-spacing/clipped",
+            // Ohne Layout-Spalten messen die Heuristiken nichts und stehen
+            // als nicht gelaufen im Bericht.
+            "order/visual-mismatch",
+            "motion/infinite-animation",
+            "reflow/min-width",
+            "keyboard/pointer-only",
+            "focus/obscured",
+            "keyboard/scrollable-region-not-focusable",
         ];
         let offen = report
             .rule_runs
@@ -359,6 +479,63 @@ mod tests {
                 .sum::<usize>()
         );
         assert_eq!(report.summary.pass, 0);
+    }
+
+    /// `withScopes` erreicht den Bericht: dieselbe ID zweimal ist ein Duplikat,
+    /// bis die zweite in eine Shadow Root verlegt wird.
+    #[test]
+    fn with_scopes_wirkt_auf_den_bericht() {
+        let arena = build(|b| {
+            b.open("body")
+                .open("span")
+                .attr("id", "d")
+                .close()
+                .open("div")
+                .open("span")
+                .attr("id", "d")
+                .close()
+                .close()
+                // Verweist auf "d"; erst damit ist die doppelte ID ein Befund.
+                .open("button")
+                .attr("aria-describedby", "d")
+                .close()
+                .close();
+        });
+        let mut scan = Scan {
+            arena,
+            rendering: None,
+            layout: None,
+            #[cfg(feature = "probes")]
+            probes: ProbeColumns::default(),
+        };
+        let dupliziert = |s: &Scan| {
+            s.report()
+                .findings
+                .iter()
+                .any(|f| f.rule_id == "ids/duplicate")
+        };
+        assert!(dupliziert(&scan));
+        scan.with_scopes(vec![0, 0, 0, 1, 0]).unwrap();
+        assert!(!dupliziert(&scan));
+    }
+
+    /// Die Doku driftet nicht: jede Methode mit eigenem JS-Namen steht in
+    /// `docs/packages/a11y-wasm.md`.
+    #[test]
+    fn doku_nennt_jede_exportierte_methode() {
+        let doku = include_str!("../../../docs/packages/a11y-wasm.md");
+        let namen: Vec<&str> = include_str!("lib.rs")
+            .lines()
+            .filter_map(|z| z.trim().strip_prefix("#[wasm_bindgen(js_name = "))
+            .filter_map(|r| r.strip_suffix(")]"))
+            .collect();
+        assert!(namen.len() >= 8, "gefunden: {namen:?}");
+        for name in namen {
+            assert!(
+                doku.contains(&format!("{name}(")),
+                "{name} fehlt in der Doku"
+            );
+        }
     }
 
     /// Die Felder eines `export interface <name> { … }` aus dem TypeScript-Text.

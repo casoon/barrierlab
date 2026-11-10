@@ -1,0 +1,17 @@
+# html-conform vs vnu finding counts per real-world page.
+# Snapshot is not in git (third-party pages); sha256[:12] pins its bytes.
+# vnu '-' = not run. Regenerate: xtask/compare-real-world.sh --update-baseline
+page	sha256	html-conform	vnu
+developer-mozilla-org-en-US-	7203a94d557a	58	-
+en-wikipedia-org-wiki-HTML	240aad3ac90e	1750	-
+example-com-	25ddf2c883e0	0	-
+insights-casoon-de-	ba39c4b15dca	1	-
+insights-casoon-de-artikel-caching-browser-cdn-origin-	c201033b94e5	1	-
+insights-casoon-de-artikel-claude-code-kontext-einstellungen-memory-delegation-	650f366b4e6b	1	-
+insights-casoon-de-artikel-typst-praxis-einstieg-installation-syntax-	1fc16961cede	1	-
+insights-casoon-de-entwicklung-	e906161c080c	0	-
+news-ycombinator-com-	27d40b149d28	105	-
+www-gnu-org-home-html	e44f6b31a60e	2	-
+www-python-org-	e5fc2cc4dd7f	72	-
+www-usa-gov-	062edafdad82	8	-
+www-w3-org-	ce909c2d562a	2	-

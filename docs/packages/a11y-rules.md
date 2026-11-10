@@ -46,8 +46,16 @@ flowchart LR
 Two rule groups deliberately do not judge: the **checklist** (`manual/*`,
 `UNTESTED` per page and criterion as soon as it is applicable to the page) and
 the **heuristics** in tier 3 (`REVIEW`, from `Rendering::layout` and
-`bounds`; without this data they report nothing, only the unmeasured
-focus visibility remains as `UNTESTED`).
+`bounds`; without this data they report no finding and are recorded as
+`NotRun::CapabilityMissing` with a reason, as are the measured presentation
+rules whose field the host does not provide: `order/visual-mismatch`,
+`motion/infinite-animation`, `reflow/min-width`, `keyboard/pointer-only`,
+`focus/obscured`, `focus/indicator-missing`, `lists/role-redundant`,
+`color/link-indistinct`, `keyboard/scrollable-region-not-focusable`). `UNTESTED`
+findings remain only where a result concerns one element or the page:
+`contrast/text-undetermined`, `contrast/control-undetermined`,
+`tables/data-undetermined`, `targets/size` (target still animating),
+`frames/cross-origin`, `language/part-undetermined` and the `manual/*` items.
 
 ## Rules over host measurements
 

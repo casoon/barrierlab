@@ -18,21 +18,60 @@ produce the same messages.
 | --- | --- |
 | `tests/html` | 3,845 |
 | `tests/html-aria` | 810 |
-| **Total** | **4,655** |
+| `tests/html-math` | 48 |
+| `tests/html-rdfa` | 212 |
+| `tests/html-rdfalite` | 56 |
+| `tests/html-svg` (6 of 522, see below) | 6 |
+| **Total** | **4,977** |
 
 vnu's expected results say, per fixture, whether it should produce findings. The test counts
 agreement:
 
 | Result | Count |
 | --- | --- |
-| true positives (vnu expects findings, html-conform reports some) | 3,745 |
-| true negatives (both clean) | 909 |
-| false positives (vnu clean, html-conform reports something) | 0 |
-| false negatives (vnu expects findings, html-conform reports none) | 1 |
-| not comparable (`check()` returned an error) | 0 |
+| Result | `html` + `html-aria` | `html-math` | `html-rdfa` | `html-rdfalite` | `html-svg` | All |
+| --- | --- | --- | --- | --- | --- | --- |
+| true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 28 | 2 | 0 | 3,793 |
+| true negatives (both clean) | 909 | 30 | 184 | 54 | 5 | 1,182 |
+| false positives (vnu clean, html-conform reports something) | 0 | 0 | 0 | 0 | 0 | 0 |
+| false negatives (vnu expects findings, html-conform reports none) | 1 | 0 | 0 | 0 | 1 | 2 |
+| not comparable (`check()` returned an error) | 0 | 0 | 0 | 0 | 0 | 0 |
 
 CI runs this test on every push (`cargo test --release --test differential -- --ignored`) and
-fails if false positives or false negatives rise above those numbers.
+fails if false positives or false negatives of a tree rise above its committed baseline. `html`
+and `html-aria` stay at 0 false positives, and so does every other tree. The two false negatives
+are pinned by name in the test (CSS below and the nested SVG `<a>` of `html-svg`), so another
+missed fixture cannot hide behind them.
+
+### Finding classes
+
+The same test also compares the *class* of finding for the 3,795 fixtures where vnu expects
+findings. `tests/vnu-class-map.tsv` maps each vnu message (with quoted parts replaced by `“X”`)
+to a class (parser, schema, assertion, scripts, csp, tables, css) and to the html-conform
+`rule_id` prefixes that count as the same class. A fixture is **matched** if html-conform
+reports a finding of vnu's class, **incidental** if it reports findings but none of that
+class, and **missed** if it reports none. vnu messages without a row in the map are listed by
+the test and counted as **unmapped**; there are none at present.
+
+| Corpus tree | matched | incidental | missed | unmapped |
+| --- | --- | --- | --- | --- |
+| `tests/html` | 3,389 | 100 | 1 | 0 |
+| `tests/html-aria` | 253 | 3 | 0 | 0 |
+| `tests/html-math` | 18 | 0 | 0 | 0 |
+| `tests/html-rdfa` | 28 | 0 | 0 | 0 |
+| `tests/html-rdfalite` | 2 | 0 | 0 | 0 |
+| `tests/html-svg` | 0 | 0 | 1 | 0 |
+
+(Matched plus incidental equals the 3,793 true positives.) The baseline is committed in
+`tests/vnu-class-baseline.json`; CI fails if *incidental* rises, *matched* falls, or the
+number of unmapped messages changes.
+
+The class figures still do not say that html-conform reports the *same* problem, only the
+same *kind*: a schema finding on a fixture whose vnu message is a different schema error
+counts as matched. They ignore message text, positions and how many findings vnu expects per
+fixture (the expectation file holds one message per fixture). The class map is coarse and was
+written from vnu's message shapes, not tuned to the results; a wrong row shifts fixtures
+between matched and incidental. The `css` class has no html-conform counterpart.
 
 ### What the numbers do not say
 
@@ -45,7 +84,8 @@ finding-by-finding parity.
 ## Covered
 
 - **The same schema.** The RELAX NG schema in `schema/` is vnu's, vendored unchanged,
-  including SVG 1.1 and MathML 3.
+  including SVG 1.1 and MathML 3. MathML is measured with 48 fixtures (no disagreement); SVG
+  with only 6 (see the triage below).
 - **Parser diagnostics, microsyntaxes, co-constraints**: see
   [Findings and rule IDs](../rule-ids/) for each layer.
 - **Import maps, speculation rules and meta CSP**: checked by dedicated Rust code.
@@ -68,13 +108,121 @@ finding-by-finding parity.
 - **CSS inside `<style>`.** vnu hands style sheets to a vendored copy of the W3C CSS
   Validator. html-conform has no CSS parser for this, so a mistyped property such as `colr`
   goes unreported. This is the one false negative
-  (`html/elements/style/css-property-error-novalid.html`), and a deliberate limitation.
-- **Parts of vnu's test suite that are not vendored.** `tests/css`, `tests/xhtml`,
-  `tests/svg`, `tests/html-rdfa`, `tests/html-rdfalite`, `tests/html-math`, `tests/html-its`,
-  `tests/langdetect`, `tests/normalization` and `tests/schema-validation` are excluded from the
-  corpus, so nothing is measured for them.
+  (`html/elements/style/css-property-error-novalid.html`), and a deliberate limitation:
+  CSS correctness is out of scope (decision A of issue #87; checking property names or whole
+  values would need its own normative basis and corpus). The test pins this fixture by name
+  as the only allowed miss.
+- **RDFa.** vnu's default schema includes RDFa 1.1 and so does html-conform (issue #173, see
+  [RDFa](#rdfa) below). Both RDFa trees match vnu with no false positive and no false negative.
+
+## Triage of vnu's other test trees
+
+vnu's `tests/` holds more trees than `html` and `html-aria` (issue #86). Each one has one of
+three outcomes:
+
+| Tree | Files | Outcome | Why |
+| --- | --- | --- | --- |
+| `tests/html-math` | 48 | measured | 0 false positives, 0 false negatives |
+| `tests/html-rdfa` | 212 | measured | 0 false positives, 0 false negatives |
+| `tests/html-rdfalite` | 56 | measured | 0 false positives, 0 false negatives |
+| `tests/html-svg` (not in the issue's list) | 522 | 6 measured, 516 not vendored | the 516 embed W3C SVG 1.1 test cases, see below |
+| `tests/css` | 16 | out of scope | stand-alone style sheets for vnu's CSS checker; html-conform checks HTML only and has no CSS validation (issue #87) |
+| `tests/xhtml` | 129 | out of scope | XML syntax; html-conform parses HTML only and plans no XHTML mode |
+| `tests/svg` | 1 | out of scope | a stand-alone `.svg` document, not HTML syntax (inline SVG is `html-svg`) |
+| `tests/langdetect` | 11 | out of scope | vnu's language-detection heuristics (character statistics over about 1.4 MB of text); html-conform has no language detector |
+| `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform has no such check |
+| `tests/html-its` | 320 (90 `.html`) | not vendored, measured locally | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
+| `tests/schema-validation` | 3 | out of scope | exercises vnu's `--schema` option on XML files against a remote DocBook schema; see below |
+
+A local run (not part of the test, nothing committed) of the out-of-scope trees that hold
+`.html` files gave: `langdetect` 0 true positives, 4 true negatives, 1 false positive, 5 false
+negatives; `normalization` 1 false negative. These are not gated.
+
+### `html-its` and `schema-validation` (issue #175)
+
+**`tests/html-its`** holds 320 files: 90 `.html` documents and 230 XML files (ITS rule files and
+XML test documents, which html-conform does not read). The files carry no licence header. They
+are the input files of the W3C ITS 2.0 test suite
+([`w3c/its-2.0-testsuite`](https://github.com/w3c/its-2.0-testsuite)), which that repository
+licenses under the W3C Test Suite License, not MIT; vnu's `LICENSE` does not cover them
+(vnu has since edited some, for example added headings). vnu's `make` passes
+`--ignore=html-its` to its test runner and `tests/messages.json` has no key for the tree, so
+there is no expected result per file. Decision: **not vendored.** Taking the files would need a
+licence decision for the repository (REUSE entries and a notice for a second licence), and
+without an expected-result file the tree would only measure against our own guess that every
+document is valid. The tree stays measurable locally from a checkout of the tag.
+
+Local run (`html-conform` CLI on `tests/html-its` of a shallow clone at 26.8.20; nothing
+committed, not gated, no vnu run): of the 90 `.html` files, 65 are clean and 25 get findings,
+90 findings in all, every one `schema.html5` "unexpected attribute `its-…`"
+(`its-annotators-ref` 17, `its-loc-quality-issue-type` 6, `its-locale-filter-list` 5, and 17
+other `its-*` names). Besides these, 46 files get the missing-`lang` warning, which the
+differential test ignores (see "Not covered, or different").
+
+The cause is a schema gap, not a parser one. vnu's default schema (`html5-all`) includes
+`its20-html5.rnc` (`build/build.py`: `include "its20-html5.rnc"` and
+`common.attrs &= its-html-attributes`), which allows the `its-*` attributes in HTML. That file
+is MIT-licensed (Jirka Kosek, in vnu's `schema/its2/`) but `xtask/vendor-schema.sh` does not
+vendor it, so html-conform rejects HTML-native ITS markup that vnu accepts. This is the same
+kind of difference as the RDFa one before issue #173. The 25 files are therefore probable
+false positives against vnu; that is inferred from the schema driver, not confirmed by a vnu
+run. Closing the gap means vendoring `its20-html5.rnc` and
+`its20-html5-types.rnc` and including them from `src/schema_source.rs`, a schema change that
+this triage does not make.
+
+If the maintainer wants the tree as a gated measurement, the options are: (1) vendor the 90
+`.html` files with the W3C Test Suite License as a second licence and treat all as expected
+clean, after the ITS schema is vendored and checked against a vnu run; (2) fetch them on demand
+into a gitignored cache, as for the real-world pages; (3) leave it out. Until then (3) holds.
+
+**`tests/schema-validation`** has 3 files: a README and two XML documents (valid and invalid
+DocBook 5), checked by `vnu --schema https://docbook.org/xml/5.1/rng/docbook.rng --xml`. The
+test is for vnu's arbitrary-schema option and XML mode. html-conform parses HTML only, has no
+schema option and does not vendor the DocBook schema, so the tree is **out of scope**. There is
+nothing to measure.
+
+### `html-svg` and the W3C copyright
+
+516 of the 522 files in `tests/html-svg` are SVG 1.1 test cases of the W3C, each with the
+header "Copyright 2009 World Wide Web Consortium ... All Rights Reserved". W3C publishes that
+suite under its document license, which allows no modification and counts a subset as a
+derivative work; this repository is MIT. `xtask/vendor-corpus.sh` therefore copies only the 6
+files without that header (written by the vnu authors, MIT). The full tree is measurable
+locally by checking out vnu at the same tag; the 479 false positives above come from such a
+run, not from the committed corpus. Whether to vendor the W3C files, fetch them on demand into
+a gitignored cache (like the real-world pages), or leave SVG at 6 fixtures is open.
+
+### RDFa
+
+vnu's default schema (`html5-all`, the one its test runner uses for every tree except `rdfalite`
+and `xhtml`) is the HTML5 schema plus `html5-svg-mathml.rnc` and `rdfa.rnc` (vnu's `build.py`
+generates `html5full-rdfa.rnc` as the HTML5 modules plus `include "rdfa.rnc"`). So RDFa 1.1
+is accepted by default, and html-conform does the same: `rdfa.rnc` is vendored by
+`xtask/vendor-schema.sh` and included by the schema entry point in `src/schema_source.rs`.
+There is no option to turn it off.
+
+vnu checks `tests/html-rdfalite` against a separate preset, `html5-rdfalite`: the same include
+with `nonRDFaLite = notAllowed`, which drops `about`, `content`, `datatype`, `rel`, `rev` and
+`inlist` from the RDFa attributes. html-conform does not offer that preset; it would need a
+second compiled schema (about 225 KB more embedded data) and the corpus cannot tell the two apart:
+none of the 56 fixtures is invalid only because of a non-Lite attribute. `html-rdfalite` is
+therefore checked against full RDFa.
+
+Differences measured on the two trees (before issue #173: 177 and 50 false positives; before
+issue #181: 2 and 0 false positives, 5 and 2 false negatives): none.
+
+- **`rev` on `<a>`** (`html-rdfa/0006`, `0007`). `rdfa.rnc` leaves `rel` and `rev` out of the RDFa
+  attributes of `<a>`; vnu accepts `rev` there from `legacy.rnc` (`a.attrs.rev`), a driver html-conform
+  does not vendor. Local patch `xtask/schema-patches/0003-a-rev-legacy.patch` copies that definition.
+- **`xmlns:prefix` on HTML elements** (`html-rdfa/0147`, `0179`, `0183`, `0258`, `0319` and
+  `html-rdfalite/0147`, `0319`). vnu reports "Attribute `xmlns:xmlzzz` not allowed here", and so
+  does html-conform: the infoset layer keeps `xmlns:*` on HTML elements and drops it only on SVG and
+  MathML elements, where it is a namespace declaration.
+- **`link` and `meta`.** `<link property resource>` without `rel`/`href` is valid in the body, and
+  `resource` replaces `href` on `<link>`; `rules/elements.sch` accepts both.
+
 - **HTML syntax only.** The input is parsed as HTML with browser-style recovery; there is no
-  XHTML (XML syntax) mode.
+  XHTML (XML syntax) mode, and none is planned.
 - **A library, not a service.** html-conform checks the string you pass it, in-process. It
   makes no HTTP requests, needs no JVM and ships no command-line tool.
 - **Messages and rule IDs are its own.** Wording differs from vnu, and there is no mapping from

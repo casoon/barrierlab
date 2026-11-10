@@ -44,6 +44,9 @@ use crate::derive::{Id, Interner, NOT_ALLOWED, param_pairs};
 use crate::grammar::Pattern;
 use crate::simplify::Definitions;
 
+mod stream;
+pub use stream::{StreamError, StreamValidator};
+
 /// An expanded (namespace-resolved) name: local name plus an optional
 /// namespace URI. `None` means "no namespace" — the caller's document
 /// implementation is responsible for resolving any prefixes itself (this
@@ -207,6 +210,10 @@ pub struct ValidationOptions {
 impl ValidationOptions {
     /// Switches the recovery described in the type documentation on or off.
     /// Off by default.
+    ///
+    /// Recovery exists only in the tree walk ([`validate_with_options`],
+    /// `Schema::validate_with_options`); [`StreamValidator`] has none and
+    /// always behaves as with this option off.
     #[must_use]
     pub fn recover_after_unexpected_element(mut self, recover: bool) -> Self {
         self.recover_after_unexpected_element = recover;

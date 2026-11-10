@@ -9,18 +9,9 @@
 # silence a failure. An entry that starts passing must be removed (the test
 # fails on stale entries).
 #
-# Why the current entries fail, by file:
+# Why the current entries fail, by file (the files below carry no error
+# expectations at all):
 #
-# - tests16.dat (26), domjs-unsafe.dat (9), plain-text-unsafe.dat (3):
-#   tokenizer gaps, not tree construction. The tokenizer does not record
-#   `unexpected-null-character` in the RCDATA, RAWTEXT, script data and
-#   PLAINTEXT states (nor in tag/attribute/comment/DOCTYPE states other than
-#   Data), and it does not record `eof-in-script-html-comment-like-text` for
-#   an EOF inside `<script><!--` before the escaped states are reached.
-# - doctype01.dat (2): the tokenizer does not record
-#   `missing-quote-before-doctype-system-identifier` from the "after DOCTYPE
-#   public identifier" / "between DOCTYPE public and system identifiers"
-#   states ("anything else").
 # - html5test-com.dat (6), webkit02.dat (5): these files carry no error
 #   expectations at all (empty `#errors`), so every error this crate
 #   correctly reports counts as a false positive: EOF inside an unclosed
@@ -35,52 +26,12 @@
 # html-conform reports those findings itself.
 # --- entries below, one per line ---
 
-doctype01.dat#23
-doctype01.dat#25
-domjs-unsafe.dat#14
-domjs-unsafe.dat#15
-domjs-unsafe.dat#16
-domjs-unsafe.dat#3
-domjs-unsafe.dat#4
-domjs-unsafe.dat#5
-domjs-unsafe.dat#6
-domjs-unsafe.dat#7
-domjs-unsafe.dat#8
 html5test-com.dat#13
 html5test-com.dat#14
 html5test-com.dat#15
 html5test-com.dat#16
 html5test-com.dat#17
 html5test-com.dat#18
-plain-text-unsafe.dat#11
-plain-text-unsafe.dat#12
-plain-text-unsafe.dat#9
-tests16.dat#121
-tests16.dat#130
-tests16.dat#131
-tests16.dat#132
-tests16.dat#133
-tests16.dat#134
-tests16.dat#135
-tests16.dat#136
-tests16.dat#147
-tests16.dat#148
-tests16.dat#149
-tests16.dat#150
-tests16.dat#22
-tests16.dat#31
-tests16.dat#32
-tests16.dat#33
-tests16.dat#34
-tests16.dat#35
-tests16.dat#36
-tests16.dat#37
-tests16.dat#48
-tests16.dat#49
-tests16.dat#50
-tests16.dat#51
-tests16.dat#52
-tests16.dat#53
 webkit02.dat#44
 webkit02.dat#45
 webkit02.dat#46

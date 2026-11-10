@@ -4,6 +4,19 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-09
+
+### Added
+
+- **Shadow DOM:** `Scan.withScopes(scopes)` setzt den Baumbereich je Knoten (`0` Dokument, sonst Shadow Root); ID-Verweise treffen nur Ziele im eigenen Bereich, dieselbe ID in zwei Bereichen ist kein Duplikat. `Arena::set_scopes` prüft Länge, Wurzel und Wertebereich (casoon/liveaudit#10).
+- **Messspalten:** `Scan.withFrames`, `withTransforms`, `withPasteProbes`, `withFocusCover` und `withTextSpacing` (dünn besetzt, je Spalte optional; eine fehlende Spalte bleibt „nicht gemessen" und die Regel `NotRun`). Das Cargo-Feature `probes` ist Standard und lässt sich mit `--no-default-features` abschalten (casoon/liveaudit#16).
+- **Größe:** Größenbudget auf 180 KB gzip angehoben (Entscheidung vom 09.11.2026), weil die Messspalten rund 9 KB brauchen (gemessen 178,8 KiB gzip).
+- **Build:** `packages/a11y-wasm/build.mjs` liest `A11Y_WASM_FEATURES` für zusätzliche Cargo-Features.
+
+### Changed
+
+- **Breaking, nicht gemessen:** Ohne Layout-Spalten stehen die Heuristiken mit `NotRun::CapabilityMissing` in `rule_runs` statt mit `untested`-Befund am Wurzelknoten; Folge aus `a11y-rules`; casoon/barrierlab#145.
+
 ## [0.15.2] - 2026-11-08
 
 ### Changed

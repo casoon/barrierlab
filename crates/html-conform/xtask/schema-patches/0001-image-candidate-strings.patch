@@ -1,0 +1,40 @@
+# Local deviation from vnu 26.8.20 (388cb36): check srcset / imagesrcset with
+# the w:image-candidate-strings datatype instead of plain `string`.
+#
+# Why: upstream leaves these attributes unchecked in the schema (vnu validates
+# them in Java). html-conform implements the datatype itself
+# (src/datatypes/misc.rs, check_image_candidate_strings), so the schema can
+# state the constraint. Not a workaround for a missing relax-ng feature.
+# Files: schema/html5/embed.rnc (img, source), schema/html5/meta.rnc (link).
+#
+--- a/embed.rnc
++++ b/embed.rnc
+@@ -67,7 +67,7 @@
+ 			}
+ 		img.attrs.srcset =
+ 			attribute srcset {
+-				string
++				w:image-candidate-strings
+ 			} & v5only
+ 		img.attrs.sizes =
+ 			attribute sizes {
+@@ -154,7 +154,7 @@
+ 			}
+ 		source.picture.attrs.srcset =
+ 			attribute srcset {
+-				string
++				w:image-candidate-strings
+ 			}
+ 		source.picture.attrs.sizes =
+ 			attribute sizes {
+--- a/meta.rnc
++++ b/meta.rnc
+@@ -233,7 +233,7 @@
+ 			}
+ 		link.attrs.imagesrcset =
+ 			attribute imagesrcset {
+-				string
++				w:image-candidate-strings
+ 			} & v5only
+ 		link.attrs.imagesizes =
+ 			attribute imagesizes {
