@@ -95,7 +95,13 @@ pub fn render(results: &[FileResult]) -> String {
     for (index, slot) in rule_ids.values_mut().enumerate() {
         *slot = index;
     }
-    let catalogue = html_conform::rules().unwrap_or_default();
+    // Findings exist only if the embedded rule files loaded for the check, so
+    // the catalogue cannot fail here; without findings it is not needed.
+    let catalogue = if rule_ids.is_empty() {
+        Vec::new()
+    } else {
+        html_conform::rules().expect("the rule files loaded for the check that produced findings")
+    };
     let rules: Vec<Value> = rule_ids
         .keys()
         .map(|id| {

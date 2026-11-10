@@ -54,8 +54,10 @@ pub fn check_with_ranges(html: &str, options: CheckOptions) -> Result<RangedRepo
 ```
 
 Like `check_with_options`, plus the source range of each finding where its layer knows the end.
-`RangedReport` has `report: CheckReport`, `ranges() -> &[Option<SourceRange>]` (parallel to
-`report.findings`), `finding(index)` and `to_report()`. `SourceRange { start, end }` holds two
+`RangedReport` keeps its fields private so findings and ranges cannot get out of step: `report()`,
+`into_report()`, `ranges() -> &[Option<SourceRange>]` (parallel to the findings),
+`findings()` (an iterator of `(&Finding, Option<SourceRange>)`) and `to_report()`. `SourceRange` is
+`#[non_exhaustive]`. A `SchemaPreset` cannot be combined with ranges yet. `SourceRange { start, end }` holds two
 `SourceLocation`s; `end` is exclusive. The shared `a11y_report` model has no end position, so
 `to_report()` does not carry it.
 
@@ -66,7 +68,7 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError>
 ```
 
 Every rule id the checker can report, with `layer` (`RuleLayer`), `outcome`, a one-line
-`description`, `defined_in` and `normative_source`. The assertion rules are read from the parsed
+`description` and `normative_source`. The assertion rules are read from the parsed
 `rules/*.sch` files the checker runs, the other ids from the constants their findings use, so
 the list cannot drift. `parser.html5` and `schema.html5` are one id each for many conditions.
 Assertion rules have no `normative_source`: the rule files carry none. `html-conform --list-rules`
@@ -106,8 +108,8 @@ Displays as `line:column`.
 
 Which layers fill the end (`check_with_ranges`, counted over the vendored vnu corpus in
 `tests/finding_ranges.rs`): `schema.html5`, `assertion.*`, `scripts.*`, `tables.integrity` and
-`csp.meta-enforcement` findings anchored at an element get that element's start tag as range
-(the part from `<` to `>`; not the end tag or content, and not an attribute's own span, which the
+`csp.meta-enforcement` findings anchored at an element get that element's start tag as range, always, also when the finding is about the element's content
+or end (the part from `<` to `>`; not the end tag or content, and not an attribute's own span, which the
 parser does not record). Findings about an element the parser synthesized, or anchored at text,
 have no end. **`parser.html5` has no end position**: the parser reports a point, not a token
 span.

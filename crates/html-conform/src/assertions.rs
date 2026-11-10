@@ -182,8 +182,6 @@ pub(crate) struct DeclaredRule {
     /// The check's message text; computed parts (`value-of`, `name`) are
     /// shown as an ellipsis.
     pub(crate) description: String,
-    /// The rule file, e.g. `aria.sch`.
-    pub(crate) file: &'static str,
 }
 
 /// Every check with an `@id` in the embedded [`RULE_FILES`], in evaluation
@@ -192,7 +190,7 @@ pub(crate) struct DeclaredRule {
 pub(crate) fn declared_rules() -> Result<Vec<DeclaredRule>, EngineError> {
     let schemas = RULE_SCHEMAS.as_ref().map_err(Clone::clone)?;
     let mut declared = Vec::new();
-    for ((file, _), schema) in RULE_FILES.iter().zip(schemas) {
+    for schema in schemas {
         for check in schema
             .patterns
             .iter()
@@ -212,7 +210,6 @@ pub(crate) fn declared_rules() -> Result<Vec<DeclaredRule>, EngineError> {
                 id: id.clone(),
                 severity: severity_from_role(check.role.as_deref()),
                 description: text.split_whitespace().collect::<Vec<_>>().join(" "),
-                file,
             });
         }
     }

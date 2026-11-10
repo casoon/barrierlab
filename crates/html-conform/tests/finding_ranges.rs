@@ -42,10 +42,7 @@ fn column_counts_chars_and_line_breaks_are_one_each() {
     let html = "<!DOCTYPE html>\r\n<html lang=en><title>t</title>\t\u{e9}\u{1F600}<p bogus=1>x</p>";
     let ranged = check_with_ranges(html, CheckOptions::default()).expect("checks");
     let (finding, range) = ranged
-        .report
-        .findings
-        .iter()
-        .zip(ranged.ranges())
+        .findings()
         .find(|(finding, _)| finding.rule_id == "schema.html5")
         .expect("bogus attribute is reported");
     let start = finding.location.expect("located");
@@ -78,10 +75,10 @@ fn parse_errors_and_synthesized_elements_have_no_range() {
         CheckOptions::default(),
     )
     .expect("checks");
-    assert!(!ranged.report.findings.is_empty());
-    for (finding, range) in ranged.report.findings.iter().zip(ranged.ranges()) {
+    assert!(!ranged.report().findings.is_empty());
+    for (finding, range) in ranged.findings() {
         if finding.rule_id == "parser.html5" || finding.location.is_none() {
-            assert_eq!(*range, None, "{finding:?}");
+            assert_eq!(range, None, "{finding:?}");
         }
     }
 }
@@ -117,8 +114,8 @@ fn corpus_findings_carry_ends_per_layer_and_ids_are_in_the_catalogue() {
             continue;
         };
         checked += 1;
-        assert_eq!(ranged.ranges().len(), ranged.report.findings.len());
-        for (finding, range) in ranged.report.findings.iter().zip(ranged.ranges()) {
+        assert_eq!(ranged.ranges().len(), ranged.report().findings.len());
+        for (finding, range) in ranged.findings() {
             if !known.contains(finding.rule_id.as_str()) {
                 unknown.insert(finding.rule_id.clone(), path.display().to_string());
             }

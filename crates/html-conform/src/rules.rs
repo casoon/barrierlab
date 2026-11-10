@@ -46,9 +46,6 @@ pub struct RuleInfo {
     /// One line on what the rule reports. For an assertion rule it is the
     /// message text of its Schematron check, computed parts shown as `…`.
     pub description: String,
-    /// Where the rule is defined: a rule file such as `rules/aria.sch`, or
-    /// the source of a layer-wide id.
-    pub defined_in: String,
     /// The specification the rule rests on, where the code states one. The
     /// Schematron rule files carry no source reference, so assertion rules
     /// have `None`.
@@ -68,7 +65,6 @@ fn layer_rule(
     layer: RuleLayer,
     outcome: Outcome,
     description: &str,
-    defined_in: &str,
     normative_source: &str,
 ) -> RuleInfo {
     RuleInfo {
@@ -76,7 +72,6 @@ fn layer_rule(
         layer,
         outcome,
         description: description.to_owned(),
-        defined_in: defined_in.to_owned(),
         normative_source: Some(normative_source.to_owned()),
     }
 }
@@ -105,7 +100,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Parser,
             Outcome::Fail,
             "HTML5 tokenizer or tree-construction parse error",
-            "src/parse.rs",
             "WHATWG HTML Standard, 13.2 Parsing HTML documents (parse errors)",
         ),
         layer_rule(
@@ -113,7 +107,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Schema,
             Outcome::Fail,
             "Content model, attribute or attribute value rejected by the HTML schema",
-            "schema/html5",
             "W3C RELAX NG schema for HTML (vnu), after the WHATWG HTML Standard",
         ),
         layer_rule(
@@ -121,7 +114,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Scripts,
             Outcome::Fail,
             "Invalid JSON content of a script of type importmap",
-            "src/scripts.rs",
             "WHATWG HTML Standard, import maps",
         ),
         layer_rule(
@@ -129,7 +121,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Scripts,
             Outcome::Fail,
             "Invalid JSON content of a script of type speculationrules",
-            "src/scripts.rs",
             "WHATWG HTML Standard, speculation rules",
         ),
         layer_rule(
@@ -137,7 +128,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Csp,
             Outcome::Review,
             "Inline content a meta Content-Security-Policy would block",
-            "src/csp_enforcement.rs",
             "Content Security Policy Level 3",
         ),
         layer_rule(
@@ -145,7 +135,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             RuleLayer::Tables,
             Outcome::Fail,
             "Inconsistent table cell grid",
-            "src/table_integrity.rs",
             "WHATWG HTML Standard, processing model of tables",
         ),
     ];
@@ -157,7 +146,6 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
         layer: RuleLayer::Assertion,
         outcome: outcome(rule.severity),
         description: rule.description,
-        defined_in: format!("rules/{}", rule.file),
         normative_source: None,
     }));
     Ok(catalogue)
@@ -187,7 +175,6 @@ mod tests {
             .find(|rule| rule.id == "assertion.elements.html-missing-lang")
             .expect("declared in rules/elements.sch");
         assert_eq!(missing_lang.outcome, Outcome::Review);
-        assert_eq!(missing_lang.defined_in, "rules/elements.sch");
         assert!(catalogue.iter().all(|rule| !rule.description.is_empty()));
     }
 }

@@ -30,6 +30,7 @@ pub struct SourceLocation {
 /// [`SourceLocation`]. Only present where a layer knows the end; see
 /// [`RangedReport`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct SourceRange {
     /// First position of the range, equal to the finding's location.
     pub start: SourceLocation,
@@ -44,30 +45,46 @@ pub struct SourceRange {
 /// stay as they are. Which layers know an end:
 ///
 /// - Findings of the schema, assertion, scripts, CSP and table layers are
-///   anchored at an element; their range is that element's start tag.
-///   Findings anchored at a text node, and findings about an element the
+///   anchored at an element; their range is always that element's start tag,
+///   also for a finding about the element's content or end. Findings anchored at a text node, and findings about an element the
 ///   parser synthesized, have no range.
 /// - `parser.html5` findings have no range: the parser reports a point, not
 ///   a token span.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RangedReport {
-    /// The report [`crate::check_with_options`] would return.
-    pub report: CheckReport,
-    pub(crate) ranges: Vec<Option<SourceRange>>,
+    report: CheckReport,
+    /// Always as long as `report.findings`; both are private so it stays so.
+    ranges: Vec<Option<SourceRange>>,
 }
 
 impl RangedReport {
-    /// The ranges, parallel to `report.findings`: `None` where the layer
+    pub(crate) fn new(report: CheckReport, ranges: Vec<Option<SourceRange>>) -> Self {
+        debug_assert_eq!(report.findings.len(), ranges.len());
+        Self { report, ranges }
+    }
+
+    /// The report [`crate::check_with_options`] would return.
+    #[must_use]
+    pub fn report(&self) -> &CheckReport {
+        &self.report
+    }
+
+    /// The report without the ranges.
+    #[must_use]
+    pub fn into_report(self) -> CheckReport {
+        self.report
+    }
+
+    /// The ranges, parallel to `report().findings`: `None` where the layer
     /// that reported the finding does not know an end.
     #[must_use]
     pub fn ranges(&self) -> &[Option<SourceRange>] {
         &self.ranges
     }
 
-    /// The finding at `index` with its range, if known.
-    #[must_use]
-    pub fn finding(&self, index: usize) -> Option<(&Finding, Option<SourceRange>)> {
-        Some((self.report.findings.get(index)?, self.ranges[index]))
+    /// Each finding with its range, in report order.
+    pub fn findings(&self) -> impl Iterator<Item = (&Finding, Option<SourceRange>)> {
+        self.report.findings.iter().zip(self.ranges.iter().copied())
     }
 
     /// Converts like [`CheckReport::to_report`]; the findings keep their

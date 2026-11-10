@@ -103,6 +103,11 @@ pub fn json(results: &[FileResult]) -> String {
     text
 }
 
+/// The `position` key of a finding's location in the pretty-printed `Report`.
+const POSITION: &str = "        \"position\": {";
+/// The line that closes that object.
+const CLOSE: &str = "        }";
+
 /// Adds `location.end` after the `position` of each finding that has one, in
 /// the pretty-printed `Report`. `ends` has one entry per finding with a
 /// position, in order. Done on the text because `a11y_report::SourcePosition`
@@ -110,8 +115,8 @@ pub fn json(results: &[FileResult]) -> String {
 /// changing every existing line. The only line equal to the `position` key
 /// at this indent is the structural one: strings never contain raw newlines.
 fn add_ends(pretty: &str, ends: &[Option<html_conform::SourceLocation>]) -> String {
-    const POSITION: &str = "        \"position\": {";
-    const CLOSE: &str = "        }";
+    let ends_total = ends.iter().flatten().count();
+    let mut inserted = 0;
     let mut ends = ends.iter();
     let mut pending = None;
     let mut lines: Vec<String> = Vec::new();
@@ -127,10 +132,15 @@ fn add_ends(pretty: &str, ends: &[Option<html_conform::SourceLocation>]) -> Stri
             lines.push(format!("          \"column\": {},", end.column));
             lines.push(format!("          \"byte_offset\": {}", end.byte_offset));
             lines.push(CLOSE.to_owned());
+            inserted += 1;
             continue;
         }
         lines.push(line.to_owned());
     }
+    debug_assert_eq!(
+        inserted, ends_total,
+        "a11y_report's JSON layout changed: not every end found its `position`"
+    );
     lines.join("\n")
 }
 
@@ -237,6 +247,41 @@ pub fn text(results: &[FileResult], quiet: bool, color: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn add_ends_relies_on_the_serialised_layout_of_a_finding() {
+        use a11y_report::SourcePosition;
+        let mut finding = Finding::fail("r", "m");
+        finding.location.position = Some(SourcePosition::new(2, 3, 10));
+        let mut report = Report::new();
+        report.push(finding);
+        let pretty = serde_json::to_string_pretty(&report.finish()).unwrap();
+        // If a11y-report changes how a finding is serialised, these fail
+        // here instead of ends silently disappearing from the output.
+        assert_eq!(
+            pretty.lines().filter(|l| *l == POSITION).count(),
+            1,
+            "{pretty}"
+        );
+        assert_eq!(
+            pretty.lines().filter(|l| *l == CLOSE).count(),
+            1,
+            "{pretty}"
+        );
+        let end = html_conform::SourceLocation {
+            line: 2,
+            column: 9,
+            byte_offset: 16,
+        };
+        let out = add_ends(&pretty, &[Some(end)]);
+        let value: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let location = &value["findings"][0]["location"];
+        assert_eq!(location["position"]["column"], 3);
+        assert_eq!(location["end"]["line"], 2);
+        assert_eq!(location["end"]["column"], 9);
+        assert_eq!(location["end"]["byte_offset"], 16);
+        assert_eq!(add_ends(&pretty, &[None]), pretty);
+    }
 
     #[test]
     fn color_rules() {
