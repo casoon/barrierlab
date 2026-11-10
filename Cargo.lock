@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "a11y-report",
  "criterion",
@@ -361,7 +361,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform-wasm"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "a11y-report",
  "html-conform",
@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "html5-parser"
-version = "0.5.0"
+version = "0.5.1"
 
 [[package]]
 name = "icu_collections"
@@ -676,7 +676,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "relax-ng"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "regex",
  "roxmltree",

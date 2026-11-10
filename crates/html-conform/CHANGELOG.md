@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
 ### Added
 
 - **API:** `check_with_ranges` returns a `RangedReport` with the source range (`SourceRange`, end
@@ -42,6 +44,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- **Dependencies:** requires `html5-parser` 0.5.1 (`Node::end_position`) and `relax-ng` 0.2.5
+  (XSD name escapes in `pattern` facets, used by the RDFa schema).
 - **CLI:** the SARIF `shortDescription` of an `assertion.*` rule is now that rule's own message
   instead of the generic sentence "Co-constraint the schema cannot express", and the run declares
   `columnKind` as `unicodeCodePoints` (barrierlab#194).

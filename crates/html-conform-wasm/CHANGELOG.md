@@ -5,6 +5,12 @@ All notable changes to this crate are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-10
+
+### Changed
+
+- **Dependencies:** requires `html-conform` 0.6.0, so findings follow that release: RDFa 1.1 and the ITS 2.0 attributes are accepted, `xmlns:prefix` on an HTML element is reported. Details: [html-conform changelog](https://github.com/casoon/barrierlab/blob/main/crates/html-conform/CHANGELOG.md).
+
 ## [0.1.1] - 2026-11-10
 
 ### Changed

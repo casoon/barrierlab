@@ -1,6 +1,6 @@
 {
   "name": "@casoon/html-conform-wasm",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "HTML5 conformance checking as WebAssembly: check(html) returns findings in the shared a11y-report model.",
   "license": "MIT",
   "type": "module",
