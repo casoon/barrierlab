@@ -14,6 +14,10 @@ in the git history only.
   equal those of `validate` (barrierlab#77). No new dependencies.
 - **Datatypes:** `pattern` facets accept the XSD name escapes `\i`, `\I`, `\c`, `\C` and
   character-class subtraction (`[\i-[:]]`); the `regex` crate knows neither (barrierlab#173).
+- **API:** `validate_with_options`/`Schema::validate_with_options` with `ValidationOptions` add an
+  opt-in recovery after an unexpected element: its subtree is checked against the element's
+  definitions elsewhere in the schema, and the extra errors report `is_recovered()`. Off by
+  default; the verdict and the plain error list are unchanged. The tree walk only; `StreamValidator` has no recovery (barrierlab#76).
 
 ## [0.2.4] - 2026-11-09
 

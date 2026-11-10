@@ -149,6 +149,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                 kind: ValidationErrorKind::UnexpectedElement(name),
                 path: self.path.clone(),
                 location,
+                recovered: false,
             });
             self.skipping = 1;
             return Ok(());
@@ -166,6 +167,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                     kind: ValidationErrorKind::UnexpectedAttribute(name),
                     path: self.path.clone(),
                     location: location.clone(),
+                    recovered: false,
                 });
                 continue;
             }
@@ -177,6 +179,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                     kind: ValidationErrorKind::InvalidAttributeValue(name, value),
                     path: self.path.clone(),
                     location: location.clone(),
+                    recovered: false,
                 });
             } else {
                 pattern = derived;
@@ -229,6 +232,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                 kind: ValidationErrorKind::MissingContent,
                 path: self.path.clone(),
                 location: frame.location,
+                recovered: false,
             });
         }
         self.path.pop();
@@ -273,6 +277,7 @@ fn flush<L: Clone>(
                 kind: ValidationErrorKind::UnexpectedText,
                 path: path.to_vec(),
                 location: frame.location.clone(),
+                recovered: false,
             });
         }
     } else {

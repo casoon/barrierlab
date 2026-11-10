@@ -335,4 +335,78 @@ mod tests {
         eprintln!("stream vs tree: {checked} documents identical, {with_errors} with errors");
         assert!(with_errors > 100, "the corpus has invalid documents");
     }
+
+    /// Error recovery after an unexpected element (relax-ng's opt-in
+    /// `ValidationOptions`) must not change the verdict: for every document
+    /// of the vendored corpus the errors without the recovered ones are the
+    /// plain run's, and the list is empty exactly when the plain one is.
+    #[test]
+    #[ignore = "slow (~4655 documents) — run with `cargo test --release -p html-conform --lib recovery_keeps_the_verdict -- --ignored --nocapture`"]
+    fn recovery_keeps_the_verdict_on_the_corpus() {
+        fn collect(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("corpus directory") {
+                let path = entry.expect("directory entry").path();
+                if path.is_dir() {
+                    collect(&path, out);
+                } else if path
+                    .extension()
+                    .is_some_and(|extension| extension == "html")
+                {
+                    out.push(path);
+                }
+            }
+        }
+        let mut files = Vec::new();
+        collect(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/corpus"),
+            &mut files,
+        );
+        assert!(files.len() > 1000, "the corpus is vendored");
+        files.sort();
+
+        let schema = html5_schema().expect("the schema loads");
+        let options = relax_ng::ValidationOptions::default().recover_after_unexpected_element(true);
+        let (mut invalid, mut with_recovered, mut recovered_errors, mut plain_errors) =
+            (0usize, 0usize, 0usize, 0usize);
+        for path in &files {
+            let html = std::fs::read_to_string(path).expect("UTF-8 fixture");
+            let parsed = crate::parse::parse(&html);
+            if crate::parse::nesting_depth(parsed.document()) > crate::MAX_NESTING_DEPTH {
+                continue;
+            }
+            let document = crate::infoset::normalize(parsed.document(), parsed.source());
+            let Some(root) = document.root_element() else {
+                continue;
+            };
+            let plain = schema
+                .validate(&DATATYPE_REGISTRY, &root)
+                .expect("datatypes are known");
+            let recovering = schema
+                .validate_with_options(&DATATYPE_REGISTRY, &root, options)
+                .expect("datatypes are known");
+            let kept: Vec<_> = recovering
+                .iter()
+                .filter(|error| !error.is_recovered())
+                .cloned()
+                .collect();
+            assert_eq!(kept, plain, "{}", path.display());
+            assert_eq!(
+                recovering.is_empty(),
+                plain.is_empty(),
+                "{}",
+                path.display()
+            );
+            let extra = recovering.len() - plain.len();
+            invalid += usize::from(!plain.is_empty());
+            with_recovered += usize::from(extra > 0);
+            recovered_errors += extra;
+            plain_errors += plain.len();
+        }
+        eprintln!(
+            "{} documents, {invalid} invalid ({plain_errors} errors); recovery adds \
+             {recovered_errors} errors in {with_recovered} documents",
+            files.len()
+        );
+        assert!(invalid > 100, "the corpus has invalid documents");
+    }
 }
