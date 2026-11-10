@@ -61,6 +61,19 @@ const HTML5_FILES: &[(&str, &str)] = &[
     ),
 ];
 
+/// The 2 vendored `schema/its2/*.rnc` modules (ITS 2.0 attributes), keyed bare like
+/// [`HTML5_FILES`]; `its20-html5.rnc` includes `its20-html5-types.rnc` as a sibling.
+const ITS2_FILES: &[(&str, &str)] = &[
+    (
+        "its20-html5.rnc",
+        include_str!("../schema/its2/its20-html5.rnc"),
+    ),
+    (
+        "its20-html5-types.rnc",
+        include_str!("../schema/its2/its20-html5-types.rnc"),
+    ),
+];
+
 /// `html5/html5.rnc` itself — looked up under the directory-prefixed href
 /// [`ROOT_ENTRY`] uses to include it (`"html5/html5.rnc"`), since from the
 /// synthetic root's perspective it's no longer the top of the compile.
@@ -281,10 +294,16 @@ const MML3_ROOT_MODULE: (&str, &str) = (
 /// file, and `rdfa.rnc` declares none of its own (the generated vnu driver
 /// starts with this same declaration). vnu's separate `html5-rdfalite`
 /// preset (the same include with `nonRDFaLite = notAllowed`) is not offered.
+/// The last two lines are the ITS 2.0 part of the same generated driver
+/// (`build/build.py`: `include "its20-html5.rnc"` and
+/// `common.attrs &= its-html-attributes`), so `its-*` attributes are accepted
+/// on every HTML element (barrierlab#188).
 const ROOT_ENTRY: &str = "default namespace = \"http://www.w3.org/1999/xhtml\"\n\
      include \"html5/html5.rnc\"\n\
      include \"html5-svg-mathml.rnc\"\n\
-     include \"rdfa.rnc\"\n";
+     include \"rdfa.rnc\"\n\
+     include \"its20-html5.rnc\"\n\
+     common.attrs &= its-html-attributes\n";
 
 /// Resolves every `include` href in the combined schema against the
 /// embedded module groups above — no file-system access. Flat (no real
@@ -304,6 +323,7 @@ impl SchemaResolver for EmbeddedResolver {
             .chain(std::iter::once(SVG11_ROOT_MODULE))
             .chain(std::iter::once(MML3_ROOT_MODULE))
             .chain(HTML5_FILES.iter().copied())
+            .chain(ITS2_FILES.iter().copied())
             .chain(SVG11_FILES.iter().copied())
             .chain(MML3_FILES.iter().copied())
             .find(|(name, _)| *name == href)

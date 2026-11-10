@@ -33,6 +33,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- **Schema check:** the ITS 2.0 attributes (`its-loc-note`, `its-translate`, `its-annotators-ref`
+  and the others) are accepted on HTML elements, as in vnu's default schema. On the 90 `.html`
+  files of vnu's `tests/html-its` the 90 false `schema.html5` findings in 25 files are gone;
+  html-conform and vnu 26.8.20 now agree per file (barrierlab#188).
 - **Schema check:** `xmlns:prefix` on an HTML element is reported (it stays visible to the schema;
   on SVG and MathML elements it is still a namespace declaration), and `rev` on `<a>` is accepted
   as in vnu's `legacy.rnc` (patch `0003-a-rev-legacy`). Differences to vnu on the `html-rdfa` and

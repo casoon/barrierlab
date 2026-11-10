@@ -55,7 +55,10 @@ between runs on the *same* pages visible.
   unchanged). A page whose sha256 differs from the baseline is reported as
   "snapshot changed", not as a regression. Output has no timings or paths:
   two runs on one snapshot are byte-identical.
-- **vnu:** `VNU_JAR=/path/vnu.jar` (needs `java`, `jq`), or `VNU_JSON_DIR` with
+- **vnu:** `VNU_JAR=/path/vnu.jar` (needs `java`, `jq`); without it `xtask/.cache/vnu.jar`
+  (gitignored) is used if present. The jar is checked against a pinned SHA-256 (vnu 26.8.20,
+  the schema's version; the npm package `vnu-jar@26.8.20` ships it, GitHub only has a rolling
+  `latest` release) and a mismatch aborts; or `VNU_JSON_DIR` with
   pre-recorded `<slug>.json` (`vnu --format json`). Neither is vendored.
 - **Self-test:** `test-real-world.sh` checks the baseline/diff logic with a
   synthetic snapshot, no Java, vnu or network.
