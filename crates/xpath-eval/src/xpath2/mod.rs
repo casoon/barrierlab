@@ -15,6 +15,7 @@ mod decimal;
 mod eval;
 mod functions;
 mod parser;
+mod regex;
 
 use crate::document::Node;
 use crate::eval::{EvalError, EvaluationContext};

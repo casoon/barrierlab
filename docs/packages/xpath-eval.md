@@ -79,7 +79,7 @@ Anything valid XPath 2.0 that is not implemented fails with
 `VersionedError::Unsupported("<feature>")` (`is_unsupported()`), at parse time
 where the syntax is recognised (`instance of`, `treat as`, `element()` tests,
 `*:name`, the namespace axis, unsupported atomic types) and at evaluation time
-for functions and values (`fn:matches`, `xs:dateTime(...)`, date arithmetic).
+for functions and values (a regex back-reference, `xs:dateTime(...)`, date arithmetic).
 `schematron-engine` reports such a check as `NotRun` with that reason. Genuine
 errors (`XPTY0004`, ...) are errors, not "false".
 
@@ -104,6 +104,94 @@ table in `src/xpath2/functions.rs`).
   and chain length is bounded); `or`/`and` chains are evaluated without
   recursion and limited to 4096 operands. This keeps the recursive parser and
   evaluator inside a debug-build stack. (The 1.0 parser has no such limit.)
+
+### Regular expressions
+
+`matches`, `replace` and `tokenize` (all arities; F&O 1.0 section 7.6 on XML
+Schema Part 2 Appendix F) run on an own engine in `src/xpath2/regex/`, no
+dependency. The pattern is parsed (`parse.rs`), compiled to a Thompson NFA
+program (`vm.rs`, counted quantifiers expanded) and run as a Pike VM with
+capture slots: all threads advance over the input in lock step in priority
+order, so a search is O(program x input), nothing recurses on the input, and
+leftmost / first-alternative / greedy-or-reluctant semantics follow from the
+thread order. `matches` tracks no captures, `tokenize` only the match span,
+`replace` only the groups its replacement string uses.
+
+Supported: branches, `? * + {n} {n,} {n,m}` and the reluctant forms, groups
+(capturing only), `.`, anchors `^ $`, classes with ranges, negation and
+subtraction, the single-character escapes of the grammar and `\$`,
+`\s \S \d \D \w \W`, `\p{..}`/`\P{..}` as below, flags `s m i x` in any order
+and repetition, `$N` (F&O 7.6.3 digit rule), `\\` and `\$` in replacements, and the errors
+`FORX0001` (a flag other than `s m i x`), `FORX0002` (invalid pattern,
+including a quantifier after a quantifier such as `a{2}{3}`, an empty class, a
+reversed range, an unknown category), `FORX0003` (`replace`/`tokenize` with a
+pattern that matches the empty string, also for an empty input), `FORX0004`
+(replacement with a stray `$` or `\`; checked even when nothing matches). Flag
+`x` removes space, tab, CR and LF outside classes, also after a backslash (as
+the F&O example `hello\ sworld` requires).
+
+Unicode, exactly what is implemented. There is no Unicode database in this
+crate. Every question about a character answers yes, no or "cannot decide",
+and "cannot decide" for a character the match actually tests is `Unsupported`
+naming that code point (a character the match never tests, or one an earlier
+class member already accepts, costs nothing):
+
+- Decided for every character: `\s` (space, tab, CR, LF); the categories `Cc`,
+  `Z`, `Zs`, `Zl`, `Zp` (fixed sets); ranges and literals; the blocks
+  `IsBasicLatin`, `IsLatin-1Supplement`, `IsLatinExtended-A`,
+  `IsLatinExtended-B`, `IsGreek`/`IsGreekandCoptic`, `IsCyrillic`, `IsHebrew`,
+  `IsArabic`, `IsGeneralPunctuation`, `IsCurrencySymbols`, `IsHiragana`,
+  `IsKatakana`, `IsCJKUnifiedIdeographs`.
+- Decided for U+0000..=U+00FF only (a table of the Unicode General_Category of
+  those 256 code points, checked by a unit test): every other category and the
+  one-letter groups (`\p{L}`, `\p{Lu}`, `\p{N}`, `\p{P}`, `\p{S}`, `\p{C}`, ...),
+  `\d` (`\p{Nd}`), `\w` (everything except `P`, `Z`, `C`, so `_` is not a word
+  character and `+` is). Beyond U+00FF: `Unsupported`.
+- `\i` and `\c` (name characters): ASCII only (`[A-Za-z_:]` and
+  `[A-Za-z0-9_:.-]`); the non-ASCII tables differ between XML 1.0 editions.
+  Beyond ASCII: `Unsupported`.
+- Any other `\p{Is...}` block: `Unsupported` (it may or may not exist). A name
+  that is neither a category nor `Is...`, and `Cs`, is `FORX0002`.
+- `-` in a class follows XML Schema Part 2 F.1: it is not an `XmlChar`, so it is no
+  endpoint of `s-e` (`[--a]`, `[+--]`, `[a--]` are `FORX0002`), and it is valid
+  only first, last, as the range operator or before a subtraction (`[a-c-e]` is
+  `FORX0002`); `\-` is a single-character escape and may start a range
+  (`[a\--z]`).
+
+Flag `i` (F&O 7.6.1.1): C2 is a case-variant of C1 iff `lower-case(C1) eq
+lower-case(C2)` or `upper-case(C1) eq upper-case(C2)` on the one-character
+strings, with the full Unicode mappings std provides (the same ones the
+function library uses). A literal or a range stands for its members and their
+case-variants; this is applied to the ranges before a class is negated or
+subtracted from, as the specification's examples require (`[^Q]` excludes `Q`
+and `q`, `[A-Z-[IO]]` excludes `I O i o`). So `ſ` (U+017F) matches `s`, `ı`
+(U+0131) matches `i` and `I`, `İ` (U+0130) matches neither (its lower case is
+two characters), the Kelvin sign matches `k`. Escapes (`\w`, `\p{Lu}`, ...) are
+not affected by the flag. A range class spanning more than 131,072 characters
+under `i` is `Unsupported` (the case-variants are enumerated).
+
+Limits, each a named `Unsupported`, never a wrong result:
+
+- Back-references `\N` (they need backtracking, which this engine does not
+  do). A reference to a group that does not exist or is not closed is
+  `FORX0002`.
+- The compiled program holds at most 10,000 instructions: `{n,m}` is expanded,
+  so `a{100000}` and `(a{1000}){1000}` are refused, `a{2000}` is not.
+- At most 100 capture groups, and class subtractions nested at most 100 deep
+  (groups are bounded by the group cap, so 600 nested groups is refused as
+  "more than 100 capture groups").
+- Step budget: one call (all matches of a `replace` or `tokenize` together)
+  may spend 8 thread steps per program instruction and input character (plus
+  100,000), at most 2,000,000,000. A search costs about two steps per instruction
+  and character, so this is linear work with margin (`a{50}b` over a megabyte
+  fits); it is the protection against quadratic re-scanning (`a.*z|a` over many
+  `a`). Beyond it the call stops with an error naming the budget.
+- `replace` produces at most 16 Mi characters, or twice its input if that is
+  more (`$1` over many matches); `tokenize` returns at most 1,000,000 tokens.
+
+Follow-ups, not in this slice: back-references with a step budget; a vendored
+Unicode table (categories, name characters, blocks) so that
+`\p{L}`, `\d`, `\w`, `\i` and `\c` decide every character.
 
 ### Inventory: EN 16931 validation artefacts 1.3.17
 
@@ -152,7 +240,7 @@ parseable and evaluable (of 261).
 | # | Slice | Unlocks |
 |---|---|---|
 | 1 | **Done.** Mode switch; sequences, `,`, `to`; atomic types above; exact decimal arithmetic; general, value and node comparisons; `if`, `for`, `some`/`every`; `cast as`/`castable as`; `xs:` constructors; path steps that are expressions; `union`/`intersect`/`except`; ~45 functions (`exists`, `empty`, `upper-case`, `lower-case`, `ends-with`, `string-join`, `abs`, `round`/`floor`/`ceiling`, `sum`/`avg`/`min`/`max`, `distinct-values`, `concat` and the string library, ...) | 260 of 261 (99.6 %) |
-| 2 | Regular expressions: `matches`, `replace`, `tokenize` with flags. Needs the XPath/XSD regex dialect: translate to the `regex` crate (MIT/Apache-2.0) or a small own engine; maintainer decision | 1 of 261 here, more in XRechnung/Peppol |
+| 2 | **Done, with gaps (see "Regular expressions").** `matches`, `replace`, `tokenize` with flags on an own engine (maintainer decision: no dependency). Open: back-references, a Unicode database for categories, `\i`/`\c`, blocks | 1 of 261 here, more in XRechnung/Peppol |
 | 3 | Rest of the F&O 1.0 string and sequence library: `round-half-to-even`, `string-to-codepoints`, `codepoints-to-string`, `compare`, `subsequence`, `index-of`, `insert-before`, `remove`, `root`, `lang`, `id` | 0 here (Peppol check digits expected) |
 | 4 | Date and time: `xs:dateTime`, `xs:time`, durations, timezones for `xs:date`, `current-date()`, component functions, date arithmetic | 0 here (`xs:date` comparison without timezone is in slice 1) |
 | 5 | Sequence types: `instance of`, `treat as`, kind tests with names (`element(a)`), `*:name`, user-callable `xsl:function` bridge | 0 here |
