@@ -152,6 +152,8 @@ pub(super) struct Class {
     pub negated: bool,
     pub items: Vec<ClassItem>,
     pub subtract: Option<Box<Class>>,
+    /// Set under flag `i`: the case-variants of this class's own ranges.
+    pub fold: Option<Fold>,
 }
 
 impl Class {
@@ -164,17 +166,20 @@ impl Class {
 
     pub fn eval(&self, c: char) -> Option<bool> {
         let mut any_unknown = false;
-        let mut found = false;
+        let mut found = match &self.fold {
+            Some(fold) => fold.matches(c),
+            None => false,
+        };
         for item in &self.items {
+            if found {
+                break;
+            }
             let answer = match item {
-                ClassItem::Range(lo, hi) => Some((*lo..=*hi).contains(&c)),
+                ClassItem::Range(lo, hi) => Some(self.fold.is_none() && (*lo..=*hi).contains(&c)),
                 ClassItem::Pred(p, complement) => p.eval(c).map(|b| b != *complement),
             };
             match answer {
-                Some(true) => {
-                    found = true;
-                    break;
-                }
+                Some(true) => found = true,
                 None => any_unknown = true,
                 Some(false) => {}
             }
@@ -197,111 +202,82 @@ impl Class {
         positive.map(|b| b != self.negated)
     }
 
-    /// The `(lo, hi)` ranges of this class and of its subtrahends.
-    pub fn has_ranges(&self) -> bool {
-        self.items.iter().any(|i| matches!(i, ClassItem::Range(..)))
-            || self.subtract.as_ref().is_some_and(|s| s.has_ranges())
-    }
-}
-
-/// The simple case mapping the `i` flag rests on (F&O 1.0 section 7.6.1.1).
-/// std gives full mappings; where those are one character they are the simple
-/// mappings. Where they are several, the simple mapping is the character itself
-/// (`ß`, ligatures) except for U+0130 (simple lower case `i`) and the Greek
-/// Extended characters with iota subscript (U+1F80..=U+1FFF), which have a
-/// simple upper case mapping std does not expose: `None` there.
-pub(super) fn simple_upper(c: char) -> Option<char> {
-    let mut it = c.to_uppercase();
-    match (it.next(), it.next()) {
-        (Some(u), None) => Some(u),
-        _ if (0x1F80..=0x1FFF).contains(&(c as u32)) => None,
-        _ => Some(c),
-    }
-}
-
-pub(super) fn simple_lower(c: char) -> char {
-    let mut it = c.to_lowercase();
-    match (it.next(), it.next()) {
-        (Some(l), None) => l,
-        _ if c == '\u{130}' => 'i',
-        _ => c,
-    }
-}
-
-/// A class under the `i` flag: a character matches if it is in the class, or
-/// if its simple upper or lower case equals that of a member of a range of the
-/// class (the sets `upper` and `lower`). Escapes (`\w`, `\p{Lu}`, ...) are not
-/// affected by the flag. Only built for classes whose ranges are not negated.
-#[derive(Debug, Clone)]
-pub(super) struct FoldClass {
-    pub class: Class,
-    upper: Vec<char>,
-    lower: Vec<char>,
-    /// A range member has no known simple upper case mapping.
-    fuzzy: bool,
-}
-
-/// Most characters an `i`-flag class may span in its ranges.
-const FOLD_SPAN_LIMIT: u32 = 0x2_0000;
-
-impl FoldClass {
-    /// `None` if the ranges are too large to enumerate.
-    pub fn new(class: Class) -> Option<FoldClass> {
+    /// Under flag `i` (F&O 1.0 section 7.6.1.1): every range of this class and
+    /// of its subtrahends stands for itself and its case-variants, before the
+    /// class is negated or subtracted from. `false` if a range is too large
+    /// to enumerate.
+    pub fn fold_case(&mut self) -> bool {
         let mut span = 0u32;
-        for item in &class.items {
+        for item in &self.items {
             if let ClassItem::Range(lo, hi) = item {
                 span = span.saturating_add(*hi as u32 - *lo as u32 + 1);
             }
         }
         if span > FOLD_SPAN_LIMIT {
-            return None;
+            return false;
         }
-        let (mut upper, mut lower, mut fuzzy) = (Vec::new(), Vec::new(), false);
-        for item in &class.items {
-            if let ClassItem::Range(lo, hi) = item {
-                for cp in *lo as u32..=*hi as u32 {
-                    let Some(c) = char::from_u32(cp) else {
-                        continue;
-                    };
-                    match simple_upper(c) {
-                        Some(u) => upper.push(u),
-                        None => fuzzy = true,
+        if span > 0 {
+            let (mut upper, mut lower) = (Vec::new(), Vec::new());
+            for item in &self.items {
+                if let ClassItem::Range(lo, hi) = item {
+                    for c in (*lo as u32..=*hi as u32).filter_map(char::from_u32) {
+                        upper.push(upper_key(c));
+                        lower.push(lower_key(c));
                     }
-                    lower.push(simple_lower(c));
                 }
             }
+            upper.sort_unstable();
+            upper.dedup();
+            lower.sort_unstable();
+            lower.dedup();
+            self.fold = Some(Fold { upper, lower });
         }
-        upper.sort_unstable();
-        upper.dedup();
-        lower.sort_unstable();
-        lower.dedup();
-        Some(FoldClass {
-            class,
-            upper,
-            lower,
-            fuzzy,
-        })
+        match &mut self.subtract {
+            Some(sub) => sub.fold_case(),
+            None => true,
+        }
     }
+}
 
-    pub fn eval(&self, c: char) -> Option<bool> {
-        let direct = self.class.eval(c);
-        if direct == Some(true) {
-            return direct;
-        }
-        match simple_upper(c) {
-            None => None,
-            Some(u) => {
-                if self.upper.binary_search(&u).is_ok()
-                    || self.lower.binary_search(&simple_lower(c)).is_ok()
-                {
-                    Some(true)
-                } else if self.fuzzy {
-                    None
-                } else {
-                    direct
-                }
-            }
-        }
+type CaseKey = [u32; 3];
+
+/// `fn:upper-case` of the one-character string `c` (the full Unicode mapping,
+/// as the function library applies it), zero padded.
+fn upper_key(c: char) -> CaseKey {
+    let mut key = [0; 3];
+    for (slot, u) in key.iter_mut().zip(c.to_uppercase()) {
+        *slot = u as u32;
+    }
+    key
+}
+
+/// `fn:lower-case` of the one-character string `c`, zero padded.
+fn lower_key(c: char) -> CaseKey {
+    let mut key = [0; 3];
+    for (slot, l) in key.iter_mut().zip(c.to_lowercase()) {
+        *slot = l as u32;
+    }
+    key
+}
+
+/// The characters of a range and their case-variants, kept as the sets of
+/// their `fn:upper-case` and `fn:lower-case` values: C2 is a case-variant of
+/// C1 iff `lower-case(C1) eq lower-case(C2)` or `upper-case(C1) eq
+/// upper-case(C2)` (F&O 1.0 section 7.6.1.1), so C2 is in the set iff its
+/// upper-case or its lower-case is the one of some member.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct Fold {
+    upper: Vec<CaseKey>,
+    lower: Vec<CaseKey>,
+}
+
+/// Most characters the ranges of one `i`-flag class may span.
+const FOLD_SPAN_LIMIT: u32 = 0x2_0000;
+
+impl Fold {
+    fn matches(&self, c: char) -> bool {
+        self.upper.binary_search(&upper_key(c)).is_ok()
+            || self.lower.binary_search(&lower_key(c)).is_ok()
     }
 }
 

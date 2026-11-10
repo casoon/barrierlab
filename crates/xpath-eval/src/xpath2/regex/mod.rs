@@ -10,7 +10,13 @@ mod class;
 mod parse;
 mod vm;
 
-use vm::{Flags, Program, STEP_BUDGET};
+use vm::{Flags, Program};
+
+/// `replace` produces at most this many characters, or twice its input if
+/// that is more (`$1` over many matches would otherwise grow without bound).
+const MIN_OUTPUT_LIMIT: usize = 16 * 1024 * 1024;
+/// `tokenize` returns at most this many tokens.
+const MAX_TOKENS: usize = 1_000_000;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum RegexError {
@@ -69,7 +75,7 @@ impl Regex {
     /// `fn:matches`: does any substring match?
     pub fn is_match(&self, text: &str) -> Result<bool, RegexError> {
         let text: Vec<char> = text.chars().collect();
-        let mut budget = STEP_BUDGET;
+        let mut budget = self.program.budget(text.len());
         Ok(self
             .program
             .search(&text, 0, 0, true, &mut budget)?
@@ -78,7 +84,7 @@ impl Regex {
 
     /// F&O 7.6.3/7.6.4: a pattern that matches the zero-length string is `FORX0003`.
     fn reject_empty_match(&self) -> Result<(), RegexError> {
-        let mut budget = STEP_BUDGET;
+        let mut budget = self.program.budget(0);
         match self.program.search(&[], 0, 0, true, &mut budget)? {
             Some(_) => Err(RegexError::ZeroLength),
             None => Ok(()),
@@ -92,13 +98,18 @@ impl Regex {
             return Ok(Vec::new());
         }
         let text: Vec<char> = text.chars().collect();
-        let mut budget = STEP_BUDGET;
+        let mut budget = self.program.budget(text.len());
         let mut tokens = Vec::new();
         let (mut last, mut pos) = (0, 0);
         while pos <= text.len() {
             let Some(m) = self.program.search(&text, pos, 2, false, &mut budget)? else {
                 break;
             };
+            if tokens.len() >= MAX_TOKENS {
+                return Err(RegexError::Unsupported(format!(
+                    "a tokenize result of more than {MAX_TOKENS} tokens"
+                )));
+            }
             tokens.push(text[last..m[0]].iter().collect());
             last = m[1];
             pos = m[1];
@@ -121,7 +132,9 @@ impl Regex {
             .unwrap_or(0);
         let slots = 2 * (needed + 1);
         let text: Vec<char> = text.chars().collect();
-        let mut budget = STEP_BUDGET;
+        let mut budget = self.program.budget(text.len());
+        let limit = MIN_OUTPUT_LIMIT.max(text.len().saturating_mul(2));
+        let mut produced = 0usize;
         let mut out = String::new();
         let (mut last, mut pos) = (0, 0);
         while pos <= text.len() {
@@ -129,16 +142,26 @@ impl Regex {
                 break;
             };
             out.extend(&text[last..m[0]]);
+            produced += m[0] - last;
             for piece in &pieces {
                 match piece {
-                    Piece::Text(t) => out.push_str(t),
+                    Piece::Text(t) => {
+                        out.push_str(t);
+                        produced += t.chars().count();
+                    }
                     Piece::Group(n) => {
                         let (s, e) = (m[2 * n], m[2 * n + 1]);
                         if s != usize::MAX && e != usize::MAX {
                             out.extend(&text[s..e]);
+                            produced += e - s;
                         }
                     }
                 }
+            }
+            if produced > limit {
+                return Err(RegexError::Unsupported(format!(
+                    "a replace result of more than {limit} characters"
+                )));
             }
             last = m[1];
             pos = m[1];
@@ -174,25 +197,37 @@ fn parse_replacement(replacement: &str, groups: usize) -> Result<Vec<Piece>, Reg
                 _ => return Err(invalid("`\\` must be followed by `\\` or `$`")),
             },
             '$' => {
-                let Some(first) = chars.get(i + 1).and_then(|c| c.to_digit(10)) else {
+                // F&O 7.6.3: N is the number formed by all the digits after
+                // `$`. N = 0: the whole match; 1 <= N <= S: that group;
+                // S < N <= 9: nothing; otherwise the last digit is a literal
+                // and the rules are reapplied to the shorter number.
+                let mut digits: Vec<char> = chars[i + 1..]
+                    .iter()
+                    .take_while(|c| c.is_ascii_digit())
+                    .copied()
+                    .collect();
+                if digits.is_empty() {
                     return Err(invalid("`$` must be followed by a digit (write `\\$`)"));
-                };
-                let mut n = first as usize;
-                i += 2;
-                while let Some(d) = chars.get(i).and_then(|c| c.to_digit(10)) {
-                    let longer = n * 10 + d as usize;
-                    if longer > groups {
-                        break;
-                    }
-                    n = longer;
-                    i += 1;
                 }
+                i += 1 + digits.len();
+                let mut tail = String::new();
+                let n = loop {
+                    let n = digits.iter().fold(0usize, |acc, d| {
+                        acc.saturating_mul(10)
+                            .saturating_add(d.to_digit(10).unwrap() as usize)
+                    });
+                    if n <= groups || n <= 9 {
+                        break n;
+                    }
+                    tail.insert(0, digits.pop().unwrap());
+                };
                 if !text.is_empty() {
                     pieces.push(Piece::Text(std::mem::take(&mut text)));
                 }
                 if n <= groups {
                     pieces.push(Piece::Group(n));
                 }
+                text.push_str(&tail);
             }
             c => {
                 text.push(c);
@@ -237,4 +272,22 @@ fn strip_whitespace(pattern: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A search costs at most about two steps per instruction and character, so
+    /// an ordinary pattern over a megabyte is far inside the budget.
+    #[test]
+    fn budget_scales_with_input_and_program() {
+        let re = Regex::new("a{50}b", "").unwrap();
+        let len = 1_000_000u64;
+        let insts = re.program.insts_len() as u64;
+        assert!(re.program.budget(len as usize) >= 4 * len * insts);
+        let small = Regex::new("a", "").unwrap();
+        assert!(small.program.budget(10) < re.program.budget(1_000_000));
+        assert!(re.program.budget(usize::MAX / 2) <= 2_000_000_000);
+    }
 }

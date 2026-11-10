@@ -5,29 +5,28 @@
 //! first-alternative-wins, greedy/reluctant semantics F&O 7.6 asks for.
 
 use super::RegexError;
-use super::class::{Class, FoldClass};
+use super::class::Class;
 use super::parse::{Node, Parsed};
 
 /// Instructions a program may have; counted quantifiers are expanded, so this
 /// bounds `(a{100}){100}`.
 pub(super) const MAX_PROGRAM: usize = 10_000;
 
-/// Thread steps one call (all matches of a `replace`/`tokenize`) may spend
-/// before it stops with a named error.
-pub(super) const STEP_BUDGET: u64 = 50_000_000;
-
-#[derive(Debug)]
-enum Matcher {
-    Class(Class),
-    Fold(FoldClass),
-}
+/// Thread steps per input character and program instruction one call (all
+/// matches of a `replace`/`tokenize` together) may spend: a search costs at
+/// most about two steps per instruction and character, so this is linear work
+/// with room for matches that look ahead and for the start thread of every
+/// position. Quadratic re-scanning (`a.*z|a` over many `a`) exceeds it.
+const STEPS_PER_CELL: u64 = 8;
+/// Whatever the product, no call spends more than this (a few seconds).
+const STEP_CEILING: u64 = 2_000_000_000;
 
 #[derive(Debug)]
 enum Inst {
     Match,
     Char(char),
     Any(bool),
-    Set(Matcher),
+    Set(Class),
     Split(usize, usize),
     Jmp(usize),
     Save(usize),
@@ -82,22 +81,14 @@ impl Compiler<'_> {
         Ok(self.insts.len() - 1)
     }
 
-    fn matcher(&self, class: &Class) -> Result<Matcher, RegexError> {
-        if !self.flags.case_insensitive || !class.has_ranges() {
-            return Ok(Matcher::Class(class.clone()));
-        }
-        if class.negated || class.subtract.is_some() {
+    fn matcher(&self, class: &Class) -> Result<Class, RegexError> {
+        let mut class = class.clone();
+        if self.flags.case_insensitive && !class.fold_case() {
             return Err(RegexError::Unsupported(
-                "the `i` flag with a negated or subtracted character class".into(),
+                "the `i` flag with a character range over 131072 characters".into(),
             ));
         }
-        FoldClass::new(class.clone())
-            .map(Matcher::Fold)
-            .ok_or_else(|| {
-                RegexError::Unsupported(
-                    "the `i` flag with a character class over a huge range".into(),
-                )
-            })
+        Ok(class)
     }
 
     fn node(&mut self, node: &Node) -> Result<(), RegexError> {
@@ -227,6 +218,20 @@ enum Task {
 }
 
 impl Program {
+    #[cfg(test)]
+    pub fn insts_len(&self) -> usize {
+        self.insts.len()
+    }
+
+    /// The step budget for one call over `len` characters of input.
+    pub fn budget(&self, len: usize) -> u64 {
+        (len as u64 + 1)
+            .saturating_mul(self.insts.len() as u64)
+            .saturating_mul(STEPS_PER_CELL)
+            .saturating_add(100_000)
+            .min(STEP_CEILING)
+    }
+
     /// The leftmost match at or after `from`, as capture slots (`2 * n`,
     /// `2 * n + 1` are start and end of group `n`, `usize::MAX` = unset;
     /// only the first `slots` are tracked). `stop_at_first` ends the search at
@@ -271,13 +276,7 @@ impl Program {
                     (_, None) => false,
                     (Inst::Char(x), Some(c)) => *x == c,
                     (Inst::Any(dot_all), Some(c)) => *dot_all || (c != '\n' && c != '\r'),
-                    (Inst::Set(m), Some(c)) => {
-                        let answer = match m {
-                            Matcher::Class(k) => k.eval(c),
-                            Matcher::Fold(k) => k.eval(c),
-                        };
-                        answer.ok_or_else(|| undecided(c))?
-                    }
+                    (Inst::Set(m), Some(c)) => m.eval(c).ok_or_else(|| undecided(c))?,
                     _ => unreachable!("only consuming instructions and Match are threads"),
                 };
                 if accepts {
@@ -364,7 +363,7 @@ impl Program {
 
 fn budget_error() -> RegexError {
     RegexError::Unsupported(format!(
-        "a regular-expression evaluation over {STEP_BUDGET} steps (stopped, not guessed)"
+        "a regular-expression evaluation beyond its step budget ({STEPS_PER_CELL} per instruction and character, at most {STEP_CEILING}; stopped, not guessed)"
     ))
 }
 

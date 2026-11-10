@@ -121,7 +121,7 @@ Supported: branches, `? * + {n} {n,} {n,m}` and the reluctant forms, groups
 (capturing only), `.`, anchors `^ $`, classes with ranges, negation and
 subtraction, the single-character escapes of the grammar and `\$`,
 `\s \S \d \D \w \W`, `\p{..}`/`\P{..}` as below, flags `s m i x` in any order
-and repetition, `$N`, `\\` and `\$` in replacements, and the errors
+and repetition, `$N` (F&O 7.6.3 digit rule), `\\` and `\$` in replacements, and the errors
 `FORX0001` (a flag other than `s m i x`), `FORX0002` (invalid pattern,
 including a quantifier after a quantifier such as `a{2}{3}`, an empty class, a
 reversed range, an unknown category), `FORX0003` (`replace`/`tokenize` with a
@@ -152,21 +152,23 @@ class member already accepts, costs nothing):
   Beyond ASCII: `Unsupported`.
 - Any other `\p{Is...}` block: `Unsupported` (it may or may not exist). A name
   that is neither a category nor `Is...`, and `Cs`, is `FORX0002`.
-- A `-` inside a class that is neither first, last, a range operator nor the
-  start of a subtraction (`[a-c-e]`) is `Unsupported`: the grammar is ambiguous
-  there.
+- `-` in a class follows XML Schema Part 2 F.1: it is not an `XmlChar`, so it is no
+  endpoint of `s-e` (`[--a]`, `[+--]`, `[a--]` are `FORX0002`), and it is valid
+  only first, last, as the range operator or before a subtraction (`[a-c-e]` is
+  `FORX0002`); `\-` is a single-character escape and may start a range
+  (`[a\--z]`).
 
-Flag `i`: a character matches a literal or a range if it is equal to a member,
-or its simple upper-case or simple lower-case mapping equals that of the
-literal or of a member of the range (F&O 7.6.1.1). std exposes full mappings;
-where a full mapping is one character it is the simple mapping, where it is
-several the character maps to itself (`ß`, ligatures), with two exceptions:
-U+0130 (simple lower case `i`) and the Greek characters U+1F80..=U+1FFF whose
-simple upper case std does not expose, which are `Unsupported` when compared.
-Escapes (`\w`, `\p{Lu}`, ...) are not affected by the flag. Not decided, so
-`Unsupported`: a negated or subtracted class that contains literals or ranges
-(does `[^a]` match `A`?), and a class spanning more than 131,072 characters.
-The Kelvin sign matches `k`, as its lower case is `k`.
+Flag `i` (F&O 7.6.1.1): C2 is a case-variant of C1 iff `lower-case(C1) eq
+lower-case(C2)` or `upper-case(C1) eq upper-case(C2)` on the one-character
+strings, with the full Unicode mappings std provides (the same ones the
+function library uses). A literal or a range stands for its members and their
+case-variants; this is applied to the ranges before a class is negated or
+subtracted from, as the specification's examples require (`[^Q]` excludes `Q`
+and `q`, `[A-Z-[IO]]` excludes `I O i o`). So `ſ` (U+017F) matches `s`, `ı`
+(U+0131) matches `i` and `I`, `İ` (U+0130) matches neither (its lower case is
+two characters), the Kelvin sign matches `k`. Escapes (`\w`, `\p{Lu}`, ...) are
+not affected by the flag. A range class spanning more than 131,072 characters
+under `i` is `Unsupported` (the case-variants are enumerated).
 
 Limits, each a named `Unsupported`, never a wrong result:
 
@@ -178,13 +180,18 @@ Limits, each a named `Unsupported`, never a wrong result:
 - At most 100 capture groups, and class subtractions nested at most 100 deep
   (groups are bounded by the group cap, so 600 nested groups is refused as
   "more than 100 capture groups").
-- One call spends at most 50 million thread steps (all matches of a `replace`
-  or `tokenize` together); beyond that it stops with an error naming the
-  budget. `(a*)*b` against 5,000 `a` needs a few thousand.
+- Step budget: one call (all matches of a `replace` or `tokenize` together)
+  may spend 8 thread steps per program instruction and input character (plus
+  100,000), at most 2,000,000,000. A search costs about two steps per instruction
+  and character, so this is linear work with margin (`a{50}b` over a megabyte
+  fits); it is the protection against quadratic re-scanning (`a.*z|a` over many
+  `a`). Beyond it the call stops with an error naming the budget.
+- `replace` produces at most 16 Mi characters, or twice its input if that is
+  more (`$1` over many matches); `tokenize` returns at most 1,000,000 tokens.
 
 Follow-ups, not in this slice: back-references with a step budget; a vendored
-Unicode table (categories, name characters, blocks, case folding) so that
-`\p{L}`, `\d`, `\w`, `\i`, `\c` and the `i` flag decide every character.
+Unicode table (categories, name characters, blocks) so that
+`\p{L}`, `\d`, `\w`, `\i` and `\c` decide every character.
 
 ### Inventory: EN 16931 validation artefacts 1.3.17
 
@@ -233,7 +240,7 @@ parseable and evaluable (of 261).
 | # | Slice | Unlocks |
 |---|---|---|
 | 1 | **Done.** Mode switch; sequences, `,`, `to`; atomic types above; exact decimal arithmetic; general, value and node comparisons; `if`, `for`, `some`/`every`; `cast as`/`castable as`; `xs:` constructors; path steps that are expressions; `union`/`intersect`/`except`; ~45 functions (`exists`, `empty`, `upper-case`, `lower-case`, `ends-with`, `string-join`, `abs`, `round`/`floor`/`ceiling`, `sum`/`avg`/`min`/`max`, `distinct-values`, `concat` and the string library, ...) | 260 of 261 (99.6 %) |
-| 2 | **Done, with gaps (see "Regular expressions").** `matches`, `replace`, `tokenize` with flags on an own engine (maintainer decision: no dependency). Open: back-references, a Unicode database for categories, `\i`/`\c`, blocks, full case folding | 1 of 261 here, more in XRechnung/Peppol |
+| 2 | **Done, with gaps (see "Regular expressions").** `matches`, `replace`, `tokenize` with flags on an own engine (maintainer decision: no dependency). Open: back-references, a Unicode database for categories, `\i`/`\c`, blocks | 1 of 261 here, more in XRechnung/Peppol |
 | 3 | Rest of the F&O 1.0 string and sequence library: `round-half-to-even`, `string-to-codepoints`, `codepoints-to-string`, `compare`, `subsequence`, `index-of`, `insert-before`, `remove`, `root`, `lang`, `id` | 0 here (Peppol check digits expected) |
 | 4 | Date and time: `xs:dateTime`, `xs:time`, durations, timezones for `xs:date`, `current-date()`, component functions, date arithmetic | 0 here (`xs:date` comparison without timezone is in slice 1) |
 | 5 | Sequence types: `instance of`, `treat as`, kind tests with names (`element(a)`), `*:name`, user-callable `xsl:function` bridge | 0 here |

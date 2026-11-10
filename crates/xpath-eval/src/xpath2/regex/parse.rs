@@ -353,19 +353,25 @@ impl Parser {
                 single
             } else if let Some(item) = self.multi_escape(e)? {
                 class.items.push(item);
-                return self.after_multi_escape();
+                return Ok(());
             } else {
                 return Err(invalid(format!(
                     "`\\{e}` is not valid in a character class"
                 )));
             }
         } else {
-            if c == '-' && !first && self.peek() != Some(']') {
-                // A `-` that is neither first, last, a range operator nor
-                // the start of a subtraction: the grammar is ambiguous here.
-                return Err(RegexError::Unsupported(
-                    "a `-` in the middle of a character class (use `\\-`)".into(),
-                ));
+            if c == '-' {
+                // XML Schema Part 2 F.1: `-` is not an XmlChar, so it is no
+                // endpoint of `s-e`, and "the - character is a valid character
+                // range only at the beginning or end of a positive character
+                // group". A start-of-range `-` is thus never a range.
+                if !first && self.peek() != Some(']') {
+                    return Err(invalid(
+                        "`-` is valid in a character class only first, last, as a range operator or before a subtraction (use `\\-`)",
+                    ));
+                }
+                class.items.push(ClassItem::Range('-', '-'));
+                return Ok(());
             }
             c
         };
@@ -389,16 +395,6 @@ impl Parser {
             class.items.push(ClassItem::Range(lo, hi));
         } else {
             class.items.push(ClassItem::Range(lo, lo));
-        }
-        Ok(())
-    }
-
-    /// `\d-x` and friends: a range cannot start with a multi-character escape.
-    fn after_multi_escape(&self) -> Result<(), RegexError> {
-        if self.peek() == Some('-') && !matches!(self.peek_at(1), Some(']' | '[')) {
-            return Err(RegexError::Unsupported(
-                "a `-` after a multi-character escape inside a character class".into(),
-            ));
         }
         Ok(())
     }

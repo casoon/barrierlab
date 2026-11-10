@@ -57,7 +57,7 @@ fn unsupported(expr: &str) -> String {
     e.to_string()
 }
 
-const POEM: &str = "'\nKaum hat dies der Hahn gesehen,\nFängt er auch schon an zu krähen:\nKikeriki! Kikikerikih!!\nTak, tak, tak! - da kommen sie.\n'";
+const POEM: &str = "'\nKaum hat dies der Hahn gesehen,\nFängt er auch schon an zu krähen:\n«Kikeriki! Kikikerikih!!»\nTak, tak, tak! - da kommen sie.\n'";
 
 // ---- F&O 7.6.2 fn:matches: the examples ----------------------------------------
 
@@ -136,8 +136,6 @@ fn replace_replacement_string() {
     assert_eq!(one(r"replace('abc', 'b', '\\')"), r"a\c");
     // a group that does not exist inserts nothing
     assert_eq!(one("replace('abc', 'b', '[$3]')"), "a[]c");
-    // digits after $ are taken while they name an existing group
-    assert_eq!(one("replace('a', '(a)', '$10')"), "a0");
     assert_eq!(
         one("replace('abcdefghijk', '(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)', '$11-$10-$1')"),
         "k-j-a"
@@ -148,6 +146,42 @@ fn replace_replacement_string() {
     assert_eq!(one("replace('Hello', 'L', 'x', 'i')"), "Hexxo");
     // matches are non-overlapping and found left to right
     assert_eq!(one("replace('aaa', 'aa', 'b')"), "ba");
+}
+
+// F&O 7.6.3: "N is the decimal number formed by taking all the digits that
+// consecutively follow the $ character: If N=0 the whole match; if 1<=N<=S that
+// group; if S<N<=9 the zero-length string; otherwise (N>S and N>9) the last digit
+// of N is taken to be a literal character ... and the rules are reapplied using the
+// number N formed by stripping off this last digit." S = number of groups.
+#[test]
+fn replace_dollar_n_rule() {
+    // S=1: all digits are N=5, S<N<=9: nothing, the 0 is part of the number
+    assert_eq!(one("replace('abc', '(a)', '$05')"), "bc");
+    assert_eq!(one("replace('abc', '(a)', '$00')"), "abc"); // N=0: the whole match
+    assert_eq!(one("replace('abc', '(a)', '$01')"), "abc"); // N=1: group 1
+    assert_eq!(one("replace('abc', '(a)', '[$5]')"), "[]bc");
+    assert_eq!(one("replace('abc', '(a)', '$1x')"), "axbc");
+    // $10 with one group: N=10>S and >9: group 1 then the literal 0
+    assert_eq!(one("replace('abc', '(a)', '$10')"), "a0bc");
+    // $10 with ten groups: N=10<=S: group 10
+    assert_eq!(
+        one("replace('abcdefghij', '(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)', '$10$1')"),
+        "ja"
+    );
+    // $19 with twelve groups: N=19>12: group 1 then the literal 9
+    assert_eq!(
+        one("replace('abcdefghijkl', '(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)', '$19')"),
+        "a9"
+    );
+    // $100 with ten groups: 100>10 -> 10, group 10 then the literal 0
+    assert_eq!(
+        one("replace('abcdefghij', '(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)', '$100')"),
+        "j0"
+    );
+    // the example of the specification: "$23" with 5 groups is group 2 and "3"
+    assert_eq!(one("replace('abcde', '(a)(b)(c)(d)(e)', '$23')"), "b3");
+    // S=0: $9 is nothing, $99 is nothing and a literal 9
+    assert_eq!(one("replace('abc', 'b', '[$9][$99]')"), "a[][9]c");
 }
 
 // ---- F&O 7.6.4 fn:tokenize: the examples ---------------------------------------
@@ -382,7 +416,24 @@ fn character_classes() {
     assert_eq!(one("matches('b', '^[a-z-[aeiou-[b-d]]]$')"), "true");
     assert_eq!(one("matches('a', '^[a-z-[aeiou-[b-d]]]$')"), "false");
     // an ambiguous `-` is named, not guessed
-    assert!(unsupported("matches('a', '[a-c-e]')").contains("`-`"));
+    // XML Schema Part 2 F.1: `-` is not an XmlChar (no endpoint of s-e) and "is a
+    // valid character range only at the beginning or end of a positive character
+    // group"; `\-` is a single-character escape and may start a range.
+    for pattern in ["[--a]", "[a--]", "[+--]", "[a-c-e]", "[\\d-z]", "[a-z-9]"] {
+        assert_eq!(
+            code(&format!("matches('5', '{pattern}')")),
+            "FORX0002",
+            "{pattern}"
+        );
+    }
+    assert_eq!(one("matches('-', '[--]')"), "true");
+    assert_eq!(one("matches('5', '[--]')"), "false");
+    assert_eq!(one("matches('-', '[^--]')"), "false");
+    assert_eq!(one("matches('5', '[^--]')"), "true");
+    assert_eq!(one("matches('5', '[a\\--z]')"), "true"); // a, and U+002D..U+007A
+    assert_eq!(one("matches('!', '[a\\--z]')"), "false");
+    assert_eq!(one("matches('-', '[\\d-]')"), "true");
+    assert_eq!(one("matches('-', '[a-z-]')"), "true");
 }
 
 #[test]
@@ -506,13 +557,53 @@ fn flag_i_case_mapping() {
     // escapes are not affected by the flag
     assert_eq!(one("matches('a', '^\\p{Lu}$', 'i')"), "false");
     assert_eq!(one("matches('A', '^\\p{Lu}$', 'i')"), "true");
-    // a negated or subtracted class over ranges is not decided
-    assert!(unsupported("matches('A', '[^a]', 'i')").contains("`i` flag"));
-    assert!(unsupported("matches('A', '[a-z-[x]]', 'i')").contains("`i` flag"));
+    // F&O 7.6.1.1: a range stands for its members and their case-variants, also
+    // inside a negative group and in a subtraction: "[^Q] will match every
+    // character except Q and q", "[A-Z-[IO]]" matches A, B, a, b, not I, O, i, o.
+    assert_eq!(one("matches('q', '^[^Q]$', 'i')"), "false");
+    assert_eq!(one("matches('Q', '^[^Q]$', 'i')"), "false");
+    assert_eq!(one("matches('x', '^[^Q]$', 'i')"), "true");
+    assert_eq!(one("matches('A', '^[^a]$', 'i')"), "false");
+    assert_eq!(one("matches('A', '^[^a-z]$', 'i')"), "false");
+    assert_eq!(one("matches('1', '^[^a-z]$', 'i')"), "true");
+    assert_eq!(one("matches('\u{212A}', '^[^a-z]$', 'i')"), "false"); // Kelvin sign
+    for c in ["A", "B", "a", "b"] {
+        assert_eq!(one(&format!("matches('{c}', '^[A-Z-[IO]]$', 'i')")), "true");
+    }
+    for c in ["I", "O", "i", "o"] {
+        assert_eq!(
+            one(&format!("matches('{c}', '^[A-Z-[IO]]$', 'i')")),
+            "false"
+        );
+    }
+    assert_eq!(one("matches('C', '^[A-Z-[b]]$', 'i')"), "true");
+    assert_eq!(one("matches('B', '^[A-Z-[B]]$', 'i')"), "false");
+    assert_eq!(one("matches('b', '^[A-Z-[B]]$', 'i')"), "false");
+    // "[A-Z] ... will also match certain other characters such as #x212A (KELVIN SIGN)"
+    assert_eq!(one("matches('\u{212A}', '^[A-Z]$', 'i')"), "true");
     // ... but a negated escape is plain
     assert_eq!(one("matches('A', '^[^\\s]$', 'i')"), "true");
-    // a character without a known simple mapping is named
-    assert!(unsupported("matches('\u{1F88}', '^a$', 'i')").contains("U+1F88"));
+    // Case-variants are defined by fn:lower-case / fn:upper-case of the two
+    // one-character strings (F&O 7.6.1.1): lower-case(C1) eq lower-case(C2) or
+    // upper-case(C1) eq upper-case(C2), with the full Unicode mappings.
+    // U+017F (long s): upper-case is S, so it is a case-variant of s and S.
+    assert_eq!(one("matches('\u{17F}', '^s$', 'i')"), "true");
+    assert_eq!(one("matches('\u{17F}', '^S$', 'i')"), "true");
+    // U+0130: lower-case is the two characters i + U+0307, upper-case is itself:
+    // no case-variant of i or I.
+    assert_eq!(one("matches('\u{130}', '^i$', 'i')"), "false");
+    assert_eq!(one("matches('\u{130}', '^I$', 'i')"), "false");
+    assert_eq!(one("matches('\u{130}', '^[a-z]$', 'i')"), "false");
+    assert_eq!(one("matches('\u{130}', '^\u{130}$', 'i')"), "true");
+    // U+0131 (dotless i): upper-case is I, so it is a case-variant of I and of i.
+    assert_eq!(one("matches('\u{131}', '^I$', 'i')"), "true");
+    assert_eq!(one("matches('\u{131}', '^i$', 'i')"), "true");
+    // full mappings are compared as strings: U+1F88 lower-cases to U+1F80
+    assert_eq!(one("matches('\u{1F88}', '^\u{1F80}$', 'i')"), "true");
+    assert_eq!(one("matches('\u{1F88}', '^a$', 'i')"), "false");
+    // the sharp s has the upper-case SS, which is no single character
+    assert_eq!(one("matches('\u{DF}', '^s$', 'i')"), "false");
+    assert_eq!(one("matches('\u{1E9E}', '^\u{DF}$', 'i')"), "true");
 }
 
 // ---- limits: pathological patterns and inputs ----------------------------------------
@@ -618,6 +709,49 @@ fn nesting_and_expansion_are_capped_with_a_named_error() {
     assert!(unsupported(&format!("matches('a', '{groups}')")).contains("capture groups"));
     let alternatives = vec!["x"; 3000].join("|");
     assert_eq!(one(&format!("matches('x', '^({alternatives})$')")), "true");
+}
+
+#[test]
+fn output_and_budget_limits() {
+    // replace output is capped at 16 Mi characters (or twice the input)
+    let a = "a".repeat(100_000);
+    let e = run(&format!("replace('{a}', '(a)', '{}')", "x".repeat(200))).unwrap_err();
+    assert!(
+        e.is_unsupported() && e.to_string().contains("replace result"),
+        "{e}"
+    );
+    let e = run(&format!(
+        "replace('{a}', '(a)', '{}{}')",
+        "$1".repeat(100),
+        "y".repeat(100)
+    ))
+    .unwrap_err();
+    assert!(e.is_unsupported(), "{e}");
+    // tokenize is capped at 1,000,000 tokens
+    let many = "a".repeat(1_000_001);
+    let e = run(&format!("tokenize('{many}', 'a')")).unwrap_err();
+    assert!(
+        e.is_unsupported() && e.to_string().contains("tokens"),
+        "{e}"
+    );
+    // an ordinary search stays inside the budget (see also the unit test of the
+    // budget rule: a megabyte against `a{50}b` is far inside it)
+    let mb = "a".repeat(100_000);
+    assert_eq!(
+        run(&format!("matches('{mb}', 'a{{50}}b')")).unwrap(),
+        ["false"]
+    );
+    assert_eq!(
+        run(&format!("matches('{mb}', '^a{{50}}')")).unwrap(),
+        ["true"]
+    );
+    // quadratic re-scanning is not: `a.*z` looks ahead to the end for every match
+    let text = "a".repeat(20_000);
+    let e = quickly(&format!("replace('{text}', 'a.*z|a', 'b')")).unwrap_err();
+    assert!(
+        e.is_unsupported() && e.to_string().contains("step budget"),
+        "{e}"
+    );
 }
 
 #[test]
