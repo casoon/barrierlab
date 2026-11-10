@@ -131,7 +131,7 @@ pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckRepo
 /// Like [`check_with_options`], and additionally reports where each finding
 /// ends where its layer knows it. See [`RangedReport`] for which findings
 /// carry a range and the units of the positions. Not available together
-/// with a [`SchemaPreset`] yet.
+/// with a `SchemaPreset` (feature `rdfa-lite`) yet.
 ///
 /// # Errors
 ///
