@@ -27,8 +27,6 @@ produce the same messages.
 vnu's expected results say, per fixture, whether it should produce findings. The test counts
 agreement:
 
-| Result | Count |
-| --- | --- |
 | Result | `html` + `html-aria` | `html-math` | `html-rdfa` | `html-rdfalite` | `html-svg` | All |
 | --- | --- | --- | --- | --- | --- | --- |
 | true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 28 | 2 | 0 | 3,793 |
@@ -94,17 +92,14 @@ finding-by-finding parity.
 
 ## Not covered, or different
 
-- **Some tree-construction parse errors.** [`html5-parser`](https://crates.io/crates/html5-parser)
-  0.4.0 records every tokenizer error, and a tree-construction error wherever it ignores a
-  token (a stray `</div>`, `</li>` or `</h2>`, a second `<body>`, `<td>` outside a table, …)
-  or repairs misnested formatting elements such as `<b><i>…</b></i>` with the adoption agency
-  algorithm. It still records nothing for the spec's parse errors on tokens it keeps: an end
+- **A few tree-construction parse errors.** [`html5-parser`](https://crates.io/crates/html5-parser)
+  0.5.0 records the spec's parse errors that earlier versions dropped on tokens it keeps: an end
   tag that closes an element while other elements inside it are still open
-  (`<div><span></div>`), content after `</html>`, and the obsolete frameset modes. vnu reports
-  these; the repaired tree carries no trace of them, so html-conform cannot find them after
-  parsing. The differential test did not move with 0.4.0: the fixtures vnu flags for a stray
-  `</header>` or `</td>` already counted as true positives through unrelated heading and table
-  findings.
+  (`<div><span></div>`), content after `</html>`, ignored tokens in the frameset modes. Its
+  html5lib harness compares the reported errors with each case's `#errors`: 1,591 of 1,602 cases
+  agree on presence; the 11 exceptions are listed in
+  `crates/html5-parser/tests/html5lib_errors_known_failures.txt`. Exact error counts and
+  positions are not yet compared, so this is presence-level agreement, not parity.
 - **CSS inside `<style>`.** vnu hands style sheets to a vendored copy of the W3C CSS
   Validator. html-conform has no CSS parser for this, so a mistyped property such as `colr`
   goes unreported. This is the one false negative
