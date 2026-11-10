@@ -411,6 +411,17 @@ mod tests {
         assert!(!report.findings.is_empty());
     }
 
+    /// barrierlab#181: `xmlns:prefix` is reported on HTML elements (vnu does
+    /// too), `rev` on `<a>` is accepted (vnu's legacy.rnc).
+    #[test]
+    fn xmlns_prefix_on_html_is_reported_and_rev_on_a_is_not() {
+        assert!(
+            !rule_ids_for_body(r#"<p xmlns:x="http://example.org/">A</p>"#).is_empty(),
+            "xmlns:x on <p>"
+        );
+        assert!(rule_ids_for_body(r#"<a href="/" rev="made">A</a>"#).is_empty());
+    }
+
     #[test]
     fn input_type_search_is_conforming() {
         assert!(

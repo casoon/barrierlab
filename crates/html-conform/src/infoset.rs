@@ -613,6 +613,13 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         let is_th = matches!(&self.data().kind, Kind::Element { name, .. }
             if name.namespace.as_deref() == Some(XHTML_NAMESPACE) && name.local_name == "th");
 
+        // `xmlns:prefix` is not allowed on HTML elements (HTML §13.1.2.3 allows
+        // only `xmlns` with the XHTML namespace); vnu reports it, so it stays
+        // visible to the schema there. On foreign elements it is a namespace
+        // declaration and is dropped below.
+        let is_html_element = matches!(&self.data().kind, Kind::Element { name, .. }
+            if name.namespace.as_deref() == Some(XHTML_NAMESPACE));
+
         let raw: Vec<(relax_ng::ExpandedName, String)> = (*self)
             .attribute_nodes()
             .map(|attribute| match &attribute.data().kind {
@@ -639,7 +646,9 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         };
 
         raw.into_iter().filter_map(move |(name, value)| {
-            if name.namespace.is_none() && name.local == "xml:lang" {
+            if is_html_element && name.namespace.is_none() && name.local.starts_with("xmlns:") {
+                Some((name, value))
+            } else if name.namespace.is_none() && name.local == "xml:lang" {
                 Some((split_xml_lang_name(), value))
             } else if name.namespace.is_none() && name.local == "lang" {
                 if has_literal_xml_lang {

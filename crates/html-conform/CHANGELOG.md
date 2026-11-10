@@ -33,6 +33,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- **Schema check:** `xmlns:prefix` on an HTML element is reported (it stays visible to the schema;
+  on SVG and MathML elements it is still a namespace declaration), and `rev` on `<a>` is accepted
+  as in vnu's `legacy.rnc` (patch `0003-a-rev-legacy`). Differences to vnu on the `html-rdfa` and
+  `html-rdfalite` trees fall from 2 false positives and 7 false negatives to none (barrierlab#181).
 - **Schema check:** `xlink:href` and the other XLink attributes on SVG elements were rejected as
   "unexpected attribute"; they now match the schema's `{xlink}href` (barrierlab#172).
 
