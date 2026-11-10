@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
 ### Added
 
 - **Document:** `Node::end_position` gives the position just past an element's start tag (exclusive end),

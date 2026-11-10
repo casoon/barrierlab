@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-10
+
 ### Added
 
 - **API:** `StreamValidator` (also `Schema::stream_validator`) and `StreamError` validate a
