@@ -125,13 +125,13 @@ three outcomes:
 | `tests/html-math` | 48 | measured | 0 false positives, 0 false negatives |
 | `tests/html-rdfa` | 212 | measured | 0 false positives, 0 false negatives |
 | `tests/html-rdfalite` | 56 | measured | 0 false positives, 0 false negatives |
-| `tests/html-svg` (not in the issue's list) | 522 | 6 measured, 516 not vendored | the 516 embed W3C SVG 1.1 test cases, see below |
+| `tests/html-svg` (not in the issue's list) | 522 | 6 vendored and gated; all 522 measured on demand | the 516 embed W3C SVG 1.1 test cases and are not vendored, see below |
 | `tests/css` | 16 | out of scope | stand-alone style sheets for vnu's CSS checker; html-conform checks HTML only and has no CSS validation (issue #87) |
 | `tests/xhtml` | 129 | out of scope | XML syntax; html-conform parses HTML only and plans no XHTML mode |
 | `tests/svg` | 1 | out of scope | a stand-alone `.svg` document, not HTML syntax (inline SVG is `html-svg`) |
 | `tests/langdetect` | 11 | out of scope | vnu's language-detection heuristics (character statistics over about 1.4 MB of text); html-conform has no language detector |
 | `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform has no such check |
-| `tests/html-its` | 320 (90 `.html`) | not vendored, measured locally (matches vnu per file) | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
+| `tests/html-its` | 320 (90 `.html`) | not vendored, measured on demand (matches vnu per file) | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
 | `tests/schema-validation` | 3 | out of scope | exercises vnu's `--schema` option on XML files against a remote DocBook schema; see below |
 
 A local run (not part of the test, nothing committed) of the out-of-scope trees that hold
@@ -168,10 +168,15 @@ missing-`lang` warning on the same 46 files as vnu and nothing on the other 44: 
 agreement with vnu is 90 of 90 (clean vs. findings). That compares presence of findings per
 file, not their messages.
 
-If the maintainer wants the tree as a gated measurement, the options are: (1) vendor the 90
-`.html` files with the W3C Test Suite License as a second licence and treat all as expected
-clean (the ITS schema is vendored and checked against a vnu run, see above); (2) fetch them on demand
-into a gitignored cache, as for the real-world pages; (3) leave it out. Until then (3) holds.
+Decision (issue #175): **fetch on demand into a gitignored cache, nothing foreign-licensed in
+the repository.** `xtask/fetch-w3c-trees.sh` downloads the tree at the pinned commit into
+`xtask/.cache/w3c-trees/`; the opt-in test `tests/w3c_trees.rs` runs html-conform over it and,
+for the per-file verdict of vnu, runs the pinned vnu jar (`xtask/.cache/vnu.jar`). Without the jar
+or Java the vnu side is reported as NotRun, without the cache the test prints "not run: cache
+missing". Measured with it (vnu 26.8.20, commit `388cb36`): of the 90 `.html` files html-conform
+reports findings in 46 and vnu in 46, per-file agreement (clean vs. findings) is **90 of 90**.
+Presence of findings per file is compared, not their messages. It is a measurement, not a gate,
+and not part of CI.
 
 **`tests/schema-validation`** has 3 files: a README and two XML documents (valid and invalid
 DocBook 5), checked by `vnu --schema https://docbook.org/xml/5.1/rng/docbook.rng --xml`. The
@@ -185,10 +190,31 @@ nothing to measure.
 header "Copyright 2009 World Wide Web Consortium ... All Rights Reserved". W3C publishes that
 suite under its document license, which allows no modification and counts a subset as a
 derivative work; this repository is MIT. `xtask/vendor-corpus.sh` therefore copies only the 6
-files without that header (written by the vnu authors, MIT). The full tree is measurable
-locally by checking out vnu at the same tag; the 479 false positives above come from such a
-run, not from the committed corpus. Whether to vendor the W3C files, fetch them on demand into
-a gitignored cache (like the real-world pages), or leave SVG at 6 fixtures is open.
+files without that header (written by the vnu authors, MIT). Decision (issue #174): **fetch on demand into a gitignored cache, nothing foreign-licensed in
+the repository.** `xtask/fetch-w3c-trees.sh` downloads `tests/html-svg`, `tests/html-its` and
+`tests/messages.json` of the pinned commit into `xtask/.cache/w3c-trees/` (843 files, with a
+`SHA256SUMS` manifest). The opt-in test `tests/w3c_trees.rs` takes the expectation as
+`differential.rs` does (a file listed in `messages.json` expects findings, any other none; the
+missing-`lang` warning is ignored for the same harness reason). Measured on all 522 files (the 6
+vendored ones included), not gated and not part of CI:
+
+| Result | `html-svg`, 522 files |
+| --- | --- |
+| true positives | 34 |
+| true negatives | 484 |
+| false positives | 0 |
+| false negatives | 4 |
+| not comparable | 0 |
+
+The 4 false negatives, by class:
+
+- **Undeclared `xmlns:*` prefix attributes on an SVG element** (2): `conform-viewers-03-f-novalid`
+  (`xmlns:link` with a value other than the XLink namespace) and `fonts-overview-201-t-novalid`
+  (`xmlns:xe` not allowed).
+- **Unicode Normalization Form C** (1): `struct-cond-02-t-haswarn`; html-conform has no such
+  check (see `normalization` above).
+- **Nested SVG `<a>`** (1): `svg-a-nested-in-svg-a-novalid`, the one already pinned in the
+  differential test.
 
 ### RDFa
 
