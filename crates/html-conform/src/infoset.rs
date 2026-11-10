@@ -196,10 +196,10 @@ impl Eq for NormalizedNode<'_> {}
 /// `namespace` (WHATWG "adjust foreign attributes" — the table's local name
 /// is `href`), whereas a RELAX NG `attribute xlink:href` pattern matches
 /// `{xlink-ns}href`. Hence the prefix is dropped when a namespace is set.
-fn schema_local_name(name: &ExpandedName) -> String {
+fn schema_local_name(name: &ExpandedName) -> &str {
     match (&name.namespace, name.local_name.split_once(':')) {
-        (Some(_), Some((_, local))) => local.to_owned(),
-        _ => name.local_name.clone(),
+        (Some(_), Some((_, local))) => local,
+        _ => &name.local_name,
     }
 }
 
@@ -609,7 +609,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
     /// origin-transform-box-isvalid.html` (`<svg xmlns="...">` at the SVG
     /// root, `<div xmlns="...">` inside a `<foreignObject>`, expected
     /// clean).
-    fn attributes(&self) -> impl Iterator<Item = (relax_ng::ExpandedName, String)> {
+    fn attributes(&self) -> impl Iterator<Item = (relax_ng::ExpandedNameRef<'_>, &str)> {
         let is_th = matches!(&self.data().kind, Kind::Element { name, .. }
             if name.namespace.as_deref() == Some(XHTML_NAMESPACE) && name.local_name == "th");
 
@@ -620,15 +620,15 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         let is_html_element = matches!(&self.data().kind, Kind::Element { name, .. }
             if name.namespace.as_deref() == Some(XHTML_NAMESPACE));
 
-        let raw: Vec<(relax_ng::ExpandedName, String)> = (*self)
+        let raw: Vec<(relax_ng::ExpandedNameRef<'_>, &str)> = (*self)
             .attribute_nodes()
             .map(|attribute| match &attribute.data().kind {
                 Kind::Attribute { name, value } => (
-                    relax_ng::ExpandedName {
-                        namespace: name.namespace.clone(),
+                    relax_ng::ExpandedNameRef {
+                        namespace: name.namespace.as_deref(),
                         local: schema_local_name(name),
                     },
-                    value.clone(),
+                    value.as_str(),
                 ),
                 Kind::Root | Kind::Element { .. } | Kind::Text { .. } | Kind::Comment { .. } => {
                     unreachable!("NormalizedNode::attribute_nodes only ever yields Attribute nodes")
@@ -640,9 +640,9 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
             .iter()
             .any(|(name, _)| name.namespace.is_none() && name.local == "xml:lang");
 
-        let split_xml_lang_name = || relax_ng::ExpandedName {
-            namespace: Some(XML_NAMESPACE.to_owned()),
-            local: "lang".to_owned(),
+        let split_xml_lang_name = || relax_ng::ExpandedNameRef {
+            namespace: Some(XML_NAMESPACE),
+            local: "lang",
         };
 
         raw.into_iter().filter_map(move |(name, value)| {
@@ -656,7 +656,7 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
                 } else {
                     Some((split_xml_lang_name(), value))
                 }
-            } else if name.namespace.as_deref() == Some(XMLNS_NAMESPACE)
+            } else if name.namespace == Some(XMLNS_NAMESPACE)
                 || (name.namespace.is_none()
                     && (name.local == "xmlns"
                         || name.local.starts_with("xmlns:")
@@ -1280,7 +1280,10 @@ mod tests {
         let body_children = expect_element(body, XHTML_NAMESPACE, "body");
         let p = find_element(&body_children, "p");
 
-        let attributes: Vec<_> = p.attributes().collect();
+        let attributes: Vec<_> = p
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
         assert_eq!(
             attributes,
             vec![(
@@ -1304,7 +1307,10 @@ mod tests {
         let body_children = expect_element(body, XHTML_NAMESPACE, "body");
         let p = find_element(&body_children, "p");
 
-        let attributes: Vec<_> = p.attributes().collect();
+        let attributes: Vec<_> = p
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
         assert_eq!(
             attributes,
             vec![(
@@ -1327,7 +1333,10 @@ mod tests {
         let body = find_element(&html_children, "body");
         let body_children = expect_element(body, XHTML_NAMESPACE, "body");
         let p = find_element(&body_children, "p");
-        let attributes: Vec<_> = p.attributes().collect();
+        let attributes: Vec<_> = p
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
 
         // Both attributes are present in the source; the schema-facing
         // view yields the split xml:lang name exactly once, with the
@@ -1356,7 +1365,10 @@ mod tests {
         let body = find_element(&html_children, "body");
         let body_children = expect_element(body, XHTML_NAMESPACE, "body");
         let p = find_element(&body_children, "p");
-        let attributes: Vec<_> = p.attributes().collect();
+        let attributes: Vec<_> = p
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
 
         assert_eq!(attributes, Vec::new());
     }
@@ -1399,7 +1411,10 @@ mod tests {
         let body = find_element(&html_children, "body");
         let body_children = expect_element(body, XHTML_NAMESPACE, "body");
         let p = find_element(&body_children, "p");
-        let attributes: Vec<_> = p.attributes().collect();
+        let attributes: Vec<_> = p
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
 
         // Bare `data-` (nothing after the hyphen) is NOT a valid custom
         // data attribute — left unmapped so the schema's own
@@ -1715,7 +1730,10 @@ mod element_adapter_tests {
         // the same attribute-mapping intent as the Phase 05a original: a
         // namespaced attribute's namespace/local-name both round-trip.
         let a = find_by_local_name(first_child(&document), "a");
-        let attributes: Vec<_> = a.attributes().collect();
+        let attributes: Vec<_> = a
+            .attributes()
+            .map(|(n, v)| (n.to_owned(), v.to_owned()))
+            .collect();
         assert_eq!(attributes.len(), 1);
         assert_eq!(attributes[0].0.local, "xlink:href");
         assert_eq!(attributes[0].1, "https://example.com");

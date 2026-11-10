@@ -26,7 +26,8 @@ use crate::{
 ///
 /// ```
 /// use relax_ng::{
-///     Content, DatatypeRegistry, Element, ExpandedName, ResolveError, Schema, SchemaResolver,
+///     Content, DatatypeRegistry, Element, ExpandedName, ExpandedNameRef, ResolveError, Schema,
+///     SchemaResolver,
 ///     SchemaSource, SchemaSyntax,
 /// };
 ///
@@ -62,10 +63,10 @@ use crate::{
 ///     fn name(&self) -> ExpandedName {
 ///         ExpandedName::new(None::<String>, self.name)
 ///     }
-///     fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+///     fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
 ///         self.attributes
 ///             .iter()
-///             .map(|(name, value)| (ExpandedName::new(None::<String>, *name), value.to_string()))
+///             .map(|(name, value)| (ExpandedNameRef { namespace: None, local: name }, *value))
 ///     }
 ///     fn children(&self) -> impl Iterator<Item = Content<Self>> {
 ///         std::iter::once(Content::Text(self.text.to_owned()))

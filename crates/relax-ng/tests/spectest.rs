@@ -15,9 +15,9 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use relax_ng::{
-    Content, DatatypeRegistry, Element, ExpandedName, ResolveError, SchemaResolver, SchemaSource,
-    SchemaSyntax, StreamValidator, ValidationOptions, parse, simplify, validate,
-    validate_with_options,
+    Content, DatatypeRegistry, Element, ExpandedName, ExpandedNameRef, ResolveError,
+    SchemaResolver, SchemaSource, SchemaSyntax, StreamValidator, ValidationOptions, parse,
+    simplify, validate, validate_with_options,
 };
 use roxmltree::Node;
 
@@ -279,11 +279,14 @@ impl<'a, 'input> Element for RoxmlElement<'a, 'input> {
         ExpandedName::new(tag.namespace(), tag.name())
     }
 
-    fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+    fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
         self.0.attributes().map(|attribute| {
             (
-                ExpandedName::new(attribute.namespace(), attribute.name()),
-                attribute.value().to_owned(),
+                ExpandedNameRef {
+                    namespace: attribute.namespace(),
+                    local: attribute.name(),
+                },
+                attribute.value(),
             )
         })
     }
@@ -326,7 +329,9 @@ fn push_events(validator: &mut StreamValidator<'_, ()>, element: &RoxmlElement<'
     validator
         .start_element(
             element.name(),
-            element.attributes(),
+            element
+                .attributes()
+                .map(|(n, v)| (n.to_owned(), v.to_owned())),
             element.namespace_bindings(),
             None,
         )

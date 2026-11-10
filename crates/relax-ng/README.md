@@ -14,7 +14,8 @@ pattern matching, datatypes).
 
 ```rust
 use relax_ng::{
-    Content, DatatypeRegistry, Element, ExpandedName, ResolveError, Schema, SchemaResolver,
+    Content, DatatypeRegistry, Element, ExpandedName, ExpandedNameRef, ResolveError, Schema,
+    SchemaResolver,
     SchemaSource, SchemaSyntax,
 };
 
@@ -40,7 +41,7 @@ let schema = Schema::compile(&source, &NoResolver).expect("schema compiles");
 struct Doc { /* ... */ }
 impl Element for Doc {
     fn name(&self) -> ExpandedName { /* ... */ unimplemented!() }
-    fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> { /* ... */ std::iter::empty() }
+    fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> { /* ... */ std::iter::empty() }
     fn children(&self) -> impl Iterator<Item = Content<Self>> { /* ... */ std::iter::empty() }
 }
 

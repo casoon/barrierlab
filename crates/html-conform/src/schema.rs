@@ -261,7 +261,9 @@ mod tests {
         validator
             .start_element(
                 element.name(),
-                element.attributes(),
+                element
+                    .attributes()
+                    .map(|(n, v)| (n.to_owned(), v.to_owned())),
                 element.namespace_bindings(),
                 element.location(),
             )

@@ -33,8 +33,8 @@ use std::rc::Rc;
 
 use crate::datatypes::{DatatypeContext, DatatypeRegistry};
 use crate::grammar::{Context, Param, Pattern};
-use crate::simplify::{Definitions, name_class_matches};
-use crate::validator::ExpandedName;
+use crate::simplify::{Definitions, name_class_matches, name_class_matches_ref};
+use crate::validator::{ExpandedName, ExpandedNameRef};
 
 /// An interned pattern.
 pub(crate) type Id = u32;
@@ -96,7 +96,7 @@ enum Event<'e> {
         name_id: u32,
     },
     Attribute {
-        name: &'e ExpandedName,
+        name: ExpandedNameRef<'e>,
         name_id: u32,
         value: &'e str,
         context_id: u32,
@@ -202,6 +202,16 @@ impl<K, V> KeyedMap<K, V> {
     /// The hash to pass to [`Self::get_hashed`] and [`Self::insert_hashed`].
     pub(crate) fn hash_of<Q: Hash + ?Sized>(&self, key: &Q) -> u64 {
         self.state.hash_one(key)
+    }
+
+    pub(crate) fn get_hashed_by(&self, hash: u64, eq: impl Fn(&K) -> bool) -> Option<&V> {
+        match self.slots.get(&hash)? {
+            Slot::One(slot_key, value) => eq(slot_key).then_some(value),
+            Slot::Many(entries) => entries
+                .iter()
+                .find(|(slot_key, _)| eq(slot_key))
+                .map(|(_, value)| value),
+        }
     }
 
     pub(crate) fn get_hashed<Q>(&self, hash: u64, key: &Q) -> Option<&V>
@@ -318,6 +328,18 @@ impl<'s> Interner<'s> {
         }
         let id = u32::try_from(self.names.len()).expect("fewer than 2^32 distinct names");
         self.names.insert_hashed(hash, name.clone(), id);
+        id
+    }
+
+    /// [`Self::name_id`] for a borrowed name: hashes and compares without
+    /// copying, and copies only when the name is new to the table.
+    pub(crate) fn name_id_ref(&mut self, name: ExpandedNameRef<'_>) -> u32 {
+        let hash = self.names.hash_of(&name);
+        if let Some(&id) = self.names.get_hashed_by(hash, |k| name.eq_owned(k)) {
+            return id;
+        }
+        let id = u32::try_from(self.names.len()).expect("fewer than 2^32 distinct names");
+        self.names.insert_hashed(hash, name.to_owned(), id);
         id
     }
 
@@ -696,7 +718,8 @@ impl<'s> Interner<'s> {
         context_id: u32,
         context: &DatatypeContext,
     ) -> Id {
-        let name_id = self.name_id(name);
+        let name = name.as_ref();
+        let name_id = self.name_id_ref(name);
         self.deriv_attribute_by_id(id, name, name_id, value, context_id, context)
     }
 
@@ -705,7 +728,7 @@ impl<'s> Interner<'s> {
     pub(crate) fn deriv_attribute_by_id(
         &mut self,
         id: Id,
-        name: &ExpandedName,
+        name: ExpandedNameRef<'_>,
         name_id: u32,
         value: &str,
         context_id: u32,
@@ -803,7 +826,7 @@ impl<'s> Interner<'s> {
                     }
                     Event::Attribute { name, .. } => self
                         .definitions
-                        .may_reach_attribute_at(position, &name.local),
+                        .may_reach_attribute_at(position, name.local),
                     Event::Text { .. } => true,
                 };
                 if !may_match {
@@ -873,7 +896,7 @@ impl<'s> Interner<'s> {
                     ..
                 },
             ) => {
-                name_class_matches(name_class, &name.namespace, &name.local) && {
+                name_class_matches_ref(name_class, name.namespace, name.local) && {
                     let body = self.intern(&body[0]);
                     self.value_matches(body, value, context)
                 }
@@ -1004,7 +1027,8 @@ impl<'s> Interner<'s> {
     /// from "allowed, but wrong value".
     #[cfg(test)]
     pub(crate) fn attribute_name_known(&mut self, id: Id, name: &ExpandedName) -> bool {
-        let name_id = self.name_id(name);
+        let name = name.as_ref();
+        let name_id = self.name_id_ref(name);
         self.attribute_known_by_id(id, name, name_id)
     }
 
@@ -1013,7 +1037,7 @@ impl<'s> Interner<'s> {
     pub(crate) fn attribute_known_by_id(
         &mut self,
         id: Id,
-        name: &ExpandedName,
+        name: ExpandedNameRef<'_>,
         name_id: u32,
     ) -> bool {
         if let Some(&known) = self.attribute_known.get(&(id, name_id)) {
@@ -1022,14 +1046,14 @@ impl<'s> Interner<'s> {
         let result = match self.node(id) {
             Node::Leaf(Leaf(Pattern::Attribute {
                 name: name_class, ..
-            })) => name_class_matches(name_class, &name.namespace, &name.local),
+            })) => name_class_matches_ref(name_class, name.namespace, name.local),
             Node::Group(values) | Node::Interleave(values) | Node::Choice(values) => values
                 .iter()
                 .any(|&value| self.attribute_known_by_id(value, name, name_id)),
             Node::OneOrMore(inner) => self.attribute_known_by_id(inner, name, name_id),
             Node::Ref(position) => {
                 self.definitions
-                    .may_reach_attribute_at(position, &name.local)
+                    .may_reach_attribute_at(position, name.local)
                     && {
                         let target = self.ref_target(position);
                         self.attribute_known_by_id(target, name, name_id)

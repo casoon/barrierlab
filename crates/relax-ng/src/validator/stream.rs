@@ -161,8 +161,11 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
         let context_id = self.interner.context_id(&bindings);
         let context = DatatypeContext::from_bindings(bindings);
         for (name, value) in attributes {
-            let name_id = self.interner.name_id(&name);
-            if !self.interner.attribute_known_by_id(pattern, &name, name_id) {
+            let name_id = self.interner.name_id_ref(name.as_ref());
+            if !self
+                .interner
+                .attribute_known_by_id(pattern, name.as_ref(), name_id)
+            {
                 self.errors.push(ValidationError {
                     kind: ValidationErrorKind::UnexpectedAttribute(name),
                     path: self.path.clone(),
@@ -171,9 +174,14 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                 });
                 continue;
             }
-            let derived = self
-                .interner
-                .deriv_attribute_by_id(pattern, &name, name_id, &value, context_id, &context);
+            let derived = self.interner.deriv_attribute_by_id(
+                pattern,
+                name.as_ref(),
+                name_id,
+                &value,
+                context_id,
+                &context,
+            );
             if derived == NOT_ALLOWED {
                 self.errors.push(ValidationError {
                     kind: ValidationErrorKind::InvalidAttributeValue(name, value),

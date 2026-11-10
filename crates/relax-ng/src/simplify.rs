@@ -1522,28 +1522,38 @@ pub(crate) fn name_class_matches(
     namespace: &Option<String>,
     local: &str,
 ) -> bool {
+    name_class_matches_ref(class, namespace.as_deref(), local)
+}
+
+/// [`name_class_matches`] for a borrowed namespace.
+pub(crate) fn name_class_matches_ref(
+    class: &NameClass,
+    namespace: Option<&str>,
+    local: &str,
+) -> bool {
+    let ns_is = |ns: &Option<String>| ns.as_deref().unwrap_or("") == namespace.unwrap_or("");
     match class {
         NameClass::Name {
             lexical,
             namespace: ns,
             ..
-        } => ns_eq(ns, namespace) && lexical == local,
+        } => ns_is(ns) && lexical == local,
         NameClass::Any { except, .. } => !except
             .iter()
-            .any(|item| name_class_matches(item, namespace, local)),
+            .any(|item| name_class_matches_ref(item, namespace, local)),
         NameClass::Namespace {
             namespace: ns,
             except,
             ..
         } => {
-            ns_eq(ns, namespace)
+            ns_is(ns)
                 && !except
                     .iter()
-                    .any(|item| name_class_matches(item, namespace, local))
+                    .any(|item| name_class_matches_ref(item, namespace, local))
         }
         NameClass::Choice(options) => options
             .iter()
-            .any(|item| name_class_matches(item, namespace, local)),
+            .any(|item| name_class_matches_ref(item, namespace, local)),
     }
 }
 
@@ -1882,7 +1892,7 @@ mod tests {
                     local: "root".to_string(),
                 }
             }
-            fn attributes(&self) -> impl Iterator<Item = (crate::ExpandedName, String)> {
+            fn attributes(&self) -> impl Iterator<Item = (crate::ExpandedNameRef<'_>, &str)> {
                 std::iter::empty()
             }
             fn children(&self) -> impl Iterator<Item = crate::Content<Self>> {

@@ -47,7 +47,9 @@ fn main() {
         let mut times = Vec::new();
         for _ in 0..samples {
             let t = Instant::now();
-            std::hint::black_box(html_conform::__bench_schema_only(std::hint::black_box(&html)));
+            std::hint::black_box(html_conform::__bench_schema_only(std::hint::black_box(
+                &html,
+            )));
             times.push(t.elapsed().as_secs_f64() * 1e3);
         }
         let allocs = (ALLOCS.load(Relaxed) - a0) / samples;

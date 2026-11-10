@@ -1,4 +1,4 @@
-use relax_ng::{Content, Element, ExpandedName};
+use relax_ng::{Content, Element, ExpandedName, ExpandedNameRef};
 use roxmltree::Node;
 
 use crate::Position;
@@ -41,12 +41,15 @@ impl Element for RngElement<'_, '_> {
         ExpandedName::new(tag.namespace(), tag.name())
     }
 
-    fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+    fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
         // roxmltree keeps `xmlns` declarations apart from attributes.
         self.0.attributes().map(|a| {
             (
-                ExpandedName::new(a.namespace(), a.name()),
-                a.value().to_owned(),
+                ExpandedNameRef {
+                    namespace: a.namespace(),
+                    local: a.name(),
+                },
+                a.value(),
             )
         })
     }

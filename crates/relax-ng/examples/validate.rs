@@ -10,8 +10,8 @@
 //! dev-dependency needed just to demonstrate the API).
 
 use relax_ng::{
-    Content, DatatypeRegistry, Element, ExpandedName, ResolveError, Schema, SchemaResolver,
-    SchemaSource, SchemaSyntax,
+    Content, DatatypeRegistry, Element, ExpandedName, ExpandedNameRef, ResolveError, Schema,
+    SchemaResolver, SchemaSource, SchemaSyntax,
 };
 use std::collections::BTreeMap;
 
@@ -83,11 +83,14 @@ impl Element for Doc {
         ExpandedName::new(None::<String>, self.name)
     }
 
-    fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+    fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
         self.attributes.iter().map(|(name, value)| {
             (
-                ExpandedName::new(None::<String>, *name),
-                (*value).to_owned(),
+                ExpandedNameRef {
+                    namespace: None,
+                    local: name,
+                },
+                *value,
             )
         })
     }

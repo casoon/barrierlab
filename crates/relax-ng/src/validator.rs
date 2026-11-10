@@ -70,6 +70,37 @@ impl ExpandedName {
     }
 }
 
+/// A borrowed [`ExpandedName`]: what [`Element::attributes`] yields, so no
+/// name is copied per attribute.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct ExpandedNameRef<'a> {
+    /// The namespace URI, or `None` for "no namespace".
+    pub namespace: Option<&'a str>,
+    /// The local (unprefixed) name.
+    pub local: &'a str,
+}
+
+impl ExpandedNameRef<'_> {
+    /// The owned form.
+    pub fn to_owned(self) -> ExpandedName {
+        ExpandedName::new(self.namespace, self.local)
+    }
+
+    pub(crate) fn eq_owned(self, other: &ExpandedName) -> bool {
+        self.namespace == other.namespace.as_deref() && self.local == other.local
+    }
+}
+
+impl ExpandedName {
+    /// The borrowed form.
+    pub fn as_ref(&self) -> ExpandedNameRef<'_> {
+        ExpandedNameRef {
+            namespace: self.namespace.as_deref(),
+            local: &self.local,
+        }
+    }
+}
+
 impl fmt::Display for ExpandedName {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.namespace {
@@ -112,7 +143,7 @@ pub trait Element: Sized {
     /// significant in XML, and RELAX NG never treats it as such either).
     /// `xmlns`/`xmlns:*` namespace declarations are not attributes for
     /// RELAX NG's purposes and must not be yielded here.
-    fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)>;
+    fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)>;
     /// This element's children, in document order.
     fn children(&self) -> impl Iterator<Item = Content<Self>>;
     /// An optional location, included in any [`ValidationError`] raised
@@ -500,10 +531,10 @@ fn open_frame<E: Element>(
     // Attributes are unordered — fold the derivative over them in
     // whatever order the caller's iterator happens to yield.
     for (name, value) in element.attributes() {
-        let name_id = interner.name_id(&name);
-        if !interner.attribute_known_by_id(pattern, &name, name_id) {
+        let name_id = interner.name_id_ref(name);
+        if !interner.attribute_known_by_id(pattern, name, name_id) {
             errors.push(ValidationError {
-                kind: ValidationErrorKind::UnexpectedAttribute(name),
+                kind: ValidationErrorKind::UnexpectedAttribute(name.to_owned()),
                 path: path.clone(),
                 location: element.location(),
                 recovered,
@@ -511,10 +542,10 @@ fn open_frame<E: Element>(
             continue;
         }
         let derived =
-            interner.deriv_attribute_by_id(pattern, &name, name_id, &value, context_id, &context);
+            interner.deriv_attribute_by_id(pattern, name, name_id, value, context_id, &context);
         if derived == NOT_ALLOWED {
             errors.push(ValidationError {
-                kind: ValidationErrorKind::InvalidAttributeValue(name, value),
+                kind: ValidationErrorKind::InvalidAttributeValue(name.to_owned(), value.to_owned()),
                 path: path.clone(),
                 location: element.location(),
                 recovered,
@@ -738,8 +769,10 @@ mod tests {
         fn name(&self) -> ExpandedName {
             self.name.clone()
         }
-        fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
-            self.attributes.clone().into_iter()
+        fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
+            self.attributes
+                .iter()
+                .map(|(name, value)| (name.as_ref(), value.as_str()))
         }
         fn children(&self) -> impl Iterator<Item = Content<Self>> {
             self.children.clone().into_iter()
@@ -1409,7 +1442,7 @@ mod tests {
         fn name(&self) -> ExpandedName {
             name(if self.remaining == 0 { "span" } else { "div" })
         }
-        fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+        fn attributes(&self) -> impl Iterator<Item = (ExpandedNameRef<'_>, &str)> {
             std::iter::empty()
         }
         fn children(&self) -> impl Iterator<Item = Content<Self>> {
