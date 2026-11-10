@@ -24,7 +24,7 @@ policy) and locked by own tests in `tests/xpath10_regression.rs`.
 XPath 2.0: locked by `tests/xpath20.rs` (spec section named per test) and
 measured against the XPath expressions of the EN 16931 validation Schematron.
 Categories, known failures, coverage numbers and how to rerun the externally
-fetched corpora: [`CONFORMANCE.md`](../../crates/xpath-eval/CONFORMANCE.md).
+fetched corpora: [`CONFORMANCE.md`](https://github.com/casoon/barrierlab/blob/main/crates/xpath-eval/CONFORMANCE.md).
 
 ## XPath 2.0 mode
 
