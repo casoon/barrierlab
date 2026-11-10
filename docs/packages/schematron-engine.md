@@ -7,7 +7,7 @@ order: 14
 Parses an ISO/IEC 19757-3 schema and evaluates it against a document the caller
 provides through `xpath_eval::Document`/`Node`. It parses no instance XML or
 HTML itself; XPath goes only through `xpath-eval`. Support matrix and usage:
-[`README.md`](../../crates/schematron-engine/README.md).
+[`README.md`](https://github.com/casoon/barrierlab/blob/main/crates/schematron-engine/README.md).
 
 ## `<let>` scope
 

@@ -31,7 +31,7 @@ and the rules neither read nor produce annotations.
 ## Format
 
 A JSON object with `schema` (currently `1`) and `annotations`. The JSON Schema is
-[`annotations.schema.json`](annotations.schema.json).
+[`annotations.schema.json`](https://casoon.github.io/barrierlab/docs/a11y/reference/annotations.schema.json).
 
 ```json
 {
