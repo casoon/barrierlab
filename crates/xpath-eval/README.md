@@ -36,6 +36,26 @@ context). For XPath variables (`$x`) or prefixed name tests (`p:foo`) that
 need real namespace resolution, build an `EvaluationContext` directly and
 supply a `variables`/`namespaces` lookup hook — see their doc comments.
 
+## XPath 2.0 mode
+
+XPath 1.0 is the default. A subset of XPath 2.0 (sequences, exact `xs:decimal`,
+`if`/`for`/`some`/`every`, value comparisons, casts, the common string and
+aggregate functions) is available through an explicit version:
+
+```rust
+use xpath_eval::{EvaluationContext, XPathVersion, evaluate_versioned, parse_versioned};
+# fn example<'a, N: xpath_eval::Node<'a>>(node: N) -> Result<(), Box<dyn std::error::Error>> {
+let expr = parse_versioned("every $a in amount satisfies xs:decimal($a) ge 0", XPathVersion::V2)?;
+let result = evaluate_versioned(&expr, &EvaluationContext::new(node))?;
+# Ok(())
+# }
+```
+
+Anything outside the subset fails with `XPath2Error::Unsupported` naming the
+feature; it never evaluates to a guessed result. See
+[`docs/packages/xpath-eval.md`](https://github.com/casoon/barrierlab/blob/main/docs/packages/xpath-eval.md)
+for the supported constructs and the planned slices.
+
 ## Scope and known limitations
 
 - **`id()` needs `Node::is_id_attribute()` to be overridden to do anything

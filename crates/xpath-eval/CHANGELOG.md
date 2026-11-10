@@ -9,6 +9,14 @@ in the git history only.
 
 ### Added
 
+- **API:** Opt-in XPath 2.0 mode next to the unchanged 1.0 default (`XPathVersion`,
+  `parse_versioned`, `evaluate_versioned`, `evaluate_boolean_versioned`, `XPath2Error`); slice 1
+  of the e-invoice rule sets, unsupported features are named errors. Design and remaining slices
+  in `docs/packages/xpath-eval.md` (casoon/barrierlab#62).
+- **Conformance:** XPath 2.0 own tests and an opt-in measurement against the EN 16931 validation
+  Schematron (`tests/en16931.rs`, `xtask/vendor-en16931.sh`; not kept in the repository): 2008 of
+  2010 expressions evaluate in 2.0 mode, 1780 in 1.0 mode. Details in `CONFORMANCE.md`
+  (casoon/barrierlab#62).
 - **Conformance:** The Jaxen XPath test cases run as an opt-in, externally fetched corpus
   (`tests/jaxen.rs`, `#[ignore]`, `xtask/vendor-jaxen.sh`; not kept in the repository): 263 of 281
   case runs pass, the 18 known failures are in `tests/jaxen_known_failures.txt`. Details in

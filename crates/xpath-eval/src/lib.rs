@@ -9,6 +9,7 @@ mod functions;
 mod lexer;
 mod parser;
 mod value;
+mod xpath2;
 
 pub use ast::*;
 pub use axes::{
@@ -20,3 +21,7 @@ pub use document::{Document, ExpandedName, Node, NodeKind};
 pub use eval::{EvalError, EvaluationContext, evaluate, evaluate_boolean};
 pub use parser::{ParseError, parse};
 pub use value::Value;
+pub use xpath2::{
+    Atomic, AtomicType, Date, Decimal, Error as XPath2Error, Expression, Item, Sequence,
+    XPathVersion, evaluate_boolean_versioned, evaluate_versioned, parse_versioned,
+};
