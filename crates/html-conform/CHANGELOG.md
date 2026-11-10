@@ -8,11 +8,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **Schema check:** feature `rdfa-lite` (off by default) adds `SchemaPreset` and
+  `check_with_preset` for vnu's `html5-rdfalite` preset, which allows only the RDFa Lite 1.1
+  attributes. The second compiled schema (`prebuilt/html5-rdfalite.rngc`, about 246 KB) is compiled
+  in only with the feature; the default behaviour is unchanged (barrierlab#181).
 - **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
   `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
   `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`
-  trees fall from 177 and 50 to 2 and 0. vnu's RDFa-Lite-only preset is not offered
-  (barrierlab#173).
+  trees fall from 177 and 50 to 2 and 0 (barrierlab#173).
 - **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
   else UTF-8); bytes invalid in that encoding are reported as not checked in every format. A
   non-UTF-8 file is decoded as declared and still gets `assertion.elements.meta-charset-not-utf8`.

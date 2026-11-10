@@ -25,7 +25,7 @@ mod finding;
 mod infoset;
 mod parse;
 mod schema;
-#[cfg(any(test, feature = "runtime-compile"))]
+#[cfg(any(test, feature = "runtime-compile", feature = "rdfa-lite"))]
 mod schema_source;
 mod scripts;
 mod skipped;
@@ -74,6 +74,25 @@ impl Default for CheckOptions {
     }
 }
 
+/// Which of vnu's schema presets [`check_with_preset`] checks against (feature `rdfa-lite`).
+///
+/// The default preset (what [`check`] and [`check_with_options`] use) is vnu's `html5-all`,
+/// which accepts full RDFa 1.1. [`SchemaPreset::RdfaLite`] is vnu's `html5-rdfalite`: the same
+/// schema with only the RDFa Lite 1.1 attributes (`vocab`, `typeof`, `property`, `resource`,
+/// `prefix`); `about`, `content`, `datatype`, `rel`, `rev` and `inlist` are then not allowed
+/// where they are RDFa-only. Without the feature this type does not exist, so a host cannot
+/// select a preset the build does not contain.
+#[cfg(feature = "rdfa-lite")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum SchemaPreset {
+    /// vnu's `html5-all`: full RDFa 1.1.
+    #[default]
+    Default,
+    /// vnu's `html5-rdfalite`: RDFa Lite 1.1 only.
+    RdfaLite,
+}
+
 /// Checks a complete HTML document with the default options.
 ///
 /// Findings are returned in parser order. Technical initialization failures are
@@ -104,6 +123,34 @@ pub fn check(html: &str) -> Result<CheckReport, CheckError> {
 /// Never for a document that is merely non-conformant, which is reported
 /// through [`CheckReport::findings`] instead.
 pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckReport, CheckError> {
+    check_impl(html, options, schema::validate_document)
+}
+
+/// [`check_with_options`] against a chosen [`SchemaPreset`] (feature `rdfa-lite`).
+/// `SchemaPreset::Default` gives exactly the result of [`check_with_options`].
+///
+/// # Errors
+///
+/// As [`check_with_options`].
+#[cfg(feature = "rdfa-lite")]
+pub fn check_with_preset(
+    html: &str,
+    options: CheckOptions,
+    preset: SchemaPreset,
+) -> Result<CheckReport, CheckError> {
+    match preset {
+        SchemaPreset::Default => check_impl(html, options, schema::validate_document),
+        SchemaPreset::RdfaLite => check_impl(html, options, schema::validate_document_rdfa_lite),
+    }
+}
+
+type SchemaErrors = Vec<relax_ng::ValidationError<SourceLocation>>;
+
+fn check_impl(
+    html: &str,
+    options: CheckOptions,
+    validate_schema: fn(&infoset::NormalizedHtmlDocument) -> Result<SchemaErrors, String>,
+) -> Result<CheckReport, CheckError> {
     let parsed = parse::parse(html);
     let depth = parse::nesting_depth(parsed.document());
     if depth > MAX_NESTING_DEPTH {
@@ -121,7 +168,7 @@ pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckRepo
     };
 
     let schema_errors =
-        schema::validate_document(&document).map_err(|message| CheckError::Initialization {
+        validate_schema(&document).map_err(|message| CheckError::Initialization {
             message: format!("schema validation setup failed: {message}"),
         })?;
     findings.extend(schema::findings(&schema_errors));
@@ -448,5 +495,67 @@ mod tests {
             )
             .is_empty()
         );
+    }
+}
+
+#[cfg(all(test, feature = "rdfa-lite"))]
+mod rdfa_lite_tests {
+    use super::{CheckOptions, SchemaPreset, check, check_with_preset};
+
+    fn schema_findings(html: &str, preset: SchemaPreset) -> usize {
+        check_with_preset(html, CheckOptions::default(), preset)
+            .expect("HTML5 parsing should recover")
+            .findings
+            .iter()
+            .filter(|finding| finding.rule_id == "schema.html5")
+            .count()
+    }
+
+    #[test]
+    fn rdfa_lite_preset_drops_the_non_lite_attributes_only() {
+        let page = |attrs: &str| {
+            format!(
+                "<!doctype html><html lang=\"en\"><title>t</title><body><p {attrs}>x</p></body></html>"
+            )
+        };
+        for lite in [
+            r#"vocab="http://schema.org/""#,
+            r#"typeof="Person""#,
+            r#"property="name""#,
+            r##"resource="#a""##,
+            r#"prefix="a: http://a/""#,
+        ] {
+            assert_eq!(
+                schema_findings(&page(lite), SchemaPreset::RdfaLite),
+                0,
+                "{lite}"
+            );
+        }
+        for full in [
+            r##"about="#a""##,
+            r#"content="x""#,
+            r#"datatype="xsd:string""#,
+            r#"inlist="""#,
+        ] {
+            assert_eq!(
+                schema_findings(&page(full), SchemaPreset::Default),
+                0,
+                "{full}"
+            );
+            assert!(
+                schema_findings(&page(full), SchemaPreset::RdfaLite) > 0,
+                "{full}"
+            );
+        }
+    }
+
+    #[test]
+    fn default_preset_equals_check() {
+        let html =
+            r##"<!doctype html><html lang="en"><title>t</title><p about="#a" bogus="1">x</p>"##;
+        let plain = check(html).expect("HTML5 parsing should recover");
+        let preset = check_with_preset(html, CheckOptions::default(), SchemaPreset::Default)
+            .expect("HTML5 parsing should recover");
+        assert_eq!(plain.findings.len(), preset.findings.len());
     }
 }

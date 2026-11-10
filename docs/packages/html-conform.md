@@ -55,6 +55,13 @@ and `schematron-engine`, for example, also outside of HTML.
 CSP hash sources); both appear there as `DocumentIncomplete` input notes. The crate's own
 `Finding` types remain for now.
 
+The `rdfa-lite` feature (off by default) adds `SchemaPreset` (`#[non_exhaustive]`: `Default`,
+`RdfaLite`) and `check_with_preset(html, options, preset)`: vnu's `html5-rdfalite` preset, which
+allows only the RDFa Lite 1.1 attributes. Without the feature the type and function do not exist,
+so there is no runtime "not run" path; `check` and `check_with_options` are unchanged. The second
+compiled schema is `prebuilt/html5-rdfalite.rngc` (about 246 KB); it is in the crate download
+either way (a feature cannot exclude files from a tarball) but only compiled in with the feature.
+
 The `cli` feature (off by default, no extra dependency) adds an `html-conform` binary as a
 thin front end for files, directories and stdin; see `docs/html-conform/guides/cli.md` (encodings, rule selection, config file, prebuilt binaries). It
 lives in the crate rather than in a separate one because it takes data from the local

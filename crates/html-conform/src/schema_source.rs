@@ -1,7 +1,8 @@
 //! The vendored HTML5 (`schema/html5/*.rnc`), SVG 1.1 (`schema/svg11/*.rnc`) and MathML 3
 //! (`schema/mml3/*.rnc`) RELAX NG modules, embedded with `include_str!`, and the compile of
 //! them into one schema. Only built for tests and the `runtime-compile` feature: normal builds
-//! load the result of this compile from `prebuilt/html5.rngc` instead (barrierlab#72).
+//! load the result of this compile from `prebuilt/html5.rngc` instead (barrierlab#72); the
+//! `rdfa-lite` preset likewise from `prebuilt/html5-rdfalite.rngc`.
 
 use relax_ng::{CompileError, ResolveError, Schema, SchemaResolver, SchemaSource, SchemaSyntax};
 
@@ -293,7 +294,7 @@ const MML3_ROOT_MODULE: (&str, &str) = (
 /// here because a compact-syntax `include` passes it on to the included
 /// file, and `rdfa.rnc` declares none of its own (the generated vnu driver
 /// starts with this same declaration). vnu's separate `html5-rdfalite`
-/// preset (the same include with `nonRDFaLite = notAllowed`) is not offered.
+/// preset (the same include with `nonRDFaLite = notAllowed`) is [`ROOT_ENTRY_RDFA_LITE`].
 /// The last two lines are the ITS 2.0 part of the same generated driver
 /// (`build/build.py`: `include "its20-html5.rnc"` and
 /// `common.attrs &= its-html-attributes`), so `its-*` attributes are accepted
@@ -302,6 +303,20 @@ const ROOT_ENTRY: &str = "default namespace = \"http://www.w3.org/1999/xhtml\"\n
      include \"html5/html5.rnc\"\n\
      include \"html5-svg-mathml.rnc\"\n\
      include \"rdfa.rnc\"\n\
+     include \"its20-html5.rnc\"\n\
+     common.attrs &= its-html-attributes\n";
+
+/// vnu's `html5-rdfalite` preset: [`ROOT_ENTRY`] with `build.py`'s
+/// `schemaDriverHtml5RDFaLite` in place of the plain `include "rdfa.rnc"`
+/// (`include "rdfa.rnc" { nonRDFaLite = notAllowed }`), which leaves only the
+/// RDFa Lite 1.1 attributes (`vocab`, `typeof`, `property`, `resource`,
+/// `prefix`) and drops `about`, `content`, `datatype`, `rel`, `rev` and
+/// `inlist`. Offered behind the `rdfa-lite` feature (barrierlab#181).
+#[cfg(feature = "rdfa-lite")]
+const ROOT_ENTRY_RDFA_LITE: &str = "default namespace = \"http://www.w3.org/1999/xhtml\"\n\
+     include \"html5/html5.rnc\"\n\
+     include \"html5-svg-mathml.rnc\"\n\
+     include \"rdfa.rnc\" { nonRDFaLite = notAllowed }\n\
      include \"its20-html5.rnc\"\n\
      common.attrs &= its-html-attributes\n";
 
@@ -338,6 +353,17 @@ impl SchemaResolver for EmbeddedResolver {
 /// [`ROOT_ENTRY`].
 pub(crate) fn compile_html5_schema() -> Result<Schema, CompileError> {
     let source = SchemaSource::new(ROOT_ENTRY, "embedded:/root.rnc", SchemaSyntax::Compact);
+    Schema::compile(&source, &EmbeddedResolver)
+}
+
+/// Compiles the `html5-rdfalite` preset from [`ROOT_ENTRY_RDFA_LITE`].
+#[cfg(feature = "rdfa-lite")]
+pub(crate) fn compile_html5_rdfa_lite_schema() -> Result<Schema, CompileError> {
+    let source = SchemaSource::new(
+        ROOT_ENTRY_RDFA_LITE,
+        "embedded:/root-rdfalite.rnc",
+        SchemaSyntax::Compact,
+    );
     Schema::compile(&source, &EmbeddedResolver)
 }
 
