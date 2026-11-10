@@ -9,6 +9,9 @@ in the git history only.
 
 ### Added
 
+- **API:** `StreamValidator` (also `Schema::stream_validator`) and `StreamError` validate a
+  document from `start_element`/`text`/`end_element` events without an `Element` tree; the findings
+  equal those of `validate` (barrierlab#77). No new dependencies.
 - **Datatypes:** `pattern` facets accept the XSD name escapes `\i`, `\I`, `\c`, `\C` and
   character-class subtraction (`[\i-[:]]`); the `regex` crate knows neither (barrierlab#173).
 

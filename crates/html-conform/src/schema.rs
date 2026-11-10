@@ -251,4 +251,88 @@ mod tests {
         }
         assert!(with_errors > 100, "the corpus has invalid documents");
     }
+
+    /// Pushes `element` and its subtree into `validator` as events.
+    fn push_events<E>(validator: &mut relax_ng::StreamValidator<'_, E::Location>, element: &E)
+    where
+        E: relax_ng::Element,
+        E::Location: Clone,
+    {
+        validator
+            .start_element(
+                element.name(),
+                element.attributes(),
+                element.namespace_bindings(),
+                element.location(),
+            )
+            .expect("well-formed events");
+        for child in element.children() {
+            match child {
+                relax_ng::Content::Text(text) => validator.text(&text).expect("text"),
+                relax_ng::Content::Element(child) => push_events(validator, &child),
+            }
+        }
+        validator.end_element().expect("well-formed events");
+    }
+
+    /// The push validator reports exactly the errors, locations and order of the tree walk
+    /// for every document of the vendored corpus (barrierlab#77).
+    #[test]
+    #[ignore = "slow (~4655 documents) — run with `cargo test --release -p html-conform --lib stream_and_tree -- --ignored`"]
+    fn stream_and_tree_validation_agree_on_the_corpus() {
+        fn collect(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("corpus directory") {
+                let path = entry.expect("directory entry").path();
+                if path.is_dir() {
+                    collect(&path, out);
+                } else if path
+                    .extension()
+                    .is_some_and(|extension| extension == "html")
+                {
+                    out.push(path);
+                }
+            }
+        }
+        let mut files = Vec::new();
+        collect(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/corpus"),
+            &mut files,
+        );
+        assert!(files.len() > 1000, "the corpus is vendored");
+        files.sort();
+
+        let schema = html5_schema().expect("the schema loads");
+        let (mut checked, mut with_errors) = (0, 0);
+        for path in &files {
+            let html = std::fs::read_to_string(path).expect("UTF-8 fixture");
+            let parsed = crate::parse::parse(&html);
+            if crate::parse::nesting_depth(parsed.document()) > crate::MAX_NESTING_DEPTH {
+                continue;
+            }
+            let document = crate::infoset::normalize(parsed.document(), parsed.source());
+            let Some(root) = document.root_element() else {
+                continue;
+            };
+            let render =
+                |errors: &[relax_ng::ValidationError<crate::finding::SourceLocation>]| {
+                    errors
+                        .iter()
+                        .map(|error| format!("{error} @ {:?}", error.location()))
+                        .collect::<Vec<_>>()
+                };
+            let tree = schema
+                .validate(&DATATYPE_REGISTRY, &root)
+                .expect("datatypes are known");
+            let mut validator = schema
+                .stream_validator(&DATATYPE_REGISTRY)
+                .expect("datatypes are known");
+            push_events(&mut validator, &root);
+            let stream = validator.finish().expect("complete document");
+            assert_eq!(render(&tree), render(&stream), "{}", path.display());
+            checked += 1;
+            with_errors += usize::from(!tree.is_empty());
+        }
+        eprintln!("stream vs tree: {checked} documents identical, {with_errors} with errors");
+        assert!(with_errors > 100, "the corpus has invalid documents");
+    }
 }

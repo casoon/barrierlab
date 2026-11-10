@@ -44,6 +44,9 @@ use crate::derive::{Id, Interner, NOT_ALLOWED, param_pairs};
 use crate::grammar::Pattern;
 use crate::simplify::Definitions;
 
+mod stream;
+pub use stream::{StreamError, StreamValidator};
+
 /// An expanded (namespace-resolved) name: local name plus an optional
 /// namespace URI. `None` means "no namespace" — the caller's document
 /// implementation is responsible for resolving any prefixes itself (this
