@@ -19,6 +19,8 @@ by hand: change or add a patch, then re-run the script.
   commit into a temp dir, applies the patches and diffs against the committed
   tree (exit 1 on any difference). Needs network, not run in CI; run it after
   every change to the script, a patch or `schema/html5/`.
+  `xtask/vendor-svg-mathml.sh --check` does the same for the unpatched
+  `schema/html5-svg-mathml.rnc`, `schema/svg11/` and `schema/mml3/`.
 - **Offline part:** `cargo test -p html-conform --test schema_patches` checks
   that each patch targets an existing module and that its added lines are in
   the committed file.

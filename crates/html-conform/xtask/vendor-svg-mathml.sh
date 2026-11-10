@@ -24,9 +24,13 @@
 #          which does — that one explicitly scopes its MIT grant to "all
 #          files in this directory", i.e. schema/html5/ only).
 #
-# Requires: curl only.
+# Requires: curl, diff.
 #
-# Usage: xtask/vendor-svg-mathml.sh
+# Usage: xtask/vendor-svg-mathml.sh           vendor into schema/
+#        xtask/vendor-svg-mathml.sh --check   vendor into a temp dir and diff
+#                                             against the committed tree; exit
+#                                             1 on any difference. Needs
+#                                             network, so it is not run in CI.
 
 set -euo pipefail
 
@@ -36,23 +40,39 @@ RAW_BASE="https://raw.githubusercontent.com/validator/validator/${VNU_COMMIT}/sc
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-if ! command -v curl >/dev/null 2>&1; then
-  echo "error: curl not found on PATH" >&2
-  exit 1
-fi
+SCHEMA_DIR="${REPO_ROOT}/schema"
+
+MODE="write"
+case "${1:-}" in
+  "") ;;
+  --check) MODE="check" ;;
+  *) echo "usage: $0 [--check]" >&2; exit 2 ;;
+esac
+
+for tool in curl diff; do
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    echo "error: ${tool} not found on PATH" >&2
+    exit 1
+  fi
+done
+
+# Everything is downloaded into a temp dir first, so a failed download leaves
+# schema/ untouched.
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "${WORK_DIR}"' EXIT
 
 # The integration driver: adds <svg>/<math> as phrasing content and wires
 # up the ARIA-in-foreign-content patterns this crate's schema layer
 # already remaps custom elements/data-*/etc. into
 # (src/infoset.rs::merge_text_and_comment_runs used to unconditionally
 # skip these subtrees).
-curl -sSf -o "${REPO_ROOT}/schema/html5-svg-mathml.rnc" \
+curl -sSf -o "${WORK_DIR}/html5-svg-mathml.rnc" \
   "${RAW_BASE}/.drivers/html5-svg-mathml.rnc"
 # REUSE-IgnoreStart
 printf '# SPDX-License-Identifier: MIT\n# (schema/html5/LICENSE governs this file — it patches patterns\n# schema/html5/*.rnc defines, see this file'"'"'s own vendoring header.)\n' \
-  | cat - "${REPO_ROOT}/schema/html5-svg-mathml.rnc" > "${REPO_ROOT}/schema/html5-svg-mathml.rnc.tmp"
+  | cat - "${WORK_DIR}/html5-svg-mathml.rnc" > "${WORK_DIR}/html5-svg-mathml.rnc.tmp"
 # REUSE-IgnoreEnd
-mv "${REPO_ROOT}/schema/html5-svg-mathml.rnc.tmp" "${REPO_ROOT}/schema/html5-svg-mathml.rnc"
+mv "${WORK_DIR}/html5-svg-mathml.rnc.tmp" "${WORK_DIR}/html5-svg-mathml.rnc"
 
 # ---------------------------------------------------------------------
 # SVG 1.1 (full profile — NOT the Basic/Tiny mobile profiles, which
@@ -103,10 +123,9 @@ SVG_MODULES=(
   svg11-inc.rnc
 )
 
-SVG_DEST="${REPO_ROOT}/schema/svg11"
+SVG_DEST="${WORK_DIR}/svg11"
 echo "==> downloading ${#SVG_MODULES[@]} SVG 1.1 .rnc modules from validator/validator@${VNU_COMMIT}"
 mkdir -p "${SVG_DEST}"
-rm -f "${SVG_DEST}"/*.rnc
 for module in "${SVG_MODULES[@]}"; do
   curl -sSf -o "${SVG_DEST}/${module}" "${RAW_BASE}/svg11/${module}"
   printf '# License: W3C Software Notice (see this file'"'"'s own header comment)\n' \
@@ -126,15 +145,36 @@ MATHML_MODULES=(
   mathml3-strict-content.rnc
 )
 
-MATHML_DEST="${REPO_ROOT}/schema/mml3"
+MATHML_DEST="${WORK_DIR}/mml3"
 echo "==> downloading ${#MATHML_MODULES[@]} MathML 3 .rnc modules from validator/validator@${VNU_COMMIT}"
 mkdir -p "${MATHML_DEST}"
-rm -f "${MATHML_DEST}"/*.rnc
 for module in "${MATHML_MODULES[@]}"; do
   curl -sSf -o "${MATHML_DEST}/${module}" "${RAW_BASE}/mml3/${module}"
   printf '# License: W3C Software Notice, additional Mozilla Foundation\n# copyright (see this file'"'"'s own header comment)\n' \
     | cat - "${MATHML_DEST}/${module}" > "${MATHML_DEST}/${module}.tmp"
   mv "${MATHML_DEST}/${module}.tmp" "${MATHML_DEST}/${module}"
+done
+
+if [ "${MODE}" = "check" ]; then
+  status=0
+  diff -u "${SCHEMA_DIR}/html5-svg-mathml.rnc" "${WORK_DIR}/html5-svg-mathml.rnc" || status=1
+  # -r also reports a committed module the script no longer produces.
+  for dir in svg11 mml3; do
+    diff -ru "${SCHEMA_DIR}/${dir}" "${WORK_DIR}/${dir}" || status=1
+  done
+  if [ "${status}" -ne 0 ]; then
+    echo "error: committed schema/{html5-svg-mathml.rnc,svg11,mml3} differs from upstream" >&2
+    exit 1
+  fi
+  echo "==> ok: html5-svg-mathml.rnc, svg11/ and mml3/ equal ${VNU_COMMIT}"
+  exit 0
+fi
+
+mkdir -p "${SCHEMA_DIR}/svg11" "${SCHEMA_DIR}/mml3"
+cp "${WORK_DIR}/html5-svg-mathml.rnc" "${SCHEMA_DIR}/html5-svg-mathml.rnc"
+for dir in svg11 mml3; do
+  rm -f "${SCHEMA_DIR}/${dir}"/*.rnc
+  cp "${WORK_DIR}/${dir}"/*.rnc "${SCHEMA_DIR}/${dir}/"
 done
 
 echo "==> done: 1 driver + ${#SVG_MODULES[@]} SVG modules + ${#MATHML_MODULES[@]} MathML modules"
