@@ -1,93 +1,94 @@
-# relax-ng
+---
+title: "relax-ng"
+description: "RELAX NG in pure Rust: reads compact and XML schemas, simplifies them and validates instances with Brzozowski derivatives, from a tree or from events."
+order: 11
+---
 
-RELAX NG in reiner Rust: Schema lesen (Compact und XML), vereinfachen, Instanzen mit
-Brzozowski-Ableitungen prüfen. Norm: RELAX NG Specification. Der Kern enthält keinen XML-Parser;
-Instanzen kommen über das Trait `Element` (Baum) oder über Ereignisse (`StreamValidator`) herein.
+Reads a RELAX NG schema (compact and XML syntax), simplifies it and validates instances with
+Brzozowski derivatives. Norm: the RELAX NG Specification. The core contains no XML parser;
+instances come in through the `Element` trait (tree) or as events (`StreamValidator`).
 
-## Streaming-Validierung
+## Streaming validation
 
-`StreamValidator` prüft ein Dokument aus Ereignissen, ohne dass der Aufrufer einen `Element`-Baum
-aufbaut (barrierlab#77). Der Baumpfad (`validate`, `Schema::validate`) bleibt unverändert.
+`StreamValidator` validates a document from events, without the caller building an `Element`
+tree (barrierlab#77). The tree path (`validate`, `Schema::validate`) is unchanged.
 
 ```rust
-let mut v = schema.stream_validator::<()>(&registry)?; // oder StreamValidator::new
+let mut v = schema.stream_validator::<()>(&registry)?; // or StreamValidator::new
 v.start_element(name, attributes, namespace_bindings, location)?;
-v.text("…")?;           // beliebig oft, wird bis zum nächsten Tag zusammengefasst
+v.text("…")?;           // any number of times, joined up to the next tag
 v.end_element()?;
-let findings = v.finish()?; // Vec<ValidationError<L>>, leer = gültig
+let findings = v.finish()?; // Vec<ValidationError<L>>, empty = valid
 ```
 
-### Ereignismodell
+### Event model
 
-| Ereignis | Ableitungsschritt |
+| Event | Derivative step |
 |---|---|
-| `start_element(name, attributes, bindings, location)` | `startTagOpen` (Ableitung des Elternmusters nach dem Namen; Inhalt des Kindes bestimmen), dann je Attribut `attDeriv` (ungeordnet), `startTagClose` ist implizit: die Kindinhalte starten mit dem Rest-Muster |
-| `text(&str)` | wird im Rahmen des offenen Elements gesammelt |
-| nächstes `start_element` / `end_element` | gesammelter Text wird als **ein** Textknoten abgeleitet (`textDeriv`) |
-| `end_element` | Textrest ableiten, dann Nullable-Prüfung (`endTag`); sonst `MissingContent` |
-| `finish` | prüft, dass genau ein Wurzelelement vollständig war |
+| `start_element(name, attributes, bindings, location)` | `startTagOpen` (derivative of the parent pattern by the name; determines the content of the child), then `attDeriv` per attribute (unordered); `startTagClose` is implicit: the child content starts with the remaining pattern |
+| `text(&str)` | collected in the frame of the open element |
+| next `start_element` / `end_element` | the collected text is derived as **one** text node (`textDeriv`) |
+| `end_element` | derive remaining text, then the nullable check (`endTag`); otherwise `MissingContent` |
+| `finish` | checks that exactly one root element was complete |
 
-Attribute stehen gebündelt am `start_element`, nicht als einzelne Ereignisse: ein Pull-Parser
-liefert sie ohnehin mit dem Start-Tag, und so gibt es keinen Zustand „Tag offen, Attribute
-unvollständig".
+Attributes arrive bundled with `start_element`, not as separate events: a pull parser delivers
+them with the start tag anyway, and so there is no state "tag open, attributes incomplete".
 
 ### Text
 
-- `data`, `value` und `list` brauchen den vollständigen Text eines Textknotens. Deshalb wird Text
-  je offenem Element gepuffert und erst an einer Kindgrenze (Start- oder End-Tag) abgeleitet.
-  Aufeinanderfolgende `text`-Aufrufe sind ein Lauf; die Zusammenführung über Kommentare hinweg
-  bleibt Sache des Aufrufers (wie bei `Content::Text`).
-- Reiner Leerraum (§6.2.7, schwacher Vergleich): Steht er neben anderen Kindern, wird er nicht
-  abgeleitet. „Neben anderen Kindern" heißt: ein früheres Kind existierte, oder ein Kind beginnt
-  direkt danach. Das ist das Kriterium `Kindanzahl > 1` des Baumpfads, nur ohne Vorausblick auf
-  das Elementende. Ein Element, dessen einziges Kind ein Leerraumlauf ist, bekommt ihn wie bisher
-  angeboten.
-- Passt Text nicht, ist es `UnexpectedText`, außer bei reinem Leerraum, wenn nichts im Muster
-  Text verlangt (`wants_text`) — identisch zum Baumpfad.
+- `data`, `value` and `list` need the complete text of a text node. Text is therefore buffered
+  per open element and derived only at a child boundary (start or end tag). Consecutive `text`
+  calls are one run; joining text across comments stays with the caller (as with
+  `Content::Text`).
+- Whitespace only (§6.2.7, weak match): next to other children it is not derived. "Next to other
+  children" means that an earlier child existed or that a child starts right after it. This is
+  the tree path's criterion `child count > 1`, only without looking ahead to the end of the
+  element. An element whose only child is a whitespace run is offered that run as before.
+- Text that does not match is `UnexpectedText`, except for whitespace when nothing in the pattern
+  asks for text (`wants_text`), identical to the tree path.
 
-### Zustand
+### State
 
-Je offenem Element ein Frame: Rest-Muster (interniert, `Id`), Datentyp-Kontext (Namensraum-
-bindungen), Ort, gepufferter Text, Kindzähler. Dazu der Pfad der Elementnamen, die Befundliste
-und ein Zähler für übersprungene Teilbäume. Speicher wächst mit Verschachtelungstiefe, Befunden,
-der Länge des längsten ungeteilten Textlaufs und dem Musterinterner des Schemas, nicht mit der
-Dokumentgröße. (Der Interner wächst mit der Zahl verschiedener Muster, die vorkommen.)
+One frame per open element: remaining pattern (interned, `Id`), datatype context (namespace
+bindings), location, buffered text, child counter. In addition the path of element names, the
+list of findings and a counter for skipped subtrees. Memory grows with nesting depth, findings,
+the length of the longest undivided text run and the pattern interner of the schema, not with the
+size of the document. (The interner grows with the number of distinct patterns that occur.)
 
-### Positionen
+### Positions
 
-Der Aufrufer gibt `location: Option<L>` je Element mit; `L: Clone`. Ein Befund trägt den Ort des
-Elements, auf dem er entsteht (Attribute, Text, `MissingContent`) bzw. des unerwarteten Kindes
-(`UnexpectedElement`) — wie im Baumpfad. Die Pfade sind dieselben `ExpandedName`-Listen.
+The caller passes `location: Option<L>` per element; `L: Clone`. A finding carries the location
+of the element it arises on (attributes, text, `MissingContent`) or of the unexpected child
+(`UnexpectedElement`), as in the tree path. The paths are the same `ExpandedName` lists.
 
-### Unerwartete Elemente
+### Unexpected elements
 
-Ein unerwartetes Element erzeugt `UnexpectedElement` und sein Teilbaum wird übersprungen
-(Ereignisse darin werden gezählt, nicht geprüft), wie im Baumpfad. Das Muster des Elternknotens
-rückt dabei nicht weiter.
+An unexpected element yields `UnexpectedElement` and its subtree is skipped (events inside it are
+counted, not checked), as in the tree path. The pattern of the parent does not advance.
 
-### Fehler im Ereignisstrom
+### Errors in the event stream
 
-Ein ungültiger Ereignisstrom (End-Tag ohne Start, zweite Wurzel, Text außerhalb der Wurzel
-außer Leerraum, `finish` vor dem Ende der Wurzel) ist ein `StreamError`, nie ein Befund und nie
-ein stiller Erfolg. Danach ist der Zustand unbestimmt; der Validator wird verworfen. Ein Schema
-mit nicht unterstütztem Datentyp scheitert wie im Baumpfad schon in `new` mit `DatatypeError`.
+An invalid event stream (end tag without start, second root, text outside the root other than
+whitespace, `finish` before the end of the root) is a `StreamError`, never a finding and never a
+silent success. After it the state is undefined; the validator is discarded. A schema with an
+unsupported datatype fails in `new` with `DatatypeError`, as in the tree path.
 
-### Grenzen
+### Limits
 
-- Ein einzelner Textlauf wird ganz gepuffert.
-- `StreamValidator` prüft ein Dokument; für das nächste ein neuer (der Schema-Interner wird nicht
-  geteilt).
-- Keine Wiederherstellung nach einem unerwarteten Element: `ValidationOptions::recover_after_unexpected_element`
-  (#76) wirkt nur im Baumpfad (`validate_with_options`). Ohne die Option liefern beide Pfade dasselbe.
-- Kein Parser: Aufrufer liefern Namen bereits expandiert, ohne `xmlns`-Attribute.
+- A single text run is buffered whole.
+- A `StreamValidator` validates one document; the next one needs a new validator (the schema
+  interner is not shared).
+- No recovery after an unexpected element: `ValidationOptions::recover_after_unexpected_element`
+  (#76) applies only to the tree path (`validate_with_options`). Without the option both paths
+  report the same.
+- No parser: callers pass names already expanded, without `xmlns` attributes.
 
-### Gleichwertigkeit
+### Equivalence
 
-Der Baumpfad und der Ereignispfad sind zwei Implementierungen derselben Schritte
-(`src/validator/stream.rs` und `validate_element_content`); der Baumpfad kennt zusätzlich die
-opt-in Wiederherstellung (`ValidationOptions`), die nur dort existiert; ohne sie ist er
-unverändert. Abgesichert wird das durch Tests: der
-Spectest (`tests/spectest.rs`) treibt jede `valid`/`invalid`-Instanz durch beide Pfade, Textläufe
-in zwei Teile zerlegt, und verlangt **gleiche Befunde in gleicher Reihenfolge**, nicht nur gleiche
-Urteile. Dasselbe prüft ein ignorierter Test in `html-conform` über das ganze vnu-Korpus
+The tree path and the event path are two implementations of the same steps
+(`src/validator/stream.rs` and `validate_element_content`); the tree path additionally has the
+opt-in recovery (`ValidationOptions`), which exists only there, and is unchanged without it. Tests
+hold this: the spec test (`tests/spectest.rs`) drives every `valid`/`invalid` instance through
+both paths, with text runs split in two, and requires **the same findings in the same order**, not
+only the same verdict. An ignored test in `html-conform` checks the same over the whole vnu corpus
 (`cargo test --release -p html-conform --lib stream_and_tree -- --ignored`).
