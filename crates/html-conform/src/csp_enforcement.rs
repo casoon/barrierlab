@@ -38,7 +38,7 @@ use html5_parser::{Document, NodeId, NodeKind};
 
 use crate::{Finding, Severity, SourceLocation};
 
-const RULE_ID: &str = "csp.meta-enforcement";
+pub(crate) const RULE_ID: &str = "csp.meta-enforcement";
 
 /// Collects every `Content-Security-Policy` `<meta http-equiv>` value in
 /// the document, then flags inline scripts/styles/event handlers/style

@@ -18,7 +18,7 @@ use a11y_report::{Finding, Outcome};
 use serde_json::{Value, json};
 
 use crate::input::{FileResult, STDIN_NAME};
-use crate::output::{findings, line_column, not_checked_reason, notes};
+use crate::output::{findings, line_column, not_checked_reason, notes, ranges};
 
 const SCHEMA: &str =
     "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
@@ -35,17 +35,14 @@ pub fn fingerprint(rule_id: &str, path: &str, message: &str, occurrence: usize) 
     format!("{:016x}:{occurrence}", fnv1a(key.as_bytes()))
 }
 
-fn describe(rule_id: &str) -> &'static str {
-    match rule_id {
-        "parser.html5" => "HTML5 tokenizer or tree-construction parse error",
-        "schema.html5" => "Content model, attribute or attribute value rejected by the HTML schema",
-        "scripts.import-map" => "Invalid JSON content of a script of type importmap",
-        "scripts.speculation-rules" => "Invalid JSON content of a script of type speculationrules",
-        "csp.meta-enforcement" => "Inline content a meta Content-Security-Policy would block",
-        "tables.integrity" => "Inconsistent table cell grid",
-        r if r.starts_with("assertion.") => "Co-constraint the schema cannot express",
-        _ => "html-conform finding",
-    }
+fn describe(catalogue: &[html_conform::RuleInfo], rule_id: &str) -> String {
+    catalogue
+        .iter()
+        .find(|rule| rule.id == rule_id)
+        .map_or_else(
+            || "html-conform finding".to_owned(),
+            |rule| rule.description.clone(),
+        )
 }
 
 /// Percent-encodes a path for use as a URI reference (`/` is kept).
@@ -66,7 +63,9 @@ fn uri(path: &str) -> String {
     }
 }
 
-fn location(path: &str, position: Option<(u32, u32)>) -> Value {
+/// `end` is the exclusive end: SARIF's `endColumn` is one past the last
+/// column of the region, and `endLine` the line of its last character.
+fn location(path: &str, position: Option<(u32, u32)>, end: Option<(u32, u32)>) -> Value {
     let mut physical = json!({
         "artifactLocation": { "uri": uri(path), "uriBaseId": "%SRCROOT%" }
     });
@@ -78,6 +77,10 @@ fn location(path: &str, position: Option<(u32, u32)>) -> Value {
     }
     if let Some((line, column)) = position {
         physical["region"] = json!({ "startLine": line, "startColumn": column });
+        if let Some((end_line, end_column)) = end {
+            physical["region"]["endLine"] = json!(end_line);
+            physical["region"]["endColumn"] = json!(end_column);
+        }
     }
     json!({ "physicalLocation": physical })
 }
@@ -92,12 +95,19 @@ pub fn render(results: &[FileResult]) -> String {
     for (index, slot) in rule_ids.values_mut().enumerate() {
         *slot = index;
     }
+    // Findings exist only if the embedded rule files loaded for the check, so
+    // the catalogue cannot fail here; without findings it is not needed.
+    let catalogue = if rule_ids.is_empty() {
+        Vec::new()
+    } else {
+        html_conform::rules().expect("the rule files loaded for the check that produced findings")
+    };
     let rules: Vec<Value> = rule_ids
         .keys()
         .map(|id| {
             json!({
                 "id": id,
-                "shortDescription": { "text": describe(id) },
+                "shortDescription": { "text": describe(&catalogue, id) },
                 "helpUri": HELP_URI,
             })
         })
@@ -108,14 +118,15 @@ pub fn render(results: &[FileResult]) -> String {
     let mut successful = true;
     for result in results {
         let mut seen: BTreeMap<(&str, &str), usize> = BTreeMap::new();
-        for finding in findings(result) {
+        for (finding, range) in findings(result).iter().zip(ranges(result)) {
             let position = line_column(finding);
+            let end = range.map(|range| (range.end.line, range.end.column));
             if !is_result(finding) {
                 notifications.push(json!({
                     "level": "note",
                     "message": { "text": format!("not evaluated: {}", finding.message) },
                     "descriptor": { "id": finding.rule_id },
-                    "locations": [location(&result.path, position)],
+                    "locations": [location(&result.path, position, end)],
                 }));
                 continue;
             }
@@ -128,7 +139,7 @@ pub fn render(results: &[FileResult]) -> String {
                 "ruleIndex": rule_ids[finding.rule_id.as_str()],
                 "level": if finding.outcome == Outcome::Fail { "error" } else { "warning" },
                 "message": { "text": finding.message },
-                "locations": [location(&result.path, position)],
+                "locations": [location(&result.path, position, end)],
                 "partialFingerprints": {
                     "htmlConform/v1": fingerprint(&finding.rule_id, &result.path, &finding.message, *count)
                 },
@@ -136,7 +147,7 @@ pub fn render(results: &[FileResult]) -> String {
         }
         if let Some(reason) = not_checked_reason(result) {
             successful = false;
-            let at = (result.path != STDIN_NAME).then(|| location(&result.path, None));
+            let at = (result.path != STDIN_NAME).then(|| location(&result.path, None, None));
             notifications.push(json!({
                 "level": "error",
                 "message": { "text": format!("not checked: {reason}") },
@@ -149,7 +160,7 @@ pub fn render(results: &[FileResult]) -> String {
                 "level": "note",
                 "message": { "text": format!("not fully checked: {}", note.detail) },
                 "descriptor": { "id": note.class },
-                "locations": [location(&result.path, None)],
+                "locations": [location(&result.path, None, None)],
             }));
         }
     }
@@ -158,6 +169,8 @@ pub fn render(results: &[FileResult]) -> String {
         "$schema": SCHEMA,
         "version": "2.1.0",
         "runs": [{
+            // Columns count Unicode scalar values (`SourceLocation`).
+            "columnKind": "unicodeCodePoints",
             "tool": { "driver": {
                 "name": "html-conform",
                 "version": env!("CARGO_PKG_VERSION"),

@@ -27,6 +27,8 @@ Options:
   --config <file>                   Read options from this file instead of
                                     ./html-conform.toml
   --no-config                       Ignore ./html-conform.toml
+  --list-rules                      Print the rules html-conform can report as
+                                    JSON and exit
   -h, --help                        Show this help
   -V, --version                     Show the version
 
@@ -128,6 +130,7 @@ pub enum Command {
     Run(Options),
     Help,
     Version,
+    ListRules,
 }
 
 pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Command, String> {
@@ -162,6 +165,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Command, String
             "--" => only_paths = true,
             "-h" | "--help" => return Ok(Command::Help),
             "-V" | "--version" => return Ok(Command::Version),
+            "--list-rules" => return Ok(Command::ListRules),
             "-q" | "--quiet" => options.quiet = true,
             "--no-config" => options.no_config = true,
             "--format" => options.format = Some(Format::parse(&value(name)?)?),

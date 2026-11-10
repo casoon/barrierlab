@@ -24,6 +24,7 @@ mod datatypes;
 mod finding;
 mod infoset;
 mod parse;
+mod rules;
 mod schema;
 #[cfg(any(test, feature = "runtime-compile", feature = "rdfa-lite"))]
 mod schema_source;
@@ -34,9 +35,10 @@ mod table_integrity;
 use assertions::SchematronEngine;
 
 pub use finding::{
-    CheckError, CheckReport, Finding, FindingDetail, Severity, Skipped, SkippedClass,
-    SourceLocation,
+    CheckError, CheckReport, Finding, FindingDetail, RangedReport, Severity, Skipped, SkippedClass,
+    SourceLocation, SourceRange,
 };
+pub use rules::{RuleInfo, RuleLayer, rules};
 
 /// The deepest element nesting [`check_with_options`] validates; deeper
 /// documents get [`CheckError::DocumentTooDeep`] instead of a report.
@@ -123,6 +125,18 @@ pub fn check(html: &str) -> Result<CheckReport, CheckError> {
 /// Never for a document that is merely non-conformant, which is reported
 /// through [`CheckReport::findings`] instead.
 pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckReport, CheckError> {
+    check_impl(html, options, schema::validate_document).map(RangedReport::into_report)
+}
+
+/// Like [`check_with_options`], and additionally reports where each finding
+/// ends where its layer knows it. See [`RangedReport`] for which findings
+/// carry a range and the units of the positions. Not available together
+/// with a `SchemaPreset` (feature `rdfa-lite`) yet.
+///
+/// # Errors
+///
+/// The same as [`check_with_options`].
+pub fn check_with_ranges(html: &str, options: CheckOptions) -> Result<RangedReport, CheckError> {
     check_impl(html, options, schema::validate_document)
 }
 
@@ -142,6 +156,7 @@ pub fn check_with_preset(
         SchemaPreset::Default => check_impl(html, options, schema::validate_document),
         SchemaPreset::RdfaLite => check_impl(html, options, schema::validate_document_rdfa_lite),
     }
+    .map(RangedReport::into_report)
 }
 
 type SchemaErrors = Vec<relax_ng::ValidationError<SourceLocation>>;
@@ -150,7 +165,7 @@ fn check_impl(
     html: &str,
     options: CheckOptions,
     validate_schema: fn(&infoset::NormalizedHtmlDocument) -> Result<SchemaErrors, String>,
-) -> Result<CheckReport, CheckError> {
+) -> Result<RangedReport, CheckError> {
     let parsed = parse::parse(html);
     let depth = parse::nesting_depth(parsed.document());
     if depth > MAX_NESTING_DEPTH {
@@ -186,7 +201,20 @@ fn check_impl(
 
     let skipped = skipped::detect(parsed.document(), &findings);
 
-    Ok(CheckReport { findings, skipped })
+    let ends = parse::start_tag_ends(parsed.document());
+    let ranges = findings
+        .iter()
+        .map(|finding| {
+            if finding.rule_id == parse::RULE_ID {
+                return None;
+            }
+            let start = finding.location?;
+            let end = *ends.get(&start.byte_offset)?;
+            Some(SourceRange { start, end })
+        })
+        .collect();
+
+    Ok(RangedReport::new(CheckReport { findings, skipped }, ranges))
 }
 
 #[cfg(test)]

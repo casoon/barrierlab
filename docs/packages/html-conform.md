@@ -55,6 +55,14 @@ and `schematron-engine`, for example, also outside of HTML.
 CSP hash sources); both appear there as `DocumentIncomplete` input notes. The crate's own
 `Finding` types remain for now.
 
+`check_with_ranges` additionally returns, per finding, the source range where the layer knows the
+end: the start tag of the element a schema, assertion, script, CSP or table finding is anchored
+at, always the start tag, also for a finding about the element's content (`html5-parser` records it as `Node::end_position`). Parse errors have no end. `column` counts
+Unicode scalar values, `byte_offset` UTF-8 bytes; details in `docs/html-conform/reference/api.md`.
+`html_conform::rules()` is the machine-readable rule catalogue (id, layer, outcome, description,
+source), built from the parsed `rules/*.sch` files and the layer constants, and also feeds the
+SARIF `tool.driver.rules`; `html-conform --list-rules` prints it.
+
 The `rdfa-lite` feature (off by default) adds `SchemaPreset` (`#[non_exhaustive]`: `Default`,
 `RdfaLite`) and `check_with_preset(html, options, preset)`: vnu's `html5-rdfalite` preset, which
 allows only the RDFa Lite 1.1 attributes. Without the feature the type and function do not exist,

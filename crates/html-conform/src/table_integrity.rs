@@ -53,7 +53,7 @@ use html5_parser::{Attribute, Document, NodeId, NodeKind};
 
 use crate::{Finding, Severity, SourceLocation};
 
-const RULE_ID: &str = "tables.integrity";
+pub(crate) const RULE_ID: &str = "tables.integrity";
 
 /// `Cell.MAX_COLSPAN` / `TableChecker.MAX_COLSPAN`.
 const MAX_COLSPAN: i64 = 1000;

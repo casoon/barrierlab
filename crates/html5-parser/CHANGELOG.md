@@ -7,6 +7,11 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **Document:** `Node::end_position` gives the position just past an element's start tag (exclusive end),
+  so a host can name the start tag's source range; `None` for synthesized and non-element nodes.
+
 ## [0.5.0] - 2026-11-09
 
 ### Added

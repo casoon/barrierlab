@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use a11y_report::{Report, SourcePosition};
+use html_conform::SourceRange;
 
 use crate::args::Input;
 use crate::config::Selection;
@@ -18,6 +19,9 @@ pub const STDIN_NAME: &str = "<stdin>";
 pub struct FileResult {
     pub path: String,
     pub state: State,
+    /// Parallel to the findings of a checked report: where the finding ends,
+    /// when its layer knows it.
+    pub ranges: Vec<Option<SourceRange>>,
 }
 
 pub enum State {
@@ -30,6 +34,7 @@ impl FileResult {
         Self {
             path,
             state: State::NotChecked(reason.into()),
+            ranges: Vec::new(),
         }
     }
 
@@ -97,7 +102,19 @@ pub fn apply_selection(results: &mut [FileResult], selection: &Selection) -> usi
     for result in results {
         if let State::Checked(report) = &mut result.state {
             let before = report.findings.len();
-            report.findings.retain(|f| selection.keeps(&f.rule_id));
+            let keep: Vec<bool> = report
+                .findings
+                .iter()
+                .map(|f| selection.keeps(&f.rule_id))
+                .collect();
+            let mut next = keep.iter();
+            report
+                .findings
+                .retain(|_| *next.next().expect("one flag each"));
+            let mut next = keep.iter();
+            result
+                .ranges
+                .retain(|_| *next.next().expect("one flag each"));
             hidden += before - report.findings.len();
         }
     }
@@ -201,13 +218,17 @@ fn check_source(source: &Source) -> FileResult {
         Ok(html) => html,
         Err(reason) => return FileResult::not_checked(display, reason),
     };
-    match html_conform::check(&html) {
+    match html_conform::check_with_ranges(&html, html_conform::CheckOptions::default()) {
         Ok(checked) => {
             let mut report = checked.to_report();
             for finding in &mut report.findings {
                 finding.location.file = Some(display.clone());
             }
-            report.findings.sort_by(|a, b| {
+            let mut paired: Vec<_> = std::mem::take(&mut report.findings)
+                .into_iter()
+                .zip(checked.ranges().iter().copied())
+                .collect();
+            paired.sort_by(|(a, _), (b, _)| {
                 let key = |f: &a11y_report::Finding| {
                     f.location
                         .position
@@ -218,9 +239,12 @@ fn check_source(source: &Source) -> FileResult {
                     .then_with(|| a.rule_id.cmp(&b.rule_id))
                     .then_with(|| a.message.cmp(&b.message))
             });
+            let (findings, ranges): (Vec<_>, Vec<_>) = paired.into_iter().unzip();
+            report.findings = findings;
             FileResult {
                 path: display,
                 state: State::Checked(report),
+                ranges,
             }
         }
         Err(err) => FileResult::not_checked(display, err.to_string()),

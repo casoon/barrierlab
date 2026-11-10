@@ -8,6 +8,17 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **API:** `check_with_ranges` returns a `RangedReport` with the source range (`SourceRange`, end
+  exclusive) of each finding whose layer knows the end: the start tag of the element a schema,
+  assertion, script, CSP or table finding is anchored at. `parser.html5` findings have none.
+  `SourceLocation` documents its units: `column` counts Unicode scalar values, `byte_offset`
+  UTF-8 bytes (barrierlab#194).
+- **API:** `rules()` lists every rule id the checker can report with layer, outcome, description
+  and source, read from the parsed `rules/*.sch` files and the layer constants (barrierlab#194).
+- **CLI:** JSON findings carry `location.end` where known; SARIF regions carry
+  `endLine`/`endColumn`, the run sets `columnKind` to `unicodeCodePoints`, and
+  `tool.driver.rules` take their descriptions from the catalogue; `--list-rules` prints the
+  catalogue as JSON (barrierlab#194).
 - **Schema check:** feature `rdfa-lite` (off by default) adds `SchemaPreset` and
   `check_with_preset` for vnu's `html5-rdfalite` preset, which allows only the RDFa Lite 1.1
   attributes. The second compiled schema (`prebuilt/html5-rdfalite.rngc`, about 246 KB) is compiled
@@ -31,6 +42,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- **CLI:** the SARIF `shortDescription` of an `assertion.*` rule is now that rule's own message
+  instead of the generic sentence "Co-constraint the schema cannot express", and the run declares
+  `columnKind` as `unicodeCodePoints` (barrierlab#194).
 - **Rules:** a `<link>` may carry `resource` instead of `href`, and a `<link>` with `property`
   is allowed in the body.
 
