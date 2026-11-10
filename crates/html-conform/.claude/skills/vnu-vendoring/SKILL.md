@@ -40,6 +40,8 @@ MIT-lizenzierter Fremdcode aus `validator/validator` (vnu). Hintergrund:
 - `xtask/vendor-schema.sh --check` (Netz nötig, nicht in CI) belegt, dass
   Upstream + Patches den committeten Baum Byte für Byte ergeben. Vor jedem
   Commit, der Skript, Patches oder `schema/html5/` anfasst, laufen lassen.
+  `xtask/vendor-svg-mathml.sh --check` leistet dasselbe für
+  `schema/html5-svg-mathml.rnc`, `schema/svg11/` und `schema/mml3/` (ohne Patches).
 
 ## Ablauf
 
