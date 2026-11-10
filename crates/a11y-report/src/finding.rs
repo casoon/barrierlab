@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::extra::Extra;
+use crate::identity::FindingId;
 use crate::outcome::{Basis, Outcome, Severity, WcagLevel};
 
 /// Wo ein Befund sitzt. Die drei Oberflächen verorten unterschiedlich:
@@ -31,6 +32,10 @@ pub struct Location {
     /// einem Baum lief (etwa HTML-Konformanz).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<SourcePosition>,
+    /// Ende der Stelle, exklusiv und in denselben Einheiten wie `position`;
+    /// nur gesetzt, wo die Prüfschicht ein Ende kennt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<SourcePosition>,
 }
 
 /// Stelle im geprüften Quelltext. Zeile und Spalte zählen ab 1, der
@@ -94,6 +99,11 @@ impl Location {
 
     pub fn with_position(mut self, position: SourcePosition) -> Self {
         self.position = Some(position);
+        self
+    }
+
+    pub fn with_end(mut self, end: SourcePosition) -> Self {
+        self.end = Some(end);
         self
     }
 
@@ -233,6 +243,21 @@ pub struct Finding {
 }
 
 impl Finding {
+    /// Stabile Kennung dieses Befunds, berechnet statt gespeichert — sie
+    /// kommt ohne Serde-Vertrag aus. Mit Selektor: Regel und Element-Muster
+    /// ([`FindingId::new`]). Ohne Selektor, aber mit Quelltextstelle: Regel,
+    /// Datei und Startposition ([`FindingId::at`]). Sonst gilt der Befund
+    /// der ganzen Seite.
+    #[must_use]
+    pub fn id(&self) -> FindingId {
+        let loc = &self.location;
+        match (&loc.selector, &loc.position) {
+            (Some(selector), _) => FindingId::new(&self.rule_id, [selector.as_str()]),
+            (None, Some(p)) => FindingId::at(&self.rule_id, loc.file.as_deref(), p.line, p.column),
+            (None, None) => FindingId::new(&self.rule_id, []),
+        }
+    }
+
     fn new(outcome: Outcome, rule_id: impl Into<String>, message: impl Into<String>) -> Self {
         Finding {
             rule_id: rule_id.into(),

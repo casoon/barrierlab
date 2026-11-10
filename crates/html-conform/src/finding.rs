@@ -87,13 +87,23 @@ impl RangedReport {
         self.report.findings.iter().zip(self.ranges.iter().copied())
     }
 
-    /// Converts like [`CheckReport::to_report`]; the findings keep their
+    /// Converts like [`CheckReport::to_report`], and fills `location.end` of
+    /// each finding whose layer knows a range. The findings keep their
     /// order, so [`RangedReport::ranges`] stays parallel to the result's
-    /// findings. The shared model has no end position, hence the ranges
-    /// are not part of it.
+    /// findings.
     #[must_use]
     pub fn to_report(&self) -> a11y_report::Report {
-        self.report.to_report()
+        let mut report = self.report.to_report();
+        for (finding, range) in report.findings.iter_mut().zip(&self.ranges) {
+            if let Some(range) = range {
+                finding.location.end = Some(a11y_report::SourcePosition::new(
+                    range.end.line,
+                    range.end.column,
+                    range.end.byte_offset,
+                ));
+            }
+        }
+        report
     }
 }
 

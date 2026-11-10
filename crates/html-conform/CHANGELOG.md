@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Changed
+
+- **API:** `RangedReport::to_report` now fills `location.end` of the shared model for every
+  finding that has a range, and the CLI's JSON output takes it from there instead of patching it
+  into the text; the output is unchanged.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added

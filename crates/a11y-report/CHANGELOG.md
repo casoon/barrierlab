@@ -7,6 +7,13 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added
+
+- **API:** `Location::end` (mit `Location::with_end`): Ende der Quelltextstelle, exklusiv und in
+  den Einheiten von `position`; im JSON nur vorhanden, wo eine Prüfschicht ein Ende kennt.
+- **API:** `Finding::id()` berechnet die stabile Kennung eines Befunds: mit Selektor aus Regel und
+  Element-Muster, sonst aus Regel, Datei und Startposition (neu: `FindingId::at`).
+
 ## [0.29.0] - 2026-11-09
 
 ### Changed

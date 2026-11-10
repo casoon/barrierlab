@@ -7,6 +7,14 @@ in the git history only.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Memory:** the memo of attribute derivatives kept one entry per distinct attribute value, so
+  unique ids or URLs made memory grow with document size, also in `StreamValidator`. It now holds
+  at most 1,024 values per pattern and attribute name; findings are unchanged. On 1,000,000
+  elements the push path peaks at 0.3 MiB instead of 302 MiB. Numbers:
+  [Measured](https://casoon.github.io/barrierlab/docs/packages/relax-ng/#measured).
+
 ## [0.2.5] - 2026-11-10
 
 ### Added

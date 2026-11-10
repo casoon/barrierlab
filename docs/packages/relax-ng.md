@@ -53,7 +53,24 @@ One frame per open element: remaining pattern (interned, `Id`), datatype context
 bindings), location, buffered text, child counter. In addition the path of element names, the
 list of findings and a counter for skipped subtrees. Memory grows with nesting depth, findings,
 the length of the longest undivided text run and the pattern interner of the schema, not with the
-size of the document. (The interner grows with the number of distinct patterns that occur.)
+size of the document. (The interner grows with the number of distinct patterns that occur; the
+memo of attribute derivatives keeps at most 1,024 distinct values per pattern and attribute name,
+so unique ids or URLs do not add up.)
+
+### Measured
+
+`cargo run --release --example stream_vs_tree -- 1000000 [tree|stream]` validates one generated
+document of 1,000,000 `<item id="…">entry …</item>` elements with unique ids against
+`element list { element item { attribute id { text }, text }* }`, in a process of its own per
+path, and reports the peak heap (counting allocator) and the time.
+
+| Path | Peak heap | Time |
+|---|---:|---:|
+| Tree, building it included | 185 MiB | 0.40 s |
+| Push (`StreamValidator`) | 0.3 MiB | 0.33 s |
+
+The tree path pays for the tree the caller has to build; the push path holds only the open
+elements. (Before the attribute memo was capped, the same run peaked at 487 MiB and 302 MiB.)
 
 ### Positions
 

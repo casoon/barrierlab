@@ -64,12 +64,10 @@ pub fn line_column(finding: &Finding) -> Option<(u32, u32)> {
 /// file.
 pub fn json(results: &[FileResult]) -> String {
     let mut merged = Report::new();
-    let mut ends = Vec::new();
     for result in results {
         match &result.state {
             State::Checked(report) => {
                 merged.extend(report.findings.iter().cloned());
-                ends.extend(ranges(result).iter().map(|r| r.map(|r| r.end)));
                 for note in &report.inputs {
                     merged.note_input(
                         InputNote::new(InputKind::DocumentIncomplete)
@@ -90,58 +88,9 @@ pub fn json(results: &[FileResult]) -> String {
         }
     }
     let merged = merged.finish();
-    let positioned_ends: Vec<_> = merged
-        .findings
-        .iter()
-        .zip(&ends)
-        .filter(|(finding, _)| finding.location.position.is_some())
-        .map(|(_, end)| *end)
-        .collect();
-    let pretty = serde_json::to_string_pretty(&merged).expect("report serialises");
-    let mut text = add_ends(&pretty, &positioned_ends);
+    let mut text = serde_json::to_string_pretty(&merged).expect("report serialises");
     text.push('\n');
     text
-}
-
-/// The `position` key of a finding's location in the pretty-printed `Report`.
-const POSITION: &str = "        \"position\": {";
-/// The line that closes that object.
-const CLOSE: &str = "        }";
-
-/// Adds `location.end` after the `position` of each finding that has one, in
-/// the pretty-printed `Report`. `ends` has one entry per finding with a
-/// position, in order. Done on the text because `a11y_report::SourcePosition`
-/// has no end and a `serde_json::Value` round trip would sort the keys,
-/// changing every existing line. The only line equal to the `position` key
-/// at this indent is the structural one: strings never contain raw newlines.
-fn add_ends(pretty: &str, ends: &[Option<html_conform::SourceLocation>]) -> String {
-    let ends_total = ends.iter().flatten().count();
-    let mut inserted = 0;
-    let mut ends = ends.iter();
-    let mut pending = None;
-    let mut lines: Vec<String> = Vec::new();
-    for line in pretty.lines() {
-        if line == POSITION {
-            pending = ends.next().copied().flatten();
-        } else if line == CLOSE
-            && let Some(end) = pending.take()
-        {
-            lines.push(format!("{CLOSE},"));
-            lines.push("        \"end\": {".to_owned());
-            lines.push(format!("          \"line\": {},", end.line));
-            lines.push(format!("          \"column\": {},", end.column));
-            lines.push(format!("          \"byte_offset\": {}", end.byte_offset));
-            lines.push(CLOSE.to_owned());
-            inserted += 1;
-            continue;
-        }
-        lines.push(line.to_owned());
-    }
-    debug_assert_eq!(
-        inserted, ends_total,
-        "a11y_report's JSON layout changed: not every end found its `position`"
-    );
-    lines.join("\n")
 }
 
 /// Whether text output is coloured. An explicit `always`/`never` wins;
@@ -247,41 +196,6 @@ pub fn text(results: &[FileResult], quiet: bool, color: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn add_ends_relies_on_the_serialised_layout_of_a_finding() {
-        use a11y_report::SourcePosition;
-        let mut finding = Finding::fail("r", "m");
-        finding.location.position = Some(SourcePosition::new(2, 3, 10));
-        let mut report = Report::new();
-        report.push(finding);
-        let pretty = serde_json::to_string_pretty(&report.finish()).unwrap();
-        // If a11y-report changes how a finding is serialised, these fail
-        // here instead of ends silently disappearing from the output.
-        assert_eq!(
-            pretty.lines().filter(|l| *l == POSITION).count(),
-            1,
-            "{pretty}"
-        );
-        assert_eq!(
-            pretty.lines().filter(|l| *l == CLOSE).count(),
-            1,
-            "{pretty}"
-        );
-        let end = html_conform::SourceLocation {
-            line: 2,
-            column: 9,
-            byte_offset: 16,
-        };
-        let out = add_ends(&pretty, &[Some(end)]);
-        let value: serde_json::Value = serde_json::from_str(&out).unwrap();
-        let location = &value["findings"][0]["location"];
-        assert_eq!(location["position"]["column"], 3);
-        assert_eq!(location["end"]["line"], 2);
-        assert_eq!(location["end"]["column"], 9);
-        assert_eq!(location["end"]["byte_offset"], 16);
-        assert_eq!(add_ends(&pretty, &[None]), pretty);
-    }
 
     #[test]
     fn color_rules() {
