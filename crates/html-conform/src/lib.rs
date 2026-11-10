@@ -74,6 +74,14 @@ impl Default for CheckOptions {
     }
 }
 
+/// Throwaway measurement hook for barrierlab#70 (not part of the API).
+#[doc(hidden)]
+pub fn __bench_schema_only(html: &str) -> usize {
+    let parsed = parse::parse(html);
+    let document = infoset::normalize(parsed.document(), parsed.source());
+    schema::validate_document(&document).map_or(0, |errors| errors.len())
+}
+
 /// Checks a complete HTML document with the default options.
 ///
 /// Findings are returned in parser order. Technical initialization failures are
