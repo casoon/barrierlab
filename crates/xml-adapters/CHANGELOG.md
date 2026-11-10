@@ -5,10 +5,6 @@ Alle nennenswerten Änderungen an `xml-adapters` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
-### Added
-
-- **Tests:** `RngElement` besteht den vendorten jing-spectest-Korpus (553 Instanzen, ohne `include`/`externalRef`-Fälle) mit denselben Urteilen wie der Test von `relax-ng`; Fehler tragen dabei eine Position (casoon/barrierlab#75).
-
 ## [0.1.0] - 2026-11-08
 
 ### Added
