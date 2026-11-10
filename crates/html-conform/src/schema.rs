@@ -89,6 +89,9 @@ pub(crate) fn validate_document(
         .map_err(|error| error.to_string())
 }
 
+/// The rule id of every finding this layer reports.
+pub(crate) const RULE_ID: &str = "schema.html5";
+
 /// Maps [`relax_ng::ValidationError`]s onto this crate's public
 /// [`crate::Finding`] model. A single fixed `rule_id` (`schema.html5`,
 /// matching `src/parse.rs`'s `parser.html5` convention) — RELAX NG grammar
@@ -100,7 +103,7 @@ pub(crate) fn findings(
     errors
         .iter()
         .map(|error| crate::finding::Finding {
-            rule_id: "schema.html5".to_owned(),
+            rule_id: RULE_ID.to_owned(),
             severity: crate::finding::Severity::Error,
             message: error.to_string(),
             // `relax_ng::Element::Location` is generic as of Phase 08

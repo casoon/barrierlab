@@ -38,6 +38,7 @@ html-conform dist --format sarif > html-conform.sarif
 | `--disable <rule>` | Hide findings of a rule. Repeatable, or comma-separated. See [Selecting rules](#selecting-rules-and-the-config-file) |
 | `--only <rule>` | Show only findings of these rules. Repeatable, or comma-separated |
 | `--config <file>` | Read the options from this file instead of `html-conform.toml` in the working directory |
+| `--list-rules` | Print the rules html-conform can report (id, layer, outcome, description, source) as JSON and exit |
 | `--no-config` | Ignore `html-conform.toml` |
 
 Files are checked in parallel; output is sorted by path, then by line and column, so it is the
@@ -110,7 +111,9 @@ Silence about them is not a pass.
 fully checked, then a summary.
 
 **json**: the serialised [`a11y_report::Report`](https://docs.rs/a11y-report) of all files.
-Every finding carries `location.file` and `location.position`. A class that was not checked,
+Every finding carries `location.file` and `location.position`; a finding whose layer knows where it
+ends also carries `location.end` (`line`, `column`, `byte_offset`, exclusive). Units: see
+[Positions and ranges](../../reference/api/#positions-and-ranges). A class that was not checked,
 and a file that could not be checked, are entries of `inputs` with kind `document_incomplete`
 and the file as `subject`.
 
@@ -122,6 +125,8 @@ and the file as `subject`.
   with: { sarif_file: html-conform.sarif }
 ```
 
+- `region` has `startLine`/`startColumn` and, where the end is known, `endLine`/`endColumn` (exclusive, as SARIF defines `endColumn`). The run sets `columnKind` to `unicodeCodePoints`, which is what the columns count. Byte offsets are not written: SARIF `byteOffset` belongs to binary regions, and the checked text may be decoded from another encoding than the file's bytes.
+- `tool.driver.rules` takes id and description from the rule catalogue.
 - `error` results are findings with outcome `Fail`, `warning` results are `Review`.
 - `artifactLocation.uri` is the path relative to the working directory (run it from the
   repository root), `region` holds `startLine` and `startColumn`.

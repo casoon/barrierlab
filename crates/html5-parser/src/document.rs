@@ -128,6 +128,7 @@ pub struct Node {
     /// The node's position in the original input, or `None` for
     /// synthesized nodes (see the struct-level doc comment above).
     pub position: Option<Position>,
+    end: Option<Position>,
     parent: Option<NodeId>,
     first_child: Option<NodeId>,
     last_child: Option<NodeId>,
@@ -136,10 +137,19 @@ pub struct Node {
 }
 
 impl Node {
+    /// For an element parsed from a start tag: the position just past that
+    /// tag's closing `>` (exclusive end, so `position..end_position()` is
+    /// the start tag). `None` for every other node and for synthesized
+    /// elements; the end tag and the element's content are not covered.
+    pub fn end_position(&self) -> Option<Position> {
+        self.end
+    }
+
     fn new(kind: NodeKind, position: Option<Position>) -> Self {
         Node {
             kind,
             position,
+            end: None,
             parent: None,
             first_child: None,
             last_child: None,
@@ -192,6 +202,17 @@ impl Document {
     /// names an unrelated node. Only pass ids obtained from this document.
     pub fn node(&self, id: NodeId) -> &Node {
         &self.nodes[id.index()]
+    }
+
+    /// Records the end of the start tag on every element that was created
+    /// from the start tag token beginning at the given byte offset.
+    pub(crate) fn set_start_tag_ends(&mut self, ends: &[(usize, Position)]) {
+        let by_start: std::collections::HashMap<usize, Position> = ends.iter().copied().collect();
+        for node in &mut self.nodes {
+            if let (NodeKind::Element { .. }, Some(start)) = (&node.kind, node.position) {
+                node.end = by_start.get(&start.byte_offset).copied();
+            }
+        }
     }
 
     /// Mutable access to a node — used by `tree_builder` to append to an

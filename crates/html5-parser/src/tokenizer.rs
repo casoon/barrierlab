@@ -580,6 +580,9 @@ pub(crate) struct Tokenizer {
     /// (see `lib.rs::parse`) — never read mid-stream, so plain
     /// accumulation (not a queue like `pending`) is enough.
     errors: Vec<ParseError>,
+    /// For every start tag emitted: the byte offset of its `<` and the
+    /// position just past its closing `>`. Read once by `lib.rs::parse`.
+    start_tag_ends: Vec<(usize, Position)>,
 }
 
 impl Tokenizer {
@@ -674,6 +677,7 @@ impl Tokenizer {
             pending: VecDeque::new(),
             eof_returned: false,
             errors: input_stream_errors,
+            start_tag_ends: Vec::new(),
         }
     }
 
@@ -683,6 +687,12 @@ impl Tokenizer {
     /// implemented in Phase 07).
     fn error(&mut self, kind: ParseErrorKind, position: Position) {
         self.errors.push(ParseError { kind, position });
+    }
+
+    /// Drains the `(start byte offset, end position)` of every start tag
+    /// emitted. The end is the position of the character after the `>`.
+    pub(crate) fn take_start_tag_ends(&mut self) -> Vec<(usize, Position)> {
+        std::mem::take(&mut self.start_tag_ends)
     }
 
     /// Drains and returns every [`ParseError`] recorded so far. Called
@@ -762,6 +772,12 @@ impl Tokenizer {
             // "appropriate end tag token" (§13.2.5) is defined against the
             // last *start* tag emitted, so only start tags update it.
             self.last_start_tag_name = Some(tag.name.clone());
+            // `emit_tag` runs right after the closing `>` was consumed, so
+            // the next character's position is the exclusive end.
+            self.start_tag_ends.push((
+                self.current_tag_start.byte_offset,
+                self.positions[self.index],
+            ));
             TokenKind::StartTag(tag)
         };
         out.push(Token {

@@ -63,21 +63,50 @@ pub fn parse(input: &str) -> ParseResult {
         tokenizer.set_in_foreign_content(tree_builder.is_in_foreign_content());
     }
     tree_builder.stop_parsing();
+    let start_tag_ends = tokenizer.take_start_tag_ends();
     let mut errors = tokenizer.take_errors();
     errors.append(&mut tree_builder.take_errors());
     // Stable, so two errors reported at the same position keep their
     // relative order (tokenizer-first, matching the order the stages
     // actually observe a given token).
     errors.sort_by_key(|error| error.position.byte_offset);
-    ParseResult {
-        document: tree_builder.into_document(),
-        errors,
-    }
+    let mut document = tree_builder.into_document();
+    document.set_start_tag_ends(&start_tag_ends);
+    ParseResult { document, errors }
 }
 
 #[cfg(test)]
 mod tests {
     use super::parse;
+
+    #[test]
+    fn elements_carry_the_end_of_their_start_tag() {
+        let html = "<!DOCTYPE html>\n<p class=\"a>b\" id=x\n>hi</p><br/>é<i>";
+        let document = parse(html).document;
+        let mut tags = Vec::new();
+        let mut stack = vec![document.root()];
+        while let Some(id) = stack.pop() {
+            let node = document.node(id);
+            if let (crate::NodeKind::Element { name, .. }, Some(start), Some(end)) =
+                (&node.kind, node.position, node.end_position())
+            {
+                tags.push((
+                    name.clone(),
+                    html[start.byte_offset..end.byte_offset].to_owned(),
+                    (end.line, end.column),
+                ));
+            }
+            stack.extend(document.children(id));
+        }
+        tags.sort();
+        let expected = [
+            ("br", "<br/>", (3, 13)),
+            ("i", "<i>", (3, 17)),
+            ("p", "<p class=\"a>b\" id=x\n>", (3, 2)),
+        ]
+        .map(|(n, t, e)| (n.to_owned(), t.to_owned(), e));
+        assert_eq!(tags, expected);
+    }
     use crate::document::{Document, NodeId, NodeKind};
     use crate::tree_builder::{HTML_NAMESPACE, MATHML_NAMESPACE, SVG_NAMESPACE};
 

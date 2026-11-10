@@ -104,6 +104,72 @@ fn golden_sarif() {
     golden("set.sarif", &result.stdout);
 }
 
+const RANGE_DOC: &str = "<!DOCTYPE html>\n<html lang=en><title>t</title>\t\u{e9}<p bogus=1>x</p>";
+
+#[test]
+fn json_and_sarif_carry_the_end_of_an_element_finding() {
+    let json = run_with(&["--format", "json", "-"], Some(RANGE_DOC), &[]);
+    let value: serde_json::Value = serde_json::from_str(&json.stdout).unwrap();
+    let finding = value["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["rule_id"] == "schema.html5")
+        .expect("schema finding");
+    let location = &finding["location"];
+    // Column counts chars: tab and "é" are one column each.
+    assert_eq!(location["position"]["column"], 33);
+    assert_eq!(location["end"]["line"], 2);
+    assert_eq!(location["end"]["column"], 44);
+    let start = location["position"]["byte_offset"].as_u64().unwrap() as usize;
+    let end = location["end"]["byte_offset"].as_u64().unwrap() as usize;
+    assert_eq!(&RANGE_DOC[start..end], "<p bogus=1>");
+    // A parser finding has no end.
+    let parser = run_with(
+        &["--format", "json", "-"],
+        Some("<p>&notAnEntity;</p>"),
+        &[],
+    );
+    let value: serde_json::Value = serde_json::from_str(&parser.stdout).unwrap();
+    assert!(
+        value["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|f| f["rule_id"] == "parser.html5")
+            .all(|f| f["location"].get("end").is_none())
+    );
+
+    let sarif = run_with(&["--format", "sarif", "-"], Some(RANGE_DOC), &[]);
+    let log: serde_json::Value = serde_json::from_str(&sarif.stdout).unwrap();
+    let run = &log["runs"][0];
+    assert_eq!(run["columnKind"], "unicodeCodePoints");
+    let result = run["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["ruleId"] == "schema.html5")
+        .expect("schema result");
+    let region = &result["locations"][0]["physicalLocation"]["region"];
+    assert_eq!(region["startColumn"], 33);
+    assert_eq!(region["endLine"], 2);
+    assert_eq!(region["endColumn"], 44);
+}
+
+#[test]
+fn list_rules_prints_the_catalogue_as_json() {
+    let result = run(&["--list-rules"]);
+    assert_eq!(result.code, 0);
+    let rules: serde_json::Value = serde_json::from_str(&result.stdout).unwrap();
+    let rules = rules.as_array().unwrap();
+    assert!(
+        rules
+            .iter()
+            .any(|r| r["id"] == "parser.html5" && r["layer"] == "parser")
+    );
+    assert!(rules.iter().any(|r| r["id"] == "assertion.ids.duplicate"));
+}
+
 #[test]
 fn sarif_is_well_formed_and_keeps_unchecked_out_of_results() {
     let result = run(&with("sarif"));

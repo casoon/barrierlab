@@ -8,6 +8,17 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **API:** `check_with_ranges` returns a `RangedReport` with the source range (`SourceRange`, end
+  exclusive) of each finding whose layer knows the end: the start tag of the element a schema,
+  assertion, script, CSP or table finding is anchored at. `parser.html5` findings have none.
+  `SourceLocation` documents its units: `column` counts Unicode scalar values, `byte_offset`
+  UTF-8 bytes (barrierlab#194).
+- **API:** `rules()` lists every rule id the checker can report with layer, outcome, description
+  and source, read from the parsed `rules/*.sch` files and the layer constants (barrierlab#194).
+- **CLI:** JSON findings carry `location.end` where known; SARIF regions carry
+  `endLine`/`endColumn`, the run sets `columnKind` to `unicodeCodePoints`, and
+  `tool.driver.rules` take their descriptions from the catalogue; `--list-rules` prints the
+  catalogue as JSON (barrierlab#194).
 - **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
   `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
   `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`

@@ -1,6 +1,11 @@
 use html5_parser::{Document, NodeKind, ParseError};
 
+use std::collections::HashMap;
+
 use crate::{Finding, Severity, SourceLocation};
+
+/// The rule id of every finding this layer reports.
+pub(crate) const RULE_ID: &str = "parser.html5";
 
 /// HTML parsing output retained for the later validation layers.
 pub(crate) struct ParsedHtml {
@@ -65,6 +70,30 @@ pub(crate) fn nesting_depth(document: &Document) -> usize {
     deepest
 }
 
+/// For every element parsed from a start tag: the start tag's start byte
+/// offset mapped to the position just past its `>`. Findings of the later
+/// layers are anchored at an element's start, so this turns that anchor into
+/// the start tag's range.
+pub(crate) fn start_tag_ends(document: &Document) -> HashMap<usize, SourceLocation> {
+    let mut ends = HashMap::new();
+    let mut stack = vec![document.root()];
+    while let Some(id) = stack.pop() {
+        let node = document.node(id);
+        if let (Some(start), Some(end)) = (node.position, node.end_position()) {
+            ends.insert(
+                start.byte_offset,
+                SourceLocation {
+                    line: end.line,
+                    column: end.column,
+                    byte_offset: end.byte_offset,
+                },
+            );
+        }
+        stack.extend(document.children(id));
+    }
+    ends
+}
+
 /// Maps parser diagnostics onto the crate's public finding model.
 ///
 /// Every diagnostic maps to `Severity::Error`. `html5_parser::ParseError`
@@ -82,7 +111,7 @@ pub(crate) fn findings(parsed: &ParsedHtml) -> Vec<Finding> {
         .diagnostics()
         .iter()
         .map(|diagnostic| Finding {
-            rule_id: "parser.html5".to_owned(),
+            rule_id: RULE_ID.to_owned(),
             severity: Severity::Error,
             message: diagnostic.kind.to_string(),
             location: Some(SourceLocation {
@@ -138,7 +167,7 @@ fn doctype_findings(document: &Document) -> Vec<Finding> {
         // implicit `<html>` root is itself synthesized, no source
         // position — see `NormalizedNode::position`'s own doc comment).
         return vec![Finding {
-            rule_id: "parser.html5".to_owned(),
+            rule_id: RULE_ID.to_owned(),
             severity: Severity::Error,
             message: "start tag seen without seeing a doctype first, expected \
                       “<!DOCTYPE html>”"
@@ -171,7 +200,7 @@ fn doctype_findings(document: &Document) -> Vec<Finding> {
         "obsolete doctype, expected “<!DOCTYPE html>”"
     };
     vec![Finding {
-        rule_id: "parser.html5".to_owned(),
+        rule_id: RULE_ID.to_owned(),
         severity: Severity::Error,
         message: message.to_owned(),
         location,
@@ -230,7 +259,7 @@ fn charset_after_1024_findings(document: &Document) -> Vec<Finding> {
                     .and_then(|p| (p.byte_offset > 1024).then_some(p));
                 if let Some(pos) = pos {
                     findings.push(Finding {
-                        rule_id: "parser.html5".to_owned(),
+                        rule_id: RULE_ID.to_owned(),
                         severity: Severity::Error,
                         message:
                             "A “charset” attribute on a “meta” element found after the first 1024 bytes."

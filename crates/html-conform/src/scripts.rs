@@ -31,8 +31,8 @@ use serde_json::Value;
 
 use crate::{Finding, Severity, SourceLocation};
 
-const IMPORT_MAP_RULE_ID: &str = "scripts.import-map";
-const SPECULATION_RULES_RULE_ID: &str = "scripts.speculation-rules";
+pub(crate) const IMPORT_MAP_RULE_ID: &str = "scripts.import-map";
+pub(crate) const SPECULATION_RULES_RULE_ID: &str = "scripts.speculation-rules";
 
 /// Walks the whole document for `<script type="importmap">`/
 /// `<script type="speculationrules">` elements and validates each one's

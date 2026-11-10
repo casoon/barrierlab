@@ -26,6 +26,21 @@ fn main() -> ExitCode {
             println!("{}", args::USAGE);
             return ExitCode::SUCCESS;
         }
+        Ok(Command::ListRules) => {
+            return match html_conform::rules() {
+                Ok(rules) => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&rules).expect("rules serialise")
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(error) => {
+                    eprintln!("html-conform: {error}");
+                    ExitCode::from(2)
+                }
+            };
+        }
         Ok(Command::Version) => {
             println!("html-conform {}", env!("CARGO_PKG_VERSION"));
             return ExitCode::SUCCESS;

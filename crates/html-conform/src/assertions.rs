@@ -173,6 +173,52 @@ impl SchematronEngine for RuleSetEngine {
     }
 }
 
+/// One check of the embedded rule files, as declared there.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DeclaredRule {
+    /// The check's `@id`, without the `assertion.` prefix.
+    pub(crate) id: String,
+    pub(crate) severity: Severity,
+    /// The check's message text; computed parts (`value-of`, `name`) are
+    /// shown as an ellipsis.
+    pub(crate) description: String,
+    /// The rule file, e.g. `aria.sch`.
+    pub(crate) file: &'static str,
+}
+
+/// Every check with an `@id` in the embedded [`RULE_FILES`], in evaluation
+/// order. Read from the same parsed schemas [`RuleSetEngine`] runs, so it
+/// cannot drift from them.
+pub(crate) fn declared_rules() -> Result<Vec<DeclaredRule>, EngineError> {
+    let schemas = RULE_SCHEMAS.as_ref().map_err(Clone::clone)?;
+    let mut declared = Vec::new();
+    for ((file, _), schema) in RULE_FILES.iter().zip(schemas) {
+        for check in schema
+            .patterns
+            .iter()
+            .flat_map(|pattern| &pattern.rules)
+            .flat_map(|rule| &rule.checks)
+        {
+            let Some(id) = &check.id else { continue };
+            let text: String = check
+                .message
+                .iter()
+                .map(|part| match part {
+                    schematron_engine::MessagePart::Text(text) => text.as_str(),
+                    _ => "…",
+                })
+                .collect();
+            declared.push(DeclaredRule {
+                id: id.clone(),
+                severity: severity_from_role(check.role.as_deref()),
+                description: text.split_whitespace().collect::<Vec<_>>().join(" "),
+                file,
+            });
+        }
+    }
+    Ok(declared)
+}
+
 /// Maps [`AssertionFailure`]s onto this crate's public [`Finding`] model.
 /// `rule_id` is prefixed with `assertion.`
 /// to namespace it against the `parser.*`/future `schema.*` layers'

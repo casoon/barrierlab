@@ -24,6 +24,7 @@ mod datatypes;
 mod finding;
 mod infoset;
 mod parse;
+mod rules;
 mod schema;
 #[cfg(any(test, feature = "runtime-compile"))]
 mod schema_source;
@@ -34,9 +35,10 @@ mod table_integrity;
 use assertions::SchematronEngine;
 
 pub use finding::{
-    CheckError, CheckReport, Finding, FindingDetail, Severity, Skipped, SkippedClass,
-    SourceLocation,
+    CheckError, CheckReport, Finding, FindingDetail, RangedReport, Severity, Skipped, SkippedClass,
+    SourceLocation, SourceRange,
 };
+pub use rules::{RuleInfo, RuleLayer, rules};
 
 /// The deepest element nesting [`check_with_options`] validates; deeper
 /// documents get [`CheckError::DocumentTooDeep`] instead of a report.
@@ -104,6 +106,17 @@ pub fn check(html: &str) -> Result<CheckReport, CheckError> {
 /// Never for a document that is merely non-conformant, which is reported
 /// through [`CheckReport::findings`] instead.
 pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckReport, CheckError> {
+    check_with_ranges(html, options).map(|ranged| ranged.report)
+}
+
+/// Like [`check_with_options`], and additionally reports where each finding
+/// ends where its layer knows it. See [`RangedReport`] for which findings
+/// carry a range and the units of the positions.
+///
+/// # Errors
+///
+/// The same as [`check_with_options`].
+pub fn check_with_ranges(html: &str, options: CheckOptions) -> Result<RangedReport, CheckError> {
     let parsed = parse::parse(html);
     let depth = parse::nesting_depth(parsed.document());
     if depth > MAX_NESTING_DEPTH {
@@ -139,7 +152,23 @@ pub fn check_with_options(html: &str, options: CheckOptions) -> Result<CheckRepo
 
     let skipped = skipped::detect(parsed.document(), &findings);
 
-    Ok(CheckReport { findings, skipped })
+    let ends = parse::start_tag_ends(parsed.document());
+    let ranges = findings
+        .iter()
+        .map(|finding| {
+            if finding.rule_id == parse::RULE_ID {
+                return None;
+            }
+            let start = finding.location?;
+            let end = *ends.get(&start.byte_offset)?;
+            Some(SourceRange { start, end })
+        })
+        .collect();
+
+    Ok(RangedReport {
+        report: CheckReport { findings, skipped },
+        ranges,
+    })
 }
 
 #[cfg(test)]
