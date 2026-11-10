@@ -83,9 +83,10 @@ Nur für Pakete unter `packages/`. Veröffentlicht werden `@casoon/a11y-wasm` un
 
 Auf npmjs.com trägt **jedes Paket** einmalig einen Trusted Publisher ein
 (*Settings → Trusted Publisher*): Organisation `casoon`, Repository `barrierlab`,
-Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt. Für
-`@casoon/html-conform-wasm` steht das noch aus; das Paket gibt es auf npm erst nach dem ersten
-Publish.
+Workflow `release-npm.yml`, Umgebung `npm`, „Allow npm publish“ angehakt. Ein
+neues Paket muss dafür einmal von Hand veröffentlicht werden, weil npm den Eintrag nur für
+vorhandene Pakete anbietet; npm zeigt danach eine Frist (zwei Tage), in der ein Publish aus CI den
+Eintrag bestätigen muss.
 
 ## WASM
 
