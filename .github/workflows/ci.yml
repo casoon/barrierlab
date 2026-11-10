@@ -48,6 +48,12 @@ jobs:
       - if: steps.members.outputs.present == 'true'
         run: cargo test --workspace
 
+      # Der Differentialtest gegen vnu ist #[ignore] (im Debug-Build zu langsam);
+      # er ist das Gate fuer False Positives/Negatives und die Befundklassen
+      # (tests/vnu-class-baseline.json), laeuft also eigens im Release-Profil.
+      - if: steps.members.outputs.present == 'true'
+        run: cargo test --release -p html-conform --test differential -- --ignored
+
       # Kaputte Doku-Verweise fallen sonst erst auf docs.rs auf, wo sie nicht
       # mehr zu korrigieren sind, ohne neu zu veroeffentlichen.
       - if: steps.members.outputs.present == 'true'
