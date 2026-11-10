@@ -1330,3 +1330,52 @@ fn differential_against_vendored_vnu_corpus() {
 /// (`tests/vnu-class-baseline.json`), so a gap in a new tree cannot hide a
 /// regression in `html` or `html-aria`, which stay at 0 and 1.
 const BASELINE_NOT_COMPARABLE: usize = 0;
+
+/// Issue #181: vnu's `TestRunner` checks every `html-rdfalite` directory against the
+/// `html5-rdfalite` schema, not `html5-all`. This runs the vendored tree the same way
+/// (feature `rdfa-lite`) and gates it with its own baseline: no false positive, no false
+/// negative (under the default preset the tree also measures 0 and 0, see
+/// docs/html-conform/guides/vnu-comparison.md).
+#[cfg(feature = "rdfa-lite")]
+#[test]
+#[ignore = "slow in debug — run with `cargo test --release --features rdfa-lite --test differential -- --ignored`"]
+fn rdfalite_tree_against_the_rdfa_lite_preset() {
+    use html_conform::{CheckOptions, SchemaPreset, check_with_preset};
+
+    let expected = expected_findings_by_path();
+    let corpus_root = corpus_dir();
+    let mut fixtures = Vec::new();
+    collect_html_fixtures(
+        &corpus_root.join("html-rdfalite"),
+        &corpus_root,
+        &mut fixtures,
+    );
+    fixtures.sort();
+    assert_eq!(fixtures.len(), 56, "html-rdfalite fixture count changed");
+
+    let (mut false_positive, mut false_negative) = (Vec::new(), Vec::new());
+    for relative_path in &fixtures {
+        let html = fs::read_to_string(corpus_root.join(relative_path))
+            .unwrap_or_else(|error| panic!("failed to read {relative_path}: {error}"));
+        let report = check_with_preset(&html, CheckOptions::default(), SchemaPreset::RdfaLite)
+            .unwrap_or_else(|error| panic!("{relative_path}: {error:?}"));
+        let found = !comparable_findings(relative_path, &report).is_empty();
+        match (expected.contains_key(relative_path), found) {
+            (false, true) => false_positive.push(relative_path.clone()),
+            (true, false) => false_negative.push(relative_path.clone()),
+            _ => {}
+        }
+    }
+    println!(
+        "html-rdfalite under the rdfa-lite preset ({} fixtures): false_positive={false_positive:?} false_negative={false_negative:?}",
+        fixtures.len()
+    );
+    assert!(
+        false_positive.is_empty(),
+        "false positives regressed: {false_positive:?}"
+    );
+    assert!(
+        false_negative.is_empty(),
+        "false negatives regressed: {false_negative:?}"
+    );
+}

@@ -25,5 +25,5 @@ pub use simplify::{CompiledSchema, SchemaError, simplify};
 pub use syntax::{ParseError, parse};
 pub use validator::{
     Content, Element, ExpandedName, StreamError, StreamValidator, ValidationError,
-    ValidationErrorKind, validate,
+    ValidationErrorKind, ValidationOptions, validate, validate_with_options,
 };

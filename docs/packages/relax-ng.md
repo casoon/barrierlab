@@ -77,14 +77,16 @@ mit nicht unterstütztem Datentyp scheitert wie im Baumpfad schon in `new` mit `
 - Ein einzelner Textlauf wird ganz gepuffert.
 - `StreamValidator` prüft ein Dokument; für das nächste ein neuer (der Schema-Interner wird nicht
   geteilt).
-- Wiederherstellung nach Fehlern (#76, PR 161) gibt es hier nicht.
+- Keine Wiederherstellung nach einem unerwarteten Element: `ValidationOptions::recover_after_unexpected_element`
+  (#76) wirkt nur im Baumpfad (`validate_with_options`). Ohne die Option liefern beide Pfade dasselbe.
 - Kein Parser: Aufrufer liefern Namen bereits expandiert, ohne `xmlns`-Attribute.
 
 ### Gleichwertigkeit
 
 Der Baumpfad und der Ereignispfad sind zwei Implementierungen derselben Schritte
-(`src/validator/stream.rs` und `validate_element_content`); der Baumpfad blieb unangetastet,
-um mit PR 161 (derselbe Code) nicht zu kollidieren. Abgesichert wird das durch Tests: der
+(`src/validator/stream.rs` und `validate_element_content`); der Baumpfad kennt zusätzlich die
+opt-in Wiederherstellung (`ValidationOptions`), die nur dort existiert; ohne sie ist er
+unverändert. Abgesichert wird das durch Tests: der
 Spectest (`tests/spectest.rs`) treibt jede `valid`/`invalid`-Instanz durch beide Pfade, Textläufe
 in zwei Teile zerlegt, und verlangt **gleiche Befunde in gleicher Reihenfolge**, nicht nur gleiche
 Urteile. Dasselbe prüft ein ignorierter Test in `html-conform` über das ganze vnu-Korpus

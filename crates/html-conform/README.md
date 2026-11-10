@@ -77,6 +77,12 @@ fn main() {
 }
 ```
 
+### RDFa Lite preset
+
+The `rdfa-lite` feature (off by default) adds `SchemaPreset` and `check_with_preset`, vnu's
+`html5-rdfalite` preset: only the RDFa Lite 1.1 attributes are allowed. It embeds a second compiled
+schema of about 246 KB, so it is a feature. The command-line tool does not offer it.
+
 ### Command line
 
 The `cli` feature (off by default, no extra dependency) builds an `html-conform` binary:

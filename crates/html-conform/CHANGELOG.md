@@ -8,11 +8,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- **Schema check:** feature `rdfa-lite` (off by default) adds `SchemaPreset` and
+  `check_with_preset` for vnu's `html5-rdfalite` preset, which allows only the RDFa Lite 1.1
+  attributes. The second compiled schema (`prebuilt/html5-rdfalite.rngc`, about 246 KB) is compiled
+  in only with the feature; the default behaviour is unchanged (barrierlab#181).
 - **Schema check:** RDFa 1.1 is accepted, as in vnu's default schema: `property`, `typeof`,
   `prefix`, `about`, `resource` and the other RDFa attributes, `<link property resource>` and
   `<meta property content>` included. False positives on vnu's `html-rdfa` and `html-rdfalite`
-  trees fall from 177 and 50 to 2 and 0. vnu's RDFa-Lite-only preset is not offered
-  (barrierlab#173).
+  trees fall from 177 and 50 to 2 and 0 (barrierlab#173).
 - **CLI:** files and stdin are decoded by WHATWG sniffing (byte order mark, `<meta charset>`,
   else UTF-8); bytes invalid in that encoding are reported as not checked in every format. A
   non-UTF-8 file is decoded as declared and still gets `assertion.elements.meta-charset-not-utf8`.
@@ -33,6 +36,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- **Schema check:** the ITS 2.0 attributes (`its-loc-note`, `its-translate`, `its-annotators-ref`
+  and the others) are accepted on HTML elements, as in vnu's default schema. On the 90 `.html`
+  files of vnu's `tests/html-its` the 90 false `schema.html5` findings in 25 files are gone;
+  html-conform and vnu 26.8.20 now agree per file (barrierlab#188).
 - **Schema check:** `xmlns:prefix` on an HTML element is reported (it stays visible to the schema;
   on SVG and MathML elements it is still a namespace declaration), and `rev` on `<a>` is accepted
   as in vnu's `legacy.rnc` (patch `0003-a-rev-legacy`). Differences to vnu on the `html-rdfa` and

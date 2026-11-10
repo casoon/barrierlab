@@ -138,10 +138,96 @@ pub trait Element: Sized {
 /// `registry` doesn't recognize, a [`DatatypeError`] *instead of*
 /// attempting validation at all, since we can't know whether the document
 /// would pass a check we can't perform.
+///
+/// An element no position allows is reported and its content is *not*
+/// checked; see [`validate_with_options`] and [`ValidationOptions`] for
+/// the opt-in recovery that looks inside it.
 pub fn validate<E: Element>(
     schema: &CompiledSchema,
     registry: &DatatypeRegistry,
     root: &E,
+) -> Result<Vec<ValidationError<E::Location>>, DatatypeError> {
+    validate_with_options(schema, registry, root, ValidationOptions::default())
+}
+
+/// What [`validate_with_options`] does beyond deciding validity. The
+/// default is exactly [`validate`].
+///
+/// # Error recovery after an unexpected element
+///
+/// RELAX NG defines which documents are valid, not how to carry on after
+/// finding one that is not. By default an element that the pattern does not
+/// allow at its position is reported once as
+/// [`ValidationErrorKind::UnexpectedElement`] and its subtree is skipped,
+/// so everything inside it goes unchecked. With
+/// [`recover_after_unexpected_element`](Self::recover_after_unexpected_element)
+/// the validator additionally looks inside such a subtree:
+///
+/// - The content is checked against the union (a `choice`) of the content
+///   of *every* `element` pattern anywhere in the schema whose name class
+///   matches the element's name. An element name with no definition at all
+///   is skipped as before.
+/// - Every error found there (attributes, text, children, missing
+///   content, nested unexpected elements, which recurse the same way) has
+///   [`ValidationError::is_recovered`] set. The path of such an error
+///   starts like any other, at the document root.
+/// - The parent is unaffected: a skipped element never advances its
+///   parent's pattern, with or without recovery. Its siblings are validated
+///   as if it were absent, so one misplaced element costs one error at its
+///   own level, not a cascade.
+///
+/// Guarantees:
+///
+/// - **Same verdict.** The errors a run without recovery reports are
+///   reported unchanged and in the same order relative to each other, and
+///   recovery only adds errors beneath an element that already produced an
+///   `UnexpectedElement`. The list is empty with recovery exactly when it
+///   is empty without.
+/// - **Deterministic**: the same input gives the same errors in the same
+///   order.
+/// - **No false errors from ambiguity.** Where an element name is defined
+///   several times (an HTML `a` in flow and in phrasing content, say), a
+///   child is accepted if *any* definition accepts it.
+///
+/// Limits (it is a heuristic for reporting, never for deciding validity):
+///
+/// - The definition of the name elsewhere in the schema is a guess at what
+///   the author meant. Errors in a recovered subtree are relative to that
+///   guess; context-dependent restrictions (an element allowed inside `a`
+///   but not inside `button` elsewhere) are not known there.
+/// - If the schema does not define the name, nothing is found, as without
+///   recovery; if it defines it with wide content, little is.
+/// - A misplaced element that, placed correctly, would have filled a
+///   required slot of its parent still leaves that slot empty, so the
+///   parent's `MissingContent` can follow the `UnexpectedElement`. This is
+///   the same without recovery.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub struct ValidationOptions {
+    recover_after_unexpected_element: bool,
+}
+
+impl ValidationOptions {
+    /// Switches the recovery described in the type documentation on or off.
+    /// Off by default.
+    ///
+    /// Recovery exists only in the tree walk ([`validate_with_options`],
+    /// `Schema::validate_with_options`); [`StreamValidator`] has none and
+    /// always behaves as with this option off.
+    #[must_use]
+    pub fn recover_after_unexpected_element(mut self, recover: bool) -> Self {
+        self.recover_after_unexpected_element = recover;
+        self
+    }
+}
+
+/// [`validate`] with [`ValidationOptions`]. With the default options the
+/// result is the same as [`validate`]'s.
+pub fn validate_with_options<E: Element>(
+    schema: &CompiledSchema,
+    registry: &DatatypeRegistry,
+    root: &E,
+    options: ValidationOptions,
 ) -> Result<Vec<ValidationError<E::Location>>, DatatypeError> {
     let mut checked_refs = BTreeSet::new();
     check_datatypes_supported(
@@ -157,13 +243,26 @@ pub fn validate<E: Element>(
     let mut errors = Vec::new();
     let mut interner = Interner::new(&schema.definitions, registry);
     let start = interner.intern(&schema.start);
+    let recovery = options
+        .recover_after_unexpected_element
+        .then_some(&schema.start);
     match interner.element_contents(start, &root.name()) {
-        Some(content) => validate_element_content(&mut interner, content, root, &mut errors),
-        None => errors.push(ValidationError {
-            kind: ValidationErrorKind::UnexpectedElement(root.name()),
-            path: Vec::new(),
-            location: root.location(),
-        }),
+        Some(content) => {
+            validate_element_content(&mut interner, recovery, content, false, root, &mut errors);
+        }
+        None => {
+            errors.push(ValidationError {
+                kind: ValidationErrorKind::UnexpectedElement(root.name()),
+                path: Vec::new(),
+                location: root.location(),
+                recovered: false,
+            });
+            if let Some(start) = recovery
+                && let Some(content) = interner.recovery_contents(start, &root.name())
+            {
+                validate_element_content(&mut interner, recovery, content, true, root, &mut errors);
+            }
+        }
     }
     Ok(errors)
 }
@@ -182,6 +281,7 @@ pub struct ValidationError<L> {
     kind: ValidationErrorKind,
     path: Vec<ExpandedName>,
     location: Option<L>,
+    recovered: bool,
 }
 
 impl<L> ValidationError<L> {
@@ -198,6 +298,13 @@ impl<L> ValidationError<L> {
     /// element, if any.
     pub fn location(&self) -> Option<&L> {
         self.location.as_ref()
+    }
+    /// Whether this error was found by the opt-in recovery inside an
+    /// element the schema does not allow at its position
+    /// ([`ValidationOptions`]), and so is measured against a guessed
+    /// definition of that element. Always `false` without recovery.
+    pub fn is_recovered(&self) -> bool {
+        self.recovered
     }
 }
 
@@ -256,6 +363,9 @@ struct Frame<E: Element> {
     context: DatatypeContext,
     children: std::vec::IntoIter<Content<E>>,
     strip_whitespace: bool,
+    /// Inside an element that was skipped as unexpected and is validated
+    /// by recovery; every error found here is marked as recovered.
+    recovered: bool,
 }
 
 /// Validates `root` (whose content must match `content`) and every
@@ -263,14 +373,21 @@ struct Frame<E: Element> {
 /// [`Frame`] on a heap-allocated stack, so a document nested arbitrarily
 /// deep cannot overflow the call stack (the pattern walks below still
 /// recurse, but only as deep as the schema's own pattern nesting).
-fn validate_element_content<E: Element>(
-    interner: &mut Interner<'_>,
+///
+/// `recovery` is the schema's start pattern when error recovery is on;
+/// `recovered` says `root` itself is an unexpected element being recovered.
+fn validate_element_content<'s, E: Element>(
+    interner: &mut Interner<'s>,
+    recovery: Option<&'s Pattern>,
     content: Id,
+    recovered: bool,
     root: &E,
     errors: &mut Vec<ValidationError<E::Location>>,
 ) {
     let mut path = Vec::new();
-    let mut stack = vec![open_frame(interner, content, root, &mut path, errors)];
+    let mut stack = vec![open_frame(
+        interner, content, root, recovered, &mut path, errors,
+    )];
 
     while let Some(frame) = stack.last_mut() {
         let Some(child) = frame.children.next() else {
@@ -280,6 +397,7 @@ fn validate_element_content<E: Element>(
                     kind: ValidationErrorKind::MissingContent,
                     path: path.clone(),
                     location: frame.element.as_ref().unwrap_or(root).location(),
+                    recovered: frame.recovered,
                 });
             }
             path.pop();
@@ -303,6 +421,7 @@ fn validate_element_content<E: Element>(
                             kind: ValidationErrorKind::UnexpectedText,
                             path: path.clone(),
                             location: frame.element.as_ref().unwrap_or(root).location(),
+                            recovered: frame.recovered,
                         });
                     }
                 } else {
@@ -312,22 +431,48 @@ fn validate_element_content<E: Element>(
             Content::Element(child_element) => {
                 let name = child_element.name();
                 let name_id = interner.name_id(&name);
+                let recovered = frame.recovered;
                 match interner.element_contents_by_id(frame.pattern, &name, name_id) {
                     Some(child_content) => {
                         // The parent's derivative depends only on the
                         // child's name, not on how its content validates,
                         // so it can be taken before the child is entered.
                         frame.pattern = interner.deriv_element_by_id(frame.pattern, &name, name_id);
-                        let mut child_frame =
-                            open_frame(interner, child_content, &child_element, &mut path, errors);
+                        let mut child_frame = open_frame(
+                            interner,
+                            child_content,
+                            &child_element,
+                            recovered,
+                            &mut path,
+                            errors,
+                        );
                         child_frame.element = Some(child_element);
                         stack.push(child_frame);
                     }
-                    None => errors.push(ValidationError {
-                        kind: ValidationErrorKind::UnexpectedElement(name),
-                        path: path.clone(),
-                        location: child_element.location(),
-                    }),
+                    None => {
+                        // The parent's pattern stays as it is: the child is
+                        // skipped, never consumed.
+                        errors.push(ValidationError {
+                            kind: ValidationErrorKind::UnexpectedElement(name.clone()),
+                            path: path.clone(),
+                            location: child_element.location(),
+                            recovered,
+                        });
+                        if let Some(start) = recovery
+                            && let Some(child_content) = interner.recovery_contents(start, &name)
+                        {
+                            let mut child_frame = open_frame(
+                                interner,
+                                child_content,
+                                &child_element,
+                                true,
+                                &mut path,
+                                errors,
+                            );
+                            child_frame.element = Some(child_element);
+                            stack.push(child_frame);
+                        }
+                    }
                 }
             }
         }
@@ -342,6 +487,7 @@ fn open_frame<E: Element>(
     interner: &mut Interner<'_>,
     content: Id,
     element: &E,
+    recovered: bool,
     path: &mut Vec<ExpandedName>,
     errors: &mut Vec<ValidationError<E::Location>>,
 ) -> Frame<E> {
@@ -360,6 +506,7 @@ fn open_frame<E: Element>(
                 kind: ValidationErrorKind::UnexpectedAttribute(name),
                 path: path.clone(),
                 location: element.location(),
+                recovered,
             });
             continue;
         }
@@ -370,6 +517,7 @@ fn open_frame<E: Element>(
                 kind: ValidationErrorKind::InvalidAttributeValue(name, value),
                 path: path.clone(),
                 location: element.location(),
+                recovered,
             });
         } else {
             pattern = derived;
@@ -389,6 +537,7 @@ fn open_frame<E: Element>(
         context,
         children: children.into_iter(),
         strip_whitespace,
+        recovered,
     }
 }
 
@@ -1275,6 +1424,222 @@ mod tests {
         fn location(&self) -> Option<Self::Location> {
             Some(self.remaining)
         }
+    }
+
+    fn recovering() -> ValidationOptions {
+        ValidationOptions::default().recover_after_unexpected_element(true)
+    }
+
+    /// `(kind, recovered)` per error, in order.
+    fn flagged(errors: &[ValidationError<TestLocation>]) -> Vec<(ValidationErrorKind, bool)> {
+        errors
+            .iter()
+            .map(|error| (error.kind().clone(), error.is_recovered()))
+            .collect()
+    }
+
+    /// `other` and `c` are defined, but only inside `wrap`, where `doc`
+    /// never puts them in the places the tests use them.
+    const RECOVERY_SCHEMA: &str = "
+        start = element doc { item*, element wrap { other?, c? } }
+        item = element item { element title { text } }
+        other = element other { attribute id { text }, element title { text } }
+        c = element c { attribute k { text } }
+    ";
+
+    fn doc(children: Vec<TestElement>) -> TestElement {
+        let mut element = TestElement::new("doc");
+        for child in children {
+            element = element.child(child);
+        }
+        element.child(TestElement::new("wrap"))
+    }
+
+    fn item() -> TestElement {
+        TestElement::new("item").child(TestElement::new("title"))
+    }
+
+    #[test]
+    fn recovery_is_off_by_default() {
+        let compiled = schema(RECOVERY_SCHEMA);
+        let document = doc(vec![TestElement::new("other").attr("bogus", "1")]);
+        let plain = validate(&compiled, &registry(), &document).unwrap();
+        let with_default_options = validate_with_options(
+            &compiled,
+            &registry(),
+            &document,
+            ValidationOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(plain, with_default_options);
+        assert_eq!(
+            flagged(&plain),
+            vec![(ValidationErrorKind::UnexpectedElement(name("other")), false)]
+        );
+    }
+
+    #[test]
+    fn recovery_reports_several_independent_errors() {
+        let compiled = schema(RECOVERY_SCHEMA);
+        let document = doc(vec![
+            TestElement::new("other").attr("bogus", "1"),
+            item(),
+            TestElement::new("other")
+                .attr("id", "x")
+                .child(TestElement::new("title"))
+                .child(TestElement::new("junk")),
+            TestElement::new("c"),
+        ]);
+        let errors =
+            validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+        assert_eq!(
+            flagged(&errors),
+            vec![
+                (ValidationErrorKind::UnexpectedElement(name("other")), false),
+                (
+                    ValidationErrorKind::UnexpectedAttribute(name("bogus")),
+                    true
+                ),
+                (ValidationErrorKind::MissingContent, true),
+                (ValidationErrorKind::UnexpectedElement(name("other")), false),
+                (ValidationErrorKind::UnexpectedElement(name("junk")), true),
+                (ValidationErrorKind::UnexpectedElement(name("c")), false),
+                (ValidationErrorKind::MissingContent, true),
+            ]
+        );
+        // The paths of recovered errors start at the document root.
+        assert_eq!(errors[1].path(), [name("doc"), name("other")]);
+    }
+
+    #[test]
+    fn no_cascade_after_a_skipped_subtree() {
+        let compiled = schema(RECOVERY_SCHEMA);
+        // A valid `other` in the wrong place: one error for the misplaced
+        // element, nothing for its content, and the items on both sides
+        // are matched as if it were absent.
+        let document = doc(vec![
+            item(),
+            TestElement::new("other")
+                .attr("id", "x")
+                .child(TestElement::new("title").text("t")),
+            item(),
+        ]);
+        let errors =
+            validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+        assert_eq!(
+            flagged(&errors),
+            vec![(ValidationErrorKind::UnexpectedElement(name("other")), false)]
+        );
+    }
+
+    #[test]
+    fn unknown_element_names_are_skipped_as_without_recovery() {
+        let compiled = schema(RECOVERY_SCHEMA);
+        let document = doc(vec![
+            TestElement::new("nowhere").child(TestElement::new("deeper")),
+        ]);
+        let plain = validate(&compiled, &registry(), &document).unwrap();
+        let errors =
+            validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+        assert_eq!(plain, errors);
+    }
+
+    #[test]
+    fn recovery_inside_interleave_choice_and_one_or_more() {
+        // `wrap` ends the start pattern's group, `c` is defined on the side.
+        let wrap = "element wrap { c }\n}\nc = element c { attribute k { text } }\n";
+        for (content, children) in [
+            ("element a { empty } & element b { empty }", ["a", "c", "b"]),
+            ("element a { empty } | element b { empty }", ["c", "b", "b"]),
+            ("element a { empty }+", ["a", "c", "a"]),
+        ] {
+            let compiled = schema(&format!("start = element doc {{ ({content}), {wrap}"));
+            let mut document = TestElement::new("doc");
+            for child in children {
+                let element = if child == "c" {
+                    TestElement::new("c").attr("zz", "1")
+                } else {
+                    TestElement::new(child)
+                };
+                document = document.child(element);
+            }
+            let document = document
+                .child(TestElement::new("wrap").child(TestElement::new("c").attr("k", "1")));
+            let errors =
+                validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+            let kinds = flagged(&errors);
+            // `c` is skipped, its unknown attribute (and the missing `k`)
+            // found inside, and nothing else reported for `doc`. The
+            // choice case also has a surplus `b`, which is its own error.
+            assert!(
+                kinds.contains(&(ValidationErrorKind::UnexpectedAttribute(name("zz")), true)),
+                "{content}: {kinds:?}"
+            );
+            let plain = validate(&compiled, &registry(), &document).unwrap();
+            let kept: Vec<_> = errors
+                .iter()
+                .filter(|e| !e.is_recovered())
+                .cloned()
+                .collect();
+            assert_eq!(kept, plain, "{content}");
+        }
+    }
+
+    #[test]
+    fn a_child_is_accepted_when_any_definition_of_the_name_accepts_it() {
+        let compiled = schema(
+            "start = element doc { element x { p | q } }\n\
+             p = element p { element b { empty } }\n\
+             q = element q { element p { element i { empty } } }",
+        );
+        // `p` directly in `x` is fine; the document's `r` is not defined.
+        let accepted_by_first = TestElement::new("doc")
+            .child(TestElement::new("x").child(TestElement::new("p").child(TestElement::new("b"))));
+        assert!(
+            validate_with_options(&compiled, &registry(), &accepted_by_first, recovering())
+                .unwrap()
+                .is_empty()
+        );
+        // A misplaced `p` (directly under `doc`) holding `i`, which only
+        // the second definition allows, is fine under recovery; one holding
+        // `u` is allowed by neither.
+        // (`u` is unexpected, and the required `b`/`i` is missing.)
+        for (inner, expected) in [("i", 0usize), ("u", 2)] {
+            let document = TestElement::new("doc")
+                .child(TestElement::new("p").child(TestElement::new(inner)))
+                .child(
+                    TestElement::new("x").child(TestElement::new("p").child(TestElement::new("b"))),
+                );
+            let errors =
+                validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+            assert_eq!(
+                errors.iter().filter(|e| e.is_recovered()).count(),
+                expected,
+                "{inner}: {:?}",
+                flagged(&errors)
+            );
+        }
+    }
+
+    #[test]
+    fn an_unexpected_root_is_recovered_too() {
+        let compiled = schema("start = element a { element b { element c { empty } } }");
+        let document = TestElement::new("b").child(TestElement::new("z"));
+        let plain = validate(&compiled, &registry(), &document).unwrap();
+        assert_eq!(
+            flagged(&plain),
+            vec![(ValidationErrorKind::UnexpectedElement(name("b")), false)]
+        );
+        let errors =
+            validate_with_options(&compiled, &registry(), &document, recovering()).unwrap();
+        assert_eq!(
+            flagged(&errors),
+            vec![
+                (ValidationErrorKind::UnexpectedElement(name("b")), false),
+                (ValidationErrorKind::UnexpectedElement(name("z")), true),
+                (ValidationErrorKind::MissingContent, true),
+            ]
+        );
     }
 
     /// auditmysite#783: validation recursed once per nesting level and

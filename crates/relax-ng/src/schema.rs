@@ -10,7 +10,8 @@ use std::fmt;
 
 use crate::{
     CompiledSchema, DatatypeError, DatatypeRegistry, Element, ParseError, SchemaError,
-    SchemaResolver, SchemaSource, StreamValidator, ValidationError, parse, simplify, validate,
+    SchemaResolver, SchemaSource, StreamValidator, ValidationError, ValidationOptions, parse,
+    simplify, validate, validate_with_options,
 };
 
 /// A parsed and composed ("simplified", in RELAX NG spec terms) schema,
@@ -119,6 +120,17 @@ impl Schema {
         root: &E,
     ) -> Result<Vec<ValidationError<E::Location>>, DatatypeError> {
         validate(&self.compiled, registry, root)
+    }
+
+    /// [`Schema::validate`] with [`ValidationOptions`], for the opt-in
+    /// error recovery after an unexpected element.
+    pub fn validate_with_options<E: Element>(
+        &self,
+        registry: &DatatypeRegistry,
+        root: &E,
+        options: ValidationOptions,
+    ) -> Result<Vec<ValidationError<E::Location>>, DatatypeError> {
+        validate_with_options(&self.compiled, registry, root, options)
     }
 
     /// Starts a push validation of one document against this schema — see
