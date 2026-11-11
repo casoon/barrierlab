@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **`help_url`:** `Page::audit` und `audit` setzen `Finding::help_url` auf die Zeile der Regel in der Regelreferenz. Neu: `rule_anchor` und `rule_help_url` (casoon/barrierlab#194).
+
 ## [0.4.0] - 2026-11-11
 
 ### Added

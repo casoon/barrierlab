@@ -253,7 +253,8 @@ fn mdx_tier(out: &mut String, heading: &str, needs: &str, metas: &[Meta]) {
     for m in metas {
         for id in m.ids {
             out.push_str(&format!(
-                "| `{id}` | {} | {} | {} |\n",
+                "| `{id}`<a id=\"{}\"></a> | {} | {} | {} |\n",
+                a11y_static::rule_anchor(id),
                 if m.wcag.is_empty() {
                     "–".to_string()
                 } else {
