@@ -111,6 +111,7 @@ const wasm = join(pkg, "html_conform_wasm_bg.wasm");
 try {
   run("wasm-opt", [
     "-Oz",
+    "--converge",
     "--enable-bulk-memory",
     "--enable-nontrapping-float-to-int",
     wasm,
