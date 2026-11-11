@@ -7,6 +7,7 @@ use std::fmt;
 use std::ops::Range;
 
 use roxmltree::Node;
+use xpath_eval::XPathVersion;
 
 use crate::resolver::SchemaResolver;
 use crate::schema::{
@@ -15,17 +16,7 @@ use crate::schema::{
 };
 
 const SCHEMATRON_NAMESPACE: &str = "http://purl.oclc.org/dsdl/schematron";
-
-/// `schema/@queryBinding` values this crate treats as equivalent to
-/// XPath 1.0 (case-insensitive), issue #6. The ISO grammar types
-/// `queryBinding` as an unconstrained non-empty string (implementation-
-/// defined values are legal), but this crate only evaluates XPath 1.0
-/// (via `xpath-eval`) — `"xslt"` is the ISO-conventional default/XPath-1.0
-/// binding name, `"xpath"` the common informal shorthand for the same;
-/// anything else (e.g. `"xslt2"`/`"xpath2"`, XPath 2.0) is rejected with
-/// `ParseError::UnsupportedQueryBinding` rather than silently
-/// misinterpreted as XPath 1.0.
-const XPATH1_QUERY_BINDINGS: &[&str] = &["xslt", "xpath"];
+const XSLT_NAMESPACE: &str = "http://www.w3.org/1999/XSL/Transform";
 
 /// Schematron elements whose `id` attribute is `xsd:ID`-typed per the ISO
 /// RNC grammar (verified against the real grammar,
@@ -178,11 +169,11 @@ pub enum ParseError {
     /// matching `<diagnostic id="...">` in the schema.
     UnknownDiagnosticReference { id: String, position: Position },
     /// `schema/@queryBinding` named a query language binding this crate
-    /// does not treat as equivalent to XPath 1.0 (issue #6) — evaluating
-    /// `test`/`context`/`select` expressions as XPath 1.0 anyway would
-    /// silently misinterpret a schema that explicitly opted into a
-    /// different query language (e.g. `"xslt2"`, XPath 2.0). See
-    /// `README.md`'s support matrix for the accepted binding names.
+    /// does not know (issue #6): `xslt`/`xpath` (XPath 1.0) and
+    /// `xslt2`/`xpath2` (XPath 2.0) are accepted. Evaluating the
+    /// `test`/`context`/`select` expressions in another language anyway would
+    /// silently misinterpret a schema that explicitly opted into a different
+    /// one (e.g. `"xslt3"`, `"xquery"`). See `README.md`'s support matrix.
     UnsupportedQueryBinding { binding: String, position: Position },
     /// [`crate::parse_with_resolver`] found an `<include href="...">` it
     /// had already started resolving further up the same inclusion chain
@@ -267,7 +258,7 @@ impl fmt::Display for ParseError {
             ),
             ParseError::UnsupportedQueryBinding { binding, position } => write!(
                 formatter,
-                "schema/@queryBinding `{binding}` at {position} is not equivalent to XPath 1.0 (only `xslt`/`xpath`, or an absent queryBinding, are accepted — see README.md)"
+                "schema/@queryBinding `{binding}` at {position} is not supported (only `xslt`/`xpath` (XPath 1.0), `xslt2`/`xpath2` (XPath 2.0) or an absent queryBinding are accepted — see README.md)"
             ),
             ParseError::CyclicInclude { href, position } => {
                 write!(formatter, "cyclic include involving `{href}` at {position}")
@@ -334,9 +325,7 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
 
     let query_binding = root.attribute("queryBinding").map(str::to_owned);
     if let Some(binding) = &query_binding
-        && !XPATH1_QUERY_BINDINGS
-            .iter()
-            .any(|known| known.eq_ignore_ascii_case(binding))
+        && XPathVersion::from_query_binding(Some(binding)).is_none()
     {
         return Err(ParseError::UnsupportedQueryBinding {
             binding: binding.clone(),
@@ -432,6 +421,15 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
         diagnostics,
         properties,
         query_binding,
+        xslt_functions: root
+            .children()
+            .filter(|child| {
+                child.is_element()
+                    && child.tag_name().namespace() == Some(XSLT_NAMESPACE)
+                    && child.tag_name().name() == "function"
+            })
+            .filter_map(|function| function.attribute("name").map(str::to_owned))
+            .collect(),
     })
 }
 
@@ -1642,7 +1640,7 @@ mod tests {
     /// case-insensitively when it names an XPath-1.0-equivalent binding.
     #[test]
     fn query_binding_xslt_and_xpath_are_accepted_case_insensitively() {
-        for binding in ["xslt", "XSLT", "xpath", "XPath"] {
+        for binding in ["xslt", "XSLT", "xpath", "XPath", "xslt2", "XPath2"] {
             let schema = parse(&format!(
                 r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="{binding}">
                     <pattern>
@@ -1677,7 +1675,7 @@ mod tests {
     #[test]
     fn unsupported_query_binding_is_an_error() {
         let error = parse(
-            r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
+            r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt3">
                 <pattern>
                     <rule context="/root">
                         <assert test="foo">message</assert>
@@ -1689,7 +1687,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            ParseError::UnsupportedQueryBinding { binding, .. } if binding == "xslt2"
+            ParseError::UnsupportedQueryBinding { binding, .. } if binding == "xslt3"
         ));
     }
 

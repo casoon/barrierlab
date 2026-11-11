@@ -177,6 +177,17 @@ pub fn evaluate_boolean_versioned<'ctx, 'hook, N: Node<'ctx>>(
     }
 }
 
+/// The text an `xsl:value-of`/Schematron `value-of` produces for `sequence`: each item atomized
+/// (a node to its string-value) and written in its canonical lexical form, joined by one space
+/// (XSLT 2.0 section 11.4.1, default separator). The empty sequence is the empty string.
+pub fn sequence_to_string<'ctx, N: Node<'ctx>>(sequence: &[Item<N>]) -> String {
+    eval::atomize(sequence)
+        .iter()
+        .map(Atomic::to_xpath_string)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub(crate) fn from_value<N>(value: Value<N>) -> Sequence<N> {
     match value {
         Value::NodeSet(nodes) => nodes.into_iter().map(Item::Node).collect(),

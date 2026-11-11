@@ -21,6 +21,37 @@ reading (SchXslt compiles pattern variables as global XSLT variables, which its
 own README lists as a scoping limitation), not the standard's text. The case
 stays in the known-failure list.
 
+## XPath 2.0 schemas
+
+`queryBinding="xslt2"` or `"xpath2"` (ISO/IEC 19757-3:2016, 5.4.4, Query language
+binding) selects the XPath 2.0 mode of `xpath-eval` for every `test`, `let`,
+`value-of` and `name` expression of the schema; `xslt`, `xpath` and an absent
+binding stay XPath 1.0 and behave as before. Any other binding is a parse error.
+
+- A `<let>` is bound to a sequence with its atomic types, through the
+  sequence-valued variable hook of `EvaluationContext`. `value-of` writes the
+  atomized items of its sequence joined by one space (XSLT 2.0, 11.4.1).
+- A rule `context` is a pattern: the nodes `descendant-or-self::node()/(context)`
+  selects from the root. A context that starts with `/` and has no `|` is
+  evaluated from the root alone (the result is the same). The 1.0 rewrite into
+  per-node tests is not used, so a 2.0 schema is slower to match than a 1.0 one.
+- What `xpath-eval` does not implement is reported, not skipped:
+  `SchematronEvalError::Query` wraps the `VersionedError`, and `is_unsupported()`
+  tells an incomplete run from a failed one. Static and dynamic XPath errors use
+  the same variant; syntax errors keep `Parse`.
+- `xsl:function` declarations are not run (no XSLT). Their names are in
+  `Schema.xslt_functions`; a test that calls one ends the run as unsupported with
+  the function named. Peppol BIS Billing 3.0 declares 12 to 13 such functions
+  (check digits, `u:mod11`, `u:checkCF`, ...), XRechnung one or two
+  (`xr:checkIBAN`); EN 16931 none.
+
+Measured end to end with the preprocessed EN 16931 UBL rules (release
+validation-1.3.17, fetched on demand by `crates/xpath-eval/xtask/vendor-en16931.sh`,
+`cargo test -p schematron-engine --test en16931 -- --ignored`): the 981 checks of
+104 rules run on the two UBL example invoices of that release (211 and 193 rule
+firings) without any fired check, and a copy without `cbc:IssueDate` and with a
+changed payable amount fires `BR-03` and `BR-CO-16`.
+
 ## SVRL output
 
 `evaluate_trace` / `evaluate_trace_with_phase` return the evaluation as a list of

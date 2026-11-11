@@ -18,10 +18,13 @@ pub use axes::{
 };
 pub use cache::DocumentCache;
 pub use document::{Document, ExpandedName, Node, NodeKind};
-pub use eval::{EvalError, EvaluationContext, evaluate, evaluate_boolean};
+pub use eval::{
+    EvalError, EvaluationContext, SequenceVariableLookup, VariableLookup, evaluate,
+    evaluate_boolean,
+};
 pub use parser::{ParseError, parse};
 pub use value::Value;
 pub use xpath2::{
     Atomic, AtomicType, Date, Decimal, Expression, Item, Sequence, VersionedError, XPathVersion,
-    evaluate_boolean_versioned, evaluate_versioned, parse_versioned,
+    evaluate_boolean_versioned, evaluate_versioned, parse_versioned, sequence_to_string,
 };

@@ -43,7 +43,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use xpath_eval::{
-    Document, DocumentCache, EvaluationContext, Expr, Node, NodeKind, NodeTest, QName, Value,
+    Atomic, Document, DocumentCache, EvaluationContext, Expr, Expression, Item, Node, NodeKind,
+    NodeTest, QName, Sequence, Value, VersionedError, XPathVersion,
 };
 
 use crate::context::Alternative;
@@ -94,6 +95,29 @@ pub enum SchematronEvalError {
     /// match any `Schema.phases[_].id` (or `Schema.default_phase` names
     /// such an unknown phase).
     UnknownPhase { phase: String },
+    /// An XPath 2.0 expression (`queryBinding` `xslt2`/`xpath2`) could not be
+    /// evaluated: [`VersionedError::Unsupported`] for a construct or function
+    /// `xpath-eval` does not implement (the evaluation did not run, which is
+    /// not the same as passing), or a static or dynamic XPath error.
+    Query(VersionedError),
+}
+
+impl SchematronEvalError {
+    /// `true` when the schema uses an XPath 2.0 feature `xpath-eval` does not
+    /// implement: the run is incomplete, not failed.
+    pub fn is_unsupported(&self) -> bool {
+        matches!(self, SchematronEvalError::Query(error) if error.is_unsupported())
+    }
+}
+
+/// Maps an XPath error to this crate's error: the 1.0 errors keep their
+/// variants, everything specific to XPath 2.0 becomes [`SchematronEvalError::Query`].
+fn from_versioned(error: VersionedError) -> SchematronEvalError {
+    match error {
+        VersionedError::Parse(error) => SchematronEvalError::Parse(error),
+        VersionedError::Eval(error) => SchematronEvalError::Eval(error),
+        other => SchematronEvalError::Query(other),
+    }
 }
 
 impl std::fmt::Display for SchematronEvalError {
@@ -107,6 +131,7 @@ impl std::fmt::Display for SchematronEvalError {
             SchematronEvalError::UnknownPhase { phase } => {
                 write!(f, "no <phase id={phase:?}> in this schema")
             }
+            SchematronEvalError::Query(err) => write!(f, "XPath 2.0 error: {err}"),
         }
     }
 }
@@ -188,6 +213,33 @@ fn evaluate_in<'a, D: Document>(
     document: &'a D,
     phase_id: Option<&str>,
     cache: &DocumentCache<D::N<'a>>,
+    trace: Option<&mut Vec<Event<D::N<'a>>>>,
+) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
+    evaluate_schema(schema, document, phase_id, cache, trace).map_err(|error| {
+        // A call of a function the schema declares with `xsl:function` is not an
+        // unknown function: this crate does not run XSLT, so say that.
+        if let SchematronEvalError::Query(VersionedError::Static {
+            code: "XPST0017",
+            message,
+        }) = &error
+            && let Some(name) = schema
+                .xslt_functions
+                .iter()
+                .find(|name| message.contains(&format!("`{name}`")))
+        {
+            return SchematronEvalError::Query(VersionedError::Unsupported(format!(
+                "the function {name} declared with xsl:function (XSLT is not run)"
+            )));
+        }
+        error
+    })
+}
+
+fn evaluate_schema<'a, D: Document>(
+    schema: &Schema,
+    document: &'a D,
+    phase_id: Option<&str>,
+    cache: &DocumentCache<D::N<'a>>,
     mut trace: Option<&mut Vec<Event<D::N<'a>>>>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
     let ns_lookup = |prefix: &str| {
@@ -210,10 +262,20 @@ fn evaluate_in<'a, D: Document>(
         })
         .transpose()?;
 
+    let version =
+        XPathVersion::from_query_binding(schema.query_binding.as_deref()).ok_or_else(|| {
+            SchematronEvalError::Query(VersionedError::Unsupported(format!(
+                "queryBinding `{}`",
+                schema.query_binding.as_deref().unwrap_or_default()
+            )))
+        })?;
     let exprs = ExprCache::default();
+    let exprs2 = ExprCache2::default();
     let env = Env {
         ns_lookup: &ns_lookup,
         exprs: &exprs,
+        exprs2: &exprs2,
+        version,
         cache,
     };
     let mut reports = Vec::new();
@@ -414,6 +476,10 @@ fn match_pattern<'a, D: Document>(
     ctx.namespaces = Some(env.ns_lookup);
     ctx.cache = Some(env.cache);
 
+    if env.version == XPathVersion::V2 {
+        return match_pattern_v2(pattern, &ctx);
+    }
+
     let mut compiled = Vec::new();
     for rule in &pattern.rules {
         compiled.push(
@@ -481,6 +547,49 @@ fn match_pattern<'a, D: Document>(
     Ok(matched)
 }
 
+/// [`match_pattern`] for XPath 2.0. A rule context is a pattern: it matches the nodes that
+/// `descendant-or-self::node()/(context)` selects (a context starting with `/` and without a
+/// union is evaluated from the root alone, which selects the same nodes without walking every
+/// node). Rule contexts are not rewritten into per-node tests as in 1.0; each is evaluated.
+fn match_pattern_v2<'a, N: Node<'a>>(
+    pattern: &Pattern,
+    ctx: &EvaluationContext<'a, '_, N>,
+) -> Result<Vec<Vec<N>>, SchematronEvalError> {
+    let mut matched = Vec::with_capacity(pattern.rules.len());
+    let mut claimed: Vec<N> = Vec::new();
+    for rule in &pattern.rules {
+        let trimmed = rule.context.trim();
+        let source = if trimmed.starts_with('/') && !trimmed.contains('|') {
+            trimmed.to_owned()
+        } else {
+            format!("descendant-or-self::node()/({trimmed})")
+        };
+        let expr =
+            xpath_eval::parse_versioned(&source, XPathVersion::V2).map_err(from_versioned)?;
+        let mut nodes = Vec::new();
+        for item in xpath_eval::evaluate_versioned(&expr, ctx).map_err(from_versioned)? {
+            match item {
+                Item::Node(node) => nodes.push(node),
+                Item::Atomic(_) => {
+                    return Err(SchematronEvalError::ContextNotNodeSet {
+                        context: rule.context.clone(),
+                    });
+                }
+            }
+        }
+        nodes.sort_by(|a, b| a.document_order(*b));
+        nodes.dedup();
+        nodes.retain(|&node| {
+            claimed
+                .binary_search_by(|probe| probe.document_order(node))
+                .is_err()
+        });
+        claimed = merge_in_document_order(claimed, nodes.clone());
+        matched.push(nodes);
+    }
+    Ok(matched)
+}
+
 /// Merges two node lists that are each in document order and disjoint.
 fn merge_in_document_order<'n, N: Node<'n>>(a: Vec<N>, b: Vec<N>) -> Vec<N> {
     if b.is_empty() {
@@ -507,6 +616,9 @@ fn merge_in_document_order<'n, N: Node<'n>>(a: Vec<N>, b: Vec<N>) -> Vec<N> {
 struct Env<'e, N> {
     ns_lookup: &'e dyn Fn(&str) -> Option<String>,
     exprs: &'e ExprCache,
+    exprs2: &'e ExprCache2,
+    /// The language every expression of this schema is parsed and evaluated in.
+    version: XPathVersion,
     cache: &'e DocumentCache<N>,
 }
 
@@ -532,12 +644,48 @@ impl ExprCache {
     }
 }
 
+/// [`ExprCache`] for XPath 2.0 mode.
+#[derive(Default)]
+struct ExprCache2 {
+    parsed: RefCell<HashMap<(*const u8, usize), Rc<Expression>>>,
+}
+
+impl ExprCache2 {
+    fn get(&self, raw: &str) -> Result<Rc<Expression>, SchematronEvalError> {
+        let key = (raw.as_ptr(), raw.len());
+        if let Some(expr) = self.parsed.borrow().get(&key) {
+            return Ok(Rc::clone(expr));
+        }
+        let expr =
+            Rc::new(xpath_eval::parse_versioned(raw, XPathVersion::V2).map_err(from_versioned)?);
+        self.parsed.borrow_mut().insert(key, Rc::clone(&expr));
+        Ok(expr)
+    }
+}
+
+/// The value of a `<let>`: an XPath 1.0 value, or in XPath 2.0 mode a sequence.
+#[derive(Clone)]
+enum Bound<N> {
+    V1(Value<N>),
+    V2(Sequence<N>),
+}
+
+impl<'n, N: Node<'n>> Bound<N> {
+    /// The text a `value-of` writes for this value.
+    fn to_text(&self) -> String {
+        match self {
+            Bound::V1(value) => value.to_xpath_string(),
+            Bound::V2(sequence) => xpath_eval::sequence_to_string(sequence),
+        }
+    }
+}
+
 /// One level of `<let>` bindings (schema, phase, pattern or rule), looked
 /// up innermost first. Replaces copying every enclosing binding into a
 /// fresh map for each context node (barrierlab#69); a later binding of the
 /// same name still wins over an earlier one.
 struct Scope<'p, N> {
-    bindings: Vec<(String, Value<N>)>,
+    bindings: Vec<(String, Bound<N>)>,
     parent: Option<&'p Scope<'p, N>>,
 }
 
@@ -549,7 +697,7 @@ impl<'p, N: Clone> Scope<'p, N> {
         }
     }
 
-    fn get(&self, name: &str) -> Option<Value<N>> {
+    fn get(&self, name: &str) -> Option<Bound<N>> {
         let mut scope = Some(self);
         while let Some(current) = scope {
             if let Some((_, value)) = current.bindings.iter().rev().find(|(n, _)| n == name) {
@@ -563,30 +711,54 @@ impl<'p, N: Clone> Scope<'p, N> {
 
 /// Evaluates the XPath expression `raw` against `node`, with
 /// `ns_lookup`/`vars` wired up as the namespace/variable hooks — the one
-/// place every `test`/`<let>`/`value-of/@select` expression evaluation
-/// goes through.
+/// place every `<let>`/`value-of/@select` expression evaluation goes
+/// through, in the language of the schema's `queryBinding`.
 fn evaluate_xpath<'n, N: Node<'n>>(
     raw: &str,
     node: N,
     vars: &Scope<'_, N>,
     env: &Env<'_, N>,
-) -> Result<Value<N>, SchematronEvalError> {
-    let expr = env.exprs.get(raw)?;
-    evaluate_parsed(&expr, node, vars, env)
+) -> Result<Bound<N>, SchematronEvalError> {
+    match env.version {
+        XPathVersion::V1 => {
+            let expr = env.exprs.get(raw)?;
+            evaluate_parsed(&expr, node, vars, env).map(Bound::V1)
+        }
+        XPathVersion::V2 => {
+            let expr = env.exprs2.get(raw)?;
+            with_context(node, vars, env, |ctx| {
+                xpath_eval::evaluate_versioned(&expr, ctx)
+            })
+            .map_err(from_versioned)
+            .map(Bound::V2)
+        }
+    }
 }
 
 /// Evaluates an `assert`/`report` test straight to a boolean (see
-/// `xpath_eval::evaluate_boolean`).
+/// `xpath_eval::evaluate_boolean`; the effective boolean value in XPath 2.0).
 fn evaluate_test<'n, N: Node<'n>>(
     raw: &str,
     node: N,
     vars: &Scope<'_, N>,
     env: &Env<'_, N>,
 ) -> Result<bool, SchematronEvalError> {
-    let expr = env.exprs.get(raw)?;
-    with_context(node, vars, env, |ctx| {
-        xpath_eval::evaluate_boolean(&expr, ctx)
-    })
+    match env.version {
+        XPathVersion::V1 => {
+            let expr = env.exprs.get(raw)?;
+            with_context(node, vars, env, |ctx| {
+                xpath_eval::evaluate_boolean(&expr, ctx)
+            })
+            .map_err(SchematronEvalError::Eval)
+        }
+        XPathVersion::V2 => {
+            let expr = env.exprs2.get(raw)?;
+            with_context(node, vars, env, |ctx| {
+                xpath_eval::evaluate_boolean_versioned(&expr, ctx)
+            })
+            .map_err(from_versioned)
+        }
+    }
 }
 
 fn evaluate_parsed<'n, N: Node<'n>>(
@@ -596,28 +768,42 @@ fn evaluate_parsed<'n, N: Node<'n>>(
     env: &Env<'_, N>,
 ) -> Result<Value<N>, SchematronEvalError> {
     with_context(node, vars, env, |ctx| xpath_eval::evaluate(expr, ctx))
+        .map_err(SchematronEvalError::Eval)
 }
 
 /// Runs `f` against `node` with `vars` and `env` wired up as the variable,
-/// namespace and cache hooks.
+/// namespace and cache hooks (`variables` for 1.0 values, `sequence_variables`
+/// for 2.0 sequences).
 fn with_context<'n, N: Node<'n>, T>(
     node: N,
     vars: &Scope<'_, N>,
     env: &Env<'_, N>,
-    f: impl FnOnce(&EvaluationContext<'n, '_, N>) -> Result<T, xpath_eval::EvalError>,
-) -> Result<T, SchematronEvalError> {
+    f: impl FnOnce(&EvaluationContext<'n, '_, N>) -> T,
+) -> T {
     let lookup = |name: &QName| {
         if name.prefix.is_some() {
-            None
-        } else {
-            vars.get(&name.local)
+            return None;
+        }
+        match vars.get(&name.local) {
+            Some(Bound::V1(value)) => Some(value),
+            _ => None,
+        }
+    };
+    let sequence_lookup = |name: &QName| {
+        if name.prefix.is_some() {
+            return None;
+        }
+        match vars.get(&name.local) {
+            Some(Bound::V2(sequence)) => Some(sequence),
+            _ => None,
         }
     };
     let mut ctx = EvaluationContext::new(node);
     ctx.namespaces = Some(env.ns_lookup);
     ctx.variables = Some(&lookup);
+    ctx.sequence_variables = Some(&sequence_lookup);
     ctx.cache = Some(env.cache);
-    f(&ctx).map_err(SchematronEvalError::Eval)
+    f(&ctx)
 }
 
 /// Evaluates `lets` in document order against `context_node`, adding each
@@ -638,7 +824,10 @@ fn extend_lets<'n, N: Node<'n>>(
             LetValue::Expr(expr) => evaluate_xpath(expr, context_node, scope, env)?,
             // issue #3: literal-XML content binds as its pre-computed
             // string-value — see `LetValue::Literal`'s doc comment.
-            LetValue::Literal(text) => Value::String(text.clone()),
+            LetValue::Literal(text) => match env.version {
+                XPathVersion::V1 => Bound::V1(Value::String(text.clone())),
+                XPathVersion::V2 => Bound::V2(vec![Item::Atomic(Atomic::String(text.clone()))]),
+            },
         };
         scope.bindings.push((binding.name.clone(), value));
     }
@@ -711,16 +900,31 @@ fn render_message<'n, N: Node<'n>>(
             MessagePart::Text(text) => message.push_str(text),
             MessagePart::ValueOf(select) => {
                 let value = evaluate_xpath(select, node, vars, env)?;
-                message.push_str(&value.to_xpath_string());
+                message.push_str(&value.to_text());
             }
             MessagePart::Name(path) => {
                 let select = match path {
                     Some(path) => format!("name({path})"),
                     None => "name()".to_owned(),
                 };
-                let expr = xpath_eval::parse(&select).map_err(SchematronEvalError::Parse)?;
-                let value = evaluate_parsed(&expr, node, vars, env)?;
-                message.push_str(&value.to_xpath_string());
+                let value = match env.version {
+                    XPathVersion::V1 => {
+                        let expr =
+                            xpath_eval::parse(&select).map_err(SchematronEvalError::Parse)?;
+                        Bound::V1(evaluate_parsed(&expr, node, vars, env)?)
+                    }
+                    XPathVersion::V2 => {
+                        let expr = xpath_eval::parse_versioned(&select, XPathVersion::V2)
+                            .map_err(from_versioned)?;
+                        Bound::V2(
+                            with_context(node, vars, env, |ctx| {
+                                xpath_eval::evaluate_versioned(&expr, ctx)
+                            })
+                            .map_err(from_versioned)?,
+                        )
+                    }
+                };
+                message.push_str(&value.to_text());
             }
         }
     }

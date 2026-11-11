@@ -7,6 +7,22 @@ version bump.
 
 ## [Unreleased]
 
+### Added
+
+- **Query binding:** `queryBinding="xslt2"` and `"xpath2"` run the schema in the XPath 2.0 mode of
+  `xpath-eval`; the EN 16931 UBL validation Schematron runs end to end on its example invoices.
+  `SchematronEvalError::Query` carries XPath 2.0 errors and `is_unsupported()` tells an incomplete
+  run from a failed one. Details in `docs/packages/schematron-engine.md` (casoon/barrierlab#62).
+- **API:** `Schema.xslt_functions` lists the `xsl:function` names a schema declares; calling one
+  ends the run as unsupported with the function named (XSLT is not run) (casoon/barrierlab#62).
+
+### Changed
+
+- **Query binding:** `ParseError::UnsupportedQueryBinding` is now raised for bindings other than
+  `xslt`, `xpath`, `xslt2`, `xpath2`; `xslt2` and `xpath2` used to be rejected.
+  `SchematronEvalError` gained the variant `Query` and `Schema` the field `xslt_functions`, so
+  exhaustive matches and struct literals need a minor version bump (casoon/barrierlab#62).
+
 ## [0.3.1] - 2026-11-09
 
 ### Added
