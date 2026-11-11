@@ -8,7 +8,7 @@ One home for all packages in this repository.
 
 | Section | Contents |
 |---|---|
-| [Packages](packages/index.mdx) | all 15 crates with their dependencies, one page per package |
+| [Packages](packages/index.mdx) | all 20 crates with their dependencies, one page per package |
 | [Accessibility in detail](a11y/index.md) | the a11y packages: installation, quickstart, concepts (findings, tiers, accname), reference |
 | [Conformance in detail](html-conform/index.md) | html-conform: getting started, guides, reference |
 

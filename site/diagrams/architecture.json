@@ -41,7 +41,7 @@
       {
         "id": "crates",
         "label": "crates.io",
-        "sublabel": "15 Rust crates",
+        "sublabel": "20 Rust crates",
         "kind": "io"
       },
       {
