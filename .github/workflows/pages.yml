@@ -39,7 +39,9 @@ jobs:
           pnpm install --frozen-lockfile
           # Mermaid wird zur Bauzeit zu Inline-SVG gerendert; rehype-mermaid
           # braucht dafuer einen Browser. Ohne Laufzeit-JavaScript auf der Seite.
-          pnpm --filter barrierlab-site exec playwright install --with-deps chromium
+          # Ohne --with-deps: das Runner-Image hat die Bibliotheken fuer Chromium
+          # schon, und der Bau haengt so nicht am apt-Spiegel der Runner.
+          pnpm --filter barrierlab-site exec playwright install chromium
           pnpm --filter barrierlab-site build
 
       - uses: actions/upload-pages-artifact@v5
