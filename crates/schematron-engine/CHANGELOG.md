@@ -7,6 +7,8 @@ version bump.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
 ### Added
 
 - **XSLT functions:** `xsl:function` declarations run when an XPath 2.0 expression calls them (a

@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `xml-adapters` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-11
+
+### Changed
+
+- **Dependencies:** builds on `xpath-eval` 0.4.0 and `schematron-engine` 0.5.0, whose document traits the adapters implement; no change of its own.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added
