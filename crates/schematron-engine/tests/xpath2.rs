@@ -152,30 +152,195 @@ fn context_must_select_nodes() {
     );
 }
 
-// Peppol and XRechnung declare helper functions with `xsl:function` (check digits, IBAN). This
-// crate does not run XSLT: calling one is reported as unsupported with its name, not as an
-// unknown function and not skipped.
-#[test]
-fn xsl_function_declarations_are_named_when_called() {
-    let body = r#"<ns prefix="u" uri="utils"/>
-        <xsl:function xmlns:xsl="http://www.w3.org/1999/XSL/Transform" name="u:twice" as="xs:integer">
-            <xsl:param name="n" as="xs:integer"/>
-            <xsl:sequence select="$n * 2"/>
-        </xsl:function>
-        <pattern><rule context="/Invoice"><assert test="u:twice(2) = 4">x</assert></rule></pattern>"#;
-    let parsed = parse(&schema("xslt2", body)).unwrap();
-    assert_eq!(parsed.xslt_functions, ["u:twice"]);
-    let error = messages("xslt2", body).unwrap_err();
-    assert!(error.is_unsupported(), "{error}");
-    assert!(error.to_string().contains("u:twice"), "{error}");
-    assert!(error.to_string().contains("xsl:function"), "{error}");
+const XSL: &str = r#"xmlns:xsl="http://www.w3.org/1999/XSL/Transform""#;
 
+fn with_functions(functions: &str, test: &str) -> String {
+    format!(
+        r#"<ns prefix="u" uri="utils"/>{functions}
+        <pattern><rule context="/Invoice"><assert test="{test}">failed</assert></rule></pattern>"#
+    )
+}
+
+// Peppol and XRechnung declare helper functions with `xsl:function` (check sums, IBAN). A call
+// runs the body: parameters, variables, `xsl:sequence`, `xsl:choose`, `xsl:if`, `xsl:value-of`.
+#[test]
+fn xsl_functions_run() {
+    let functions = format!(
+        r#"<xsl:function {XSL} name="u:twice" as="xs:integer">
+            <xsl:param name="n" as="xs:integer"/>
+            <xsl:variable name="doubled" select="$n * 2"/>
+            <xsl:sequence select="$doubled"/>
+        </xsl:function>
+        <xsl:function {XSL} name="u:sign" as="xs:string">
+            <xsl:param name="n"/>
+            <xsl:choose>
+                <xsl:when test="$n &lt; 0"><xsl:sequence select="'negative'"/></xsl:when>
+                <xsl:when test="$n = 0"><xsl:text>zero</xsl:text></xsl:when>
+                <xsl:otherwise>
+                    <xsl:if test="$n &gt; 100"><xsl:value-of select="'big'"/></xsl:if>
+                    <xsl:if test="$n &lt;= 100"><xsl:value-of select="('posi', 'tive')" separator=""/></xsl:if>
+                </xsl:otherwise>
+            </xsl:choose>
+        </xsl:function>
+        <xsl:function {XSL} name="u:numerals" as="xs:string">
+            <xsl:param name="s" as="xs:string"/>
+            <xsl:variable name="allowed">0123456789</xsl:variable>
+            <xsl:sequence select="translate($s, translate($s, $allowed, ''), '')"/>
+        </xsl:function>"#
+    );
+    let parsed = parse(&schema("xslt2", &with_functions(&functions, "true()"))).unwrap();
+    assert_eq!(parsed.xslt_functions, ["u:twice", "u:sign", "u:numerals"]);
+    assert!(parsed.functions.iter().all(|f| f.unsupported.is_none()));
+    // The arguments are nodes and sequences too: atomized and converted to the declared type.
+    for test in [
+        "u:twice(2) = 4",
+        "u:twice(cac:Line[2]/cbc:ID) = 4",
+        "u:sign(-1) = 'negative'",
+        "u:sign(0) = 'zero'",
+        "u:sign(5) = 'positive'",
+        "u:sign(500) = 'big'",
+        "u:numerals('a1b2c3') = '123'",
+        "u:numerals(cbc:PayableAmount) = '3040'",
+    ] {
+        let found = messages("xslt2", &with_functions(&functions, test)).unwrap();
+        assert_eq!(found, Vec::<String>::new(), "{test}");
+    }
+    // A wrong result is a failed assertion, so the passes above are not vacuous.
+    let found = messages("xslt2", &with_functions(&functions, "u:twice(2) = 5")).unwrap();
+    assert_eq!(found, ["failed"]);
+}
+
+// A function body sees the global `<let>`s (schema- and pattern-level), not a rule's, and has no
+// context item: a path in it is the dynamic error XPDY0002, not a lookup in some document node.
+#[test]
+fn xsl_function_scope() {
+    let functions = format!(
+        r#"<xsl:function {XSL} name="u:limit" as="xs:integer"><xsl:sequence select="$limit"/></xsl:function>
+        <xsl:function {XSL} name="u:rule" as="xs:integer"><xsl:sequence select="$inrule"/></xsl:function>
+        <xsl:function {XSL} name="u:path" as="xs:string"><xsl:sequence select="string(cbc:PayableAmount)"/></xsl:function>"#
+    );
+    let schema = |test: &str| {
+        format!(
+            r#"<ns prefix="u" uri="utils"/>{functions}
+            <let name="limit" value="7"/>
+            <pattern><let name="local" value="8"/><rule context="/Invoice"><let name="inrule" value="9"/>
+                <assert test="{test}">failed</assert></rule></pattern>"#
+        )
+    };
+    assert_eq!(
+        messages("xslt2", &schema("u:limit() = 7")).unwrap(),
+        Vec::<String>::new()
+    );
+    let error = messages("xslt2", &schema("u:rule() = 9")).unwrap_err();
+    assert!(error.to_string().contains("XPST0008"), "{error}");
+    let error = messages("xslt2", &schema("u:path() = '30.40'")).unwrap_err();
+    assert!(error.to_string().contains("XPDY0002"), "{error}");
+}
+
+// A recursive function runs; a call nested beyond the limit is an error, not a stack overflow.
+#[test]
+fn xsl_function_recursion_is_limited() {
+    let functions = format!(
+        r#"<xsl:function {XSL} name="u:sum-to" as="xs:integer">
+            <xsl:param name="n" as="xs:integer"/>
+            <xsl:sequence select="if ($n = 0) then 0 else $n + u:sum-to($n - 1)"/>
+        </xsl:function>"#
+    );
+    let found = messages("xslt2", &with_functions(&functions, "u:sum-to(10) = 55")).unwrap();
+    assert_eq!(found, Vec::<String>::new());
+    let deepest = xpath_eval::MAX_FUNCTION_DEPTH - 1;
+    let found = messages(
+        "xslt2",
+        &with_functions(&functions, &format!("u:sum-to({deepest}) > 0")),
+    )
+    .unwrap();
+    assert_eq!(found, Vec::<String>::new());
+    let error = messages("xslt2", &with_functions(&functions, "u:sum-to(100000) > 0")).unwrap_err();
+    assert!(!error.is_unsupported(), "{error}");
+    assert!(error.to_string().contains("FOER0000"), "{error}");
+}
+
+// Argument and result types follow the function conversion rules: a value that does not fit is
+// XPTY0004, a wrong arity is an unknown function.
+#[test]
+fn xsl_function_types_are_checked() {
+    let functions = format!(
+        r#"<xsl:function {XSL} name="u:len" as="xs:integer">
+            <xsl:param name="s" as="xs:string"/>
+            <xsl:sequence select="string-length($s)"/>
+        </xsl:function>
+        <xsl:function {XSL} name="u:bad" as="xs:integer"><xsl:sequence select="'text'"/></xsl:function>"#
+    );
+    let run = |test: &str| messages("xslt2", &with_functions(&functions, test));
+    assert_eq!(run("u:len('abc') = 3").unwrap(), Vec::<String>::new());
+    assert_eq!(
+        run("u:len(cbc:PayableAmount) = 5").unwrap(),
+        Vec::<String>::new()
+    );
+    for test in [
+        "u:len(5) = 1",
+        "u:len(('a', 'b')) = 1",
+        "u:len(()) = 1",
+        "u:bad() = 1",
+    ] {
+        let error = run(test).unwrap_err();
+        assert!(error.to_string().contains("XPTY0004"), "{test}: {error}");
+    }
+    let error = run("u:len('a', 'b') = 1").unwrap_err();
+    assert!(error.to_string().contains("XPST0017"), "{error}");
     // A function the schema does not declare stays what it is: an unknown function.
+    let error = run("u:nothing(2) = 4").unwrap_err();
+    assert!(!error.is_unsupported(), "{error}");
+}
+
+// What the interpreter does not run is reported as unsupported, with the construct named, and
+// only when the function is called.
+#[test]
+fn xsl_function_with_unsupported_instruction_is_not_run() {
+    let functions = format!(
+        r#"<xsl:function {XSL} name="u:loop" as="xs:integer">
+            <xsl:param name="n"/>
+            <xsl:for-each select="1 to 3"><xsl:sequence select="."/></xsl:for-each>
+        </xsl:function>"#
+    );
+    let schema_text = with_functions(&functions, "u:loop(1) = 1");
+    let parsed = parse(&schema("xslt2", &schema_text)).unwrap();
+    assert!(
+        parsed.functions[0]
+            .unsupported
+            .as_deref()
+            .unwrap()
+            .contains("xsl:for-each")
+    );
+    let error = messages("xslt2", &schema_text).unwrap_err();
+    assert!(error.is_unsupported(), "{error}");
+    assert!(error.to_string().contains("u:loop"), "{error}");
+    assert!(error.to_string().contains("xsl:for-each"), "{error}");
+    // Not called: nothing happens.
+    let found = messages("xslt2", &with_functions(&functions, "true()")).unwrap();
+    assert_eq!(found, Vec::<String>::new());
+}
+
+// A pattern with `<let>`s and no rule declares variables for the whole schema (XRechnung's
+// `common.sch`), a pattern with rules keeps its `<let>`s to itself, and a rule context reads the
+// variables in scope.
+#[test]
+fn variable_patterns_and_variables_in_contexts() {
+    let found = messages(
+        "xslt2",
+        r#"<pattern id="vars"><let name="wanted" value="'cac:Line'"/><let name="count" value="3"/></pattern>
+        <pattern><let name="own" value="1"/>
+            <rule context="/Invoice[$count = 3]"><assert test="$wanted = 'cac:Line'">global</assert></rule></pattern>
+        <pattern><rule context="/Invoice[$count = 4]"><assert test="false()">never</assert></rule></pattern>"#,
+    )
+    .unwrap();
+    assert_eq!(found, Vec::<String>::new());
+    // The variable of a pattern with a rule is not visible in another pattern.
     let error = messages(
         "xslt2",
-        r#"<ns prefix="u" uri="utils"/>
-        <pattern><rule context="/Invoice"><assert test="u:nothing(2) = 4">x</assert></rule></pattern>"#,
+        r#"<pattern><let name="own" value="1"/><rule context="/Invoice"><assert test="true()">a</assert></rule></pattern>
+        <pattern><rule context="/Invoice"><assert test="$own = 1">b</assert></rule></pattern>"#,
     )
     .unwrap_err();
-    assert!(!error.is_unsupported(), "{error}");
+    assert!(error.to_string().contains("XPST0008"), "{error}");
 }

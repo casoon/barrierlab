@@ -11,6 +11,7 @@ use super::regex::{Regex, RegexError};
 use super::{Item, Sequence, VersionedError};
 use crate::ast::QName;
 use crate::document::Node;
+use crate::eval::MAX_FUNCTION_DEPTH;
 use std::cmp::Ordering;
 
 /// Every function F&O 1.0 defines in `fn:` and XSLT 2.0 defines for XPath
@@ -175,11 +176,38 @@ pub(super) fn call<'e, 'ctx, 'hook, N: Node<'ctx>>(
     match namespace.as_str() {
         XS_NAMESPACE => constructor(&name.local, &shown, args),
         FN_NAMESPACE => library(env, &name.local, &shown, args),
-        _ => Err(VersionedError::static_error(
-            "XPST0017",
-            format!("no function `{shown}` in that namespace"),
-        )),
+        _ => user_function(env, &namespace, &name.local, &shown, args),
     }
+}
+
+/// A function in a namespace other than `fn` and `xs`: the caller's `FunctionLookup`, if any,
+/// knows it (an `xsl:function`); nesting is limited to `MAX_FUNCTION_DEPTH`.
+fn user_function<'e, 'ctx, 'hook, N: Node<'ctx>>(
+    env: &Env<'e, 'ctx, 'hook, N>,
+    namespace: &str,
+    local: &str,
+    shown: &str,
+    args: Vec<Sequence<N>>,
+) -> Result<Sequence<N>, VersionedError> {
+    let arguments = args.len();
+    if let Some(functions) = env.ctx.functions {
+        let depth = functions.depth + 1;
+        if depth > MAX_FUNCTION_DEPTH {
+            return Err(VersionedError::dynamic(
+                "FOER0000",
+                format!(
+                    "calls of user-defined functions nested more than {MAX_FUNCTION_DEPTH} deep at `{shown}`"
+                ),
+            ));
+        }
+        if let Some(result) = (functions.lookup)(namespace, local, args, depth) {
+            return result;
+        }
+    }
+    Err(VersionedError::static_error(
+        "XPST0017",
+        format!("no function `{shown}` with {arguments} argument(s) in that namespace"),
+    ))
 }
 
 /// `xs:T(arg)` (XPath 2.0 §3.10.4): the empty sequence stays empty, otherwise
@@ -237,7 +265,7 @@ fn boolean_seq<N>(b: bool) -> Sequence<N> {
 }
 
 fn integer_seq<N>(n: usize) -> Sequence<N> {
-    atom(Atomic::Integer(n as i64))
+    atom(Atomic::Integer(n as i128))
 }
 
 /// An argument declared `xs:string?`: untyped values are accepted, other
@@ -388,7 +416,7 @@ fn collapse_whitespace(s: &str) -> String {
 /// (F&O §6.4: `fn:abs`, `fn:ceiling`, `fn:floor`, `fn:round`).
 fn numeric_function<N>(
     value: Option<Atomic>,
-    integer: impl Fn(i64) -> Option<i64>,
+    integer: impl Fn(i128) -> Option<i128>,
     decimal: impl Fn(Decimal) -> Decimal,
     double: impl Fn(f64) -> f64,
 ) -> Result<Sequence<N>, VersionedError> {
@@ -561,7 +589,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
         ("string-to-codepoints", 1) => Ok(opt_string(&args[0], local)?
             .unwrap_or_default()
             .chars()
-            .map(|c| Item::Atomic(Atomic::Integer(i64::from(u32::from(c)))))
+            .map(|c| Item::Atomic(Atomic::Integer(i128::from(u32::from(c)))))
             .collect()),
         ("codepoints-to-string", 1) => {
             let mut text = String::new();
@@ -704,7 +732,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
         }
         ("abs", 1) => numeric_function(
             opt_numeric(&args[0], local)?,
-            i64::checked_abs,
+            i128::checked_abs,
             Decimal::abs,
             f64::abs,
         ),
@@ -741,7 +769,7 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
                 Some(total) => atom(arithmetic(
                     &total,
                     Arithmetic::Div,
-                    &Atomic::Integer(count),
+                    &Atomic::Integer(count as i128),
                 )?),
                 None => Vec::new(),
             })

@@ -27,7 +27,10 @@ pub(super) fn evaluate<'ctx, 'hook, N: Node<'ctx>>(
 ) -> Result<Sequence<N>, VersionedError> {
     let env = Env {
         ctx,
-        focus: Some(Focus {
+        focus: (!ctx
+            .functions
+            .is_some_and(|functions| functions.no_context_item))
+        .then_some(Focus {
             item: Item::Node(ctx.node),
             position: ctx.position,
             size: ctx.size,
@@ -52,7 +55,7 @@ struct Binding<N> {
 
 #[derive(Clone)]
 pub(super) struct Env<'e, 'ctx, 'hook, N: Node<'ctx>> {
-    ctx: &'e EvaluationContext<'ctx, 'hook, N>,
+    pub(super) ctx: &'e EvaluationContext<'ctx, 'hook, N>,
     pub focus: Option<Focus<N>>,
     vars: Option<Rc<Binding<N>>>,
 }
@@ -368,7 +371,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
 
     /// `a to b` (§3.3.1).
     fn range(&self, from: &Expr, to: &Expr) -> Result<Sequence<N>, VersionedError> {
-        let bound = |expr: &Expr| -> Result<Option<i64>, VersionedError> {
+        let bound = |expr: &Expr| -> Result<Option<i128>, VersionedError> {
             let Some(atom) = single_atomic(&self.eval(expr)?, "the operand of `to`")? else {
                 return Ok(None);
             };
@@ -387,7 +390,7 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
         let (Some(from), Some(to)) = (bound(from)?, bound(to)?) else {
             return Ok(Vec::new());
         };
-        if to >= from && (to - from) >= MAX_RANGE {
+        if to >= from && (to - from) >= i128::from(MAX_RANGE) {
             return Err(VersionedError::dynamic(
                 "FOAR0002",
                 "the range is too large for this implementation",
@@ -696,7 +699,7 @@ fn predicate_holds<'ctx, N: Node<'ctx>>(
     if let [Item::Atomic(number)] = result
         && number.is_numeric()
     {
-        let wanted = Atomic::Integer(position as i64);
+        let wanted = Atomic::Integer(position as i128);
         return Ok(compare_values(number, &wanted)?.is_some_and(|o| o.is_eq()));
     }
     effective_boolean_value(result)

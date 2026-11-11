@@ -32,6 +32,39 @@ pub type VariableLookup<'a, N> = dyn Fn(&QName) -> Option<Value<N>> + 'a;
 /// expressions, ignored by the 1.0 evaluator.
 pub type SequenceVariableLookup<'a, N> = dyn Fn(&QName) -> Option<crate::Sequence<N>> + 'a;
 
+/// The user-defined functions of an XPath 2.0 expression (what an `xsl:function` is in XSLT):
+/// called for a function whose name is in a namespace other than `fn` and `xs`, with the
+/// namespace URI, the local name, the arguments as sequences and the call depth (1 for a call
+/// from the outermost expression). `None` means that no such function exists with this arity
+/// (the static error `XPST0017`); otherwise the result sequence or the error.
+pub type FunctionLookup<'a, N> = dyn Fn(
+        &str,
+        &str,
+        Vec<crate::Sequence<N>>,
+        usize,
+    ) -> Option<Result<crate::Sequence<N>, crate::VersionedError>>
+    + 'a;
+
+/// The user-defined functions of an XPath 2.0 expression and where in a chain of calls it is
+/// evaluated, see [`EvaluationContext::functions`]. Ignored for 1.0 expressions.
+pub struct FunctionContext<'a, N> {
+    /// Answers the calls of user-defined functions.
+    pub lookup: &'a FunctionLookup<'a, N>,
+    /// How many user-defined function calls are active around the expression: 0 for an
+    /// expression of the document, the `depth` the lookup was called with for the body of a
+    /// function. A call beyond [`MAX_FUNCTION_DEPTH`] is refused.
+    pub depth: usize,
+    /// The expression has no context item (the body of a function, XSLT 2.0 section 10.3): `.`,
+    /// `/`, a path step or `position()` is the dynamic error `XPDY0002`, and the context node
+    /// of the [`EvaluationContext`] is ignored.
+    pub no_context_item: bool,
+}
+
+/// Deepest nesting of user-defined function calls (a function calling a function, recursion
+/// included). The call that would be the 65th is the dynamic error `FOER0000` instead of a
+/// stack overflow; the evaluators are recursive and a debug build has a small stack.
+pub const MAX_FUNCTION_DEPTH: usize = 64;
+
 /// A namespace-prefix resolution hook: given a name test's raw prefix
 /// string, returns the namespace URI it's bound to, if any. `None` means
 /// the prefix is unresolvable via this hook — a prefixed name test then
@@ -75,6 +108,8 @@ pub struct EvaluationContext<'ctx, 'hook, N: Node<'ctx>> {
     pub variables: Option<&'hook VariableLookup<'hook, N>>,
     /// Sequence-valued variables for XPath 2.0 expressions, see [`SequenceVariableLookup`].
     pub sequence_variables: Option<&'hook SequenceVariableLookup<'hook, N>>,
+    /// User-defined functions for XPath 2.0 expressions, see [`FunctionContext`].
+    pub functions: Option<&'hook FunctionContext<'hook, N>>,
     pub namespaces: Option<&'hook NamespaceLookup<'hook>>,
     /// Per-document memo (see [`DocumentCache`]). `None` evaluates
     /// everything from scratch; the result is the same either way.
@@ -102,6 +137,7 @@ impl<'ctx, 'hook, N: Node<'ctx>> EvaluationContext<'ctx, 'hook, N> {
             size: 1,
             variables: None,
             sequence_variables: None,
+            functions: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -118,7 +154,9 @@ impl<'ctx, 'hook, N: Node<'ctx>> EvaluationContext<'ctx, 'hook, N> {
             position,
             size,
             variables: self.variables,
-            sequence_variables: self.sequence_variables,
+            // The 1.0 evaluator reads neither of the two XPath 2.0 hooks.
+            sequence_variables: None,
+            functions: None,
             namespaces: self.namespaces,
             cache: self.cache,
             prefixes: self.prefixes,
@@ -229,7 +267,9 @@ fn with_prefix_memo<'ctx, 'hook, N: Node<'ctx>, R>(
         position: ctx.position,
         size: ctx.size,
         variables: ctx.variables,
-        sequence_variables: ctx.sequence_variables,
+        // The 1.0 evaluator reads neither of the two XPath 2.0 hooks.
+        sequence_variables: None,
+        functions: None,
         namespaces: ctx.namespaces,
         cache: ctx.cache,
         prefixes: Some(&memo),
@@ -1737,6 +1777,7 @@ mod tests {
             size: 1,
             variables: Some(&lookup),
             sequence_variables: None,
+            functions: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -1768,6 +1809,7 @@ mod tests {
             size: 1,
             variables: Some(&lookup),
             sequence_variables: None,
+            functions: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -2119,6 +2161,7 @@ mod tests {
                 size: 1,
                 variables: None,
                 sequence_variables: None,
+                functions: None,
                 namespaces: Some(&namespace_hook),
                 cache: None,
                 prefixes: None,

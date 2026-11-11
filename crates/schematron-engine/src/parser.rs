@@ -415,6 +415,8 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
     }
 
     let phases = collect_children(root, "phase", |node| parse_phase(node, &pattern_ids))?;
+    #[cfg(feature = "xpath2")]
+    let functions = crate::xslt::parse_functions(root, &ns);
 
     Ok(Schema {
         ns,
@@ -434,6 +436,8 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
             })
             .filter_map(|function| function.attribute("name").map(str::to_owned))
             .collect(),
+        #[cfg(feature = "xpath2")]
+        functions,
     })
 }
 

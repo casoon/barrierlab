@@ -50,9 +50,9 @@ impl Decimal {
         Decimal { mantissa, scale }
     }
 
-    pub(crate) fn from_i64(n: i64) -> Decimal {
+    pub(crate) fn from_i128(n: i128) -> Decimal {
         Decimal {
-            mantissa: n as i128,
+            mantissa: n,
             scale: 0,
         }
     }
@@ -114,10 +114,10 @@ impl Decimal {
         self.mantissa.signum() as i32
     }
 
-    /// `Some(n)` when the value is a whole number that fits `i64`.
-    pub(crate) fn to_i64_exact(self) -> Option<i64> {
+    /// `Some(n)` when the value is a whole number.
+    pub(crate) fn to_i128_exact(self) -> Option<i128> {
         if self.scale == 0 {
-            i64::try_from(self.mantissa).ok()
+            Some(self.mantissa)
         } else {
             None
         }

@@ -92,8 +92,8 @@ pub enum Atomic {
     Untyped(String),
     String(String),
     Boolean(bool),
-    /// `xs:integer`, limited to 64 bits; overflow raises `FOAR0002`.
-    Integer(i64),
+    /// `xs:integer`, limited to 128 bits (39 digits); overflow raises `FOAR0002`.
+    Integer(i128),
     Decimal(Decimal),
     Double(f64),
     Date(Date),
@@ -212,7 +212,7 @@ impl Atomic {
             },
             AtomicType::Decimal => match self {
                 Atomic::Decimal(_) => self.clone(),
-                Atomic::Integer(i) => Atomic::Decimal(Decimal::from_i64(*i)),
+                Atomic::Integer(i) => Atomic::Decimal(Decimal::from_i128(*i)),
                 Atomic::Double(d) => {
                     if !d.is_finite() {
                         return Err(VersionedError::dynamic(
@@ -222,7 +222,7 @@ impl Atomic {
                     }
                     Atomic::Decimal(Decimal::from_f64(*d).map_err(|_| too_precise())?)
                 }
-                Atomic::Boolean(b) => Atomic::Decimal(Decimal::from_i64(*b as i64)),
+                Atomic::Boolean(b) => Atomic::Decimal(Decimal::from_i128(*b as i128)),
                 _ if text_source => {
                     Atomic::Decimal(Decimal::parse(&lexical()).map_err(|e| match e {
                         DecimalParseError::Invalid => invalid("xs:decimal"),
@@ -234,7 +234,7 @@ impl Atomic {
             AtomicType::Integer => match self {
                 Atomic::Integer(_) => self.clone(),
                 Atomic::Decimal(d) => {
-                    Atomic::Integer(d.trunc().to_i64_exact().ok_or_else(|| {
+                    Atomic::Integer(d.trunc().to_i128_exact().ok_or_else(|| {
                         VersionedError::dynamic("FOAR0002", "xs:integer overflow")
                     })?)
                 }
@@ -246,12 +246,12 @@ impl Atomic {
                         ));
                     }
                     let t = d.trunc();
-                    if t >= i64::MAX as f64 || t < i64::MIN as f64 {
+                    if t >= i128::MAX as f64 || t < i128::MIN as f64 {
                         return Err(VersionedError::dynamic("FOAR0002", "xs:integer overflow"));
                     }
-                    Atomic::Integer(t as i64)
+                    Atomic::Integer(t as i128)
                 }
-                Atomic::Boolean(b) => Atomic::Integer(*b as i64),
+                Atomic::Boolean(b) => Atomic::Integer(*b as i128),
                 _ if text_source => {
                     let s = lexical();
                     let digits = s.strip_prefix(['+', '-']).unwrap_or(&s);
@@ -259,7 +259,9 @@ impl Atomic {
                         return Err(invalid("xs:integer"));
                     }
                     Atomic::Integer(s.parse().map_err(|_| {
-                        VersionedError::dynamic("FOAR0002", "xs:integer beyond 64 bits")
+                        VersionedError::Unsupported(
+                            "an xs:integer beyond 128 bits (39 digits)".into(),
+                        )
                     })?)
                 }
                 _ => return Err(type_error(self, "xs:integer")),
@@ -359,7 +361,7 @@ fn promote_double(a: &Atomic) -> f64 {
 
 fn promote_decimal(a: &Atomic) -> Decimal {
     match a {
-        Atomic::Integer(i) => Decimal::from_i64(*i),
+        Atomic::Integer(i) => Decimal::from_i128(*i),
         Atomic::Decimal(d) => *d,
         _ => Decimal::ZERO,
     }
@@ -550,7 +552,7 @@ pub fn arithmetic(a: &Atomic, op: Arithmetic, b: &Atomic) -> Result<Atomic, Vers
             }
             return x
                 .checked_idiv(y)
-                .and_then(|d| d.to_i64_exact())
+                .and_then(|d| d.to_i128_exact())
                 .map(Integer)
                 .ok_or_else(overflow);
         }

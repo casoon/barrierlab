@@ -19,8 +19,8 @@ pub use axes::{
 pub use cache::DocumentCache;
 pub use document::{Document, ExpandedName, Node, NodeKind};
 pub use eval::{
-    EvalError, EvaluationContext, SequenceVariableLookup, VariableLookup, evaluate,
-    evaluate_boolean,
+    EvalError, EvaluationContext, FunctionContext, FunctionLookup, MAX_FUNCTION_DEPTH,
+    SequenceVariableLookup, VariableLookup, evaluate, evaluate_boolean,
 };
 pub use parser::{ParseError, parse};
 pub use value::Value;
