@@ -36,7 +36,7 @@
       {
         "id": "reg",
         "label": "crates.io, npm",
-        "sublabel": "15 crates, a11y-wasm",
+        "sublabel": "20 crates, a11y-wasm",
         "kind": "io"
       },
       {

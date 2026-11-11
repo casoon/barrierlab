@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "type": "flow",
-  "title": "The 15 crates and their dependencies",
+  "title": "The core crates and their dependencies",
   "description": "An arrow leads from a crate to the one that uses it. Dependencies only point down, from L0 to L3: html-conform builds on six parsers and engines, a11y-rules on a11y-dom, a11y-report and stylesheet-parse, and a11y-wasm bundles a11y-rules and accname for the browser. a11y-perception and web-checks stand alone.",
   "source": "[dependencies] of the crate manifests in crates/*/Cargo.toml",
   "width": 1100,
