@@ -39,8 +39,8 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::CompiledSchema;
-use crate::datatypes::{DatatypeContext, DatatypeError, DatatypeRegistry};
-use crate::derive::{Id, Interner, NOT_ALLOWED, param_pairs};
+use crate::datatypes::{DatatypeError, DatatypeRegistry};
+use crate::derive::param_pairs;
 use crate::grammar::Pattern;
 use crate::simplify::Definitions;
 
@@ -229,42 +229,12 @@ pub fn validate_with_options<E: Element>(
     root: &E,
     options: ValidationOptions,
 ) -> Result<Vec<ValidationError<E::Location>>, DatatypeError> {
-    let mut checked_refs = BTreeSet::new();
-    check_datatypes_supported(
-        &schema.start,
-        &schema.definitions,
+    let validator = StreamValidator::<usize>::with_recovery(
+        schema,
         registry,
-        &mut checked_refs,
+        options.recover_after_unexpected_element,
     )?;
-    for pattern in schema.definitions.values() {
-        check_datatypes_supported(pattern, &schema.definitions, registry, &mut checked_refs)?;
-    }
-
-    let mut errors = Vec::new();
-    let mut interner = Interner::new(&schema.definitions, registry);
-    let start = interner.intern(&schema.start);
-    let recovery = options
-        .recover_after_unexpected_element
-        .then_some(&schema.start);
-    match interner.element_contents(start, &root.name()) {
-        Some(content) => {
-            validate_element_content(&mut interner, recovery, content, false, root, &mut errors);
-        }
-        None => {
-            errors.push(ValidationError {
-                kind: ValidationErrorKind::UnexpectedElement(root.name()),
-                path: Vec::new(),
-                location: root.location(),
-                recovered: false,
-            });
-            if let Some(start) = recovery
-                && let Some(content) = interner.recovery_contents(start, &root.name())
-            {
-                validate_element_content(&mut interner, recovery, content, true, root, &mut errors);
-            }
-        }
-    }
-    Ok(errors)
+    Ok(drive(validator, root))
 }
 
 /// A single validation problem, with the path of element names from the
@@ -352,192 +322,146 @@ impl fmt::Display for ValidationErrorKind {
     }
 }
 
-/// One element whose content is being validated: its remaining pattern
-/// and the children not yet consumed. [`validate_element_content`] keeps
-/// these on an explicit stack instead of recursing per nesting level.
-///
-/// `element` is `None` for the root, which the caller only lends.
-struct Frame<E: Element> {
+/// An element the tree walk has entered and not yet left.
+struct Open<E: Element> {
+    /// Its number in document order; it is the location the validator
+    /// carries for the element, resolved by [`resolve_locations`].
+    serial: usize,
+    /// `None` for the root, which the caller only lends.
     element: Option<E>,
-    pattern: Id,
-    context: DatatypeContext,
     children: std::vec::IntoIter<Content<E>>,
-    strip_whitespace: bool,
-    /// Inside an element that was skipped as unexpected and is validated
-    /// by recovery; every error found here is marked as recovered.
-    recovered: bool,
 }
 
-/// Validates `root` (whose content must match `content`) and every
-/// descendant. Iterative over document depth: each open element is a
-/// [`Frame`] on a heap-allocated stack, so a document nested arbitrarily
-/// deep cannot overflow the call stack (the pattern walks below still
+/// The tree path: turns `root` into the events [`StreamValidator`] takes
+/// and returns its findings with the elements' own locations. Iterative
+/// over document depth: each open element is an [`Open`] on a
+/// heap-allocated stack, so a document nested arbitrarily deep cannot
+/// overflow the call stack (the pattern walks in the validator still
 /// recurse, but only as deep as the schema's own pattern nesting).
 ///
-/// `recovery` is the schema's start pattern when error recovery is on;
-/// `recovered` says `root` itself is an unexpected element being recovered.
-fn validate_element_content<'s, E: Element>(
-    interner: &mut Interner<'s>,
-    recovery: Option<&'s Pattern>,
-    content: Id,
-    recovered: bool,
+/// The validator is given a serial number per element instead of the
+/// element's [`Element::Location`], which need not be `Clone`; a finding's
+/// location is read from the element as soon as the finding exists, while
+/// that element is still open.
+fn drive<E: Element>(
+    mut validator: StreamValidator<'_, usize>,
     root: &E,
-    errors: &mut Vec<ValidationError<E::Location>>,
-) {
-    let mut path = Vec::new();
-    let mut stack = vec![open_frame(
-        interner, content, root, recovered, &mut path, errors,
-    )];
+) -> Vec<ValidationError<E::Location>> {
+    let mut locations: Vec<Option<E::Location>> = Vec::new();
+    let mut stack: Vec<Open<E>> = Vec::new();
+    let mut serial = 0;
+    enter(
+        &mut validator,
+        root,
+        &mut stack,
+        &mut locations,
+        None,
+        serial,
+    );
 
-    while let Some(frame) = stack.last_mut() {
-        let Some(child) = frame.children.next() else {
-            let frame = stack.pop().expect("the loop just saw a frame");
-            if !interner.nullable(frame.pattern) {
-                errors.push(ValidationError {
-                    kind: ValidationErrorKind::MissingContent,
-                    path: path.clone(),
-                    location: frame.element.as_ref().unwrap_or(root).location(),
-                    recovered: frame.recovered,
-                });
+    while let Some(top) = stack.last_mut() {
+        match top.children.next() {
+            None => {
+                validator
+                    .end_element()
+                    .expect("the walk emits balanced events");
+                resolve_locations(&validator, root, &stack, &mut locations);
+                stack.pop();
             }
-            path.pop();
-            continue;
-        };
-        match child {
-            Content::Text(text) if frame.strip_whitespace && text.trim().is_empty() => {}
-            Content::Text(text) => {
-                let derived = interner.deriv_text(frame.pattern, &text, &frame.context);
-                if derived == NOT_ALLOWED {
-                    // §6.2.7: a text node that consists entirely of
-                    // whitespace is treated as if it weren't there at all
-                    // when it doesn't otherwise fit the content model —
-                    // but *only* if nothing reachable there actually wants
-                    // text (`wants_text`); a bare `data`/`value` (or a
-                    // `choice` where every branch wants text) still must
-                    // see a real, matching event. Non-whitespace text that
-                    // doesn't fit is always an error.
-                    if !text.trim().is_empty() || interner.wants_text(frame.pattern) {
-                        errors.push(ValidationError {
-                            kind: ValidationErrorKind::UnexpectedText,
-                            path: path.clone(),
-                            location: frame.element.as_ref().unwrap_or(root).location(),
-                            recovered: frame.recovered,
-                        });
-                    }
-                } else {
-                    frame.pattern = derived;
-                }
+            Some(Content::Text(text)) => {
+                validator
+                    .text_owned(text)
+                    .expect("text is inside the root element");
             }
-            Content::Element(child_element) => {
-                let name = child_element.name();
-                let name_id = interner.name_id(&name);
-                let recovered = frame.recovered;
-                match interner.element_contents_by_id(frame.pattern, &name, name_id) {
-                    Some(child_content) => {
-                        // The parent's derivative depends only on the
-                        // child's name, not on how its content validates,
-                        // so it can be taken before the child is entered.
-                        frame.pattern = interner.deriv_element_by_id(frame.pattern, &name, name_id);
-                        let mut child_frame = open_frame(
-                            interner,
-                            child_content,
-                            &child_element,
-                            recovered,
-                            &mut path,
-                            errors,
-                        );
-                        child_frame.element = Some(child_element);
-                        stack.push(child_frame);
-                    }
-                    None => {
-                        // The parent's pattern stays as it is: the child is
-                        // skipped, never consumed.
-                        errors.push(ValidationError {
-                            kind: ValidationErrorKind::UnexpectedElement(name.clone()),
-                            path: path.clone(),
-                            location: child_element.location(),
-                            recovered,
-                        });
-                        if let Some(start) = recovery
-                            && let Some(child_content) = interner.recovery_contents(start, &name)
-                        {
-                            let mut child_frame = open_frame(
-                                interner,
-                                child_content,
-                                &child_element,
-                                true,
-                                &mut path,
-                                errors,
-                            );
-                            child_frame.element = Some(child_element);
-                            stack.push(child_frame);
-                        }
-                    }
-                }
+            Some(Content::Element(child)) => {
+                serial += 1;
+                enter(
+                    &mut validator,
+                    root,
+                    &mut stack,
+                    &mut locations,
+                    Some(child),
+                    serial,
+                );
             }
         }
+    }
+
+    validator
+        .finish()
+        .expect("the walk emits one complete element")
+        .into_iter()
+        .zip(locations)
+        .map(|(error, location)| ValidationError {
+            kind: error.kind,
+            path: error.path,
+            location,
+            recovered: error.recovered,
+        })
+        .collect()
+}
+
+/// Starts `element` (`None`: the root) in the validator. Its children are
+/// collected only if the validator looks inside it; a skipped subtree is
+/// not walked at all.
+fn enter<E: Element>(
+    validator: &mut StreamValidator<'_, usize>,
+    root: &E,
+    stack: &mut Vec<Open<E>>,
+    locations: &mut Vec<Option<E::Location>>,
+    element: Option<E>,
+    serial: usize,
+) {
+    stack.push(Open {
+        serial,
+        element,
+        children: Vec::new().into_iter(),
+    });
+    let element = stack
+        .last()
+        .and_then(|open| open.element.as_ref())
+        .unwrap_or(root);
+    validator
+        .start_element(
+            element.name(),
+            element.attributes(),
+            element.namespace_bindings(),
+            Some(serial),
+        )
+        .expect("the walk emits one root element");
+    let children: Vec<_> = if validator.is_skipping() {
+        Vec::new()
+    } else {
+        element.children().collect()
+    };
+    resolve_locations(validator, root, stack, locations);
+    if validator.is_skipping() {
+        validator
+            .end_element()
+            .expect("the walk emits balanced events");
+        stack.pop();
+    } else if let Some(open) = stack.last_mut() {
+        open.children = children.into_iter();
     }
 }
 
-/// Enters `element`: pushes its name onto `path`, derives `content`
-/// through its (unordered) attributes and collects its children for the
-/// ordered pass in [`validate_element_content`]. The frame's `element`
-/// is left `None`; the caller moves an owned child in.
-fn open_frame<E: Element>(
-    interner: &mut Interner<'_>,
-    content: Id,
-    element: &E,
-    recovered: bool,
-    path: &mut Vec<ExpandedName>,
-    errors: &mut Vec<ValidationError<E::Location>>,
-) -> Frame<E> {
-    path.push(element.name());
-    let mut pattern = content;
-    let bindings: Vec<(String, String)> = element.namespace_bindings().collect();
-    let context_id = interner.context_id(&bindings);
-    let context = DatatypeContext::from_bindings(bindings);
-
-    // Attributes are unordered — fold the derivative over them in
-    // whatever order the caller's iterator happens to yield.
-    for (name, value) in element.attributes() {
-        let name_id = interner.name_id(&name);
-        if !interner.attribute_known_by_id(pattern, &name, name_id) {
-            errors.push(ValidationError {
-                kind: ValidationErrorKind::UnexpectedAttribute(name),
-                path: path.clone(),
-                location: element.location(),
-                recovered,
-            });
-            continue;
-        }
-        let derived =
-            interner.deriv_attribute_by_id(pattern, &name, name_id, &value, context_id, &context);
-        if derived == NOT_ALLOWED {
-            errors.push(ValidationError {
-                kind: ValidationErrorKind::InvalidAttributeValue(name, value),
-                path: path.clone(),
-                location: element.location(),
-                recovered,
-            });
-        } else {
-            pattern = derived;
-        }
-    }
-
-    // Children are ordered.
-    let children: Vec<_> = element.children().collect();
-    // §6.2.7 weak match: next to other children, whitespace-only text is
-    // stripped before matching, not offered to the pattern. Offering it
-    // lets a `text` further on consume it and so skip an optional element
-    // that has to come first — `<fieldset> <legend>` would lose its legend.
-    let strip_whitespace = children.len() > 1;
-    Frame {
-        element: None,
-        pattern,
-        context,
-        children: children.into_iter(),
-        strip_whitespace,
-        recovered,
+/// Reads the location of the element each new finding was raised against.
+/// That element is always still open: the one just started or ended, or an
+/// ancestor whose pending text was flushed.
+fn resolve_locations<E: Element>(
+    validator: &StreamValidator<'_, usize>,
+    root: &E,
+    stack: &[Open<E>],
+    locations: &mut Vec<Option<E::Location>>,
+) {
+    for error in &validator.findings()[locations.len()..] {
+        let serial = error.location().expect("every element carries a serial");
+        let open = stack
+            .iter()
+            .rev()
+            .find(|open| open.serial == *serial)
+            .expect("the finding's element is open");
+        locations.push(open.element.as_ref().unwrap_or(root).location());
     }
 }
 
@@ -622,7 +546,8 @@ fn check_datatypes_supported(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::DatatypeLibrary;
+    use crate::datatypes::{DatatypeContext, DatatypeLibrary};
+    use crate::derive::{Interner, NOT_ALLOWED};
     use crate::{ResolveError, SchemaResolver, SchemaSource, SchemaSyntax};
 
     struct NoResolver;
@@ -1666,5 +1591,53 @@ mod tests {
         );
         assert_eq!(errors[0].path().len(), DEPTH);
         assert_eq!(errors[0].location(), Some(&0));
+    }
+
+    /// `Element::Location` carries no `Clone` bound; findings on an element
+    /// and on its parent (text flushed when a child starts) both get the
+    /// location of the right element.
+    #[test]
+    fn locations_need_no_clone_and_belong_to_the_right_element() {
+        #[derive(Debug, PartialEq)]
+        struct Position(&'static str);
+
+        /// An element with optional text and optionally one empty child.
+        struct Node(&'static str, Option<&'static str>);
+
+        impl Element for Node {
+            type Location = Position;
+            fn name(&self) -> ExpandedName {
+                name(self.0)
+            }
+            fn attributes(&self) -> impl Iterator<Item = (ExpandedName, String)> {
+                std::iter::empty()
+            }
+            fn children(&self) -> impl Iterator<Item = Content<Self>> {
+                [
+                    Content::Text("stray".to_owned()),
+                    Content::Element(Node(self.1.unwrap_or("none"), None)),
+                ]
+                .into_iter()
+                .filter(|child| self.1.is_some() || matches!(child, Content::Text(_)))
+            }
+            fn location(&self) -> Option<Position> {
+                Some(Position(self.0))
+            }
+        }
+
+        let compiled = schema("start = element a { element b { empty } }");
+        let errors = validate(&compiled, &registry(), &Node("a", Some("c"))).unwrap();
+        let found: Vec<_> = errors
+            .iter()
+            .map(|error| (error.kind().clone(), error.location().map(|p| p.0)))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                (ValidationErrorKind::UnexpectedText, Some("a")),
+                (ValidationErrorKind::UnexpectedElement(name("c")), Some("c")),
+                (ValidationErrorKind::MissingContent, Some("a")),
+            ]
+        );
     }
 }
