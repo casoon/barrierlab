@@ -23,11 +23,21 @@ note = "Die frühere Rundungstoleranz; der Grenzfall 4,49995:1 muss sie töten."
 id = "contrast/text-insufficient"
 file = "src/rendering.rs"
 kind = "drop-condition"
-find = '''    if !carries_text(n) || inactive(n) {'''
-replace = '''    if !carries_text(n) {'''
+find = '''    if !carries_text(n) || inactive(n) || pure_decoration(n) {'''
+replace = '''    if !carries_text(n) || pure_decoration(n) {'''
 test = "korpus"
 expect = "killed"
 note = "Ausnahme für inaktive Bedienelemente entfernt."
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''    if !carries_text(n) || inactive(n) || pure_decoration(n) {'''
+replace = '''    if !carries_text(n) || inactive(n) {'''
+test = "korpus"
+expect = "killed"
+note = "Ausnahme für reine Dekoration entfernt (barrierlab#221): aria-hidden Trennzeichen müssen wieder Befunde sein."
 
 [[mutation]]
 id = "contrast/text-undetermined"
