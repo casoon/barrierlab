@@ -350,6 +350,7 @@ dependencies = [
  "csp-parse",
  "encoding_rs",
  "html5-parser",
+ "icu_normalizer",
  "media-query-parse",
  "relax-ng",
  "schematron-engine",

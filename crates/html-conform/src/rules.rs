@@ -9,7 +9,7 @@ use a11y_report::Outcome;
 use serde::Serialize;
 
 use crate::finding::{CheckError, Severity};
-use crate::{assertions, csp_enforcement, parse, schema, scripts, table_integrity};
+use crate::{assertions, csp_enforcement, normalization, parse, schema, scripts, table_integrity};
 
 /// The layer that reports a rule.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -28,6 +28,8 @@ pub enum RuleLayer {
     Csp,
     /// Table cell grid.
     Tables,
+    /// Text content, for example Unicode normalization.
+    Text,
 }
 
 /// One rule id html-conform can report in `Finding::rule_id`.
@@ -69,6 +71,7 @@ pub(crate) fn help_url(rule_id: &str) -> Option<String> {
         scripts::IMPORT_MAP_RULE_ID | scripts::SPECULATION_RULES_RULE_ID => "scripts",
         csp_enforcement::RULE_ID => "cspmeta-enforcement",
         table_integrity::RULE_ID => "tablesintegrity",
+        normalization::RULE_ID => "textnormalization",
         id if id.starts_with("assertion.") => "assertionid",
         _ => return None,
     };
@@ -160,6 +163,13 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
             Outcome::Fail,
             "Inconsistent table cell grid",
             "WHATWG HTML Standard, processing model of tables",
+        ),
+        layer_rule(
+            normalization::RULE_ID,
+            RuleLayer::Text,
+            Outcome::Review,
+            "Text run not in Unicode Normalization Form C",
+            "WHATWG HTML Standard, Character encodings; Character Model for the World Wide Web, string matching",
         ),
     ];
     let declared = assertions::declared_rules().map_err(|error| CheckError::Initialization {

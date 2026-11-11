@@ -27,6 +27,7 @@ a11y-report = { workspace = true }
 csp-parse = { workspace = true }
 encoding_rs = "0.8"
 html5-parser = { workspace = true }
+icu_normalizer = { version = "2", default-features = false, features = ["compiled_data"] }
 media-query-parse = { workspace = true }
 relax-ng = { workspace = true, features = ["serialize"] }
 schematron-engine = { workspace = true }
