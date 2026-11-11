@@ -23,6 +23,7 @@ mod csp_enforcement;
 mod datatypes;
 mod finding;
 mod infoset;
+mod normalization;
 mod parse;
 mod rules;
 mod schema;
@@ -198,6 +199,7 @@ fn check_impl(
     findings.extend(scripts::findings(parsed.document()));
     findings.extend(csp_enforcement::findings(parsed.document()));
     findings.extend(table_integrity::findings(parsed.document()));
+    findings.extend(normalization::findings(parsed.document()));
 
     let skipped = skipped::detect(parsed.document(), &findings);
 

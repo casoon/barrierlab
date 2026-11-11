@@ -44,7 +44,7 @@ Measured on 2026-11-09 (barrierlab#73), Node 24, Apple silicon, `wasm-opt` 133:
 | WASM, gzip -9 | 747.2 KiB (765,111 bytes) |
 | WASM, brotli | about 563 KiB |
 | npm tarball | 793.6 kB |
-| Budget (`build.mjs`) | 760 KiB gzip |
+| Budget (`build.mjs`) | 782 KiB gzip |
 | `initSync` (instantiate) | 2 to 5 ms |
 | first `check` (small document) | 65 to 91 ms |
 | later `check` calls (same document) | 7 to 15 ms |
@@ -52,6 +52,11 @@ Measured on 2026-11-09 (barrierlab#73), Node 24, Apple silicon, `wasm-opt` 133:
 Most of the size is data: the prebuilt schema is 217 KiB raw, the rest is the parser, the
 RELAX NG validator, the XPath engine and the Schematron rules. The first call pays for loading
 the schema and the rule set, later calls reuse them.
+
+Since the Unicode NFC check (barrierlab#198) the artefact is 2,054 KiB raw and 766.8 KiB gzip
+(measured locally, `wasm-opt` after the build; 756.7 KiB before). The 10.1 KiB are the NFC
+paths of `icu_normalizer`, whose compiled data `url` (through `idna`) already carries; the budget
+was raised from 760 to 782 KiB for that.
 
 ## Public surface
 

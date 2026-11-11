@@ -64,8 +64,6 @@ a11y-report = { version = "0.30.0", path = "crates/a11y-report" }
 a11y-rules = { version = "0.30.0", path = "crates/a11y-rules", default-features = false }
 a11y-dom = { version = "0.30.0", path = "crates/a11y-dom" }
 accname = { version = "0.30.0", path = "crates/accname" }
-a11y-static = { version = "0.4.0", path = "crates/a11y-static" }
-xml-adapters = { version = "0.1.0", path = "crates/xml-adapters" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

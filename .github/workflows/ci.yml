@@ -122,7 +122,7 @@ jobs:
           if gz > 180:
               sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 180 KB")
           EOF
-      # Groessenbudget (760 KiB gzip) und Fixture-Tests des Pakets
+      # Groessenbudget (782 KiB gzip) und Fixture-Tests des Pakets
       # html-conform-wasm (barrierlab#73): build.mjs bricht bei Ueberschreitung ab.
       - run: node packages/html-conform-wasm/build.mjs
       - run: npm test
