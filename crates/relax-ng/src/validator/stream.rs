@@ -1,6 +1,7 @@
-//! Push validation: the same derivative steps as the tree walk in the
-//! parent module, driven by events instead of an [`Element`](super::Element)
-//! tree. See `docs/packages/relax-ng.md` (section "Streaming validation")
+//! Push validation: the one implementation of the derivative steps. The
+//! tree walk in the parent module ([`validate`](crate::validate)) is a thin
+//! driver that turns an [`Element`](super::Element) tree into the events
+//! this validator takes. See `docs/packages/relax-ng.md` (section "Streaming validation")
 //! for the event model and its limits.
 
 use std::collections::BTreeSet;
@@ -10,6 +11,7 @@ use super::{ExpandedName, ValidationError, ValidationErrorKind, check_datatypes_
 use crate::CompiledSchema;
 use crate::datatypes::{DatatypeContext, DatatypeError, DatatypeRegistry};
 use crate::derive::{Id, Interner, NOT_ALLOWED};
+use crate::grammar::Pattern;
 
 /// A misuse of [`StreamValidator`]: the event sequence is not a single
 /// well-formed element. Never a finding about the document's validity —
@@ -48,21 +50,27 @@ struct Frame<L> {
     location: Option<L>,
     /// Text since the last child boundary, not yet offered to the pattern:
     /// a `data`/`value`/`list` needs the complete run.
-    pending: String,
+    pending: Option<String>,
     /// Children (elements and flushed text runs) seen so far.
     children: usize,
+    /// Inside an element that was skipped as unexpected and is validated by
+    /// recovery; every error found here is marked as recovered.
+    recovered: bool,
 }
 
 /// A push validator: validates one document from `start_element` /
 /// `text` / `end_element` events, without a document tree. The findings
 /// are the same [`ValidationError`]s, in the same order, as
-/// [`validate`](crate::validate) reports for the equivalent tree.
+/// [`validate`](crate::validate) reports for the equivalent tree — which
+/// is implemented on top of this type.
 ///
 /// `L` is the location type carried into findings (as
 /// [`Element::Location`](super::Element::Location) in the tree path).
 pub struct StreamValidator<'s, L> {
     interner: Interner<'s>,
     start: Id,
+    /// The schema's start pattern when error recovery is on (tree path only).
+    recovery: Option<&'s Pattern>,
     stack: Vec<Frame<L>>,
     path: Vec<ExpandedName>,
     errors: Vec<ValidationError<L>>,
@@ -79,6 +87,17 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
         schema: &'s CompiledSchema,
         registry: &'s DatatypeRegistry,
     ) -> Result<Self, DatatypeError> {
+        Self::with_recovery(schema, registry, false)
+    }
+
+    /// [`new`](Self::new), optionally with the recovery after an unexpected
+    /// element of [`ValidationOptions`](super::ValidationOptions), which the
+    /// tree path offers.
+    pub(crate) fn with_recovery(
+        schema: &'s CompiledSchema,
+        registry: &'s DatatypeRegistry,
+        recover: bool,
+    ) -> Result<Self, DatatypeError> {
         let mut checked_refs = BTreeSet::new();
         check_datatypes_supported(
             &schema.start,
@@ -94,6 +113,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
         Ok(Self {
             interner,
             start,
+            recovery: recover.then_some(&schema.start),
             stack: Vec::new(),
             path: Vec::new(),
             errors: Vec::new(),
@@ -119,7 +139,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
             return Ok(());
         }
         let name_id = self.interner.name_id(&name);
-        let content = if let Some(parent) = self.stack.last_mut() {
+        let (matched, parent_recovered) = if let Some(parent) = self.stack.last_mut() {
             flush(
                 &mut self.interner,
                 parent,
@@ -136,23 +156,36 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                     .interner
                     .deriv_element_by_id(parent.pattern, &name, name_id);
             }
-            content
+            (content, parent.recovered)
         } else {
             if self.seen_root {
                 return Err(StreamError::SecondRoot);
             }
             self.seen_root = true;
-            self.interner.element_contents(self.start, &name)
+            (self.interner.element_contents(self.start, &name), false)
         };
-        let Some(content) = content else {
-            self.errors.push(ValidationError {
-                kind: ValidationErrorKind::UnexpectedElement(name),
-                path: self.path.clone(),
-                location,
-                recovered: false,
-            });
-            self.skipping = 1;
-            return Ok(());
+        let (content, recovered) = match matched {
+            Some(content) => (content, parent_recovered),
+            None => {
+                // The parent's pattern stays as it is: the element is
+                // skipped, never consumed.
+                self.errors.push(ValidationError {
+                    kind: ValidationErrorKind::UnexpectedElement(name.clone()),
+                    path: self.path.clone(),
+                    location: location.clone(),
+                    recovered: parent_recovered,
+                });
+                let guess = self
+                    .recovery
+                    .and_then(|start| self.interner.recovery_contents(start, &name));
+                match guess {
+                    Some(content) => (content, true),
+                    None => {
+                        self.skipping = 1;
+                        return Ok(());
+                    }
+                }
+            }
         };
 
         self.path.push(name);
@@ -167,7 +200,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                     kind: ValidationErrorKind::UnexpectedAttribute(name),
                     path: self.path.clone(),
                     location: location.clone(),
-                    recovered: false,
+                    recovered,
                 });
                 continue;
             }
@@ -179,7 +212,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                     kind: ValidationErrorKind::InvalidAttributeValue(name, value),
                     path: self.path.clone(),
                     location: location.clone(),
-                    recovered: false,
+                    recovered,
                 });
             } else {
                 pattern = derived;
@@ -189,8 +222,9 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
             pattern,
             context,
             location,
-            pending: String::new(),
+            pending: None,
             children: 0,
+            recovered,
         });
         Ok(())
     }
@@ -204,11 +238,39 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
             return Ok(());
         }
         match self.stack.last_mut() {
-            Some(frame) => frame.pending.push_str(text),
+            Some(_) if text.is_empty() => {}
+            Some(frame) => frame.pending.get_or_insert_with(String::new).push_str(text),
             None if text.trim().is_empty() => {}
             None => return Err(StreamError::TextOutsideRoot),
         }
         Ok(())
+    }
+
+    /// [`text`](Self::text) for a run the caller already owns: moved in
+    /// without a copy when no text is pending. Unlike `text`, an empty run
+    /// is kept and offered to the pattern: the tree path has always done
+    /// so for an `Element` that yields an empty `Content::Text`.
+    pub(crate) fn text_owned(&mut self, text: String) -> Result<(), StreamError> {
+        if self.skipping > 0 {
+            return Ok(());
+        }
+        match self.stack.last_mut() {
+            Some(frame) if frame.pending.is_none() => frame.pending = Some(text),
+            _ => return self.text(&text),
+        }
+        Ok(())
+    }
+
+    /// Whether the element just started was skipped (an unexpected element
+    /// without recovery): its content needs no events, only its
+    /// `end_element`.
+    pub(crate) fn is_skipping(&self) -> bool {
+        self.skipping > 0
+    }
+
+    /// The findings so far.
+    pub(crate) fn findings(&self) -> &[ValidationError<L>] {
+        &self.errors
     }
 
     /// The current element ends.
@@ -232,7 +294,7 @@ impl<'s, L: Clone> StreamValidator<'s, L> {
                 kind: ValidationErrorKind::MissingContent,
                 path: self.path.clone(),
                 location: frame.location,
-                recovered: false,
+                recovered: frame.recovered,
             });
         }
         self.path.pop();
@@ -258,10 +320,9 @@ fn flush<L: Clone>(
     errors: &mut Vec<ValidationError<L>>,
     followed: bool,
 ) {
-    if frame.pending.is_empty() {
+    let Some(text) = frame.pending.take() else {
         return;
-    }
-    let text = std::mem::take(&mut frame.pending);
+    };
     // §6.2.7 weak match, as in the tree walk: whitespace-only text next to
     // other children is not offered to the pattern. "Other children" means
     // an earlier child or one that starts right after this run.
@@ -277,7 +338,7 @@ fn flush<L: Clone>(
                 kind: ValidationErrorKind::UnexpectedText,
                 path: path.to_vec(),
                 location: frame.location.clone(),
-                recovered: false,
+                recovered: frame.recovered,
             });
         }
     } else {

@@ -11,7 +11,8 @@ instances come in through the `Element` trait (tree) or as events (`StreamValida
 ## Streaming validation
 
 `StreamValidator` validates a document from events, without the caller building an `Element`
-tree (barrierlab#77). The tree path (`validate`, `Schema::validate`) is unchanged.
+tree (barrierlab#77). The tree path (`validate`, `Schema::validate`) is built on it: it turns the
+`Element` tree into the same events, so there is one implementation of the derivation steps.
 
 ```rust
 let mut v = schema.stream_validator::<()>(&registry)?; // or StreamValidator::new
@@ -72,6 +73,10 @@ path, and reports the peak heap (counting allocator) and the time.
 The tree path pays for the tree the caller has to build; the push path holds only the open
 elements. (Before the attribute memo was capped, the same run peaked at 487 MiB and 302 MiB.)
 
+Moving the tree path onto the push core changed neither number: before and after, median of 10
+runs on one machine, the tree run took 0.35 s (building the tree included) and peaked at 185 MiB,
+the push run 0.25 s.
+
 ### Positions
 
 The caller passes `location: Option<L>` per element; `L: Clone`. A finding carries the location
@@ -95,17 +100,23 @@ unsupported datatype fails in `new` with `DatatypeError`, as in the tree path.
 - A single text run is buffered whole.
 - A `StreamValidator` validates one document; the next one needs a new validator (the schema
   interner is not shared).
-- No recovery after an unexpected element: `ValidationOptions::recover_after_unexpected_element`
-  (#76) applies only to the tree path (`validate_with_options`). Without the option both paths
-  report the same.
+- No recovery after an unexpected element in the public push API:
+  `ValidationOptions::recover_after_unexpected_element` (#76) is offered only through the tree
+  path (`validate_with_options`). Internally the recovery lives in the shared core and is
+  switched on by the tree path; `StreamValidator` always runs with it off, and without the option
+  both paths report the same.
 - No parser: callers pass names already expanded, without `xmlns` attributes.
 
 ### Equivalence
 
-The tree path and the event path are two implementations of the same steps
-(`src/validator/stream.rs` and `validate_element_content`); the tree path additionally has the
-opt-in recovery (`ValidationOptions`), which exists only there, and is unchanged without it. Tests
-hold this: the spec test (`tests/spectest.rs`) drives every `valid`/`invalid` instance through
+There is one implementation of the derivation steps, `StreamValidator` (`src/validator/stream.rs`).
+The tree path (`drive` in `src/validator.rs`) walks the `Element` tree iteratively and feeds it the
+events; the opt-in recovery (`ValidationOptions`) is a mode of that core, so findings, their order
+and the recovery are the same by construction. Two things stay with the tree path: it does not
+descend into a subtree the core skips (no `children()` call there), and it reads a finding's
+`Element::Location` from the element while it is still open (the core only carries a serial
+number), so `Element::Location` needs no `Clone`. Tests check that the two drivers agree:
+the spec test (`tests/spectest.rs`) drives every `valid`/`invalid` instance through
 both paths, with text runs split in two, and requires **the same findings in the same order**, not
 only the same verdict. An ignored test in `html-conform` checks the same over the whole vnu corpus
 (`cargo test --release -p html-conform --lib stream_and_tree -- --ignored`).
