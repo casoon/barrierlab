@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **Text:** `text.normalization` warns about a text run that is not in Unicode Normalization Form C,
+  with the NFC form as suggestion, as vnu does (barrierlab#198). New dependency
+  `unicode-normalization`; the `html-conform-wasm` size budget rises from 760 to 835 KiB gzip.
+- **API:** `RuleLayer::Text` for the new rule.
+
 ## [0.7.0] - 2026-11-11
 
 ### Added

@@ -124,13 +124,13 @@ three outcomes:
 | `tests/xhtml` | 129 | out of scope | XML syntax; html-conform parses HTML only and plans no XHTML mode |
 | `tests/svg` | 1 | out of scope | a stand-alone `.svg` document, not HTML syntax (inline SVG is `html-svg`) |
 | `tests/langdetect` | 11 | out of scope | vnu's language-detection heuristics (character statistics over about 1.4 MB of text); html-conform has no language detector |
-| `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform has no such check |
+| `tests/normalization` | 1 | out of scope | a Unicode NFC warning on one text run; html-conform reports the same condition (`text.normalization`) but the tree is not measured |
 | `tests/html-its` | 320 (90 `.html`) | not vendored, measured on demand (matches vnu per file) | W3C ITS 2.0 test suite under the W3C Test Suite License, not MIT; no expected-result file; see below |
 | `tests/schema-validation` | 3 | out of scope | exercises vnu's `--schema` option on XML files against a remote DocBook schema; see below |
 
 A local run (not part of the test, nothing committed) of the out-of-scope trees that hold
 `.html` files gave: `langdetect` 0 true positives, 4 true negatives, 1 false positive, 5 false
-negatives; `normalization` 1 false negative. These are not gated.
+negatives; `normalization` 1 false negative (measured before `text.normalization` existed). These are not gated.
 
 ### `html-its` and `schema-validation` (issue #175)
 
@@ -194,16 +194,18 @@ vendored ones included), not gated and not part of CI:
 
 | Result | `html-svg`, 522 files |
 | --- | --- |
-| true positives | 37 |
+| true positives | 38 |
 | true negatives | 484 |
 | false positives | 0 |
-| false negatives | 1 |
+| false negatives | 0 |
 | not comparable | 0 |
 
-The one false negative is **Unicode Normalization Form C**: `struct-cond-02-t-haswarn`;
-html-conform has no such check (see `normalization` above). The other two classes the first
-measurement found (disallowed `xmlns:*` attributes on SVG elements, nested SVG `<a>`) are
-reported now: on a foreign element only `xmlns:xlink` bound to the XLink namespace is allowed
+The last false negative was **Unicode Normalization Form C** (`struct-cond-02-t-haswarn`); it is
+reported now as `text.normalization` (barrierlab#198), see the guide on rule IDs. It checks text
+runs the way vnu's `NormalizationChecker` does (ICU `isNormalized`, NFC); the "starts with a
+combining character" warnings and non-NFC attribute values are not implemented. The other two
+classes the first measurement found (disallowed `xmlns:*` attributes on SVG elements, nested SVG
+`<a>`) are reported: on a foreign element only `xmlns:xlink` bound to the XLink namespace is allowed
 (HTML, "Attributes", XML-compatible attribute names), and an SVG `a` must not have an `a`
 descendant.
 

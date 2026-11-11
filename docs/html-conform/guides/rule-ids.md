@@ -19,6 +19,7 @@ of this page for its layer (all assertion rules share the `assertion.<id>` secti
 | `scripts.speculation-rules` | JSON content of `<script type="speculationrules">` | Error |
 | `csp.meta-enforcement` | inline content against a meta CSP | Warning |
 | `tables.integrity` | table cell grid | Error |
+| `text.normalization` | text run not in Unicode Normalization Form C | Warning |
 
 ## `parser.html5`
 
@@ -81,3 +82,14 @@ needs state carried across cells, so it is Rust code rather than a Schematron ru
 
 The die Beispiele des Crates has one sample document per layer, with the findings
 html-conform reports for it.
+
+## `text.normalization`
+
+A text run that is not in Unicode Normalization Form C is a warning, as in vnu. A text run is
+the character data between two element boundaries: comments do not end it, start and end tags
+and processing instructions do. The check is `is_nfc` of the run (the quick check plus the full
+normalization where the quick check is not decisive); the message gives the NFC form of the run
+as the suggested replacement. One finding per run, anchored at the first text node of the run.
+
+Not covered, although vnu reports them: a text run, element or attribute name, or attribute
+value that starts with a combining character, and attribute values that are not in NFC.
