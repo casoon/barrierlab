@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-11
+
 ### Added
 
 - **Text:** `text.normalization` warns about a text run that is not in Unicode Normalization Form C,

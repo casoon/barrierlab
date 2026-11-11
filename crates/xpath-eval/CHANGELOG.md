@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
 ### Added
 
 - **API:** user-defined functions in the XPath 2.0 mode: `EvaluationContext::functions`

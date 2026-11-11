@@ -5,6 +5,12 @@ All notable changes to this crate are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
+### Changed
+
+- **Dependencies:** requires `html-conform` 0.8.0, so findings follow that release: `text.normalization` warns about text not in NFC, and findings at an element carry a structural `location.selector`. Details: [html-conform changelog](https://github.com/casoon/barrierlab/blob/main/crates/html-conform/CHANGELOG.md).
+
 ## [0.3.0] - 2026-11-11
 
 ### Changed
