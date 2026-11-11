@@ -216,7 +216,18 @@ fn check_impl(
         })
         .collect();
 
-    Ok(RangedReport::new(CheckReport { findings, skipped }, ranges))
+    let paths = parse::element_paths(
+        parsed.document(),
+        findings
+            .iter()
+            .filter(|finding| finding.rule_id != parse::RULE_ID)
+            .filter_map(|finding| finding.location.map(|location| location.byte_offset)),
+    );
+
+    Ok(RangedReport::new(
+        CheckReport::new(findings, skipped, paths),
+        ranges,
+    ))
 }
 
 #[cfg(test)]
@@ -230,6 +241,64 @@ mod tests {
 
         assert!(report.findings.is_empty());
         assert!(!report.has_errors());
+    }
+
+    #[test]
+    fn element_findings_get_a_structural_selector_and_a_stable_id() {
+        let page = |gap: &str| {
+            format!(
+                "<!doctype html>{gap}<html lang=en><title>t</title><body><p>a</p>\n<table><tr><td>x</table>\n<ul><span>y</span></ul>&bogus;"
+            )
+        };
+        let report = |html: &str| check(html).expect("check").to_report();
+        let before = report(&page(""));
+        let after = report(&page("\n\n<!-- c -->\n"));
+        assert_eq!(before.findings.len(), after.findings.len());
+
+        let element: Vec<_> = before
+            .findings
+            .iter()
+            .filter(|f| f.rule_id != "parser.html5")
+            .collect();
+        assert!(!element.is_empty());
+        let span = element
+            .iter()
+            .find(|f| f.rule_id == "schema.html5" && f.message.contains("span"))
+            .expect("span in ul");
+        assert_eq!(
+            span.location.selector.as_deref(),
+            Some("html > body > ul:nth-child(3) > span:nth-child(1)")
+        );
+        for f in &element {
+            assert!(f.location.selector.is_some(), "{}", f.rule_id);
+        }
+        // Moving the document down by a few lines keeps every element id.
+        let ids = |r: &a11y_report::Report| {
+            r.findings
+                .iter()
+                .filter(|f| f.rule_id != "parser.html5")
+                .map(|f| f.id())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(&before), ids(&after));
+        // Parser findings have no element anchor and keep the position id.
+        let parser: Vec<_> = before
+            .findings
+            .iter()
+            .filter(|f| f.rule_id == "parser.html5")
+            .collect();
+        assert!(!parser.is_empty());
+        for f in parser {
+            assert!(f.location.selector.is_none());
+        }
+        let parser_ids = |r: &a11y_report::Report| {
+            r.findings
+                .iter()
+                .filter(|f| f.rule_id == "parser.html5")
+                .map(|f| f.id())
+                .collect::<Vec<_>>()
+        };
+        assert_ne!(parser_ids(&before), parser_ids(&after));
     }
 
     #[test]

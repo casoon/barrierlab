@@ -94,6 +94,71 @@ pub(crate) fn start_tag_ends(document: &Document) -> HashMap<usize, SourceLocati
     ends
 }
 
+/// The structural path of the elements that start at the given byte offsets,
+/// for findings anchored at an element. Selector-like and independent of
+/// source text positions: `html > body > table:nth-child(2) > tbody:nth-child(1)`.
+/// `html`, `head` and `body` appear bare (there is only one of each), every
+/// other element gets `:nth-child(n)`, `n` counting its element siblings from
+/// one in the parser tree (comments and text do not count; a `template`'s
+/// content counts as its children). Offsets that are not the start of an
+/// element parsed from a start tag are left out; where several elements start
+/// at one offset (the parser re-creates formatting elements), the first in
+/// document order wins.
+pub(crate) fn element_paths(
+    document: &Document,
+    offsets: impl IntoIterator<Item = usize>,
+) -> std::collections::BTreeMap<usize, String> {
+    let wanted: std::collections::BTreeSet<usize> = offsets.into_iter().collect();
+    let mut paths = std::collections::BTreeMap::new();
+    if wanted.is_empty() {
+        return paths;
+    }
+    let mut stack = vec![document.root()];
+    while let Some(id) = stack.pop() {
+        let node = document.node(id);
+        if let (NodeKind::Element { .. }, Some(start), Some(_)) =
+            (&node.kind, node.position, node.end_position())
+            && wanted.contains(&start.byte_offset)
+            && !paths.contains_key(&start.byte_offset)
+        {
+            paths.insert(start.byte_offset, path_of(document, id));
+        }
+        let children: Vec<_> = document.children(id).collect();
+        stack.extend(children.into_iter().rev());
+    }
+    paths
+}
+
+fn path_of(document: &Document, id: html5_parser::NodeId) -> String {
+    let mut segments = Vec::new();
+    let mut current = Some(id);
+    while let Some(node_id) = current {
+        let parent = document.parent(node_id);
+        if let NodeKind::Element { name, .. } = &document.node(node_id).kind {
+            let lowered = name.to_ascii_lowercase();
+            if matches!(lowered.as_str(), "html" | "head" | "body") {
+                segments.push(lowered);
+            } else {
+                let index = parent
+                    .map(|parent| {
+                        document
+                            .children(parent)
+                            .filter(|child| {
+                                matches!(document.node(*child).kind, NodeKind::Element { .. })
+                            })
+                            .position(|child| child == node_id)
+                            .map_or(1, |position| position + 1)
+                    })
+                    .unwrap_or(1);
+                segments.push(format!("{lowered}:nth-child({index})"));
+            }
+        }
+        current = parent;
+    }
+    segments.reverse();
+    segments.join(" > ")
+}
+
 /// Maps parser diagnostics onto the crate's public finding model.
 ///
 /// Every diagnostic maps to `Severity::Error`. `html5_parser::ParseError`

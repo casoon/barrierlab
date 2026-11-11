@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file. The format 
   760 to 782 KiB gzip.
 - **API:** `RuleLayer::Text` for the new rule.
 
+### Changed
+
+- **API:** `CheckReport::to_report` and `RangedReport::to_report` set `location.selector` to a
+  structural element path for findings anchored at an element, so `Finding::id()` no longer changes
+  when lines are inserted above the element (barrierlab#194). `parser.html5` findings keep the
+  position-based ID.
+
 ## [0.7.0] - 2026-11-11
 
 ### Added

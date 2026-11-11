@@ -114,6 +114,23 @@ parser does not record). Findings about an element the parser synthesized, or an
 have no end. **`parser.html5` has no end position**: the parser reports a point, not a token
 span.
 
+#### Element path and finding ID
+
+`CheckReport::to_report` and `RangedReport::to_report` set `location.selector` on every finding
+that hangs on an element parsed from a start tag (the same findings that get a range): a
+structural path through the parser tree, for example
+`html > body > table:nth-child(2) > tbody:nth-child(1) > tr:nth-child(1)`. `html`, `head` and
+`body` are written bare; every other element gets `:nth-child(n)`, counting its element siblings
+from one (text and comments do not count; implied elements such as `tbody` do). The path is
+computed from the tree only, so it does not change when lines are inserted above the element, and
+`a11y_report::Finding::id()` (which prefers the selector over the position) stays the same.
+
+`parser.html5` findings and findings anchored at text or at a synthesized element have no path
+and keep the position-based ID. `FindingId` normalizes digits in selectors, so two findings of one
+rule on sibling elements of the same name (`tr:nth-child(1)` and `tr:nth-child(2)`) share an ID,
+as for every other selector in the report model. The path is not part of the serialized
+`CheckReport` (the deprecated `Finding` type is unchanged); it exists in the converted report.
+
 ### `CheckError`
 
 `#[non_exhaustive]` enum; the document was not checked. Implements `std::error::Error`.
