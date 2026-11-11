@@ -26,6 +26,12 @@ use std::rc::Rc;
 /// bound value, if any.
 pub type VariableLookup<'a, N> = dyn Fn(&QName) -> Option<Value<N>> + 'a;
 
+/// Variable lookup for the XPath 2.0 mode: a variable is bound to a sequence, which keeps the
+/// atomic types (`xs:decimal`, `xs:date`, ...) that the 1.0 [`Value`] cannot hold. Consulted
+/// before [`VariableLookup`] by `evaluate_versioned` and `evaluate_boolean_versioned` for 2.0
+/// expressions, ignored by the 1.0 evaluator.
+pub type SequenceVariableLookup<'a, N> = dyn Fn(&QName) -> Option<crate::Sequence<N>> + 'a;
+
 /// A namespace-prefix resolution hook: given a name test's raw prefix
 /// string, returns the namespace URI it's bound to, if any. `None` means
 /// the prefix is unresolvable via this hook — a prefixed name test then
@@ -67,6 +73,8 @@ pub struct EvaluationContext<'ctx, 'hook, N: Node<'ctx>> {
     pub position: usize,
     pub size: usize,
     pub variables: Option<&'hook VariableLookup<'hook, N>>,
+    /// Sequence-valued variables for XPath 2.0 expressions, see [`SequenceVariableLookup`].
+    pub sequence_variables: Option<&'hook SequenceVariableLookup<'hook, N>>,
     pub namespaces: Option<&'hook NamespaceLookup<'hook>>,
     /// Per-document memo (see [`DocumentCache`]). `None` evaluates
     /// everything from scratch; the result is the same either way.
@@ -93,6 +101,7 @@ impl<'ctx, 'hook, N: Node<'ctx>> EvaluationContext<'ctx, 'hook, N> {
             position: 1,
             size: 1,
             variables: None,
+            sequence_variables: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -109,6 +118,7 @@ impl<'ctx, 'hook, N: Node<'ctx>> EvaluationContext<'ctx, 'hook, N> {
             position,
             size,
             variables: self.variables,
+            sequence_variables: self.sequence_variables,
             namespaces: self.namespaces,
             cache: self.cache,
             prefixes: self.prefixes,
@@ -219,6 +229,7 @@ fn with_prefix_memo<'ctx, 'hook, N: Node<'ctx>, R>(
         position: ctx.position,
         size: ctx.size,
         variables: ctx.variables,
+        sequence_variables: ctx.sequence_variables,
         namespaces: ctx.namespaces,
         cache: ctx.cache,
         prefixes: Some(&memo),
@@ -1725,6 +1736,7 @@ mod tests {
             position: 1,
             size: 1,
             variables: Some(&lookup),
+            sequence_variables: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -1755,6 +1767,7 @@ mod tests {
             position: 1,
             size: 1,
             variables: Some(&lookup),
+            sequence_variables: None,
             namespaces: None,
             cache: None,
             prefixes: None,
@@ -2105,6 +2118,7 @@ mod tests {
                 position: 1,
                 size: 1,
                 variables: None,
+                sequence_variables: None,
                 namespaces: Some(&namespace_hook),
                 cache: None,
                 prefixes: None,

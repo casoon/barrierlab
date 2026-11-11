@@ -558,6 +558,45 @@ fn library<'e, 'ctx, 'hook, N: Node<'ctx>>(
         ("lower-case", 1) => Ok(string_seq(
             string_or_empty(&args[0], "lower-case")?.to_lowercase(),
         )),
+        ("string-to-codepoints", 1) => Ok(opt_string(&args[0], local)?
+            .unwrap_or_default()
+            .chars()
+            .map(|c| Item::Atomic(Atomic::Integer(i64::from(u32::from(c)))))
+            .collect()),
+        ("codepoints-to-string", 1) => {
+            let mut text = String::new();
+            for code in atomize(&args[0]) {
+                let code = match code {
+                    Atomic::Integer(i) => i,
+                    untyped @ Atomic::Untyped(_) => match untyped.cast(AtomicType::Integer)? {
+                        Atomic::Integer(i) => i,
+                        _ => unreachable!("a cast to xs:integer yields an integer"),
+                    },
+                    other => {
+                        return Err(VersionedError::dynamic(
+                            "XPTY0004",
+                            format!(
+                                "codepoints-to-string needs xs:integer items, got {}",
+                                other.type_name()
+                            ),
+                        ));
+                    }
+                };
+                // F&O 7.2.1: the code point must be a character of the XML 1.0 Char production.
+                let character = u32::try_from(code)
+                    .ok()
+                    .filter(|c| matches!(c, 0x9 | 0xA | 0xD | 0x20..=0xD7FF | 0xE000..=0xFFFD | 0x10000..=0x10FFFF))
+                    .and_then(char::from_u32)
+                    .ok_or_else(|| {
+                        VersionedError::dynamic(
+                            "FOCH0001",
+                            format!("{code} is not the code point of an XML character"),
+                        )
+                    })?;
+                text.push(character);
+            }
+            Ok(string_seq(text))
+        }
         ("matches", 2 | 3) => {
             let input = string_or_empty(&args[0], local)?;
             let regex = regex_arg(&args[1], args.get(2), local)?;

@@ -10,6 +10,12 @@ categories = ["parser-implementations"]
 license = "MIT"
 repository.workspace = true
 
+[features]
+# `queryBinding="xslt2"`/`"xpath2"` through the XPath 2.0 mode of xpath-eval. Off: those
+# bindings are rejected as before and no XPath 2.0 code is linked.
+default = ["xpath2"]
+xpath2 = []
+
 [dependencies]
 roxmltree = "0.21.1"
 xpath-eval = { workspace = true }

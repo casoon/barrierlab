@@ -350,6 +350,9 @@ impl<'e, 'ctx, 'hook, N: Node<'ctx>> Env<'e, 'ctx, 'hook, N> {
             }
             binding = b.next.as_ref();
         }
+        if let Some(value) = self.ctx.sequence_variables.and_then(|lookup| lookup(name)) {
+            return Ok(value);
+        }
         if let Some(value) = self.ctx.variables.and_then(|lookup| lookup(name)) {
             return Ok(from_value(value));
         }

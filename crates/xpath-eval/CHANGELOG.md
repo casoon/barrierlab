@@ -13,6 +13,15 @@ in the git history only.
   `parse_versioned`, `evaluate_versioned`, `evaluate_boolean_versioned`, `VersionedError`); slice 1
   of the e-invoice rule sets, unsupported features are named errors. Design and remaining slices
   in `docs/packages/xpath-eval.md` (casoon/barrierlab#62).
+- **API:** `EvaluationContext::sequence_variables` (`SequenceVariableLookup`) binds a variable to a
+  sequence with its atomic types for XPath 2.0 expressions, consulted before the 1.0 `variables`
+  hook; `sequence_to_string` renders a sequence as `value-of` does (atomized, joined by a space).
+  `VariableLookup` is exported. Used by the XPath 2.0 mode of `schematron-engine`
+  (casoon/barrierlab#62).
+- **XPath 2.0:** `fn:string-to-codepoints` and `fn:codepoints-to-string` (error `FOCH0001` for a
+  code point that is no XML character), used by the check-digit functions of the Peppol BIS Billing
+  3.0 rules. Inventory of Peppol and XRechnung in `docs/packages/xpath-eval.md`
+  (casoon/barrierlab#62).
 - **XPath 2.0:** `fn:matches`, `fn:replace` and `fn:tokenize` (all arities, flags `s m i x`, errors
   `FORX0001` to `FORX0004`) on an own regular-expression engine without a dependency: an NFA run as
   a Pike VM, so matching is O(pattern x input) and cannot backtrack catastrophically or overflow

@@ -26,6 +26,12 @@ pub struct Schema {
     /// evaluating `test`/`context`/`select` expressions as XPath 1.0 when
     /// the schema declared something else, e.g. `"xslt2"`).
     pub query_binding: Option<String>,
+    /// The `name` of every `xsl:function` declared as a child of `schema`
+    /// (`http://www.w3.org/1999/XSL/Transform`), as written (`u:mod11`).
+    /// Informational: this crate does not run XSLT, so a test that calls one of them
+    /// ends the evaluation with an error that says so (see
+    /// [`crate::SchematronEvalError::is_unsupported`]) instead of being skipped.
+    pub xslt_functions: Vec<String>,
 }
 
 /// A `<diagnostic id="..." role="...">` — referenced by a [`Check`]'s

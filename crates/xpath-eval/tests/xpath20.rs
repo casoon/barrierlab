@@ -606,7 +606,7 @@ fn unsupported_features_are_reported_as_such() {
     for expr in [
         "matches('aa', '(a)\\1')",
         "round-half-to-even(2.5)",
-        "string-to-codepoints('a')",
+        "compare('a', 'b')",
         "'a' instance of xs:string",
         "1 treat as xs:integer",
         "xs:dateTime('2026-01-01T00:00:00')",
@@ -767,4 +767,71 @@ fn deep_expressions_are_rejected_not_fatal() {
         " and true()".repeat(3000)
     )));
     parse_fails(format!("true(){}", " and true()".repeat(5000)));
+}
+
+// F&O 7.2.2 fn:string-to-codepoints and 7.2.1 fn:codepoints-to-string (used by the check-digit
+// functions of the Peppol BIS Billing 3.0 rules, e.g. `reverse(for $i in
+// string-to-codepoints(...) return $i - 48)`).
+#[test]
+fn codepoint_functions() {
+    assert_eq!(
+        vals("string-to-codepoints('Thérèse')"),
+        ["84", "104", "233", "114", "232", "115", "101"]
+    );
+    assert!(vals("string-to-codepoints('')").is_empty());
+    assert!(vals("string-to-codepoints(())").is_empty());
+    assert_eq!(typed("string-to-codepoints('9')"), ["xs:integer:57"]);
+    assert_eq!(one("string-to-codepoints('9') - 48"), "9");
+    assert_eq!(one("codepoints-to-string((84, 233, 115))"), "Tés");
+    assert_eq!(one("codepoints-to-string(128512)"), "\u{1F600}");
+    assert_eq!(one("codepoints-to-string(())"), "");
+    // The digits of a number as strings, as the Greek TIN check does.
+    assert_eq!(
+        vals("for $ch in string-to-codepoints('123') return codepoints-to-string($ch)"),
+        ["1", "2", "3"]
+    );
+    // 0 and a surrogate are no XML characters (FOCH0001); a string is no integer (XPTY0004).
+    assert_eq!(code(&err("codepoints-to-string(0)")), "FOCH0001");
+    assert_eq!(code(&err("codepoints-to-string(55296)")), "FOCH0001");
+    assert_eq!(code(&err("codepoints-to-string('a')")), "XPTY0004");
+    assert_eq!(code(&err("string-to-codepoints(1)")), "XPTY0004");
+}
+
+// The sequence-valued variable hook binds a variable to a sequence with its atomic types; it is
+// consulted before the 1.0 `variables` hook. `sequence_to_string` joins atomized items with a space.
+#[test]
+fn sequence_variables_keep_sequences_and_types() {
+    use xpath_eval::{Atomic, sequence_to_string};
+    let doc = parse_xml("<a><b>x</b><b>y</b></a>");
+    let root = doc.root();
+    let bound = |q: &QName| match q.local.as_str() {
+        "i" => Some(vec![Item::Atomic(Atomic::Integer(5))]),
+        "s" => Some(vec![
+            Item::Atomic(Atomic::Integer(1)),
+            Item::Atomic(Atomic::String("two".to_owned())),
+        ]),
+        "n" => Some(
+            root.children()
+                .flat_map(|a| a.children())
+                .map(Item::Node)
+                .collect(),
+        ),
+        _ => None,
+    };
+    let one_value = |q: &QName| (q.local == "i" || q.local == "v").then_some(Value::Number(99.0));
+    let mut ctx = EvaluationContext::new(root);
+    ctx.sequence_variables = Some(&bound);
+    ctx.variables = Some(&one_value);
+    let run = |source: &str| {
+        evaluate_versioned(&parse_versioned(source, XPathVersion::V2).unwrap(), &ctx).unwrap()
+    };
+    // The type survives (a 1.0 value would arrive as xs:double), and the sequence hook wins.
+    assert!(matches!(run("$i")[..], [Item::Atomic(Atomic::Integer(5))]));
+    assert_eq!(sequence_to_string(&run("$i idiv 2")), "2");
+    // The 1.0 hook still serves names the sequence hook does not know.
+    assert_eq!(sequence_to_string(&run("$v")), "99");
+    assert_eq!(sequence_to_string(&run("count($s)")), "2");
+    assert_eq!(sequence_to_string(&run("$s")), "1 two");
+    assert_eq!(sequence_to_string(&run("$n")), "x y");
+    assert_eq!(sequence_to_string(&run("()")), "");
 }

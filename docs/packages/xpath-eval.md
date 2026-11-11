@@ -97,6 +97,7 @@ table in `src/xpath2/functions.rs`).
   does not fit is `FOAR0002`; `div` keeps 18 fractional digits, fewer if the
   scaled dividend does not fit.
 - `xs:integer` is 64-bit; overflow is `FOAR0002`.
+- Variables: the 2.0 evaluator reads `EvaluationContext::sequence_variables` (a variable bound to a sequence with its atomic types) first, then the 1.0 `variables` hook (a 1.0 value becomes a sequence of one item). `sequence_to_string` renders a sequence the way `value-of` does: atomized, joined by one space.
 - Nesting (both modes): the parser rejects an expression whose syntax tree would be
   deeper than 256 levels with a parse error ("nested or chained too deeply"),
   never a stack overflow. A parenthesis, function argument or predicate counts 8
@@ -246,9 +247,41 @@ parseable and evaluable (of 261).
 |---|---|---|
 | 1 | **Done.** Mode switch; sequences, `,`, `to`; atomic types above; exact decimal arithmetic; general, value and node comparisons; `if`, `for`, `some`/`every`; `cast as`/`castable as`; `xs:` constructors; path steps that are expressions; `union`/`intersect`/`except`; ~45 functions (`exists`, `empty`, `upper-case`, `lower-case`, `ends-with`, `string-join`, `abs`, `round`/`floor`/`ceiling`, `sum`/`avg`/`min`/`max`, `distinct-values`, `concat` and the string library, ...) | 260 of 261 (99.6 %) |
 | 2 | **Done, with gaps (see "Regular expressions").** `matches`, `replace`, `tokenize` with flags on an own engine (maintainer decision: no dependency). Open: back-references, a Unicode database for categories, `\i`/`\c`, blocks | 1 of 261 here, more in XRechnung/Peppol |
-| 3 | Rest of the F&O 1.0 string and sequence library: `round-half-to-even`, `string-to-codepoints`, `codepoints-to-string`, `compare`, `subsequence`, `index-of`, `insert-before`, `remove`, `root`, `lang`, `id` | 0 here (Peppol check digits expected) |
+| 3 | **Partly done.** `string-to-codepoints` and `codepoints-to-string` (Peppol check digits, see "Inventory: Peppol and XRechnung"). Not implemented, and not used by any inventoried rule set: `round-half-to-even`, `compare`, `codepoint-equal`, `subsequence`, `index-of`, `insert-before`, `remove`, `exactly-one`/`zero-or-one`/`one-or-more`, `deep-equal`, `root`, `lang`, `id`, `encode-for-uri`, `error`, `trace` (all `Unsupported`) | 0 here; Peppol only through `xsl:function` bodies |
 | 4 | Date and time: `xs:dateTime`, `xs:time`, durations, timezones for `xs:date`, `current-date()`, component functions, date arithmetic | 0 here (`xs:date` comparison without timezone is in slice 1) |
 | 5 | Sequence types: `instance of`, `treat as`, kind tests with names (`element(a)`), `*:name`, user-callable `xsl:function` bridge | 0 here |
-| 6 | `schematron-engine`: accept `xslt2`/`xpath2` bindings, run in 2.0 mode, report `Unsupported` as `NotRun` | enables the rule sets end to end |
+| 6 | **Done.** `schematron-engine` accepts `xslt2`/`xpath2`, runs the schema in 2.0 mode and reports `Unsupported` as an error that says so (`SchematronEvalError::is_unsupported`; the engine has no `NotRun` model, that is `a11y-report`). Needs the sequence-valued variable hook of `EvaluationContext` (`sequence_variables`) and `sequence_to_string` from this crate | EN 16931 UBL end to end: see `schematron-engine` |
+
+### Inventory: Peppol and XRechnung
+
+Fetched on 2026-11-11, not committed: `OpenPEPPOL/peppol-bis-invoice-3`
+`rules/sch/PEPPOL-EN16931-UBL.sch` and `-CII.sch` (master, commit
+`38d693d71d28d813781323a6ca97324edcc4d239`), and `itplr-kosit/xrechnung-schematron`
+`src/validation/schematron/{ubl/XRechnung-UBL-validation.sch,cii/XRechnung-CII-validation.sch,common.sch}`
+(master, commit `7e3ddbe224674427fd174a8406635708b0d50ed1`). Every `test`,
+`context`, `let/@value` and `select` attribute (including the `xsl:function`
+bodies):
+
+| File | Expressions | Parse in 2.0 mode |
+|---|---:|---:|
+| Peppol UBL | 346 | 346 |
+| Peppol CII | 207 | 207 |
+| XRechnung UBL | 97 | 97 |
+| XRechnung CII | 90 | 90 |
+| XRechnung `common.sch` | 20 | 20 |
+
+Functions called beyond the EN 16931 set: `tokenize`, `replace`, `matches`,
+`translate`, `reverse`, `string-join`, `substring-after`, `codepoints-to-string`,
+`string-to-codepoints`, `round`, `last`, `xs:integer`, `xs:string`, `xs:date`, plus the
+constructs `if`, `for`, `to`, `castable as`. All but the two codepoint functions
+were already implemented; those two are now.
+
+The part that is not reachable from this crate: the rule sets declare helper
+functions with `xsl:function` (Peppol: 12 in CII and 13 in UBL, for example
+`u:mod11`, `u:gln`, `u:checkCF`, recursive `u:addPIVA`; XRechnung: `xr:checkIBAN`)
+and call them from `assert/@test`. Running them needs an XSLT function bridge
+(`xsl:param`, `xsl:variable`, `xsl:sequence`, `xsl:choose`, recursion) in
+`schematron-engine`. That is not done; the engine names the function and reports
+the run as unsupported (see its documentation).
 
 Out of scope for `xpath-eval` altogether: XSD validation, XSLT, XQuery.
