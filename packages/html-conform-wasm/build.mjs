@@ -26,12 +26,12 @@ import { fileURLToPath } from "node:url";
  * vorübersetzte HTML5-Schema (`html5.rngc`, 217 KiB roh) den größten Teil.
  * Eine Anhebung ist eine Entscheidung, kein Nebeneffekt.
  *
- * Angehoben von 760 auf 835 KiB (Nutzerentscheid 2026-11-11, barrierlab#198):
- * die NFC-Warnung (`unicode-normalization`, Zerlegungs- und Kompositions-
- * tabellen) kostet lokal 756,7 -> 818,5 KiB gzip (+61,8 KiB); dazu rund 2 %
+ * Angehoben von 760 auf 782 KiB (Nutzerentscheid 2026-11-11, barrierlab#198):
+ * die NFC-Warnung (`icu_normalizer`, dessen Daten `url`/`idna` ohnehin
+ * mitbringen) kostet lokal 756,7 -> 766,8 KiB gzip (+10,1 KiB); dazu rund 2 %
  * Spielraum (CI misst bis zu 1,5 KiB höher).
  */
-const BUDGET_KIB = 835;
+const BUDGET_KIB = 782;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = dirname(dirname(here));

@@ -20,7 +20,7 @@
 //! Walks the raw `html5_parser::Document`, like `scripts.rs`.
 
 use html5_parser::{Document, NodeId, NodeKind};
-use unicode_normalization::{UnicodeNormalization, is_nfc};
+use icu_normalizer::ComposingNormalizerBorrowed;
 
 use crate::{Finding, Severity, SourceLocation};
 
@@ -63,8 +63,9 @@ fn collect_runs(document: &Document, id: NodeId, findings: &mut Vec<Finding>) {
 }
 
 fn flush(run: &mut String, location: Option<SourceLocation>, findings: &mut Vec<Finding>) {
-    if !run.is_empty() && !is_nfc(run) {
-        let normalized: String = run.nfc().collect();
+    let nfc = ComposingNormalizerBorrowed::new_nfc();
+    if !run.is_empty() && !nfc.is_normalized(run) {
+        let normalized = nfc.normalize(run);
         findings.push(Finding {
             rule_id: RULE_ID.to_owned(),
             severity: Severity::Warning,
