@@ -39,8 +39,9 @@ binding stay XPath 1.0 and behave as before. Any other binding is a parse error.
   evaluated from the root alone (the result is the same). The 1.0 rewrite into
   per-node tests is not used, so a 2.0 schema is slower to match than a 1.0 one.
 - What `xpath-eval` does not implement is reported, not skipped:
-  `SchematronEvalError::Query` wraps the `VersionedError`, and `is_unsupported()`
-  tells an incomplete run from a failed one. Static and dynamic XPath errors use
+  `SchematronEvalError::Query { unsupported, message }` carries the
+  message of the `xpath-eval` error, and `is_unsupported()` tells an incomplete run
+  from a failed one. Static and dynamic XPath errors use
   the same variant; syntax errors keep `Parse`.
 - `xsl:function` declarations are not run (no XSLT). Their names are in
   `Schema.xslt_functions`; a test that calls one ends the run as unsupported with

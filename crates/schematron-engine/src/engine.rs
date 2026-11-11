@@ -42,9 +42,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+#[cfg(feature = "xpath2")]
+use xpath_eval::{Atomic, Expression, Item, Sequence, VersionedError};
 use xpath_eval::{
-    Atomic, Document, DocumentCache, EvaluationContext, Expr, Expression, Item, Node, NodeKind,
-    NodeTest, QName, Sequence, Value, VersionedError, XPathVersion,
+    Document, DocumentCache, EvaluationContext, Expr, Node, NodeKind, NodeTest, QName, Value,
+    XPathVersion,
 };
 
 use crate::context::Alternative;
@@ -96,17 +98,24 @@ pub enum SchematronEvalError {
     /// such an unknown phase).
     UnknownPhase { phase: String },
     /// An XPath 2.0 expression (`queryBinding` `xslt2`/`xpath2`) could not be
-    /// evaluated: [`VersionedError::Unsupported`] for a construct or function
-    /// `xpath-eval` does not implement (the evaluation did not run, which is
-    /// not the same as passing), or a static or dynamic XPath error.
-    Query(VersionedError),
+    /// evaluated. `unsupported` is `true` for a construct or function `xpath-eval`
+    /// does not implement (the evaluation did not run, which is not the same as
+    /// passing); otherwise `message` describes a static or dynamic XPath error,
+    /// with its error code.
+    Query { unsupported: bool, message: String },
 }
 
 impl SchematronEvalError {
     /// `true` when the schema uses an XPath 2.0 feature `xpath-eval` does not
     /// implement: the run is incomplete, not failed.
     pub fn is_unsupported(&self) -> bool {
-        matches!(self, SchematronEvalError::Query(error) if error.is_unsupported())
+        matches!(
+            self,
+            SchematronEvalError::Query {
+                unsupported: true,
+                ..
+            }
+        )
     }
 }
 
@@ -117,7 +126,10 @@ fn from_versioned(error: VersionedError) -> SchematronEvalError {
     match error {
         VersionedError::Parse(error) => SchematronEvalError::Parse(error),
         VersionedError::Eval(error) => SchematronEvalError::Eval(error),
-        other => SchematronEvalError::Query(other),
+        other => SchematronEvalError::Query {
+            unsupported: other.is_unsupported(),
+            message: other.to_string(),
+        },
     }
 }
 
@@ -132,7 +144,7 @@ impl std::fmt::Display for SchematronEvalError {
             SchematronEvalError::UnknownPhase { phase } => {
                 write!(f, "no <phase id={phase:?}> in this schema")
             }
-            SchematronEvalError::Query(err) => write!(f, "XPath 2.0 error: {err}"),
+            SchematronEvalError::Query { message, .. } => write!(f, "XPath 2.0 error: {message}"),
         }
     }
 }
@@ -216,24 +228,31 @@ fn evaluate_in<'a, D: Document>(
     cache: &DocumentCache<D::N<'a>>,
     trace: Option<&mut Vec<Event<D::N<'a>>>>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
-    evaluate_schema(schema, document, phase_id, cache, trace).map_err(|error| {
+    let result = evaluate_schema(schema, document, phase_id, cache, trace);
+    #[cfg(feature = "xpath2")]
+    let result = result.map_err(|error| {
         // A call of a function the schema declares with `xsl:function` is not an
         // unknown function: this crate does not run XSLT, so say that.
-        if let SchematronEvalError::Query(VersionedError::Static {
-            code: "XPST0017",
+        if let SchematronEvalError::Query {
+            unsupported: false,
             message,
-        }) = &error
+        } = &error
+            && message.starts_with("XPST0017:")
             && let Some(name) = schema
                 .xslt_functions
                 .iter()
                 .find(|name| message.contains(&format!("`{name}`")))
         {
-            return SchematronEvalError::Query(VersionedError::Unsupported(format!(
-                "the function {name} declared with xsl:function (XSLT is not run)"
-            )));
+            return SchematronEvalError::Query {
+                unsupported: true,
+                message: format!(
+                    "unsupported XPath 2.0 feature: the function {name} declared with xsl:function (XSLT is not run)"
+                ),
+            };
         }
         error
-    })
+    });
+    result
 }
 
 fn evaluate_schema<'a, D: Document>(
@@ -265,17 +284,21 @@ fn evaluate_schema<'a, D: Document>(
 
     let version =
         XPathVersion::from_query_binding(schema.query_binding.as_deref()).ok_or_else(|| {
-            SchematronEvalError::Query(VersionedError::Unsupported(format!(
-                "queryBinding `{}`",
-                schema.query_binding.as_deref().unwrap_or_default()
-            )))
+            SchematronEvalError::Query {
+                unsupported: true,
+                message: format!(
+                    "unsupported XPath 2.0 feature: queryBinding `{}`",
+                    schema.query_binding.as_deref().unwrap_or_default()
+                ),
+            }
         })?;
     #[cfg(not(feature = "xpath2"))]
     if version == XPathVersion::V2 {
-        return Err(SchematronEvalError::Query(VersionedError::Unsupported(
-            "queryBinding `xslt2`/`xpath2` (the feature `xpath2` of schematron-engine is off)"
+        return Err(SchematronEvalError::Query {
+            unsupported: true,
+            message: "unsupported XPath 2.0 feature: queryBinding `xslt2`/`xpath2` (the feature `xpath2` of schematron-engine is off)"
                 .to_owned(),
-        )));
+        });
     }
     let exprs = ExprCache::default();
     let exprs2 = ExprCache2::default();
@@ -657,10 +680,15 @@ impl ExprCache {
 
 /// [`ExprCache`] for XPath 2.0 mode.
 #[derive(Default)]
-#[cfg_attr(not(feature = "xpath2"), allow(dead_code))]
+#[cfg(feature = "xpath2")]
 struct ExprCache2 {
     parsed: RefCell<HashMap<(*const u8, usize), Rc<Expression>>>,
 }
+
+/// Without the feature there is no XPath 2.0 expression to cache.
+#[derive(Default)]
+#[cfg(not(feature = "xpath2"))]
+struct ExprCache2 {}
 
 #[cfg(feature = "xpath2")]
 impl ExprCache2 {
@@ -680,6 +708,7 @@ impl ExprCache2 {
 #[derive(Clone)]
 enum Bound<N> {
     V1(Value<N>),
+    #[cfg(feature = "xpath2")]
     V2(Sequence<N>),
 }
 
@@ -690,8 +719,6 @@ impl<'n, N: Node<'n>> Bound<N> {
             Bound::V1(value) => value.to_xpath_string(),
             #[cfg(feature = "xpath2")]
             Bound::V2(sequence) => xpath_eval::sequence_to_string(sequence),
-            #[cfg(not(feature = "xpath2"))]
-            Bound::V2(_) => unreachable!("XPath 2.0 mode is off"),
         }
     }
 }
@@ -812,9 +839,12 @@ fn with_context<'n, N: Node<'n>, T>(
         }
         match vars.get(&name.local) {
             Some(Bound::V1(value)) => Some(value),
-            _ => None,
+            None => None,
+            #[cfg(feature = "xpath2")]
+            Some(Bound::V2(_)) => None,
         }
     };
+    #[cfg(feature = "xpath2")]
     let sequence_lookup = |name: &QName| {
         if name.prefix.is_some() {
             return None;
@@ -827,7 +857,10 @@ fn with_context<'n, N: Node<'n>, T>(
     let mut ctx = EvaluationContext::new(node);
     ctx.namespaces = Some(env.ns_lookup);
     ctx.variables = Some(&lookup);
-    ctx.sequence_variables = Some(&sequence_lookup);
+    #[cfg(feature = "xpath2")]
+    {
+        ctx.sequence_variables = Some(&sequence_lookup);
+    }
     ctx.cache = Some(env.cache);
     f(&ctx)
 }
@@ -852,7 +885,12 @@ fn extend_lets<'n, N: Node<'n>>(
             // string-value — see `LetValue::Literal`'s doc comment.
             LetValue::Literal(text) => match env.version {
                 XPathVersion::V1 => Bound::V1(Value::String(text.clone())),
+                #[cfg(feature = "xpath2")]
                 XPathVersion::V2 => Bound::V2(vec![Item::Atomic(Atomic::String(text.clone()))]),
+                #[cfg(not(feature = "xpath2"))]
+                XPathVersion::V2 => {
+                    unreachable!("queryBinding xslt2 is rejected without the feature xpath2")
+                }
             },
         };
         scope.bindings.push((binding.name.clone(), value));
