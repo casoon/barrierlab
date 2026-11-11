@@ -186,10 +186,7 @@ fn load_class_baseline() -> BTreeMap<String, ClassCounts> {
 /// not masked by them. vnu validates `<style>` with the W3C CSS Validator;
 /// html-conform does not validate CSS (docs/html-conform/guides/vnu-comparison.md,
 /// issue #87, decision A).
-const PINNED_FALSE_NEGATIVES: [&str; 2] = [
-    "html-svg/svg-a-nested-in-svg-a-novalid.html",
-    "html/elements/style/css-property-error-novalid.html",
-];
+const PINNED_FALSE_NEGATIVES: [&str; 1] = ["html/elements/style/css-property-error-novalid.html"];
 
 /// Per corpus tree: how the true positives split by finding class.
 #[derive(Default, Debug, PartialEq, Eq)]

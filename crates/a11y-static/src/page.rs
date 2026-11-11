@@ -197,6 +197,10 @@ impl Page {
     /// and an [`InputKind::StylesheetUnresolved`] note for every `@import`
     /// that stays unresolved. While any such note exists the contrast rules
     /// stay `untested`.
+    ///
+    /// Findings with a node get `Location::position` (the `<` of the start
+    /// tag) and `Location::end`. The `end` is the end of the **start tag**
+    /// (exclusive), not of the whole element; it is empty for text nodes.
     pub fn audit(&self, sheets: &[Sheet], env: Environment, locale: Locale) -> Report {
         let mut parsed = Vec::new();
         let mut missing: Vec<(Option<String>, String)> = Vec::new();
@@ -256,23 +260,27 @@ impl Page {
         report
     }
 
-    /// Sets `Location::position` on every finding that names a node, from the
-    /// parser's source offsets. A node the parser synthesized (implied
-    /// `<tbody>`, `<html>`, `<head>`, `<body>`) takes the position of its
-    /// nearest ancestor that comes from the source; without one it stays
-    /// empty. Nothing is invented.
+    /// Sets `Location::position` and `Location::end` on every finding that
+    /// names a node, from the parser's source offsets. `end` is the end of
+    /// the start tag (exclusive), not of the whole element, and stays empty
+    /// for nodes without a start tag (text). A node the parser synthesized
+    /// (implied `<tbody>`, `<html>`, `<head>`, `<body>`) takes the position
+    /// and end of its nearest ancestor that comes from the source; without
+    /// one both stay empty. Nothing is invented.
     fn fill_positions(&self, report: &mut Report) {
-        let mut positions: HashMap<u32, SourcePosition> = HashMap::new();
-        let mut stack = vec![(self.doc.root(), None::<SourcePosition>)];
+        type Span = (SourcePosition, Option<SourcePosition>);
+        let to_pos =
+            |p: html5_parser::Position| SourcePosition::new(p.line, p.column, p.byte_offset);
+        let mut spans: HashMap<u32, Span> = HashMap::new();
+        let mut stack = vec![(self.doc.root(), None::<Span>)];
         while let Some((id, inherited)) = stack.pop() {
-            let own = self
-                .doc
-                .node(id)
+            let node = self.doc.node(id);
+            let own = node
                 .position
-                .map(|p| SourcePosition::new(p.line, p.column, p.byte_offset));
+                .map(|p| (to_pos(p), node.end_position().map(to_pos)));
             let here = own.or(inherited);
-            if let Some(p) = here {
-                positions.insert(id.as_u32(), p);
+            if let Some(span) = here {
+                spans.insert(id.as_u32(), span);
             }
             stack.extend(self.doc.children(id).map(|c| (c, here)));
         }
@@ -280,12 +288,16 @@ impl Page {
             if f.location.position.is_some() {
                 continue;
             }
-            f.location.position = f
+            let span = f
                 .location
                 .node
                 .as_deref()
                 .and_then(|n| n.parse::<u32>().ok())
-                .and_then(|n| positions.get(&n).copied());
+                .and_then(|n| spans.get(&n).copied());
+            if let Some((start, end)) = span {
+                f.location.position = Some(start);
+                f.location.end = end;
+            }
         }
     }
 }

@@ -57,6 +57,29 @@ fn offsets_point_at_the_tag_with_crlf() {
     check("\r\n");
 }
 
+/// `end` is the end of the start tag (exclusive), not of the element.
+#[test]
+fn end_is_the_end_of_the_start_tag() {
+    for eol in ["\n", "\r\n"] {
+        let html = page(eol);
+        let r = audit(&html, &[], Environment::default());
+        for (rule, tag) in [
+            ("images/alt-missing", "<img src=\"a.jpg\">"),
+            ("links/name-missing", "<a href=\"/x\">"),
+            ("buttons/name-missing", "<button>"),
+        ] {
+            let f = r
+                .findings
+                .iter()
+                .find(|f| f.rule_id == rule && f.outcome == Outcome::Fail)
+                .unwrap_or_else(|| panic!("{rule}: no failing finding"));
+            let (p, e) = (f.location.position.unwrap(), f.location.end.unwrap());
+            assert_eq!(&html[p.byte_offset..e.byte_offset], tag, "{rule}");
+            assert_eq!((e.line, e.column), expected(&html, e.byte_offset), "{rule}");
+        }
+    }
+}
+
 #[test]
 fn implied_elements_have_no_position() {
     // No <html>, <head> or <body> in the source: a finding on them has no position.
@@ -68,5 +91,9 @@ fn implied_elements_have_no_position() {
         .filter(|f| f.rule_id == "document/lang-missing")
         .collect::<Vec<_>>();
     assert!(!on_root.is_empty(), "{:?}", r.findings);
-    assert!(on_root.iter().all(|f| f.location.position.is_none()));
+    assert!(
+        on_root
+            .iter()
+            .all(|f| f.location.position.is_none() && f.location.end.is_none())
+    );
 }

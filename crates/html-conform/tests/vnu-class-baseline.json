@@ -4,5 +4,5 @@
   "html-math": { "matched": 18, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
   "html-rdfa": { "matched": 28, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
   "html-rdfalite": { "matched": 2, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 },
-  "html-svg": { "matched": 0, "incidental": 0, "missed": 1, "unmapped": 0, "false_positive": 0 }
+  "html-svg": { "matched": 1, "incidental": 0, "missed": 0, "unmapped": 0, "false_positive": 0 }
 }

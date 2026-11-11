@@ -50,6 +50,29 @@ pub struct RuleInfo {
     /// Schematron rule files carry no source reference, so assertion rules
     /// have `None`.
     pub normative_source: Option<String>,
+    /// The section of the "Findings and rule IDs" guide that explains the
+    /// rule's layer, as an absolute URL. The guide has one section per
+    /// layer, not per rule, so every assertion rule shares one anchor.
+    pub help_url: Option<String>,
+}
+
+const RULE_IDS_GUIDE: &str =
+    "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/";
+
+/// The guide section for a finding's `rule_id`, or `None` for an id this
+/// crate does not report. Anchors are the heading ids of
+/// `docs/html-conform/guides/rule-ids.md` as the project site builds them.
+pub(crate) fn help_url(rule_id: &str) -> Option<String> {
+    let anchor = match rule_id {
+        parse::RULE_ID => "parserhtml5",
+        schema::RULE_ID => "schemahtml5",
+        scripts::IMPORT_MAP_RULE_ID | scripts::SPECULATION_RULES_RULE_ID => "scripts",
+        csp_enforcement::RULE_ID => "cspmeta-enforcement",
+        table_integrity::RULE_ID => "tablesintegrity",
+        id if id.starts_with("assertion.") => "assertionid",
+        _ => return None,
+    };
+    Some(format!("{RULE_IDS_GUIDE}#{anchor}"))
 }
 
 fn outcome(severity: Severity) -> Outcome {
@@ -73,6 +96,7 @@ fn layer_rule(
         outcome,
         description: description.to_owned(),
         normative_source: Some(normative_source.to_owned()),
+        help_url: help_url(id),
     }
 }
 
@@ -141,12 +165,16 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError> {
     let declared = assertions::declared_rules().map_err(|error| CheckError::Initialization {
         message: format!("assertion rules unavailable: {error}"),
     })?;
-    catalogue.extend(declared.into_iter().map(|rule| RuleInfo {
-        id: format!("assertion.{}", rule.id),
-        layer: RuleLayer::Assertion,
-        outcome: outcome(rule.severity),
-        description: rule.description,
-        normative_source: None,
+    catalogue.extend(declared.into_iter().map(|rule| {
+        let id = format!("assertion.{}", rule.id);
+        RuleInfo {
+            help_url: help_url(&id),
+            id,
+            layer: RuleLayer::Assertion,
+            outcome: outcome(rule.severity),
+            description: rule.description,
+            normative_source: None,
+        }
     }));
     Ok(catalogue)
 }
@@ -176,5 +204,17 @@ mod tests {
             .expect("declared in rules/elements.sch");
         assert_eq!(missing_lang.outcome, Outcome::Review);
         assert!(catalogue.iter().all(|rule| !rule.description.is_empty()));
+        assert!(catalogue.iter().all(|rule| rule.help_url.is_some()));
+    }
+
+    #[test]
+    fn report_findings_carry_the_guide_anchor() {
+        let report = crate::check("<p><b>x</p>").expect("check").to_report();
+        assert!(!report.findings.is_empty());
+        for finding in &report.findings {
+            let url = finding.help_url.as_deref().expect("help_url");
+            assert!(url.starts_with(RULE_IDS_GUIDE), "{url}");
+            assert_eq!(Some(url.to_owned()), help_url(&finding.rule_id));
+        }
     }
 }

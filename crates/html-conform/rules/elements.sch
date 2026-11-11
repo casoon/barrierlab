@@ -15,6 +15,7 @@
 -->
 <schema xmlns="http://purl.oclc.org/dsdl/schematron">
   <ns prefix="h" uri="http://www.w3.org/1999/xhtml"/>
+  <ns prefix="s" uri="http://www.w3.org/2000/svg"/>
 
   <pattern id="elements-bdo">
     <rule context="h:bdo">
@@ -1130,6 +1131,19 @@
     <rule context="h:a[@href and ancestor::h:button]">
       <assert id="elements.a-href-in-button" role="error" test="false()">
         The element "a" with the attribute "href" must not appear as a descendant of the "button" element.
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--
+    SVG 2 `a`: transparent content model, but an `a` element must not have
+    another `a` as a descendant (the SVG counterpart of the HTML rule
+    below). Own pattern, so it is independent of the HTML `a` rules.
+  -->
+  <pattern id="elements-svg-a-in-svg-a">
+    <rule context="s:a[ancestor::s:a]">
+      <assert id="elements.svg-a-in-svg-a" role="error" test="false()">
+        The SVG element "a" must not appear as a descendant of another SVG element "a".
       </assert>
     </rule>
   </pattern>

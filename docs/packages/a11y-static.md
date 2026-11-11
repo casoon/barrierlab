@@ -92,6 +92,12 @@ refers to the original text. Tests over a document with multi-byte text and with
 the offset points at the offending tag for `images/alt-missing`, `links/name-missing` and
 `buttons/name-missing`.
 
+`Location::end` is filled from the same source: for an element it is the position just past the
+closing `>` of its **start tag** (exclusive), so `position..end` spans the start tag. It is **not**
+the end of the whole element: the content and the end tag are not covered. It stays empty for a
+finding on a text node. A node the parser synthesized takes the `end` of the same ancestor it takes
+its position from. An `end` is only set together with the position this pass writes.
+
 Findings that get **no** position:
 
 - Findings on a node the parser synthesized (implied `<html>`, `<head>`, `<body>`, `<tbody>`) take

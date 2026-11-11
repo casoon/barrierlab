@@ -497,6 +497,31 @@ mod tests {
         assert!(rule_ids_for_body(r#"<a href="/" rev="made">A</a>"#).is_empty());
     }
 
+    /// barrierlab#198 (HTML, "Attributes"): on a foreign element only
+    /// `xmlns:xlink` bound to the XLink namespace is allowed.
+    #[test]
+    fn xmlns_prefix_on_svg_is_reported_except_xlink() {
+        let xlink = r#"xmlns:xlink="http://www.w3.org/1999/xlink""#;
+        assert!(rule_ids_for_body(&format!("<svg {xlink}><g {xlink}></g></svg>")).is_empty());
+        for svg in [
+            r#"<svg xmlns:xe="http://www.w3.org/2001/xml-events"></svg>"#,
+            r#"<svg><g xmlns:xlink="http://example.net/bar"></g></svg>"#,
+        ] {
+            assert!(!rule_ids_for_body(svg).is_empty(), "{svg}");
+        }
+    }
+
+    #[test]
+    fn svg_a_inside_svg_a_is_reported() {
+        let ids = rule_ids_for_body(r#"<svg><a href="/x"><a href="/x">x</a></a></svg>"#);
+        assert!(
+            ids.iter()
+                .any(|id| id == "assertion.elements.svg-a-in-svg-a"),
+            "{ids:?}"
+        );
+        assert!(rule_ids_for_body(r#"<svg><a href="/x"><text>x</text></a></svg>"#).is_empty());
+    }
+
     #[test]
     fn input_type_search_is_conforming() {
         assert!(

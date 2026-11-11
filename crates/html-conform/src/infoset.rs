@@ -196,6 +196,29 @@ impl Eq for NormalizedNode<'_> {}
 /// `namespace` (WHATWG "adjust foreign attributes" — the table's local name
 /// is `href`), whereas a RELAX NG `attribute xlink:href` pattern matches
 /// `{xlink-ns}href`. Hence the prefix is dropped when a namespace is set.
+/// The XLink namespace, the only one HTML §13.1.2.3 permits for `xmlns:xlink`.
+const XLINK_NAMESPACE: &str = "http://www.w3.org/1999/xlink";
+
+/// For an `xmlns:*` attribute on a foreign element: its literal name
+/// `xmlns:<prefix>` when HTML §13.1.2.3 does not permit it, i.e. anything
+/// but `xmlns:xlink` bound to the XLink namespace. The parser puts
+/// `xmlns:xlink` in [`XMLNS_NAMESPACE`] ("adjust foreign attributes") and
+/// leaves every other prefix as a literal name without namespace. `None`
+/// for every other attribute.
+fn foreign_disallowed_xmlns_prefix(name: &relax_ng::ExpandedName, value: &str) -> Option<String> {
+    let prefix = match name.namespace.as_deref() {
+        Some(XMLNS_NAMESPACE) if name.local != "xmlns" => {
+            name.local.strip_prefix("xmlns:").unwrap_or(&name.local)
+        }
+        None => name.local.strip_prefix("xmlns:")?,
+        _ => return None,
+    };
+    if prefix == "xlink" && value == XLINK_NAMESPACE {
+        return None;
+    }
+    Some(format!("xmlns:{prefix}"))
+}
+
 fn schema_local_name(name: &ExpandedName) -> String {
     match (&name.namespace, name.local_name.split_once(':')) {
         (Some(_), Some((_, local))) => local.to_owned(),
@@ -648,6 +671,17 @@ impl<'a> relax_ng::Element for NormalizedNode<'a> {
         raw.into_iter().filter_map(move |(name, value)| {
             if is_html_element && name.namespace.is_none() && name.local.starts_with("xmlns:") {
                 Some((name, value))
+            } else if let Some(prefixed) = foreign_disallowed_xmlns_prefix(&name, &value) {
+                // HTML §13.1.2.3: on a foreign element the only `xmlns:*`
+                // allowed is `xmlns:xlink` with the XLink namespace. Any
+                // other one stays visible, as on HTML elements.
+                Some((
+                    relax_ng::ExpandedName {
+                        namespace: None,
+                        local: prefixed,
+                    },
+                    value,
+                ))
             } else if name.namespace.is_none() && name.local == "xml:lang" {
                 Some((split_xml_lang_name(), value))
             } else if name.namespace.is_none() && name.local == "lang" {

@@ -111,7 +111,7 @@ Silence about them is not a pass.
 fully checked, then a summary.
 
 **json**: the serialised [`a11y_report::Report`](https://docs.rs/a11y-report) of all files.
-Every finding carries `location.file` and `location.position`; a finding whose layer knows where it
+Every finding carries `location.file`, `location.position` and a `help_url` to its rule layer in the rule ID guide; a finding whose layer knows where it
 ends also carries `location.end` (`line`, `column`, `byte_offset`, exclusive). The range is always the element's start tag, also for a finding about the element's content. Units: see
 [Positions and ranges](../../reference/api/#positions-and-ranges). A class that was not checked,
 and a file that could not be checked, are entries of `inputs` with kind `document_incomplete`

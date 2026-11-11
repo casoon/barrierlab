@@ -6,7 +6,9 @@ order: 2
 
 Every finding carries a `rule_id` that names the layer, and for Schematron rules the
 individual assertion. Messages are meant for people and may change; rule IDs are what code
-should match on.
+should match on. In the shared report model, each finding's `help_url` points to the section
+of this page for its layer (all assertion rules share the `assertion.<id>` section), and
+`RuleInfo::help_url` in the catalogue carries the same link.
 
 | Rule ID | Layer | Severity |
 | --- | --- | --- |
@@ -36,6 +38,8 @@ subtrees. This covers the content model (which element may appear where), allowe
 attributes, and the value of each attribute through custom datatypes: `srcset` and `sizes`,
 media queries, dates and times, URLs, BCP 47 language tags, CSP strings and others. Messages
 name the offending value, for example ``invalid value `2026-13-01` for attribute `datetime` ``.
+On SVG and MathML elements, an `xmlns:*` attribute is reported unless it is `xmlns:xlink`
+bound to the XLink namespace.
 
 ## `assertion.<id>`
 
@@ -44,7 +48,7 @@ and evaluated with [`schematron-engine`](https://crates.io/crates/schematron-eng
 rule ID is `assertion.` followed by the Schematron assertion id, for example
 `assertion.ids.duplicate` or `assertion.aria.hidden-not-focusable`. The rule files cover ARIA
 roles, states and restrictions, attributes, elements, headings, IDs, microdata, obsolete
-elements and tables.
+elements and tables. An SVG `a` inside another SVG `a` is `assertion.elements.svg-a-in-svg-a`.
 
 A rule's `role` sets the severity: `warning` and `info` map to `Severity::Warning` and
 `Severity::Info`, anything else to `Severity::Error`. The missing-`lang` check,

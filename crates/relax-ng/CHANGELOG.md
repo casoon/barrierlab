@@ -7,6 +7,13 @@ in the git history only.
 
 ## [Unreleased]
 
+### Changed
+
+- **Internals:** the tree path (`validate`, `validate_with_options`, `Schema::validate`) now runs
+  on the `StreamValidator` core and only turns the `Element` tree into events, so there is one
+  implementation of the derivation steps (barrierlab#77). Findings, their order and the opt-in
+  recovery are unchanged; `Element::Location` still needs no `Clone`.
+
 ### Fixed
 
 - **Memory:** the memo of attribute derivatives kept one entry per distinct attribute value, so
