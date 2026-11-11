@@ -31,6 +31,14 @@ in the git history only.
   specification cover every category of that table, so the level stays checked without the external
   corpus (casoon/barrierlab#111).
 
+### Fixed
+
+- **XPath 1.0:** The parser now limits nesting and operator chains (256 weighted levels, the same
+  limit as the 2.0 parser) and returns a `ParseError` instead of overflowing the stack on
+  expressions such as 600 nested parentheses, `1+1+...` with 2000 terms or deeply nested `not(...)`,
+  reachable through untrusted Schematron files. Expressions within the limit parse as before
+  (casoon/barrierlab#192).
+
 ## [0.2.3] - 2026-10-31
 
 ### Added

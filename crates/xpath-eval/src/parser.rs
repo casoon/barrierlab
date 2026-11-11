@@ -59,6 +59,8 @@ pub fn parse(expr: &str) -> Result<Expr, ParseError> {
         tokens,
         pos: 0,
         end,
+        depth: 0,
+        spine: 0,
     };
     let result = parser.parse_expr()?;
     if parser.pos != parser.tokens.len() {
@@ -68,10 +70,22 @@ pub fn parse(expr: &str) -> Result<Expr, ParseError> {
     Ok(result)
 }
 
+/// What one level of nesting (parenthesis, function argument, predicate) costs against
+/// [`MAX_DEPTH`]: the recursive-descent parser needs about a dozen stack frames per level.
+const NEST_WEIGHT: usize = 8;
+
+/// Largest syntax-tree depth the parser accepts: nesting weighted by `NEST_WEIGHT` plus the length
+/// of the left-leaning operator chains (`+`, `or`, `|`, unary `-`, ...) and the chained function
+/// calls. The evaluator and the drop of the tree recurse on the tree, so the parser is the one
+/// place that keeps them inside the stack. Same value as the XPath 2.0 parser.
+const MAX_DEPTH: usize = 256;
+
 struct Parser {
     tokens: Vec<(Token, usize)>,
     pos: usize,
     end: usize,
+    depth: usize,
+    spine: usize,
 }
 
 impl Parser {
@@ -119,14 +133,39 @@ impl Parser {
 
     // ---- Operator-precedence chain ---------------------------------
 
+    fn too_deep(&self) -> ParseError {
+        ParseError::new(
+            self.current_pos(),
+            format!("expression is nested or chained too deeply (limit {MAX_DEPTH})"),
+        )
+    }
+
+    /// One more link in a left-leaning operator chain (or one more unary operator).
+    fn extend_spine(&mut self) -> Result<(), ParseError> {
+        self.spine += 1;
+        if self.depth + self.spine > MAX_DEPTH {
+            return Err(self.too_deep());
+        }
+        Ok(())
+    }
+
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_or()
+        self.depth += NEST_WEIGHT;
+        if self.depth > MAX_DEPTH {
+            return Err(self.too_deep());
+        }
+        let outer_spine = std::mem::replace(&mut self.spine, 0);
+        let result = self.parse_or();
+        self.spine = outer_spine;
+        self.depth -= NEST_WEIGHT;
+        result
     }
 
     fn parse_or(&mut self) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_and()?;
         while matches!(self.peek(), Some(Token::Or)) {
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_and()?;
             lhs = Expr::Or(Box::new(lhs), Box::new(rhs));
         }
@@ -137,6 +176,7 @@ impl Parser {
         let mut lhs = self.parse_equality()?;
         while matches!(self.peek(), Some(Token::And)) {
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_equality()?;
             lhs = Expr::And(Box::new(lhs), Box::new(rhs));
         }
@@ -152,6 +192,7 @@ impl Parser {
                 _ => break,
             };
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_relational()?;
             lhs = Expr::Equality(Box::new(lhs), op, Box::new(rhs));
         }
@@ -169,6 +210,7 @@ impl Parser {
                 _ => break,
             };
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_additive()?;
             lhs = Expr::Relational(Box::new(lhs), op, Box::new(rhs));
         }
@@ -184,6 +226,7 @@ impl Parser {
                 _ => break,
             };
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_multiplicative()?;
             lhs = Expr::Additive(Box::new(lhs), op, Box::new(rhs));
         }
@@ -200,6 +243,7 @@ impl Parser {
                 _ => break,
             };
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_unary()?;
             lhs = Expr::Multiplicative(Box::new(lhs), op, Box::new(rhs));
         }
@@ -209,6 +253,7 @@ impl Parser {
     fn parse_unary(&mut self) -> Result<Expr, ParseError> {
         if matches!(self.peek(), Some(Token::Minus)) {
             self.advance();
+            self.extend_spine()?;
             let operand = self.parse_unary()?;
             Ok(Expr::Negate(Box::new(operand)))
         } else {
@@ -220,6 +265,7 @@ impl Parser {
         let mut lhs = self.parse_path_expr()?;
         while matches!(self.peek(), Some(Token::Pipe)) {
             self.advance();
+            self.extend_spine()?;
             let rhs = self.parse_path_expr()?;
             lhs = Expr::Union(Box::new(lhs), Box::new(rhs));
         }

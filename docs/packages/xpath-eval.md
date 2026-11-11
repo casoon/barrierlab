@@ -97,13 +97,18 @@ table in `src/xpath2/functions.rs`).
   does not fit is `FOAR0002`; `div` keeps 18 fractional digits, fewer if the
   scaled dividend does not fit.
 - `xs:integer` is 64-bit; overflow is `FOAR0002`.
-- Nesting: the 2.0 parser rejects an expression whose syntax tree would be
-  deeper than 256 levels with a parse error. A parenthesis, function argument,
-  predicate or `if`/`for` branch counts 8 levels (about 32 nested levels), each
-  link of a left-leaning `+`, `*`, `|`, `/` chain counts 1 (the sum of nesting
-  and chain length is bounded); `or`/`and` chains are evaluated without
-  recursion and limited to 4096 operands. This keeps the recursive parser and
-  evaluator inside a debug-build stack. (The 1.0 parser has no such limit.)
+- Nesting (both modes): the parser rejects an expression whose syntax tree would be
+  deeper than 256 levels with a parse error ("nested or chained too deeply"),
+  never a stack overflow. A parenthesis, function argument or predicate counts 8
+  levels (about 31 nested levels); in 2.0 an `if`/`for` branch counts 8 as
+  well. Each link of a left-leaning `+`, `*`, `=`, `<`, `|` chain and each unary
+  `-` counts 1, and in 1.0 each `or`/`and` link too (the sum of nesting and chain
+  length is bounded: 248 links of `1+1+...` fit, 249 do not). The 2.0 evaluator
+  walks `or`/`and` chains without recursion and limits them to 4096 operands. This
+  keeps the recursive parser, evaluator and drop of the tree inside a debug-build
+  stack. A location path is a flat list of steps and has no length limit in 1.0.
+  The evaluator relies on this: a tree built by hand instead of through `parse`
+  is not depth-checked.
 
 ### Regular expressions
 
