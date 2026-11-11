@@ -7,6 +7,19 @@ in the git history only.
 
 ## [Unreleased]
 
+### Added
+
+- **API:** user-defined functions in the XPath 2.0 mode: `EvaluationContext::functions`
+  (`FunctionContext`, `FunctionLookup`), nesting limited to `MAX_FUNCTION_DEPTH`; a function body can
+  be evaluated without a context item (casoon/barrierlab#62).
+
+### Changed
+
+- **XPath 2.0:** `xs:integer` holds 128 bits (39 digits) instead of 64; a longer value is
+  reported as unsupported instead of `FOAR0002`. The IBAN check of XRechnung reads a 24-digit
+  number. `Atomic::Integer` carries an `i128`, so code that matches it needs a minor version bump
+  (casoon/barrierlab#62).
+
 ## [0.3.0] - 2026-11-11
 
 ### Added

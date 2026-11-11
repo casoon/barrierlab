@@ -7,6 +7,23 @@ version bump.
 
 ## [Unreleased]
 
+### Added
+
+- **XSLT functions:** `xsl:function` declarations run when an XPath 2.0 expression calls them (a
+  subset of XSLT: params, variables, `xsl:sequence`, `xsl:if`, `xsl:choose`, recursion); anything
+  else leaves the function marked unsupported (`Schema.functions`). Peppol BIS Billing 3.0 and
+  XRechnung (UBL, CII) run end to end. Details in `docs/packages/schematron-engine.md`
+  (casoon/barrierlab#62).
+
+### Changed
+
+- **Variables:** in XPath 2.0 mode a pattern with `<let>`s and no rule declares variables for the
+  whole schema (the idiom of XRechnung's `common.sch`), and a rule `context` can read the variables
+  in scope (`Party[$supplierCountry = 'NO']`). `Schema` gained the field `functions` (with the
+  feature `xpath2`), so struct literals need a minor version bump (casoon/barrierlab#62).
+- **API:** a call of a declared function with an arity the declaration does not have is the
+  unknown-function error `XPST0017`, no longer an unsupported-feature error (casoon/barrierlab#62).
+
 ## [0.4.0] - 2026-11-11
 
 ### Added

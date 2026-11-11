@@ -62,7 +62,7 @@ the rule sets use:
 |---|---|---|
 | `xs:untypedAtomic` | `String` | what atomizing a node gives: there is no schema, no node has a type annotation |
 | `xs:string`, `xs:boolean` | `String`, `bool` | |
-| `xs:integer` | `i64` | overflow raises `FOAR0002` instead of wrapping |
+| `xs:integer` | `i128` | overflow raises `FOAR0002` instead of wrapping; a literal or cast beyond 128 bits (39 digits) is *unsupported*. 128 instead of 64 bits because the XRechnung IBAN check reads a number of 24 digits |
 | `xs:decimal` | own `Decimal`, `i128` mantissa and scale | exact, 38 digits, no new dependency; `div` keeps 18 fractional digits (F&O §6.2.4); an operation that does not fit raises `FOAR0002` |
 | `xs:double` | `f64` | |
 | `xs:date` | year, month, day | no timezone: a date with timezone is *unsupported*, not silently compared |
@@ -96,7 +96,7 @@ table in `src/xpath2/functions.rs`).
   cast or constructor beyond that is `Unsupported`; an operation whose result
   does not fit is `FOAR0002`; `div` keeps 18 fractional digits, fewer if the
   scaled dividend does not fit.
-- `xs:integer` is 64-bit; overflow is `FOAR0002`.
+- `xs:integer` is 128-bit (39 digits); overflow is `FOAR0002`, a longer literal or string cast is `Unsupported`.
 - Variables: the 2.0 evaluator reads `EvaluationContext::sequence_variables` (a variable bound to a sequence with its atomic types) first, then the 1.0 `variables` hook (a 1.0 value becomes a sequence of one item). `sequence_to_string` renders a sequence the way `value-of` does: atomized, joined by one space.
 - Nesting (both modes): the parser rejects an expression whose syntax tree would be
   deeper than 256 levels with a parse error ("nested or chained too deeply"),
@@ -110,6 +110,28 @@ table in `src/xpath2/functions.rs`).
   stack. A location path is a flat list of steps and has no length limit in 1.0.
   The evaluator relies on this: a tree built by hand instead of through `parse`
   is not depth-checked.
+
+### User-defined functions
+
+A function whose name is in a namespace other than `fn` and `xs` is answered by the caller:
+`EvaluationContext::functions` (a `FunctionContext`) holds a `FunctionLookup` that receives the
+namespace URI, the local name, the arguments as sequences and the call depth, and returns a
+sequence, an error, or `None` for "no such function" (then `XPST0017`). `schematron-engine` uses
+it to run `xsl:function`. The crate itself defines no function and no `xsl:function` model.
+
+- **Depth.** `FunctionContext::depth` is the number of calls around the expression (0 for an
+  expression of the document; the caller sets the depth it was called with when it evaluates a
+  function body). `evaluate_versioned` refuses the call nested deeper than `MAX_FUNCTION_DEPTH`
+  (64) with the dynamic error `FOER0000`, so a runaway recursion ends as an error and not as a
+  stack overflow. The limit is chosen so that a 63-deep chain of calls runs on the 2 MiB stack of
+  a debug test thread.
+- **No focus.** `FunctionContext::no_context_item` evaluates an expression as the body of a
+  function is: `.`, `/`, a path step or `position()` is `XPDY0002`.
+- **1.0 mode.** The hook is ignored; a function it would answer is an unknown function there.
+- **Size.** The hook, the depth and the flag sit behind one `Option` in `EvaluationContext`, and
+  the 1.0 evaluator, which `html-conform-wasm` links, does not copy the two XPath 2.0 hooks into
+  the contexts it derives (it never reads them). Measured with
+  `node packages/html-conform-wasm/build.mjs`: the gzip size did not grow (774,849 B before, 774,813 B after).
 
 ### Regular expressions
 
@@ -249,7 +271,7 @@ parseable and evaluable (of 261).
 | 2 | **Done, with gaps (see "Regular expressions").** `matches`, `replace`, `tokenize` with flags on an own engine (maintainer decision: no dependency). Open: back-references, a Unicode database for categories, `\i`/`\c`, blocks | 1 of 261 here, more in XRechnung/Peppol |
 | 3 | **Partly done.** `string-to-codepoints` and `codepoints-to-string` (Peppol check digits, see "Inventory: Peppol and XRechnung"). Not implemented, and not used by any inventoried rule set: `round-half-to-even`, `compare`, `codepoint-equal`, `subsequence`, `index-of`, `insert-before`, `remove`, `exactly-one`/`zero-or-one`/`one-or-more`, `deep-equal`, `root`, `lang`, `id`, `encode-for-uri`, `error`, `trace` (all `Unsupported`) | 0 here; Peppol only through `xsl:function` bodies |
 | 4 | Date and time: `xs:dateTime`, `xs:time`, durations, timezones for `xs:date`, `current-date()`, component functions, date arithmetic | 0 here (`xs:date` comparison without timezone is in slice 1) |
-| 5 | Sequence types: `instance of`, `treat as`, kind tests with names (`element(a)`), `*:name`, user-callable `xsl:function` bridge | 0 here |
+| 5 | Sequence types: `instance of`, `treat as`, kind tests with names (`element(a)`), `*:name`. (The user-callable `xsl:function` bridge is done, see "User-defined functions".) | 0 here |
 | 6 | **Done.** `schematron-engine` accepts `xslt2`/`xpath2`, runs the schema in 2.0 mode and reports `Unsupported` as an error that says so (`SchematronEvalError::is_unsupported`; the engine has no `NotRun` model, that is `a11y-report`). Needs the sequence-valued variable hook of `EvaluationContext` (`sequence_variables`) and `sequence_to_string` from this crate | EN 16931 UBL end to end: see `schematron-engine` |
 
 ### Inventory: Peppol and XRechnung
@@ -276,12 +298,13 @@ Functions called beyond the EN 16931 set: `tokenize`, `replace`, `matches`,
 constructs `if`, `for`, `to`, `castable as`. All but the two codepoint functions
 were already implemented; those two are now.
 
-The part that is not reachable from this crate: the rule sets declare helper
-functions with `xsl:function` (Peppol: 12 in CII and 13 in UBL, for example
-`u:mod11`, `u:gln`, `u:checkCF`, recursive `u:addPIVA`; XRechnung: `xr:checkIBAN`)
-and call them from `assert/@test`. Running them needs an XSLT function bridge
-(`xsl:param`, `xsl:variable`, `xsl:sequence`, `xsl:choose`, recursion) in
-`schematron-engine`. That is not done; the engine names the function and reports
-the run as unsupported (see its documentation).
+The rule sets declare helper functions with `xsl:function` (Peppol: 12 in CII and 13 in UBL, for
+example `u:mod11`, `u:gln`, `u:checkCF`, recursive `u:addPIVA`; XRechnung: `xr:checkIBAN`,
+`u:decimalOrZero`) and call them from `assert/@test`. Their bodies use only functions this crate
+has (`string-to-codepoints`, `codepoints-to-string`, `translate`, `reverse`, `matches`, `replace`,
+`string-join`, `xs:integer`, `castable as`, `idiv`, `mod`, `for`, `to`, `if`); the one addition was
+the width of `xs:integer` (128 instead of 64 bits), because `xr:checkIBAN` reads the rearranged
+IBAN as one number of 24 digits or more. Running them is the `xsl:function` bridge of
+`schematron-engine`, see its documentation and "User-defined functions" above.
 
 Out of scope for `xpath-eval` altogether: XSD validation, XSLT, XQuery.

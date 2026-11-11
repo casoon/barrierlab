@@ -228,31 +228,7 @@ fn evaluate_in<'a, D: Document>(
     cache: &DocumentCache<D::N<'a>>,
     trace: Option<&mut Vec<Event<D::N<'a>>>>,
 ) -> Result<Vec<Report<D::N<'a>>>, SchematronEvalError> {
-    let result = evaluate_schema(schema, document, phase_id, cache, trace);
-    #[cfg(feature = "xpath2")]
-    let result = result.map_err(|error| {
-        // A call of a function the schema declares with `xsl:function` is not an
-        // unknown function: this crate does not run XSLT, so say that.
-        if let SchematronEvalError::Query {
-            unsupported: false,
-            message,
-        } = &error
-            && message.starts_with("XPST0017:")
-            && let Some(name) = schema
-                .xslt_functions
-                .iter()
-                .find(|name| message.contains(&format!("`{name}`")))
-        {
-            return SchematronEvalError::Query {
-                unsupported: true,
-                message: format!(
-                    "unsupported XPath 2.0 feature: the function {name} declared with xsl:function (XSLT is not run)"
-                ),
-            };
-        }
-        error
-    });
-    result
+    evaluate_schema(schema, document, phase_id, cache, trace)
 }
 
 fn evaluate_schema<'a, D: Document>(
@@ -302,18 +278,66 @@ fn evaluate_schema<'a, D: Document>(
     }
     let exprs = ExprCache::default();
     let exprs2 = ExprCache2::default();
+    #[cfg(feature = "xpath2")]
+    let globals = RefCell::new(Vec::new());
     let env = Env {
         ns_lookup: &ns_lookup,
         exprs: &exprs,
         exprs2: &exprs2,
         version,
         cache,
+        #[cfg(feature = "xpath2")]
+        root: document.root(),
+        #[cfg(feature = "xpath2")]
+        functions: &schema.functions,
+        #[cfg(feature = "xpath2")]
+        globals: &globals,
     };
     let mut reports = Vec::new();
     let mut index = None;
 
     let mut schema_scope = Scope::new(None);
     extend_lets(&mut schema_scope, &schema.lets, document.root(), &env)?;
+
+    // A pattern with `<let>`s and no rule can only be meant as a declaration of variables for the
+    // whole schema (XRechnung's `common.sch` says so: "solely serves for declaring global
+    // variables (in XSLT speak)"; the XSLT implementations compile every pattern `<let>` to a
+    // global variable). Their scope is the schema, not the pattern, see `docs/packages/schematron-engine.md`.
+    #[cfg(feature = "xpath2")]
+    if version == XPathVersion::V2 {
+        for pattern in schema.patterns.iter().filter(|p| p.rules.is_empty()) {
+            extend_lets(&mut schema_scope, &pattern.lets, document.root(), &env)?;
+        }
+    }
+
+    #[cfg(feature = "xpath2")]
+    if version == XPathVersion::V2 && !schema.functions.is_empty() {
+        let mut global_scope = Scope::new(Some(&schema_scope));
+        for binding in schema
+            .patterns
+            .iter()
+            .filter(|pattern| !pattern.rules.is_empty())
+            .flat_map(|pattern| &pattern.lets)
+        {
+            // A `<let>` that fails here fails again where its pattern runs; a function body
+            // that reads it before then finds it unbound, which is an error, not a value.
+            let mut single = Scope::new(Some(&global_scope));
+            if extend_lets(
+                &mut single,
+                std::slice::from_ref(binding),
+                document.root(),
+                &env,
+            )
+            .is_ok()
+            {
+                let bound = single.bindings.pop().expect("one binding was added");
+                global_scope.bindings.push(bound);
+            }
+        }
+        let mut all = schema_scope.bindings.clone();
+        all.extend(global_scope.bindings);
+        *globals.borrow_mut() = all;
+    }
 
     let mut phase_scope = Scope::new(Some(&schema_scope));
     if let Some(phase) = phase {
@@ -340,7 +364,7 @@ fn evaluate_schema<'a, D: Document>(
         let mut pattern_scope = Scope::new(Some(&phase_scope));
         extend_lets(&mut pattern_scope, &pattern.lets, document.root(), &env)?;
 
-        let matched = match_pattern(pattern, document, &env, &mut index)?;
+        let matched = match_pattern(pattern, document, &env, &pattern_scope, &mut index)?;
 
         for (rule, nodes) in pattern.rules.iter().zip(matched) {
             for node in nodes {
@@ -500,17 +524,23 @@ fn match_pattern<'a, D: Document>(
     pattern: &Pattern,
     document: &'a D,
     env: &Env<'_, D::N<'a>>,
+    vars: &Scope<'_, D::N<'a>>,
     index: &mut Option<NodeIndex<D::N<'a>>>,
 ) -> Result<Vec<Vec<D::N<'a>>>, SchematronEvalError> {
     let root = document.root();
+
+    // A rule context may read the variables in scope (`Party[$supplierCountry = 'NO']`) and call
+    // the functions of the schema.
+    #[cfg(feature = "xpath2")]
+    if env.version == XPathVersion::V2 {
+        return with_context(root, vars, env, |ctx| match_pattern_v2(pattern, ctx));
+    }
+
+    #[cfg(not(feature = "xpath2"))]
+    let _ = vars;
     let mut ctx = EvaluationContext::new(root);
     ctx.namespaces = Some(env.ns_lookup);
     ctx.cache = Some(env.cache);
-
-    #[cfg(feature = "xpath2")]
-    if env.version == XPathVersion::V2 {
-        return match_pattern_v2(pattern, &ctx);
-    }
 
     let mut compiled = Vec::new();
     for rule in &pattern.rules {
@@ -654,6 +684,17 @@ struct Env<'e, N> {
     /// The language every expression of this schema is parsed and evaluated in.
     version: XPathVersion,
     cache: &'e DocumentCache<N>,
+    /// The document root: the context node of nothing, but `EvaluationContext` needs one.
+    #[cfg(feature = "xpath2")]
+    root: N,
+    /// The `xsl:function` declarations XPath 2.0 expressions can call.
+    #[cfg(feature = "xpath2")]
+    functions: &'e [crate::xslt::XsltFunction],
+    /// What a function body sees as global variables: the schema-level and the pattern-level
+    /// `<let>`s (XSLT compiles both to global variables; a body has no other way to reach a
+    /// rule's or a pattern's `<let>`). Filled once per evaluation, before the first rule runs.
+    #[cfg(feature = "xpath2")]
+    globals: &'e RefCell<Vec<(String, Bound<N>)>>,
 }
 
 /// Parsed XPath expressions of one evaluation, keyed by the address of the
@@ -693,16 +734,22 @@ struct ExprCache2 {}
 #[cfg(feature = "xpath2")]
 impl ExprCache2 {
     fn get(&self, raw: &str) -> Result<Rc<Expression>, SchematronEvalError> {
+        self.get_versioned(raw).map_err(from_versioned)
+    }
+
+    fn get_versioned(&self, raw: &str) -> Result<Rc<Expression>, VersionedError> {
         let key = (raw.as_ptr(), raw.len());
         if let Some(expr) = self.parsed.borrow().get(&key) {
             return Ok(Rc::clone(expr));
         }
-        let expr =
-            Rc::new(xpath_eval::parse_versioned(raw, XPathVersion::V2).map_err(from_versioned)?);
+        let expr = Rc::new(xpath_eval::parse_versioned(raw, XPathVersion::V2)?);
         self.parsed.borrow_mut().insert(key, Rc::clone(&expr));
         Ok(expr)
     }
 }
+
+#[cfg(feature = "xpath2")]
+mod xslt_run;
 
 /// The value of a `<let>`: an XPath 1.0 value, or in XPath 2.0 mode a sequence.
 #[derive(Clone)]
@@ -833,6 +880,19 @@ fn with_context<'n, N: Node<'n>, T>(
     env: &Env<'_, N>,
     f: impl FnOnce(&EvaluationContext<'n, '_, N>) -> T,
 ) -> T {
+    run_in_context(node, None, vars, env, f)
+}
+
+/// [`with_context`], or with `function_depth` the context of an `xsl:function` body at that
+/// call depth: no context item, the globals of `env` visible after `vars`, `env.functions`
+/// callable.
+fn run_in_context<'n, N: Node<'n>, T>(
+    node: N,
+    function_depth: Option<usize>,
+    vars: &Scope<'_, N>,
+    env: &Env<'_, N>,
+    f: impl FnOnce(&EvaluationContext<'n, '_, N>) -> T,
+) -> T {
     let lookup = |name: &QName| {
         if name.prefix.is_some() {
             return None;
@@ -851,8 +911,29 @@ fn with_context<'n, N: Node<'n>, T>(
         }
         match vars.get(&name.local) {
             Some(Bound::V2(sequence)) => Some(sequence),
-            _ => None,
+            Some(Bound::V1(_)) => None,
+            None if function_depth.is_some() => env
+                .globals
+                .borrow()
+                .iter()
+                .rev()
+                .find(|(global, _)| *global == name.local)
+                .and_then(|(_, bound)| match bound {
+                    Bound::V2(sequence) => Some(sequence.clone()),
+                    Bound::V1(_) => None,
+                }),
+            None => None,
         }
+    };
+    #[cfg(feature = "xpath2")]
+    let function_lookup = |namespace: &str, local: &str, args: Vec<Sequence<N>>, depth: usize| {
+        xslt_run::call(env, namespace, local, args, depth)
+    };
+    #[cfg(feature = "xpath2")]
+    let function_context = xpath_eval::FunctionContext {
+        lookup: &function_lookup,
+        depth: function_depth.unwrap_or(0),
+        no_context_item: function_depth.is_some(),
     };
     let mut ctx = EvaluationContext::new(node);
     ctx.namespaces = Some(env.ns_lookup);
@@ -860,7 +941,12 @@ fn with_context<'n, N: Node<'n>, T>(
     #[cfg(feature = "xpath2")]
     {
         ctx.sequence_variables = Some(&sequence_lookup);
+        if env.version == XPathVersion::V2 && !env.functions.is_empty() {
+            ctx.functions = Some(&function_context);
+        }
     }
+    #[cfg(not(feature = "xpath2"))]
+    let _ = function_depth;
     ctx.cache = Some(env.cache);
     f(&ctx)
 }

@@ -890,9 +890,9 @@ impl<'a> Parser<'a> {
             })?;
             return Ok(Expr::Literal(Atomic::Decimal(value)));
         }
-        let value: i64 = text
-            .parse()
-            .map_err(|_| VersionedError::Unsupported("an integer literal beyond 64 bits".into()))?;
+        let value: i128 = text.parse().map_err(|_| {
+            VersionedError::Unsupported("an integer literal beyond 128 bits (39 digits)".into())
+        })?;
         Ok(Expr::Literal(Atomic::Integer(value)))
     }
 }

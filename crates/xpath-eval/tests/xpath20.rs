@@ -398,7 +398,8 @@ fn constructors_and_casts() {
     assert_eq!(code(&err("xs:decimal((1, 2))")), "XPTY0004");
     assert_eq!(code(&err("xs:date(bad)")), "FORG0001");
     assert_eq!(code(&err("xs:integer(xs:double('NaN'))")), "FOCA0002");
-    assert_eq!(code(&err("xs:integer('9223372036854775808')")), "FOAR0002");
+    // 2^127: beyond the 128 bits xs:integer holds here, so not a wrong answer but unsupported.
+    assert!(err("xs:integer('170141183460469231731687303715884105728')").is_unsupported());
 }
 
 #[test]
@@ -619,7 +620,7 @@ fn unsupported_features_are_reported_as_such() {
         "/inv/element(c:line)",
         "//*:line",
         "c:line/namespace::*",
-        "99999999999999999999",
+        "170141183460469231731687303715884105728",
     ] {
         let e = match run_in(XPathVersion::V2, DOC, expr) {
             Err(e) => e,
@@ -697,8 +698,17 @@ fn integer_range_edges() {
         typed("xs:integer(-9223372036854775808e0)"),
         ["xs:integer:-9223372036854775808"]
     );
-    assert_eq!(code(&err("xs:integer(9223372036854775808e0)")), "FOAR0002");
-    assert_eq!(code(&err("xs:integer(-9223372036854777856e0)")), "FOAR0002");
+    assert_eq!(
+        typed("xs:integer(9223372036854775808e0)"),
+        ["xs:integer:9223372036854775808"]
+    );
+    assert_eq!(code(&err("xs:integer(1e39)")), "FOAR0002");
+    assert_eq!(code(&err("xs:integer(-1e39)")), "FOAR0002");
+    // The IBAN check of XRechnung reads a 24-digit number (beyond 64 bits) as xs:integer.
+    assert_eq!(
+        typed("xs:integer('370400440532013000131489') mod 97"),
+        ["xs:integer:1"]
+    );
 }
 
 // Beyond 38 places is the limit of this implementation: never FORG0001 or FOAR0002.

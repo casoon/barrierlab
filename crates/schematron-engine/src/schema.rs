@@ -28,10 +28,16 @@ pub struct Schema {
     pub query_binding: Option<String>,
     /// The `name` of every `xsl:function` declared as a child of `schema`
     /// (`http://www.w3.org/1999/XSL/Transform`), as written (`u:mod11`).
-    /// Informational: this crate does not run XSLT, so a test that calls one of them
-    /// ends the evaluation with an error that says so (see
-    /// [`crate::SchematronEvalError::is_unsupported`]) instead of being skipped.
+    /// With the Cargo feature `xpath2` the declarations are run, see
+    /// [`Schema::functions`]; without it this list is informational.
     pub xslt_functions: Vec<String>,
+    /// The `xsl:function` declarations as a model that XPath 2.0 expressions can call (Cargo
+    /// feature `xpath2`): a small subset of XSLT, see [`crate::XsltFunction`]. A function whose
+    /// body uses anything else is listed with the reason in `unsupported`; calling it ends the
+    /// evaluation with an error that says so
+    /// ([`crate::SchematronEvalError::is_unsupported`]).
+    #[cfg(feature = "xpath2")]
+    pub functions: Vec<crate::xslt::XsltFunction>,
 }
 
 /// A `<diagnostic id="..." role="...">` — referenced by a [`Check`]'s

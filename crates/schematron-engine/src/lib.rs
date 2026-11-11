@@ -6,6 +6,8 @@ mod parser;
 mod resolver;
 mod schema;
 mod svrl;
+#[cfg(feature = "xpath2")]
+mod xslt;
 
 pub use engine::{
     Report, SchematronEvalError, evaluate, evaluate_trace, evaluate_trace_with_phase,
@@ -18,3 +20,5 @@ pub use schema::{
     Phase, Property, Rule, Schema,
 };
 pub use svrl::{Event, location_path, to_svrl, to_svrl_with};
+#[cfg(feature = "xpath2")]
+pub use xslt::XsltFunction;
