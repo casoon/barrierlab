@@ -25,4 +25,7 @@ relax-ng = { workspace = true, optional = true }
 xpath-eval = { workspace = true, optional = true }
 
 [dev-dependencies]
-schematron-engine = { workspace = true }
+# Path only, without `version`: cargo drops it when packaging, so the publish order does
+# not need schematron-engine before xml-adapters (same as xpath-eval's dev-dependency on
+# xml-adapters).
+schematron-engine = { path = "../schematron-engine", default-features = false }
