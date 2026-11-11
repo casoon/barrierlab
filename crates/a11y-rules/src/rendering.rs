@@ -95,6 +95,28 @@ fn carries_text<'a, N: Node<'a>>(n: N) -> bool {
         .any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty())
 }
 
+/// Reine Dekoration im Sinne von WCAG 1.4.3 und 1.4.6 („pure decoration"):
+/// Der Autor hat den Teilbaum mit `aria-hidden="true"` aus dem
+/// Accessibility-Tree genommen, und der eigene Text besteht nur aus
+/// Satzzeichen und Symbolen, etwa `·`, `|`, `→`, `•`, `›` (casoon/barrierlab#221).
+/// Ein Buchstabe oder eine Ziffer macht daraus Inhalt, der gemessen wird.
+/// Ohne `aria-hidden` bleibt das Zeichen gemessen: Dort hat der Autor es nicht als
+/// Dekoration ausgewiesen. Nähe der Prüfung: kein Buchstabe, keine Ziffer; die
+/// Unicode-Kategorien P* und S* selbst kennt die Standardbibliothek nicht.
+fn pure_decoration<'a, N: Node<'a>>(n: N) -> bool {
+    let hidden = std::iter::once(n)
+        .chain(ancestors(n))
+        .any(|a| a.attr("aria-hidden").is_some_and(|v| v.trim() == "true"));
+    hidden
+        && n.children()
+            .filter(|k| k.kind() == NodeKind::Text)
+            .all(|k| {
+                k.text()
+                    .chars()
+                    .all(|c| c.is_whitespace() || !c.is_alphanumeric())
+            })
+}
+
 /// Ob das Element überhaupt dargestellt wird. `display: none` und
 /// `visibility: hidden` sind kein Kontrastproblem.
 fn is_rendered(style: &ComputedStyle) -> bool {
@@ -174,8 +196,9 @@ fn span(front: Color, sample: &[f64]) -> Option<(f64, f64)> {
 ///
 /// Text unter `aria-hidden` wird gemessen: WCAG 1.4.3 gilt für sichtbaren
 /// Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn aus (#395).
+/// Ausgenommen ist reine Dekoration (siehe [`pure_decoration`]).
 fn measure<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Measurement> {
-    if !carries_text(n) || inactive(n) {
+    if !carries_text(n) || inactive(n) || pure_decoration(n) {
         return None;
     }
     let style = doc.computed_style(n)?;

@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-11-11
+
+### Fixed
+
+- **Kontrast:** `contrast/text-insufficient` (und die AAA-Prüfung) melden reine Dekoration nicht mehr: Text unter `aria-hidden="true"`, der nur aus Satzzeichen und Symbolen besteht (`·`, `|`, `→`), ist nach WCAG 1.4.3 und 1.4.6 ausgenommen. Buchstaben und Ziffern unter `aria-hidden` und Zeichen ohne `aria-hidden` bleiben gemessen; casoon/barrierlab#221.
+
 ## [0.30.0] - 2026-11-11
 
 ### Changed

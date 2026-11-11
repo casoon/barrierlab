@@ -68,6 +68,15 @@ fn contrast() -> Vec<Fall> {
         fail(ti, r#"<p aria-hidden="true" style="color:#777777;background-color:#888888">Decorative caption</p>"#,
             "WCAG 2.2 1.4.3 applies to the visual presentation of text; aria-hidden does not remove it from view")
             .variant("aria-hidden, aber sichtbar"),
+        negative(ti, r#"<a href="/a" style="color:#000000;background-color:#ffffff">Accessibility</a><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">·</span><a href="/b" style="color:#000000;background-color:#ffffff">GitHub</a><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">|</span><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">→</span>"#,
+            "WCAG 2.2 1.4.3 exception: text that is pure decoration; an aria-hidden separator glyph (·, |, →) with no letter or digit carries nothing (casoon/barrierlab#221, www.casoon.de footer)")
+            .variant("reine Dekoration: aria-hidden Trennzeichen"),
+        fail(ti, r#"<a href="/a" style="color:#000000;background-color:#ffffff">Accessibility</a><span style="color:#eeeeee;background-color:#ffffff">·</span><a href="/b" style="color:#000000;background-color:#ffffff">GitHub</a>"#,
+            "WCAG 2.2 1.4.3: without aria-hidden the author did not mark the glyph as decoration, so it is measured")
+            .variant("Trennzeichen ohne aria-hidden bleibt gemessen"),
+        fail(ti, r#"<span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">Weiter</span>"#,
+            "WCAG 2.2 1.4.3: letters under aria-hidden are content that is merely hidden from assistive technology, not pure decoration (auditmysite#47)")
+            .variant("aria-hidden mit Buchstaben bleibt gemessen"),
         negative(ti, r#"<p style="display:none;color:#777777;background-color:#888888">Hidden note</p><p hidden style="color:#777777;background-color:#888888">Hidden note</p><p style="visibility:hidden;color:#777777;background-color:#888888">Hidden note</p>"#,
             "ACT afw4f7: applies only to visible text; display:none / hidden / visibility:hidden text is not presented")
             .variant("versteckt per CSS und hidden-Attribut"),
