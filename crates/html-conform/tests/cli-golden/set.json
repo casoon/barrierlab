@@ -8,6 +8,7 @@
       "message": "Consider adding a \"lang\" attribute to the \"html\" start tag to declare the language of this document.",
       "location": {
         "file": "invalid.html",
+        "selector": "html",
         "source_hint": "2:1",
         "position": {
           "line": 2,
@@ -77,6 +78,7 @@
       "message": "An \"img\" element must have an \"alt\" attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.",
       "location": {
         "file": "invalid.html",
+        "selector": "html > body > img:nth-child(2)",
         "source_hint": "9:1",
         "position": {
           "line": 9,

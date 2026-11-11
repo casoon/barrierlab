@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
 
@@ -55,6 +56,20 @@ pub struct RangedReport {
     report: CheckReport,
     /// Always as long as `report.findings`; both are private so it stays so.
     ranges: Vec<Option<SourceRange>>,
+}
+
+impl CheckReport {
+    pub(crate) fn new(
+        findings: Vec<Finding>,
+        skipped: Vec<Skipped>,
+        paths: BTreeMap<usize, String>,
+    ) -> Self {
+        Self {
+            findings,
+            skipped,
+            paths,
+        }
+    }
 }
 
 impl RangedReport {
@@ -206,6 +221,13 @@ pub struct CheckReport {
     /// validate. An empty list means the document contains none of the
     /// known unchecked constructs, not that it is fully covered.
     pub skipped: Vec<Skipped>,
+    /// Structural path of the element each element-anchored finding hangs
+    /// on, by the finding's `location.byte_offset` (see
+    /// `parse::element_paths`). Kept by offset, not parallel to `findings`,
+    /// so a host that filters `findings` cannot misalign it. Not part of
+    /// the serialized form.
+    #[serde(skip)]
+    paths: BTreeMap<usize, String>,
 }
 
 /// A class of content the checker does not validate.
@@ -297,6 +319,14 @@ impl CheckReport {
                 mapped = mapped.with_extra(detail.clone());
             }
             if let Some(location) = finding.location {
+                // The anchor of every layer but the parser is an element's
+                // start; its structural path survives edits above it, which
+                // a line/column does not (`Finding::id` prefers a selector).
+                if finding.rule_id != crate::parse::RULE_ID
+                    && let Some(path) = self.paths.get(&location.byte_offset)
+                {
+                    mapped.location.selector = Some(path.clone());
+                }
                 mapped.location.source_hint = Some(location.to_string());
                 mapped.location.position = Some(a11y_report::SourcePosition::new(
                     location.line,
@@ -376,7 +406,7 @@ mod tests {
                 finding(Severity::Warning, None),
                 finding(Severity::Info, None),
             ],
-            skipped: Vec::new(),
+            ..CheckReport::default()
         }
         .to_report();
         let pairs: Vec<_> = report
@@ -405,7 +435,7 @@ mod tests {
         };
         let report = CheckReport {
             findings: vec![finding(Severity::Error, Some(location))],
-            skipped: Vec::new(),
+            ..CheckReport::default()
         }
         .to_report();
         assert_eq!(
@@ -477,6 +507,7 @@ mod tests {
                 class: SkippedClass::StyleElementCss,
                 detail: "d".to_owned(),
             }],
+            ..CheckReport::default()
         }
         .to_report();
         let json = serde_json::to_value(&report).expect("serializes");
