@@ -14,7 +14,7 @@ or in `Cargo.toml`:
 
 ```toml
 [dependencies]
-html-conform = "0.6"
+html-conform = "0.7"
 ```
 
 ## Requirements

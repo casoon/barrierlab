@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-11
+
 ### Added
 
 - **Assertion rules:** `assertion.elements.svg-a-in-svg-a` reports an SVG `a` inside another SVG

@@ -120,8 +120,8 @@ the test-only fixture adapter doesn't model.
 
 ```toml
 [dependencies]
-schematron-engine = "0.2"
-xpath-eval = "0.2" # implement Document/Node over your own document tree
+schematron-engine = "0.4"
+xpath-eval = "0.3" # implement Document/Node over your own document tree
 ```
 
 ## License

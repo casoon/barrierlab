@@ -81,7 +81,7 @@ for the supported constructs and the planned slices.
 
 ```toml
 [dependencies]
-xpath-eval = "0.2"
+xpath-eval = "0.3"
 ```
 
 ## License

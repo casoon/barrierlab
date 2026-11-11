@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
 ### Added
 
 - **Quellposition:** `Page::audit` setzt zusätzlich `Location::end`: das Ende des Start-Tags (exklusiv), nicht des ganzen Elements. Bei Textknoten bleibt es leer (casoon/barrierlab#194).
