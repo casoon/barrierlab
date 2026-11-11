@@ -290,6 +290,9 @@ impl CheckReport {
                 ),
             };
             mapped = mapped.with_severity(severity);
+            if let Some(url) = crate::rules::help_url(&finding.rule_id) {
+                mapped = mapped.with_help_url(url);
+            }
             if let Some(detail) = &finding.detail {
                 mapped = mapped.with_extra(detail.clone());
             }
