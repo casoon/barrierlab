@@ -29,17 +29,16 @@ agreement:
 
 | Result | `html` + `html-aria` | `html-math` | `html-rdfa` | `html-rdfalite` | `html-svg` | All |
 | --- | --- | --- | --- | --- | --- | --- |
-| true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 28 | 2 | 0 | 3,793 |
+| true positives (vnu expects findings, html-conform reports some) | 3,745 | 18 | 28 | 2 | 1 | 3,794 |
 | true negatives (both clean) | 909 | 30 | 184 | 54 | 5 | 1,182 |
 | false positives (vnu clean, html-conform reports something) | 0 | 0 | 0 | 0 | 0 | 0 |
-| false negatives (vnu expects findings, html-conform reports none) | 1 | 0 | 0 | 0 | 1 | 2 |
+| false negatives (vnu expects findings, html-conform reports none) | 1 | 0 | 0 | 0 | 0 | 1 |
 | not comparable (`check()` returned an error) | 0 | 0 | 0 | 0 | 0 | 0 |
 
 CI runs this test on every push (`cargo test --release --test differential -- --ignored`) and
 fails if false positives or false negatives of a tree rise above its committed baseline. `html`
-and `html-aria` stay at 0 false positives, and so does every other tree. The two false negatives
-are pinned by name in the test (CSS below and the nested SVG `<a>` of `html-svg`), so another
-missed fixture cannot hide behind them.
+and `html-aria` stay at 0 false positives, and so does every other tree. The one false negative
+is pinned by name in the test (CSS below), so another missed fixture cannot hide behind it.
 
 ### Finding classes
 
@@ -58,9 +57,9 @@ the test and counted as **unmapped**; there are none at present.
 | `tests/html-math` | 18 | 0 | 0 | 0 |
 | `tests/html-rdfa` | 28 | 0 | 0 | 0 |
 | `tests/html-rdfalite` | 2 | 0 | 0 | 0 |
-| `tests/html-svg` | 0 | 0 | 1 | 0 |
+| `tests/html-svg` | 1 | 0 | 0 | 0 |
 
-(Matched plus incidental equals the 3,793 true positives.) The baseline is committed in
+(Matched plus incidental equals the 3,794 true positives.) The baseline is committed in
 `tests/vnu-class-baseline.json`; CI fails if *incidental* rises, *matched* falls, or the
 number of unmapped messages changes.
 
@@ -195,21 +194,18 @@ vendored ones included), not gated and not part of CI:
 
 | Result | `html-svg`, 522 files |
 | --- | --- |
-| true positives | 34 |
+| true positives | 37 |
 | true negatives | 484 |
 | false positives | 0 |
-| false negatives | 4 |
+| false negatives | 1 |
 | not comparable | 0 |
 
-The 4 false negatives, by class:
-
-- **Undeclared `xmlns:*` prefix attributes on an SVG element** (2): `conform-viewers-03-f-novalid`
-  (`xmlns:link` with a value other than the XLink namespace) and `fonts-overview-201-t-novalid`
-  (`xmlns:xe` not allowed).
-- **Unicode Normalization Form C** (1): `struct-cond-02-t-haswarn`; html-conform has no such
-  check (see `normalization` above).
-- **Nested SVG `<a>`** (1): `svg-a-nested-in-svg-a-novalid`, the one already pinned in the
-  differential test.
+The one false negative is **Unicode Normalization Form C**: `struct-cond-02-t-haswarn`;
+html-conform has no such check (see `normalization` above). The other two classes the first
+measurement found (disallowed `xmlns:*` attributes on SVG elements, nested SVG `<a>`) are
+reported now: on a foreign element only `xmlns:xlink` bound to the XLink namespace is allowed
+(HTML, "Attributes", XML-compatible attribute names), and an SVG `a` must not have an `a`
+descendant.
 
 ### RDFa
 

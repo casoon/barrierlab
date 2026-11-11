@@ -19,7 +19,8 @@
           "column": 7,
           "byte_offset": 22
         }
-      }
+      },
+      "help_url": "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/#assertionid"
     },
     {
       "rule_id": "parser.html5",
@@ -34,7 +35,8 @@
           "column": 15,
           "byte_offset": 101
         }
-      }
+      },
+      "help_url": "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/#parserhtml5"
     },
     {
       "rule_id": "parser.html5",
@@ -49,7 +51,8 @@
           "column": 21,
           "byte_offset": 107
         }
-      }
+      },
+      "help_url": "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/#parserhtml5"
     },
     {
       "rule_id": "parser.html5",
@@ -64,7 +67,8 @@
           "column": 25,
           "byte_offset": 111
         }
-      }
+      },
+      "help_url": "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/#parserhtml5"
     },
     {
       "rule_id": "assertion.elements.img-missing-alt",
@@ -84,7 +88,8 @@
           "column": 18,
           "byte_offset": 133
         }
-      }
+      },
+      "help_url": "https://casoon.github.io/barrierlab/docs/html-conform/guides/rule-ids/#assertionid"
     }
   ],
   "inputs": [

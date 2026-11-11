@@ -6,7 +6,19 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Added
+
+- **Assertion rules:** `assertion.elements.svg-a-in-svg-a` reports an SVG `a` inside another SVG
+  `a` (barrierlab#198).
+- **API:** `RuleInfo::help_url` links each rule to its layer's section of the "Findings and rule
+  IDs" guide (barrierlab#194).
+
 ### Changed
+
+- **API:** `CheckReport::to_report` and `RangedReport::to_report` fill `help_url` of each
+  finding with that link, so the CLI's JSON output now carries `help_url` (barrierlab#194).
+- **Schema check:** `xmlns:*` attributes on SVG and MathML elements are reported unless they are
+  `xmlns:xlink` bound to the XLink namespace, as vnu does (HTML, "Attributes"; barrierlab#198).
 
 - **API:** `RangedReport::to_report` now fills `location.end` of the shared model for every
   finding that has a range, and the CLI's JSON output takes it from there instead of patching it

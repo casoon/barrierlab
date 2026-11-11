@@ -58,8 +58,8 @@ Like `check_with_options`, plus the source range of each finding where its layer
 `into_report()`, `ranges() -> &[Option<SourceRange>]` (parallel to the findings),
 `findings()` (an iterator of `(&Finding, Option<SourceRange>)`) and `to_report()`. `SourceRange` is
 `#[non_exhaustive]`. A `SchemaPreset` cannot be combined with ranges yet. `SourceRange { start, end }` holds two
-`SourceLocation`s; `end` is exclusive. The shared `a11y_report` model has no end position, so
-`to_report()` does not carry it.
+`SourceLocation`s; `end` is exclusive. `RangedReport::to_report()` carries it as `location.end` of the shared
+`a11y_report` model.
 
 ### Rule catalogue
 
@@ -68,7 +68,7 @@ pub fn rules() -> Result<Vec<RuleInfo>, CheckError>
 ```
 
 Every rule id the checker can report, with `layer` (`RuleLayer`), `outcome`, a one-line
-`description` and `normative_source`. The assertion rules are read from the parsed
+`description`, `normative_source` and `help_url` (the rule layer's section of the rule ID guide). The assertion rules are read from the parsed
 `rules/*.sch` files the checker runs, the other ids from the constants their findings use, so
 the list cannot drift. `parser.html5` and `schema.html5` are one id each for many conditions.
 Assertion rules have no `normative_source`: the rule files carry none. `html-conform --list-rules`
