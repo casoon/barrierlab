@@ -5,6 +5,7 @@ use a11y_report::{InputKind, InputNote, Report, SourcePosition};
 use a11y_rules::Locale;
 use style_cascade::{Environment, ExpandedImports, Resolution, expand_imports, wrap_media};
 
+use crate::help::rule_help_url;
 use crate::host::Host;
 
 /// A parsed HTML document.
@@ -257,6 +258,11 @@ impl Page {
             );
         }
         self.fill_positions(&mut report);
+        for f in &mut report.findings {
+            if f.help_url.is_none() {
+                f.help_url = rule_help_url(&f.rule_id);
+            }
+        }
         report
     }
 

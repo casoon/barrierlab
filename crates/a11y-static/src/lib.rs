@@ -25,9 +25,11 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod help;
 mod host;
 mod page;
 
 pub use a11y_rules::Locale;
+pub use help::{rule_anchor, rule_help_url};
 pub use page::{Page, Sheet, StylesheetRef, audit};
 pub use style_cascade::Environment;
