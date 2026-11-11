@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "html5-parser",
 ]
@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-static"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -66,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",
@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "a11y-report",
  "criterion",
@@ -361,7 +361,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform-wasm"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "a11y-report",
  "html-conform",
@@ -676,7 +676,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "relax-ng"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "regex",
  "roxmltree",
@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "schematron-engine"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "roxmltree",
  "xpath-eval",
@@ -1024,7 +1024,7 @@ dependencies = [
 
 [[package]]
 name = "xpath-eval"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "roxmltree",
  "xml-adapters",

@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-11
+
 ### Added
 
 - **API:** Opt-in XPath 2.0 mode next to the unchanged 1.0 default (`XPathVersion`,

@@ -7,6 +7,8 @@ in the git history only.
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-11-11
+
 ### Changed
 
 - **Internals:** the tree path (`validate`, `validate_with_options`, `Schema::validate`) now runs

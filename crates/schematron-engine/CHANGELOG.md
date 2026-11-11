@@ -7,6 +7,8 @@ version bump.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-11
+
 ### Added
 
 - **Query binding:** `queryBinding="xslt2"` and `"xpath2"` run the schema in the XPath 2.0 mode of

@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-11
+
 ### Added
 
 - **API:** `Location::end` (mit `Location::with_end`): Ende der Quelltextstelle, exklusiv und in
