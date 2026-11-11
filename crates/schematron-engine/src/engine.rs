@@ -112,6 +112,7 @@ impl SchematronEvalError {
 
 /// Maps an XPath error to this crate's error: the 1.0 errors keep their
 /// variants, everything specific to XPath 2.0 becomes [`SchematronEvalError::Query`].
+#[cfg(feature = "xpath2")]
 fn from_versioned(error: VersionedError) -> SchematronEvalError {
     match error {
         VersionedError::Parse(error) => SchematronEvalError::Parse(error),
@@ -269,6 +270,13 @@ fn evaluate_schema<'a, D: Document>(
                 schema.query_binding.as_deref().unwrap_or_default()
             )))
         })?;
+    #[cfg(not(feature = "xpath2"))]
+    if version == XPathVersion::V2 {
+        return Err(SchematronEvalError::Query(VersionedError::Unsupported(
+            "queryBinding `xslt2`/`xpath2` (the feature `xpath2` of schematron-engine is off)"
+                .to_owned(),
+        )));
+    }
     let exprs = ExprCache::default();
     let exprs2 = ExprCache2::default();
     let env = Env {
@@ -476,6 +484,7 @@ fn match_pattern<'a, D: Document>(
     ctx.namespaces = Some(env.ns_lookup);
     ctx.cache = Some(env.cache);
 
+    #[cfg(feature = "xpath2")]
     if env.version == XPathVersion::V2 {
         return match_pattern_v2(pattern, &ctx);
     }
@@ -551,6 +560,7 @@ fn match_pattern<'a, D: Document>(
 /// `descendant-or-self::node()/(context)` selects (a context starting with `/` and without a
 /// union is evaluated from the root alone, which selects the same nodes without walking every
 /// node). Rule contexts are not rewritten into per-node tests as in 1.0; each is evaluated.
+#[cfg(feature = "xpath2")]
 fn match_pattern_v2<'a, N: Node<'a>>(
     pattern: &Pattern,
     ctx: &EvaluationContext<'a, '_, N>,
@@ -616,6 +626,7 @@ fn merge_in_document_order<'n, N: Node<'n>>(a: Vec<N>, b: Vec<N>) -> Vec<N> {
 struct Env<'e, N> {
     ns_lookup: &'e dyn Fn(&str) -> Option<String>,
     exprs: &'e ExprCache,
+    #[cfg_attr(not(feature = "xpath2"), allow(dead_code))]
     exprs2: &'e ExprCache2,
     /// The language every expression of this schema is parsed and evaluated in.
     version: XPathVersion,
@@ -646,10 +657,12 @@ impl ExprCache {
 
 /// [`ExprCache`] for XPath 2.0 mode.
 #[derive(Default)]
+#[cfg_attr(not(feature = "xpath2"), allow(dead_code))]
 struct ExprCache2 {
     parsed: RefCell<HashMap<(*const u8, usize), Rc<Expression>>>,
 }
 
+#[cfg(feature = "xpath2")]
 impl ExprCache2 {
     fn get(&self, raw: &str) -> Result<Rc<Expression>, SchematronEvalError> {
         let key = (raw.as_ptr(), raw.len());
@@ -675,7 +688,10 @@ impl<'n, N: Node<'n>> Bound<N> {
     fn to_text(&self) -> String {
         match self {
             Bound::V1(value) => value.to_xpath_string(),
+            #[cfg(feature = "xpath2")]
             Bound::V2(sequence) => xpath_eval::sequence_to_string(sequence),
+            #[cfg(not(feature = "xpath2"))]
+            Bound::V2(_) => unreachable!("XPath 2.0 mode is off"),
         }
     }
 }
@@ -724,6 +740,7 @@ fn evaluate_xpath<'n, N: Node<'n>>(
             let expr = env.exprs.get(raw)?;
             evaluate_parsed(&expr, node, vars, env).map(Bound::V1)
         }
+        #[cfg(feature = "xpath2")]
         XPathVersion::V2 => {
             let expr = env.exprs2.get(raw)?;
             with_context(node, vars, env, |ctx| {
@@ -731,6 +748,10 @@ fn evaluate_xpath<'n, N: Node<'n>>(
             })
             .map_err(from_versioned)
             .map(Bound::V2)
+        }
+        #[cfg(not(feature = "xpath2"))]
+        XPathVersion::V2 => {
+            unreachable!("queryBinding xslt2 is rejected without the feature xpath2")
         }
     }
 }
@@ -751,12 +772,17 @@ fn evaluate_test<'n, N: Node<'n>>(
             })
             .map_err(SchematronEvalError::Eval)
         }
+        #[cfg(feature = "xpath2")]
         XPathVersion::V2 => {
             let expr = env.exprs2.get(raw)?;
             with_context(node, vars, env, |ctx| {
                 xpath_eval::evaluate_boolean_versioned(&expr, ctx)
             })
             .map_err(from_versioned)
+        }
+        #[cfg(not(feature = "xpath2"))]
+        XPathVersion::V2 => {
+            unreachable!("queryBinding xslt2 is rejected without the feature xpath2")
         }
     }
 }
@@ -913,6 +939,7 @@ fn render_message<'n, N: Node<'n>>(
                             xpath_eval::parse(&select).map_err(SchematronEvalError::Parse)?;
                         Bound::V1(evaluate_parsed(&expr, node, vars, env)?)
                     }
+                    #[cfg(feature = "xpath2")]
                     XPathVersion::V2 => {
                         let expr = xpath_eval::parse_versioned(&select, XPathVersion::V2)
                             .map_err(from_versioned)?;
@@ -922,6 +949,10 @@ fn render_message<'n, N: Node<'n>>(
                             })
                             .map_err(from_versioned)?,
                         )
+                    }
+                    #[cfg(not(feature = "xpath2"))]
+                    XPathVersion::V2 => {
+                        unreachable!("queryBinding xslt2 is rejected without the feature xpath2")
                     }
                 };
                 message.push_str(&value.to_text());

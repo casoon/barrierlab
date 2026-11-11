@@ -28,6 +28,9 @@ binding) selects the XPath 2.0 mode of `xpath-eval` for every `test`, `let`,
 `value-of` and `name` expression of the schema; `xslt`, `xpath` and an absent
 binding stay XPath 1.0 and behave as before. Any other binding is a parse error.
 
+- The mode is the Cargo feature `xpath2`, on by default. Without it (the workspace crates
+  depend on `schematron-engine` with `default-features = false`, to keep the
+  `html-conform-wasm` size budget) `xslt2`/`xpath2` are rejected as before.
 - A `<let>` is bound to a sequence with its atomic types, through the
   sequence-valued variable hook of `EvaluationContext`. `value-of` writes the
   atomized items of its sequence joined by one space (XSLT 2.0, 11.4.1).

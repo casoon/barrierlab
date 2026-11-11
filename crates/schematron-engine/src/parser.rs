@@ -325,7 +325,11 @@ pub fn parse(xml: &str) -> Result<Schema, ParseError> {
 
     let query_binding = root.attribute("queryBinding").map(str::to_owned);
     if let Some(binding) = &query_binding
-        && XPathVersion::from_query_binding(Some(binding)).is_none()
+        && !match XPathVersion::from_query_binding(Some(binding)) {
+            Some(XPathVersion::V1) => true,
+            Some(XPathVersion::V2) => cfg!(feature = "xpath2"),
+            None => false,
+        }
     {
         return Err(ParseError::UnsupportedQueryBinding {
             binding: binding.clone(),
@@ -1640,7 +1644,7 @@ mod tests {
     /// case-insensitively when it names an XPath-1.0-equivalent binding.
     #[test]
     fn query_binding_xslt_and_xpath_are_accepted_case_insensitively() {
-        for binding in ["xslt", "XSLT", "xpath", "XPath", "xslt2", "XPath2"] {
+        for binding in ["xslt", "XSLT", "xpath", "XPath"] {
             let schema = parse(&format!(
                 r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="{binding}">
                     <pattern>
@@ -1652,6 +1656,20 @@ mod tests {
             ))
             .unwrap();
 
+            assert_eq!(schema.query_binding.as_deref(), Some(binding));
+        }
+    }
+
+    #[cfg(feature = "xpath2")]
+    #[test]
+    fn query_binding_xslt2_and_xpath2_are_accepted_with_the_feature() {
+        for binding in ["xslt2", "XPath2"] {
+            let schema = parse(&format!(
+                r#"<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="{binding}">
+                    <pattern><rule context="/root"><assert test="foo">m</assert></rule></pattern>
+                </schema>"#,
+            ))
+            .unwrap();
             assert_eq!(schema.query_binding.as_deref(), Some(binding));
         }
     }

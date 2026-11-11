@@ -53,7 +53,9 @@ csp-parse = { version = "0.1.1", path = "crates/csp-parse" }
 media-query-parse = { version = "0.2.0", path = "crates/media-query-parse" }
 xpath-eval = { version = "0.2.3", path = "crates/xpath-eval" }
 relax-ng = { version = "0.2.5", path = "crates/relax-ng" }
-schematron-engine = { version = "0.3.1", path = "crates/schematron-engine" }
+# Without default features: the workspace crates (html-conform, down to the wasm budget) do not
+# take the XPath 2.0 mode; hosts on crates.io get it by default.
+schematron-engine = { version = "0.3.1", path = "crates/schematron-engine", default-features = false }
 html-conform = { version = "0.6.0", path = "crates/html-conform" }
 stylesheet-parse = { version = "0.1.1", path = "crates/stylesheet-parse" }
 style-cascade = { version = "0.2.0", path = "crates/style-cascade" }

@@ -3,6 +3,8 @@
 //! constructs are the ones the EN 16931 validation Schematron uses (`xpath-eval`'s
 //! `CONFORMANCE.md`).
 
+#![cfg(feature = "xpath2")]
+
 mod support;
 
 use schematron_engine::{SchematronEvalError, evaluate, parse};

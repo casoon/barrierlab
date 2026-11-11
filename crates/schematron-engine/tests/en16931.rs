@@ -6,6 +6,8 @@
 //! The examples (`ubl-tc434-example1`, `-example2`) are valid invoices, so no `fatal` rule may
 //! fire; whatever fires is printed.
 
+#![cfg(feature = "xpath2")]
+
 mod support;
 
 use std::fs;
