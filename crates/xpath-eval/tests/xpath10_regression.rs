@@ -1222,3 +1222,60 @@ fn parsed_expression_reuse_is_stateless() {
     assert_eq!(b.to_number(), 0.0);
     assert_eq!(a2.to_number(), 10.0);
 }
+
+// ---------------------------------------------------------------------------
+// nesting and chain limit (casoon/barrierlab#192): a parse error, never a stack overflow
+
+#[test]
+fn deep_expressions_are_rejected_not_fatal() {
+    for expr in [
+        format!("{}1{}", "(".repeat(600), ")".repeat(600)),
+        format!("{}true(){}", "not(".repeat(600), ")".repeat(600)),
+        format!("1{}", "+1".repeat(2000)),
+        format!("1{}", " * 1".repeat(2000)),
+        format!("a{}", " | a".repeat(2000)),
+        format!("true(){}", " or true()".repeat(2000)),
+        format!("true(){}", " and true()".repeat(2000)),
+        format!("1{}", " = 1".repeat(2000)),
+        format!("1{}", " < 1".repeat(2000)),
+        format!("{}1", "-".repeat(2000)),
+        format!("a{}{}", "[a".repeat(600), "]".repeat(600)),
+    ] {
+        let err = parse(&expr).expect_err(&expr[..expr.len().min(40)]);
+        assert!(err.message.contains("too deeply"), "{err}");
+    }
+}
+
+#[test]
+fn nesting_limit_boundary() {
+    // Each parenthesis level costs 8 of 256, the outermost expression 8: 31 levels fit, 32 do not.
+    let nested = |n: usize| format!("{}1{}", "(".repeat(n), ")".repeat(n));
+    assert!(parse(&nested(31)).is_ok());
+    assert!(parse(&nested(32)).is_err());
+    // A chain link costs 1: 248 links next to the outermost expression fit, 249 do not.
+    let chain = |n: usize| format!("1{}", "+1".repeat(n));
+    assert!(parse(&chain(248)).is_ok());
+    assert!(parse(&chain(249)).is_err());
+    // Chains and nesting add up.
+    assert!(parse(&format!("({})", chain(240))).is_ok());
+    assert!(parse(&format!("({})", chain(241))).is_err());
+}
+
+#[test]
+fn expressions_at_the_limit_evaluate_in_the_default_stack() {
+    let d = parse_xml("<a/>");
+    let run = |expr: &str| {
+        evaluate(&parse(expr).unwrap(), &EvaluationContext::new(d.root()))
+            .unwrap()
+            .to_number()
+    };
+    assert_eq!(run(&format!("1{}", "+1".repeat(248))), 249.0);
+    assert_eq!(
+        run(&format!("{}1{}", "number(".repeat(31), ")".repeat(31))),
+        1.0
+    );
+    assert_eq!(run(&format!("{}1", "- ".repeat(247))), -1.0);
+    // A location path is a flat list of steps, not nesting.
+    let long = parse(&format!("count(/a{})", "/..".repeat(5000))).unwrap();
+    evaluate(&long, &EvaluationContext::new(d.root())).unwrap();
+}
