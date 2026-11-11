@@ -34,7 +34,7 @@ flowchart LR
 | `Outcome` | the four states; `NotRun` is one of them, not a special case of "passed" |
 | `Basis` | criterion or recommendation: a best-practice finding (`Finding::best_practice`) is `REVIEW` with `Basis::BestPractice`, never a WCAG failure |
 | `Severity`, `WcagLevel` | classification of a finding |
-| `Finding`, `Evidence`, `Location`, `SourcePosition` | a finding and what it is anchored to |
+| `Finding`, `Evidence`, `Location`, `SourcePosition` | a finding and what it is anchored to; `Location::end` is the exclusive end of a source range, `Finding::id()` the stable id (selector, else file and start position) |
 | `Report`, `RuleRun`, `NotRun`, `Summary` | what a run produced, including the rules that did not run |
 | `InputNote`, `InputKind` | `Report::inputs`: the host notes that an input was incomplete (stylesheet unavailable or unresolved, partial document). Rules do not read these notes; with `stylesheet_unavailable` present, treat the contrast rules as untested |
 | `Extra` | host-specific additional fields, without breaking the contract |

@@ -399,4 +399,32 @@ mod tests {
             Err(StreamError::SecondRoot)
         );
     }
+
+    #[test]
+    fn many_distinct_attribute_values_past_the_memo_cap_still_validate() {
+        // More distinct values than the derivative memo keeps: the findings
+        // for a bad value must be the same whether it was memoised (early)
+        // or not (late).
+        let schema = schema(r#"element list { element item { attribute id { xsd:integer } }* }"#);
+        let registry = DatatypeRegistry::new();
+        let findings_with_bad_value_at = |bad: usize| {
+            let mut v = StreamValidator::<()>::new(&schema, &registry).unwrap();
+            v.start_element(name("list"), [], [], None).unwrap();
+            for i in 0..3000 {
+                let value = if i == bad {
+                    "x".to_owned()
+                } else {
+                    i.to_string()
+                };
+                v.start_element(name("item"), [(name("id"), value)], [], None)
+                    .unwrap();
+                v.end_element().unwrap();
+            }
+            v.end_element().unwrap();
+            v.finish().unwrap().len()
+        };
+        let early = findings_with_bad_value_at(5);
+        assert!(early > 0);
+        assert_eq!(findings_with_bad_value_at(2500), early);
+    }
 }

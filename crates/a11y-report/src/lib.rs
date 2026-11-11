@@ -97,6 +97,48 @@ mod tests {
     use super::*;
 
     #[test]
+    fn end_round_trips_and_is_omitted_when_absent() {
+        let loc = Location::default()
+            .with_position(SourcePosition::new(3, 7, 20))
+            .with_end(SourcePosition::new(3, 12, 25));
+        let json = serde_json::to_value(&loc).unwrap();
+        assert_eq!(
+            json["end"],
+            serde_json::json!({"line": 3, "column": 12, "byte_offset": 25})
+        );
+        assert_eq!(serde_json::from_value::<Location>(json).unwrap(), loc);
+        let plain = serde_json::to_value(Location::file("a.html")).unwrap();
+        assert!(plain.get("end").is_none());
+    }
+
+    #[test]
+    fn finding_id_follows_selector_then_position_then_page() {
+        let at = |line, col| {
+            Finding::fail("r/x", "m")
+                .at(Location::file("a.html").with_position(SourcePosition::new(line, col, 0)))
+        };
+        // Selector wins and is normalised like FindingId::new.
+        let by_selector =
+            Finding::fail("r/x", "m").at(Location::default().with_selector("ul > li:nth-child(3)"));
+        assert_eq!(
+            by_selector.id(),
+            FindingId::new("r/x", ["ul > li:nth-child(9)"])
+        );
+        // Without a selector the start position decides, and it is not normalised.
+        assert_ne!(at(1, 5).id(), at(1, 6).id());
+        assert_eq!(at(2, 4).id(), at(2, 4).id());
+        assert_ne!(
+            at(2, 4).id(),
+            Finding::fail("r/y", "m")
+                .at(Location::file("a.html").with_position(SourcePosition::new(2, 4, 0)))
+                .id()
+        );
+        // Nothing to go on: the whole page.
+        assert_eq!(Finding::fail("r/x", "m").id(), FindingId::new("r/x", []));
+        assert!(at(1, 1).id().as_str().starts_with("F-"));
+    }
+
+    #[test]
     fn source_position_round_trips_and_is_omitted_when_absent() {
         let with = Location::default().with_position(SourcePosition::new(3, 7, 20));
         let json = serde_json::to_value(&with).unwrap();

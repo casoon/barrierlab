@@ -105,6 +105,15 @@ impl FindingId {
         FindingId(format!("F-{}", short_hash(&key)))
     }
 
+    /// Kennung für einen Befund ohne Selektor, der nur eine Stelle im
+    /// Quelltext hat (etwa HTML-Konformanz): Regel, Datei und Startposition.
+    /// Anders als bei Selektoren wird nichts normalisiert — die Position ist
+    /// der Schlüssel, und sie ändert sich mit dem Text.
+    pub fn at(rule_id: &str, file: Option<&str>, line: u32, column: u32) -> Self {
+        let key = format!("{rule_id}\n@{}:{line}:{column}", file.unwrap_or(""));
+        FindingId(format!("F-{}", short_hash(&key)))
+    }
+
     pub fn as_str(&self) -> &str {
         &self.0
     }

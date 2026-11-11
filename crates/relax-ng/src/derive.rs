@@ -158,6 +158,9 @@ impl Hasher for IdHasher {
     }
 }
 
+/// Most distinct attribute values memoised per (pattern, name, bindings).
+const MAX_MEMOISED_VALUES: usize = 1024;
+
 type IdMap<K, V> = HashMap<K, V, BuildHasherDefault<IdHasher>>;
 
 /// A map for keys that come from the document (names, attribute values,
@@ -756,10 +759,18 @@ impl<'s> Interner<'s> {
                 }
                 let result = self.deriv_uncached(id, event);
                 let state = &self.value_state;
-                self.attribute_derivs
+                let values = self
+                    .attribute_derivs
                     .entry(key)
-                    .or_insert_with(|| KeyedMap::with_state(state.clone()))
-                    .insert_hashed(hash, value.into(), result);
+                    .or_insert_with(|| KeyedMap::with_state(state.clone()));
+                // Values that repeat (enumerations, flags) are worth a memo;
+                // values that do not (ids, URLs, timestamps) would grow it by
+                // one entry per attribute for the whole document. The cap
+                // keeps memory independent of document size; the result is
+                // the same either way, a full table only recomputes.
+                if values.len() < MAX_MEMOISED_VALUES {
+                    values.insert_hashed(hash, value.into(), result);
+                }
                 result
             }
             Event::Text { .. } => {
