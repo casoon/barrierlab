@@ -11,12 +11,18 @@
 //! läuft auf Tier 1. Der Rahmenname kann über `aria-labelledby` kommen; dafür
 //! braucht es die Namensberechnung, also Tier 2.
 
-use a11y_dom::{Document, Node, NodeId, NodeKind, Semantics, ancestors, descendants, elements};
+use std::collections::HashMap;
+
+use a11y_dom::{
+    Document, Node, NodeId, NodeKind, ScopedId, Semantics, ancestors, descendants, elements,
+};
 use a11y_report::{Finding, Location, Severity};
 
+use crate::forms::id_index;
+use crate::landmarks::tabindex;
 use crate::locale::{Locale, pick};
 use crate::semantics::named;
-use crate::structure::explicit_role;
+use crate::structure::{Naming, labelledby, presentational};
 
 fn at(id: NodeId) -> Location {
     Location::node(id.to_string())
@@ -30,8 +36,39 @@ fn filled<'a, N: Node<'a>>(n: N, attr: &str) -> bool {
 /// dem `alt` vor. auditmysite zählt nur `aria-label` (und an `<area>` gar
 /// nichts außer `alt`); ein Element, das per `aria-labelledby` benannt ist,
 /// meldet es zu Unrecht.
-fn aria_named<'a, N: Node<'a>>(n: N) -> bool {
-    filled(n, "aria-label") || filled(n, "aria-labelledby")
+///
+/// `aria-labelledby` zählt nur, wenn ein Ziel Text trägt: Ein Verweis auf ein
+/// leeres Element stiftet keinen Namen (accname 1.2, 2B; ACT 8fc3b6). Ein
+/// Ziel, das in der Sicht fehlt, kann versteckt oder nicht vorhanden sein
+/// ([`Naming::Unknown`]).
+fn aria_naming<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Naming {
+    if filled(n, "aria-label") {
+        Naming::Named
+    } else {
+        labelledby(n, ids)
+    }
+}
+
+/// Der Befund zu einem Element ohne eigene Textalternative: `FAIL`, wenn auch
+/// `aria-labelledby` nichts stiftet, `REVIEW`, wenn sein Ziel versteckt sein
+/// könnte.
+fn unnamed(
+    naming: Naming,
+    id: &str,
+    fail: &'static str,
+    unknown: &'static str,
+    at_node: NodeId,
+) -> Option<Finding> {
+    let f = match naming {
+        Naming::Named => return None,
+        Naming::Empty => Finding::fail(id, fail),
+        Naming::Unknown => Finding::review(id, unknown),
+    };
+    Some(
+        f.with_severity(Severity::High)
+            .with_wcag(["1.1.1"])
+            .at(at(at_node)),
+    )
 }
 
 // --- images/area-alt-missing ------------------------------------------------
@@ -41,8 +78,14 @@ fn aria_named<'a, N: Node<'a>>(n: N) -> bool {
 ///
 /// Beleg: auditmysite-Korpus `misc_content_checks`.
 pub(crate) fn area_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let ids = id_index(doc);
     for n in elements(doc) {
-        if n.is_element("area") && n.has_attr("href") && !filled(n, "alt") && !aria_named(n) {
+        // Ein Ziel außerhalb der Sicht zählt hier als Name, wie bisher.
+        if n.is_element("area")
+            && n.has_attr("href")
+            && !filled(n, "alt")
+            && aria_naming(n, &ids) == Naming::Empty
+        {
             out.push(
                 Finding::fail(
                     "images/area-alt-missing",
@@ -69,25 +112,33 @@ pub(crate) fn area_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Findi
 ///
 /// Beleg: auditmysite-Korpus `misc_content_checks`.
 pub(crate) fn input_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let ids = id_index(doc);
     for n in elements(doc) {
         let graphic_button = n.is_element("input")
             && n.attr("type")
                 .is_some_and(|t| t.trim().eq_ignore_ascii_case("image"));
-        if graphic_button && !filled(n, "alt") && !aria_named(n) {
-            out.push(
-                Finding::fail(
-                    "images/input-alt-missing",
-                    pick!(
-                        locale,
-                        "This image button has no alt text describing its action.",
-                        "Der Grafik-Button hat keinen Alt-Text, der seine Aktion beschreibt.",
-                    ),
-                )
-                .with_severity(Severity::High)
-                .with_wcag(["1.1.1"])
-                .at(at(n.id())),
-            );
+        // HTML-AAM (`input type="image"`): Nach `alt` kommt `title`, erst
+        // dann der Ersatztext des Browsers (ACT 59796f).
+        if !graphic_button || filled(n, "alt") || filled(n, "title") {
+            continue;
         }
+        out.extend(unnamed(
+            aria_naming(n, &ids),
+            "images/input-alt-missing",
+            pick!(
+                locale,
+                "This image button has no alt text describing its action.",
+                "Der Grafik-Button hat keinen Alt-Text, der seine Aktion beschreibt.",
+            ),
+            pick!(
+                locale,
+                "This image button has no alt text; its aria-labelledby points to an element \
+                 that is hidden or does not exist.",
+                "Der Grafik-Button hat keinen Alt-Text; sein aria-labelledby zeigt auf ein \
+                 verstecktes oder nicht vorhandenes Element.",
+            ),
+            n.id(),
+        ));
     }
 }
 
@@ -137,29 +188,36 @@ pub(crate) fn server_side_map<D: Document>(doc: &D, locale: Locale, out: &mut Ve
 ///
 /// Beleg: auditmysite-Korpus `object_no_alt` (ein PDF ohne Ersatzinhalt).
 pub(crate) fn object_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let ids = id_index(doc);
     for n in elements(doc) {
-        if !n.is_element("object") {
+        // Ausdrücklich dekorativ mit wirksamer `role="none"`: nicht im
+        // Accessibility-Tree, kein Name nötig (ACT 8fc3b6).
+        if !n.is_element("object") || presentational(n) {
             continue;
         }
         let replacement_text =
             descendants(n).any(|k| k.kind() == NodeKind::Text && !k.text().trim().is_empty());
-        if !replacement_text && !aria_named(n) && !filled(n, "title") {
-            out.push(
-                Finding::fail(
-                    "objects/alt-missing",
-                    pick!(
-                        locale,
-                        "This <object> has no text alternative: no fallback content, \
-                         aria-label or title.",
-                        "Das <object> hat keine Textalternative: keinen Ersatzinhalt, kein \
-                         aria-label und keinen title.",
-                    ),
-                )
-                .with_severity(Severity::High)
-                .with_wcag(["1.1.1"])
-                .at(at(n.id())),
-            );
+        if replacement_text || filled(n, "title") {
+            continue;
         }
+        out.extend(unnamed(
+            aria_naming(n, &ids),
+            "objects/alt-missing",
+            pick!(
+                locale,
+                "This <object> has no text alternative: no fallback content, aria-label or title.",
+                "Das <object> hat keine Textalternative: keinen Ersatzinhalt, kein aria-label \
+                 und keinen title.",
+            ),
+            pick!(
+                locale,
+                "This <object> has no fallback content, aria-label or title; its \
+                 aria-labelledby points to an element that is hidden or does not exist.",
+                "Das <object> hat keinen Ersatzinhalt, kein aria-label und keinen title; sein \
+                 aria-labelledby zeigt auf ein verstecktes oder nicht vorhandenes Element.",
+            ),
+            n.id(),
+        ));
     }
 }
 
@@ -289,8 +347,11 @@ fn invisible_frame<'a, N: Node<'a>>(n: N) -> bool {
 /// eine von mehreren Techniken (H64), sein Fehlen also kein Verstoß dort. Screenreader nennen beim Betreten
 /// des Rahmens dessen Namen; ohne ihn bleibt offen, was darin steckt.
 ///
-/// Ausgenommen sind Rahmen mit `role="none"`/`"presentation"` und solche, die
-/// nie zu sehen sind ([`invisible_frame`]). Der Teil von auditmysites
+/// Ausgenommen sind Rahmen außerhalb der Tab-Reihenfolge (negativer
+/// `tabindex`; ACT cae760 gilt nur für per Tab erreichbare Rahmen) und solche,
+/// die nie zu sehen sind ([`invisible_frame`]). `role="none"` nimmt einen
+/// Rahmen nicht aus: Er ist fokussierbar, also verwirft der Browser die Rolle
+/// (WAI-ARIA 1.2, § 9.3; ACT cae760). Der Teil von auditmysites
 /// `media_rules`, der fremde Rahmen als ungeprüft meldet (`frame-tested`),
 /// bleibt im Host — ob ein Rahmen fremd ist, weiß nur der Browser.
 ///
@@ -300,7 +361,7 @@ pub(crate) fn frame_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<F
     for n in elements(doc) {
         if !n.is_element("iframe")
             || doc.is_ignored(n)
-            || explicit_role(n).is_some_and(|r| matches!(r, "none" | "presentation"))
+            || tabindex(n).is_some_and(|t| t < 0)
             || invisible_frame(n)
             || named(doc, n)
         {

@@ -173,6 +173,18 @@ fn svg_name() -> Vec<Fall> {
             "ACT 7d6734, Graphics-ARIA: graphics-document ist Bildrolle",
         )
         .variant("graphics-document"),
+        fail(
+            ID,
+            r#"<svg><rect role="graphics-symbol" width="4" height="4"></rect></svg>"#,
+            "ACT 7d6734: auch ein SVG-Element mit Bildrolle im SVG braucht einen Namen",
+        )
+        .variant("Teil mit Bildrolle"),
+        negative(
+            ID,
+            r#"<svg><rect role="graphics-symbol" aria-label="Square" width="4" height="4"></rect></svg>"#,
+            "ACT 7d6734, ARIA6: benannter Teil trägt die Aussage, das svg ohne Rolle bleibt ohne Befund",
+        )
+        .variant("benannter Teil mit Bildrolle"),
         review(
             ID,
             r#"<svg><circle r="5"></circle></svg>"#,
@@ -397,6 +409,24 @@ fn required_names() -> Vec<Fall> {
             "ACT e086e5: behauptete Beschriftung, die leer ausgeht",
         )
         .variant("natives Feld, leere Beschriftung"),
+        fail(
+            ID,
+            r#"<span role="img" class="hero"></span>"#,
+            "ACT 23a2a8, WAI-ARIA 1.2 img: Accessible Name Required (1.1.1)",
+        )
+        .variant("role=img"),
+        negative(
+            ID,
+            r#"<span role="img" aria-label="Sunset over the bay"></span>"#,
+            "WCAG ARIA6: role=img mit aria-label",
+        )
+        .variant("role=img mit Namen"),
+        na(
+            ID,
+            r#"<img src="a.png" role="img"><svg role="img"></svg>"#,
+            "Regeldoku: img und SVG melden images/alt-missing bzw. svg/name-missing",
+        )
+        .variant("img und svg mit eigener Regel"),
         negative(
             ID,
             r#"<div role="checkbox" aria-checked="false" tabindex="0" aria-label="Accept terms"></div>"#,
@@ -651,6 +681,12 @@ fn label_in_name() -> Vec<Fall> {
         .variant("Symbol"),
         negative(
             ID,
+            r#"<button type="button" aria-label="Dismiss">x</button>"#,
+            "ACT 2ee8b8: ein einzelnes Zeichen drückt Nicht-Text aus",
+        )
+        .variant("ein Buchstabe als Symbol"),
+        negative(
+            ID,
             r#"<button type="button">Send</button>"#,
             "ACT 2ee8b8: Name aus dem Inhalt enthält ihn",
         )
@@ -707,6 +743,24 @@ fn media() -> Vec<Fall> {
             "H36: leeres alt; Typ ASCII-case-insensitive",
         )
         .variant("alt leer, Schreibung"),
+        fail(
+            "images/input-alt-missing",
+            r#"<span id="leer"></span><input type="image" src="go.png" aria-labelledby="leer">"#,
+            "ACT 59796f, accname 1.2 2B: Verweis auf ein leeres Element stiftet keinen Namen",
+        )
+        .variant("aria-labelledby auf leeres Ziel"),
+        review(
+            "images/input-alt-missing",
+            r#"<input type="image" src="go.png" aria-labelledby="fehlt">"#,
+            "Regeldoku: Ziel fehlt in der Sicht (versteckt oder nicht vorhanden) → REVIEW",
+        )
+        .variant("aria-labelledby ins Leere"),
+        negative(
+            "images/input-alt-missing",
+            r#"<input type="image" src="go.png" title="Search">"#,
+            "ACT 59796f, HTML-AAM input type=image: title nach alt",
+        )
+        .variant("title"),
         negative(
             "images/input-alt-missing",
             r#"<input type="image" src="go.png" alt="Search">"#,
@@ -770,6 +824,24 @@ fn media() -> Vec<Fall> {
             "HTML-AAM object: title",
         )
         .variant("title"),
+        fail(
+            "objects/alt-missing",
+            r#"<p id="leer"></p><object data="chart.png" type="image/png" aria-labelledby="leer"></object>"#,
+            "ACT 8fc3b6, accname 1.2 2B: Verweis auf ein leeres Element stiftet keinen Namen",
+        )
+        .variant("aria-labelledby auf leeres Ziel"),
+        review(
+            "objects/alt-missing",
+            r#"<p id="v" hidden>Sales chart</p><object data="chart.png" type="image/png" aria-labelledby="v"></object>"#,
+            "accname 1.2 2B: verstecktes Ziel zählt; Tier 1 sieht es nicht → REVIEW, kein FAIL",
+        )
+        .variant("aria-labelledby auf verstecktes Ziel"),
+        na(
+            "objects/alt-missing",
+            r#"<object data="deko.png" type="image/png" role="none"></object>"#,
+            "ACT 8fc3b6: role=none kennzeichnet Schmuck (WAI-ARIA 1.2 § 9.3 ohne Konflikt)",
+        )
+        .variant("role=none"),
         na(
             "objects/alt-missing",
             r#"<img src="a.png" alt="A">"#,
@@ -843,6 +915,24 @@ fn media() -> Vec<Fall> {
             "Grenze: 2×2 ist dargestellt (Ausnahme nur bis 1×1)",
         )
         .variant("Grenze: 2×2"),
+        fail(
+            "frames/name-missing",
+            r#"<iframe src="/widget" role="presentation"></iframe>"#,
+            "ACT cae760, WAI-ARIA 1.2 § 9.3: fokussierbarer Rahmen behält seine Rolle",
+        )
+        .variant("role=presentation"),
+        fail(
+            "frames/name-missing",
+            r#"<iframe src="/widget" tabindex="0"></iframe>"#,
+            "Grenze: tabindex=0 bleibt in der Tab-Reihenfolge",
+        )
+        .variant("Grenze: tabindex=0"),
+        na(
+            "frames/name-missing",
+            r#"<iframe src="/widget" tabindex="-1"></iframe>"#,
+            "ACT cae760: nur Rahmen in der sequenziellen Fokusreihenfolge",
+        )
+        .variant("tabindex=-1"),
         negative(
             "frames/name-missing",
             r#"<iframe src="/widget" title="Weather forecast"></iframe>"#,
