@@ -162,14 +162,92 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-        || n.has_attr("aria-labelledby")
-    {
+    if n.attr("aria-label").is_some_and(|v| !v.trim().is_empty()) || content_names(n, ids) {
 '''
 replace = '''
-        || n.has_attr("aria-label")
-        || n.has_attr("aria-labelledby")
-    {
+    if n.has_attr("aria-label") || content_names(n, ids) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+            Some(_) => {}
+            None => state = Naming::Unknown,
+'''
+replace = '''
+            Some(_) => return Naming::Named,
+            None => state = Naming::Unknown,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            Some(_) => {}
+            None => state = Naming::Unknown,
+'''
+replace = '''
+            Some(_) => {}
+            None => state = Naming::Empty,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+                || (c.attr("alt").is_some_and(|v| !v.trim().is_empty()) && !presentational(c))
+'''
+replace = '''
+                || c.attr("alt").is_some_and(|v| !v.trim().is_empty())
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+        explicit_role(n).filter(|r| !matches!(*r, "none" | "presentation") || presentational(n));
+'''
+replace = '''
+        explicit_role(n);
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+        && !crate::landmarks::focusable(n)
+'''
+replace = '''
+        && (true || !crate::landmarks::focusable(n))
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+                if !alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
+'''
+replace = '''
+                if alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
 '''
 expect = "killed"
 

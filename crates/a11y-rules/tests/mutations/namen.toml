@@ -261,10 +261,13 @@ id = "images/area-alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if n.is_element("area") && n.has_attr("href") && !filled(n, "alt") && !aria_named(n) {
+        if n.is_element("area")
+            && n.has_attr("href")
+            && !filled(n, "alt")
 '''
 replace = '''
-        if n.is_element("area") && !filled(n, "alt") && !aria_named(n) {
+        if n.is_element("area")
+            && !filled(n, "alt")
 '''
 test = "korpus"
 expect = "killed"
@@ -274,10 +277,23 @@ id = "images/input-alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if graphic_button && !filled(n, "alt") && !aria_named(n) {
+        if !graphic_button || filled(n, "alt") || filled(n, "title") {
 '''
 replace = '''
-        if graphic_button && !aria_named(n) {
+        if !graphic_button || filled(n, "title") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/input-alt-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if !graphic_button || filled(n, "alt") || filled(n, "title") {
+'''
+replace = '''
+        if !graphic_button || filled(n, "alt") {
 '''
 test = "korpus"
 expect = "killed"
@@ -313,10 +329,10 @@ id = "objects/alt-missing"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if !replacement_text && !aria_named(n) && !filled(n, "title") {
+        if replacement_text || filled(n, "title") {
 '''
 replace = '''
-        if !aria_named(n) && !filled(n, "title") {
+        if filled(n, "title") {
 '''
 test = "korpus"
 expect = "killed"
@@ -383,6 +399,102 @@ replace = '''
         out.push(
             Finding::fail(
                 "frames/name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/name-missing"
+file = "src/media.rs"
+kind = "threshold"
+find = '''
+            || tabindex(n).is_some_and(|t| t < 0)
+'''
+replace = '''
+            || tabindex(n).is_some_and(|t| t < 1)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "frames/name-missing"
+file = "src/media.rs"
+kind = "revert-fix"
+find = '''
+            || doc.is_ignored(n)
+            || tabindex(n).is_some_and(|t| t < 0)
+'''
+replace = '''
+            || doc.is_ignored(n)
+            || n.attr("role") == Some("presentation")
+            || tabindex(n).is_some_and(|t| t < 0)
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "objects/alt-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+        if !n.is_element("object") || presentational(n) {
+'''
+replace = '''
+        if !n.is_element("object") {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "objects/alt-missing"
+file = "src/media.rs"
+kind = "invert"
+find = '''
+        Naming::Empty => Finding::fail(id, fail),
+        Naming::Unknown => Finding::review(id, unknown),
+'''
+replace = '''
+        Naming::Empty => Finding::review(id, unknown),
+        Naming::Unknown => Finding::fail(id, fail),
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "svg/name-missing"
+file = "src/semantics.rs"
+kind = "drop-condition"
+find = '''
+        let part = !n.is_element("svg") && graphic_role(n) && in_svg(n);
+'''
+replace = '''
+        let part = false && graphic_role(n) && in_svg(n);
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/required-missing"
+file = "src/names.rs"
+kind = "revert-fix"
+find = '''
+        if role == "img" && (n.is_element("img") || crate::semantics::in_svg(n)) {
+'''
+replace = '''
+        if role == "img" {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/names.rs"
+kind = "threshold"
+find = '''
+        if normalised(&visible).chars().count() == 1 {
+'''
+replace = '''
+        if normalised(&visible).chars().count() == 0 {
 '''
 test = "korpus"
 expect = "killed"

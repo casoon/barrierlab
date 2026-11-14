@@ -297,6 +297,42 @@ fn headings() -> Vec<Fall> {
         .variant("Regression: leeres aria-label"),
         fail(
             "headings/empty",
+            r#"<h1>Title</h1><p id="leer"></p><h2 aria-labelledby="leer"><b aria-hidden="true">Intro</b></h2>"#,
+            "ACT ffd0e9, accname 1.2 2B: Verweis auf ein leeres Element stiftet keinen Namen",
+        )
+        .variant("aria-labelledby auf leeres Ziel"),
+        review(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 aria-labelledby="gibt-es-nicht"></h2>"#,
+            "Regeldoku: Ziel fehlt in der Sicht (versteckt oder nicht vorhanden) → REVIEW",
+        )
+        .variant("aria-labelledby ins Leere"),
+        fail(
+            "headings/empty",
+            r#"<h1>Title</h1><h2><img src="logo.png" alt="Brand" role="presentation"></h2>"#,
+            "ACT ffd0e9, accname 1.2 2D: alt eines präsentationalen Bildes zählt nicht",
+        )
+        .variant("Bild mit role=presentation"),
+        fail(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 role="none" aria-label=""><i aria-hidden="true">Intro</i></h2>"#,
+            "ACT ffd0e9, WAI-ARIA 1.2 § 9.3: globales Attribut hebt role=none auf",
+        )
+        .variant("role=none mit globalem Attribut"),
+        review(
+            "headings/empty",
+            r#"<h1>Title</h1><p id="t" hidden>Intro</p><h2 aria-labelledby="t"></h2>"#,
+            "accname 1.2 2B: auch ein verstecktes Ziel stiftet den Namen; Tier 1 sieht es nicht → REVIEW, kein FAIL",
+        )
+        .variant("aria-labelledby auf verstecktes Ziel"),
+        na(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 role="none"></h2>"#,
+            "WAI-ARIA 1.2 § 9.3: ohne globales Attribut wirkt role=none, keine Überschrift",
+        )
+        .variant("role=none wirkt"),
+        fail(
+            "headings/empty",
             r#"<h1>Title</h1><div role="heading" aria-level="2"></div>"#,
             "ACT ffd0e9 gilt für die Rolle heading, nicht nur für hN",
         )
@@ -482,6 +518,24 @@ fn images() -> Vec<Fall> {
             "accname 1.2, 2C: aria-label aus Leerraum stiftet keinen Namen",
         )
         .variant("leeres aria-label"),
+        fail(
+            "images/alt-missing",
+            r#"<img src="a.png" alt="  ">"#,
+            "ACT 23a2a8, HTML-AAM: nur alt=\"\" macht dekorativ; Leerraum ergibt leeren Namen",
+        )
+        .variant("alt nur Leerraum"),
+        fail(
+            "images/alt-missing",
+            r#"<img src="a.png" role="presentation" tabindex="0">"#,
+            "ACT 23a2a8, WAI-ARIA 1.2 § 9.3: fokussierbares Bild behält seine Rolle",
+        )
+        .variant("role=presentation, fokussierbar"),
+        negative(
+            "images/alt-missing",
+            r#"<img src="a.png" alt=" " title="Company logo">"#,
+            "accname 1.2 2I: title stiftet den Namen trotz leerem alt",
+        )
+        .variant("alt Leerraum, title"),
         negative(
             "images/alt-missing",
             r#"<img src="a.png" alt="Logo of ACME">"#,

@@ -360,14 +360,14 @@ fn native_focusable<'a, N: Node<'a>>(n: N) -> bool {
     }
 }
 
-fn tabindex<'a, N: Node<'a>>(n: N) -> Option<i32> {
+pub(crate) fn tabindex<'a, N: Node<'a>>(n: N) -> Option<i32> {
     n.attr("tabindex")
         .and_then(|t| t.trim().parse::<i32>().ok())
 }
 
 /// Ob das Element fokussiert werden kann, auch nur per Skript
 /// (`tabindex="-1"`) — das, was Chrome als `focusable` meldet.
-fn focusable<'a, N: Node<'a>>(n: N) -> bool {
+pub(crate) fn focusable<'a, N: Node<'a>>(n: N) -> bool {
     tabindex(n).is_some() || native_focusable(n)
 }
 

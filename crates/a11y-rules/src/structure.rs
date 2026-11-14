@@ -399,18 +399,67 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Der Accessible Name wäre die genauere Auskunft, aber er ist Tier 2. Diese
 /// Regel gilt Tier 1 und nähert ihn deshalb strukturell an: Sie fragt nicht,
 /// *wie* der Name lautet, sondern ob überhaupt einer gestiftet wird.
-fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
+///
+/// Seit ACT ffd0e9 genauer: `aria-labelledby` zählt nur, wenn ein Ziel Text
+/// trägt (accname 1.2, 2B: ein leeres Ergebnis fällt auf den Inhalt zurück),
+/// das `alt` eines Bildes mit wirksamer `role="presentation"` nicht (2D).
+/// Versteckter Inhalt fehlt in der Sicht der Regel ohnehin (2A).
+fn heading_naming<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Naming {
     // Ein leeres `aria-label` stiftet keinen Namen (accname 1.2, 2D).
-    if has_text(n)
-        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-        || n.has_attr("aria-labelledby")
-    {
-        return false;
+    if n.attr("aria-label").is_some_and(|v| !v.trim().is_empty()) || content_names(n, ids) {
+        return Naming::Named;
     }
-    !self_and_descendants(n).any(|d| {
-        d.attr("alt").is_some_and(|v| !v.trim().is_empty())
-            || d.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-            || d.has_attr("aria-labelledby")
+    labelledby(n, ids)
+}
+
+/// Was `aria-labelledby` zum Namen beiträgt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Naming {
+    /// Ein Ziel trägt Text.
+    Named,
+    /// Kein Attribut, oder alle Ziele sind da und leer (accname 1.2, 2B).
+    Empty,
+    /// Ein Ziel fehlt in der Sicht der Regel: Es ist versteckt — dann zählt
+    /// sein Text nach accname trotzdem — oder es gibt die ID nicht
+    /// (`aria/reference-missing`). Eine Regel auf Tier 1 sieht nur die
+    /// Sicht ohne Verstecktes und kann beides nicht unterscheiden.
+    Unknown,
+}
+
+/// Ob die Verweise in `aria-labelledby` auf ein Element mit Text zeigen —
+/// Text, ein `aria-label` oder ein Bild mit `alt` darin.
+pub(crate) fn labelledby<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Naming {
+    let filled = |d: N, a: &str| d.attr(a).is_some_and(|v| !v.trim().is_empty());
+    let mut state = Naming::Empty;
+    for t in n.attr("aria-labelledby").unwrap_or("").split_whitespace() {
+        match ids.get(&scoped_id(n, t)) {
+            Some(r)
+                if has_text(*r)
+                    || self_and_descendants(*r).any(|d| {
+                        filled(d, "aria-label") || (d.is_element("img") && filled(d, "alt"))
+                    }) =>
+            {
+                return Naming::Named;
+            }
+            Some(_) => {}
+            None => state = Naming::Unknown,
+        }
+    }
+    state
+}
+
+/// Ob der Inhalt unterhalb von `n` einen Namen stiftet (accname 1.2, 2F):
+/// Text, ein benanntes Kind oder ein Bild mit `alt`. Ein Kind mit einem
+/// Verweis, der nicht aufzulösen ist, zählt als benannt.
+fn content_names<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> bool {
+    n.children().any(|c| match c.kind() {
+        a11y_dom::NodeKind::Text => !c.text().trim().is_empty(),
+        a11y_dom::NodeKind::Element => {
+            c.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+                || labelledby(c, ids) != Naming::Empty
+                || (c.attr("alt").is_some_and(|v| !v.trim().is_empty()) && !presentational(c))
+                || content_names(c, ids)
+        }
     })
 }
 
@@ -418,7 +467,11 @@ fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
 /// `aria-level` (WAI-ARIA 1.2: ohne Angabe Ebene 2). Eine andere explizite
 /// Rolle nimmt einem `hN` die Überschrift (`<h2 role="tab">`).
 fn heading_level_of<'a, N: Node<'a>>(n: N) -> Option<u8> {
-    match explicit_role(n) {
+    // Eine verworfene `role="none"` lässt die implizite Rolle stehen
+    // ([`presentational`]).
+    let role =
+        explicit_role(n).filter(|r| !matches!(*r, "none" | "presentation") || presentational(n));
+    match role {
         Some("heading") => Some(
             n.attr("aria-level")
                 .and_then(|v| v.trim().parse::<u8>().ok())
@@ -435,6 +488,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut last = 0u8;
     let mut any = false;
     let mut h1s: Vec<NodeId> = Vec::new();
+    let ids = crate::forms::id_index(doc);
 
     for n in elements(doc) {
         let Some(level) = heading_level_of(n) else {
@@ -444,19 +498,32 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         if level == 1 {
             h1s.push(n.id());
         }
-        if heading_is_empty(n) {
+        let empty = match heading_naming(n, &ids) {
+            Naming::Named => None,
+            Naming::Empty => Some(Finding::fail(
+                "headings/empty",
+                pick!(
+                    locale,
+                    "The heading has no text.",
+                    "Die Überschrift hat keinen Text.",
+                ),
+            )),
+            Naming::Unknown => Some(Finding::review(
+                "headings/empty",
+                pick!(
+                    locale,
+                    "The heading has no text of its own; its aria-labelledby points to an \
+                     element that is hidden or does not exist.",
+                    "Die Überschrift hat keinen eigenen Text; ihr aria-labelledby zeigt auf ein \
+                     verstecktes oder nicht vorhandenes Element.",
+                ),
+            )),
+        };
+        if let Some(f) = empty {
             out.push(
-                Finding::fail(
-                    "headings/empty",
-                    pick!(
-                        locale,
-                        "The heading has no text.",
-                        "Die Überschrift hat keinen Text.",
-                    ),
-                )
-                .with_severity(Severity::Medium)
-                .with_wcag(["1.3.1", "2.4.6"])
-                .at(at(n.id())),
+                f.with_severity(Severity::Medium)
+                    .with_wcag(["1.3.1", "2.4.6"])
+                    .at(at(n.id())),
             );
         }
         // Eine übersprungene Ebene ist kein Verstoß: 1.3.1 verlangt, dass die
@@ -975,14 +1042,11 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// dekorativ. Ihm ein `alt` abzuverlangen hieße, eine bewusste Angabe des
 /// Autors zu ignorieren und einen Befund zu melden, den niemand beheben kann,
 /// ohne die Angabe zurückzunehmen.
+///
+/// Die Rolle wirkt nur, wenn der Browser sie nicht verwirft
+/// ([`presentational`]): Ein fokussierbares Bild bleibt ein Bild.
 fn explicitly_decorative<'a, N: Node<'a>>(n: N) -> bool {
-    if n.attr("aria-hidden") == Some("true") {
-        return true;
-    }
-    n.attr("role").is_some_and(|r| {
-        r.split_whitespace()
-            .any(|x| x.eq_ignore_ascii_case("presentation") || x.eq_ignore_ascii_case("none"))
-    })
+    n.attr("aria-hidden") == Some("true") || presentational(n)
 }
 
 /// Ob ein `<img>` ohne `alt` seine Textalternative anders bekommt:
@@ -1016,6 +1080,28 @@ fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .with_wcag(["1.1.1"])
                 .at(at(n.id())),
             ),
+            // Nur das leere `alt=""` macht ein Bild dekorativ (HTML-AAM: Rolle
+            // `presentation`). `alt=" "` lässt die Rolle `img` stehen, und der
+            // Name ist nach dem Kürzen leer (accname 1.2, ACT 23a2a8).
+            Some(alt)
+                if !alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
+            {
+                out.push(
+                    Finding::fail(
+                        "images/alt-missing",
+                        pick!(
+                            locale,
+                            "The image's alt attribute contains only whitespace, so the image \
+                             has no accessible name; decorative images take alt=\"\".",
+                            "Das alt-Attribut des Bildes enthält nur Leerraum, das Bild hat also \
+                             keinen zugänglichen Namen; dekorative Bilder bekommen alt=\"\".",
+                        ),
+                    )
+                    .with_severity(Severity::High)
+                    .with_wcag(["1.1.1"])
+                    .at(at(n.id())),
+                )
+            }
             Some(alt) if suspicious_alt(alt) => out.push(
                 // Heuristisch: der Text ist da, aber vermutlich nichtssagend.
                 // Deshalb Review, nicht Fail.
@@ -1481,6 +1567,44 @@ pub(crate) fn explicit_role<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
     n.attr("role")?
         .split_whitespace()
         .find(|r| VALID_ROLES.contains(r))
+}
+
+/// Die globalen Zustände und Eigenschaften aus WAI-ARIA 1.2, § 6.4.
+const GLOBAL_ARIA: &[&str] = &[
+    "aria-atomic",
+    "aria-busy",
+    "aria-controls",
+    "aria-current",
+    "aria-describedby",
+    "aria-details",
+    "aria-disabled",
+    "aria-dropeffect",
+    "aria-errormessage",
+    "aria-flowto",
+    "aria-grabbed",
+    "aria-haspopup",
+    "aria-hidden",
+    "aria-invalid",
+    "aria-keyshortcuts",
+    "aria-label",
+    "aria-labelledby",
+    "aria-live",
+    "aria-owns",
+    "aria-relevant",
+    "aria-roledescription",
+];
+
+/// Ob `role="none"`/`"presentation"` an diesem Element wirkt.
+///
+/// WAI-ARIA 1.2, § 9.3 (Presentational Roles Conflict Resolution): Ist das
+/// Element fokussierbar oder trägt es ein globales ARIA-Attribut, ignoriert
+/// der Browser die präsentationale Rolle und stellt die implizite aus.
+/// `<img role="none" tabindex="0">` bleibt ein Bild, `<h1 role="none"
+/// aria-label="">` eine Überschrift (ACT 23a2a8, ffd0e9).
+pub(crate) fn presentational<'a, N: Node<'a>>(n: N) -> bool {
+    explicit_role(n).is_some_and(|r| matches!(r, "none" | "presentation"))
+        && !crate::landmarks::focusable(n)
+        && !GLOBAL_ARIA.iter().any(|a| n.has_attr(a))
 }
 
 /// Die Element-Kinder einer Liste im flachen Baum.

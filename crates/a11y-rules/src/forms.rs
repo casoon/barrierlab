@@ -43,7 +43,7 @@ fn is_input<'a, N: Node<'a>>(n: N, types: &[&str]) -> bool {
 }
 
 /// Die IDs der Sicht. Was in einem versteckten Teilbaum liegt, fehlt darin.
-fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<ScopedId<'a>, D::N<'a>> {
+pub(crate) fn id_index<'a, D: Document>(doc: &'a D) -> HashMap<ScopedId<'a>, D::N<'a>> {
     let mut ids = HashMap::new();
     for n in elements(doc) {
         if let Some(id) = n.attr("id") {

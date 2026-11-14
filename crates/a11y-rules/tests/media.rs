@@ -285,8 +285,19 @@ fn named_and_invisible_frames() {
         <iframe id="hidden-widget" title="Hidden widget" aria-hidden="true" style="width:300px;height:100px;border:0"></iframe>
         <span id="beschriftung">Karte</span>
         <iframe id="labelledby" src="/karte" aria-labelledby="beschriftung"></iframe>
-        <iframe id="praesentation" src="/x" role="presentation"></iframe>"#;
+        <iframe id="aus-tab-folge" src="/x" tabindex="-1"></iframe>"#;
     assert!(findings_at(src, &check(src), "frames/name-missing").is_empty());
+}
+
+/// WAI-ARIA 1.2, § 9.3: Ein Rahmen ist fokussierbar, der Browser verwirft
+/// `role="presentation"` an ihm (ACT cae760).
+#[test]
+fn presentational_frame_still_needs_a_name() {
+    let src = r#"<iframe id="praesentation" src="/x" role="presentation"></iframe>"#;
+    assert_eq!(
+        findings_at(src, &check(src), "frames/name-missing"),
+        ["praesentation"]
+    );
 }
 
 // --- manual/media-alternatives ----------------------------------------------
