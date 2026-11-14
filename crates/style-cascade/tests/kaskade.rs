@@ -418,6 +418,62 @@ fn verlauf_gibt_proben() {
     assert_eq!(c.backdrop_luminances(finde(&d, "b")), None);
 }
 
+/// CSS Color 4 §15.1: `opacity` mischt die fertige Gruppe linear mit dem,
+/// was dahinter liegt — Text und Hintergrund gleichermaßen.
+#[test]
+fn farbpaare_unter_deckkraft() {
+    let d = seite(r#"<div id="a"><p id="b">t</p></div>"#);
+    let c = kaskade("#a { background: #fff } #b { color: #000; opacity: .3 }");
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.pairs, vec![(rgb(179, 179, 179), rgb(255, 255, 255))]);
+    assert!(p.halo.is_empty());
+    // Prozent wie Zahl; 0 macht Text und Grund gleich.
+    let c = kaskade("#a { background: #fff } #b { color: #000; opacity: 0% }");
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.pairs[0].0, p.pairs[0].1);
+    // Deckkraft an einem Vorfahren mit deckendem Grund: dahinter die Leinwand.
+    let c = kaskade("#a { background: #000; opacity: .5 } #b { color: #fff }");
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.pairs, vec![(rgb(255, 255, 255), rgb(128, 128, 128))]);
+}
+
+/// Je Stufe und Mitte ein Paar; halbdurchsichtiger Text liegt auf jeder
+/// Stelle anders.
+#[test]
+fn farbpaare_ueber_verlauf() {
+    let d = seite(r#"<div id="a"><span id="b">t</span></div>"#);
+    let c = kaskade(
+        "#a { background-image: linear-gradient(90deg, transparent, black) } \
+         #b { color: rgba(90, 90, 90, .8) }",
+    );
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.pairs.len(), 3);
+    assert_eq!(p.pairs[0], (rgb(123, 123, 123), rgb(255, 255, 255)));
+    assert_eq!(p.pairs[1], (rgb(72, 72, 72), rgb(0, 0, 0)));
+    // Ein Bild ist keine bekannte Farbe.
+    let c = kaskade("#a { background: url(x.png), linear-gradient(#fff, #000) }");
+    assert_eq!(c.color_pairs(finde(&d, "b")), None);
+}
+
+/// `text-shadow` erbt (CSS Text Decoration 3 §4) und kommt als Halo mit.
+#[test]
+fn farbpaare_mit_schatten() {
+    let d = seite(r#"<div id="a"><p id="b">t</p></div>"#);
+    let c = kaskade("#a { background: #737373; text-shadow: white 0 0 3px } #b { color: #000 }");
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.pairs, vec![(rgb(0, 0, 0), rgb(0x73, 0x73, 0x73))]);
+    assert_eq!(p.halo, vec![rgb(255, 255, 255)]);
+    // Ohne Farbangabe gilt currentcolor.
+    let c = kaskade("#a { background: #fff } #b { color: #123456; text-shadow: 1px 1px 2px }");
+    let p = c.color_pairs(finde(&d, "b")).expect("Paare");
+    assert_eq!(p.halo, vec![rgb(0x12, 0x34, 0x56)]);
+    // Nichts davon: die berechneten Farben gelten.
+    let c = kaskade("#a { background: #fff } #b { color: #000 }");
+    assert_eq!(c.color_pairs(finde(&d, "b")), None);
+    let c = kaskade("#a { background: #fff } #b { color: #000; text-shadow: none }");
+    assert_eq!(c.color_pairs(finde(&d, "b")), None);
+}
+
 #[test]
 fn verlauf_mit_halbdurchsichtiger_flaeche() {
     let d = seite(r#"<div id="a"><div id="k"><p id="b">t</p></div></div>"#);

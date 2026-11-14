@@ -7,6 +7,12 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-14
+
+### Added
+
+- **Rendering:** `Rendering::color_pairs` (Vorgabe `None`) und `ColorPairs`: ein Host ohne Pixel kann die Farbpaare liefern, die er kennt (Verlaufsstufen, `opacity`, `text-shadow`), statt Stichproben vorzutäuschen.
+
 ## [0.30.1] - 2026-11-11
 
 ### Changed

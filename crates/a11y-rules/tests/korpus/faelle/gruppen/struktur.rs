@@ -436,10 +436,10 @@ fn lists() -> Vec<Fall> {
             r#"<div><li>Allein</li></div>"#,
             "HTML li: Elternelement ol, ul oder menu; WAI-ARIA 1.2 listitem: Required Context list",
         ),
-        fail(
+        na(
             OUTSIDE,
             r#"<div role="listitem">Allein</div>"#,
-            "WAI-ARIA 1.2 listitem: Required Context Role list",
+            "Kontext von role=listitem außerhalb von <li>: aria/required-parent-missing (ACT ff89c9)",
         )
         .variant("ARIA listitem"),
         fail(
@@ -608,6 +608,51 @@ fn tables() -> Vec<Fall> {
             "ACT d0f69e, ARIA grid mit gridcell",
         )
         .variant("ARIA grid"),
+        fail(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th>Name</th><th>Preis</th></tr><tr><td>Brot</td></tr></table>"#,
+            "ACT d0f69e; HTML „Forming relationships between data cells and header cells“: Spalte ohne Zelle darunter",
+        )
+        .variant("Spalte ohne Zelle")
+        .count(1),
+        fail(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th id="n">Name</th><th id="p">Preis</th></tr><tr><td>Brot</td><td headers="n">2 €</td></tr></table>"#,
+            "ACT d0f69e; HTML: eine Zelle mit headers bekommt nur die genannten Kopfzellen",
+        )
+        .variant("headers umgeht die Spalte")
+        .count(1),
+        fail(
+            WITHOUT,
+            r#"<div role="grid" aria-label="G"><div role="row"><div role="columnheader">Raum</div><div role="columnheader">Gast</div></div><div role="row"><div role="gridcell">1</div></div></div>"#,
+            "ACT d0f69e; WAI-ARIA 1.2 columnheader: Grid mit kürzeren Zeilen",
+        )
+        .variant("ARIA grid, Spalte ohne Zelle")
+        .count(1),
+        negative(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th>Tag</th><th>Früh</th></tr><tr><th>Mo</th><td>8</td></tr></table>"#,
+            "HTML: Spaltenkopf über Zeilenköpfen ist ihnen zugeordnet (auditmysite#638)",
+        )
+        .variant("zwei Kopfrichtungen"),
+        negative(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th>A</th><th>B</th></tr><tr><td colspan="2">1</td></tr></table>"#,
+            "HTML „Forming a table“: colspan deckt beide Spalten",
+        )
+        .variant("colspan"),
+        negative(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th id="a">A</th><th id="b">B</th></tr><tr><td>1</td></tr><tr><td headers="b">2</td></tr></table>"#,
+            "HTML: headers ordnet die Kopfzelle zu",
+        )
+        .variant("headers"),
+        negative(
+            WITHOUT,
+            r#"<table><caption>T</caption><tr><th></th><th>A</th></tr><tr><th>Z</th><td>1</td></tr></table>"#,
+            "HTML: leere Zellen streicht die Kopfzellenliste; die leere Ecke beschriftet nichts",
+        )
+        .variant("leere Ecke"),
         na(
             WITHOUT,
             r#"<table><caption>T</caption><tr><td>1</td></tr></table>"#,

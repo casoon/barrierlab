@@ -71,9 +71,52 @@ fn contrast() -> Vec<Fall> {
         negative(ti, r#"<a href="/a" style="color:#000000;background-color:#ffffff">Accessibility</a><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">·</span><a href="/b" style="color:#000000;background-color:#ffffff">GitHub</a><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">|</span><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">→</span>"#,
             "WCAG 2.2 1.4.3 exception: text that is pure decoration; an aria-hidden separator glyph (·, |, →) with no letter or digit carries nothing (casoon/barrierlab#221, www.casoon.de footer)")
             .variant("reine Dekoration: aria-hidden Trennzeichen"),
-        fail(ti, r#"<a href="/a" style="color:#000000;background-color:#ffffff">Accessibility</a><span style="color:#eeeeee;background-color:#ffffff">·</span><a href="/b" style="color:#000000;background-color:#ffffff">GitHub</a>"#,
-            "WCAG 2.2 1.4.3: without aria-hidden the author did not mark the glyph as decoration, so it is measured")
-            .variant("Trennzeichen ohne aria-hidden bleibt gemessen"),
+        negative(tu, r#"<span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">·</span><span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">|</span>"#,
+            "WCAG 2.2 1.4.3 exception: pure decoration is not checked at all — no open question either (casoon/barrierlab#221)")
+            .variant("reine Dekoration: auch nicht offen"),
+        review(tu, r#"<a href="/a" style="color:#000000;background-color:#ffffff">Accessibility</a><span style="color:#eeeeee;background-color:#ffffff">·</span><a href="/b" style="color:#000000;background-color:#ffffff">GitHub</a>"#,
+            "ACT afw4f7 expectation: text that does not express anything in human language is exempt; without aria-hidden the author did not mark the glyph as decoration, so whether it says something is for a human — open, not failed")
+            .variant("Trennzeichen ohne aria-hidden: offen"),
+        review(tu, r#"<p style="color:#000000;background-color:#666666">----====++++****%%%%</p>"#,
+            "ACT afw4f7 (passed example: a row of symbols does not convey anything in human language); 3.66:1 is below 4.5:1, a human decides whether it means something")
+            .variant("Zeichenreihe ohne Buchstaben: offen"),
+        negative(ti, r#"<p style="color:#000000;background-color:#666666">----====++++****%%%%</p>"#,
+            "ACT afw4f7 expectation: text that does not express anything in human language is exempt — no FAIL")
+            .variant("Zeichenreihe ohne Buchstaben: kein FAIL"),
+        negative(ti, r#"<p style="color:#ffffff;background-color:#ffffff">Hidden text</p>"#,
+            "ACT afw4f7 applies to visible text; definition 'visible': text whose transparency would change no pixel (colour equals background) is not visible; WCAG 1.4.3 exempts text not visible to anyone")
+            .variant("Textfarbe gleich Hintergrund: nicht sichtbar"),
+        negative(ti, r#"<label style="color:#888888;background-color:#ffffff">Name <input type="text" disabled></label><label for="pet" style="color:#888888;background-color:#ffffff">Pet</label><input id="pet" disabled><span id="nick" style="color:#888888;background-color:#ffffff">Nickname</span><div role="textbox" aria-labelledby="nick" aria-disabled="true"></div>"#,
+            "WCAG 2.2 1.4.3 exception: text that is part of an inactive user interface component; ACT afw4f7 excludes the 'disabled label' (used in the accessible name of a disabled widget) via label, label for and aria-labelledby")
+            .variant("Beschriftung eines inaktiven Bedienelements"),
+        fail(ti, r#"<label for="city" style="color:#888888;background-color:#ffffff">City</label><input id="city">"#,
+            "WCAG 2.2 1.4.3: the label of an enabled control is measured (3.54:1 < 4.5:1)")
+            .variant("Beschriftung eines aktiven Bedienelements bleibt gemessen"),
+        // --- genau bekannte Farbpaare (Verlauf, opacity, text-shadow) ---
+        fail(ti, r#"<p style="--pairs:#b3b3b3/#ffffff">Faded text</p>"#,
+            "CSS Color 4 opacity: black text at opacity .3 over white is drawn as #b3b3b3, 2.10:1 < 4.5:1 (ACT afw4f7 failed example: opacity)")
+            .variant("Farbpaare: durchgehend zu schwach"),
+        fail(ti, r#"<span style="--pairs:#7b7b7b/#ffffff,#484848/#000000">Hello</span>"#,
+            "ACT afw4f7 'highest possible contrast' between two sets of colours: 4.23:1 and 2.30:1, both below 4.5:1")
+            .variant("Farbpaare: Verlauf, jede Stelle zu schwach"),
+        review(tu, r#"<p style="--pairs:#333333/#ffffff,#333333/#0000ff">Over a gradient</p>"#,
+            "ACT afw4f7 (passed example: gradient, the text lies over the light part): 12.64:1 over white, 1.47:1 over blue; a static host does not know where the text lies — open, not failed")
+            .variant("Farbpaare: Verlauf, teils ausreichend"),
+        negative(ti, r#"<p style="--pairs:#333333/#ffffff,#333333/#0000ff">Over a gradient</p>"#,
+            "ACT afw4f7: highest possible contrast reaches 4.5:1 — no FAIL")
+            .variant("Farbpaare: Verlauf teils ausreichend, kein FAIL"),
+        review(tu, r#"<p style="--pairs:#000000/#737373;--halo:#ffffff">Shadowed text</p>"#,
+            "Understanding 1.4.3 (halo around text); ACT afw4f7 passed example: 4.43:1 against the background, but a white text shadow sets the glyphs off with 21:1 — open, not failed")
+            .variant("Farbpaare: Schatten rettet"),
+        fail(ti, r#"<p style="--pairs:#000000/#666666;--halo:#333333">Shadowed text</p>"#,
+            "WCAG 2.2 1.4.3: 3.66:1 against the background, and the shadow (#333333) does not reach 4.5:1 either")
+            .variant("Farbpaare: Schatten hilft nicht"),
+        negative(ti, r#"<p style="--pairs:#ffffff/#ffffff">Fully transparent</p>"#,
+            "ACT afw4f7 'visible': text drawn in the colour of its background (opacity: 0) is not visible")
+            .variant("Farbpaare: nicht sichtbar"),
+        untested(tu, r#"<p style="--pairs:none">Unreadable shadow</p>"#,
+            "WCAG 2.2 1.4.3: the host knows the pairs are needed but cannot read them — not passed (docs/conventions.md)")
+            .variant("Farbpaare: nicht bestimmbar"),
         fail(ti, r#"<span aria-hidden="true" style="color:#eeeeee;background-color:#ffffff">Weiter</span>"#,
             "WCAG 2.2 1.4.3: letters under aria-hidden are content that is merely hidden from assistive technology, not pure decoration (auditmysite#47)")
             .variant("aria-hidden mit Buchstaben bleibt gemessen"),
@@ -129,6 +172,15 @@ fn contrast() -> Vec<Fall> {
         negative(te, r#"<button disabled style="color:#313131;background-color:#bebebe">Send</button>"#,
             "WCAG 2.2 1.4.6 exception: text of an inactive user interface component")
             .variant("Regression: inaktives Bedienelement"),
+        fail(te, r#"<p style="--pairs:#666666/#ffffff">Faded text</p>"#,
+            "CSS Color 4 opacity: black text at opacity .6 over white is drawn as #666666, 5.74:1 meets 4.5:1 but not 7:1 (ACT 09o5cg failed example: opacity)")
+            .variant("Farbpaare: AA erreicht, AAA nicht"),
+        fail(te, r#"<span style="--pairs:#6b6b6b/#ffffff,#6b6b6b/#000000">Hello</span>"#,
+            "ACT 09o5cg 'highest possible contrast': 5.33:1 and 3.94:1 — open under AA, but every pair misses 7:1")
+            .variant("Farbpaare: AA offen, AAA überall verfehlt"),
+        negative(te, r#"<p style="--pairs:#595959/#ffffff,#595959/#000000">Over a gradient</p>"#,
+            "ACT 09o5cg 'highest possible contrast': 7.01:1 over white reaches 7:1 — no FAIL; the open AA question is reported under 1.4.3")
+            .variant("Farbpaare: AAA teils erreicht"),
         na(te, r#"<div></div>"#, "WCAG 2.2 1.4.6 applies to text; no text"),
     ]
 }

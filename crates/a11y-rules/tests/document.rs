@@ -144,15 +144,25 @@ fn immediate_redirect_web_de_gmx_net() {
 fn twenty_hours_and_without_digits_html_standard() {
     let doc = document(
         r#"<!DOCTYPE html><html lang="en"><head><title>T</title>
-           <meta id="lang" http-equiv="Refresh" content="72000">
-           <meta id="kaputt" http-equiv="refresh" content="url=/x">
-           <meta id="kurz" http-equiv="REFRESH" content=" 5; url=/weiter"></head><body></body></html>"#,
+           <meta id="lang" http-equiv="Refresh" content="72000"></head><body></body></html>"#,
     );
     // Genau 20 Stunden sind nicht „länger als 20 Stunden" (2.2.1; ACT bc659a:
     // „greater than 72000") — casoon/auditmysite#783.
     assert_eq!(
         findings_at(&doc, &run(&doc), "timing/meta-refresh"),
-        ["lang", "kurz"]
+        ["lang"]
+    );
+    // Eine ungültige Anweisung verwirft der Browser; es gilt die erste
+    // gültige (HTML, „shared declarative refresh steps"; ACT bisz58).
+    let doc = document(
+        r#"<!DOCTYPE html><html lang="en"><head><title>T</title>
+           <meta id="kaputt" http-equiv="refresh" content="url=/x">
+           <meta id="kurz" http-equiv="REFRESH" content=" 5; url=/weiter">
+           <meta id="zweite" http-equiv="refresh" content="7"></head><body></body></html>"#,
+    );
+    assert_eq!(
+        findings_at(&doc, &run(&doc), "timing/meta-refresh"),
+        ["kurz"]
     );
 }
 

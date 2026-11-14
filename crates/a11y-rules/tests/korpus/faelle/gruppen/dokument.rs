@@ -90,12 +90,30 @@ fn language() -> Vec<Fall> {
             "RFC 5646 2.1: Untertags haben höchstens 8 Zeichen",
         )
         .variant("Regression: Grenze 9 Zeichen im Untertag"),
+        fail(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="deu"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "RFC 5646 2.2.1, ACT bf051a: hat eine Sprache eine Kennung aus ISO 639-1, ist die dreibuchstabige nicht registriert",
+        )
+        .variant("Regression: ISO 639-2 statt 639-1"),
+        fail(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="xq-DE"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "ACT bf051a: das Primärsubtag muss in der IANA Language Subtag Registry stehen",
+        )
+        .variant("Regression: unbekanntes Zweibuchstabenkürzel"),
         negative(
             "document/lang-invalid",
-            r#"<!DOCTYPE html><html lang="eng"><head><title>T</title></head><body><p>x</p></body></html>"#,
-            "RFC 5646 2.2.1: dreibuchstabiges Primärsubtag (ISO 639-2/3)",
+            r#"<!DOCTYPE html><html lang="gsw"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "RFC 5646 2.2.1: dreibuchstabiges Primärsubtag (ISO 639-3) ohne zweibuchstabige Kennung",
         )
         .variant("Grenze: 3 Buchstaben"),
+        negative(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="IW"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "IANA Registry: veraltete Kennungen bleiben registriert; BCP 47 ohne Rücksicht auf Schreibung",
+        )
+        .variant("veraltet, groß geschrieben"),
         negative(
             "document/lang-invalid",
             r#"<!DOCTYPE html><html lang="zh-Hant-TW"><head><title>T</title></head><body><p>x</p></body></html>"#,
@@ -216,11 +234,23 @@ fn viewport() -> Vec<Fall> {
             "ACT b4f0c3: maximum-scale 2 erlaubt 200 %",
         )
         .variant("Grenze: 2"),
+        fail(
+            "zoom/viewport-locked",
+            r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="maximum-scale=yes"></head><body><p>x</p></body></html>"#,
+            "CSS Device Adaptation „translate a single value“: yes ist 1; ACT b4f0c3",
+        )
+        .variant("Regression: maximum-scale=yes"),
         negative(
             "zoom/viewport-locked",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="width=device-width, user-scalable=yes"></head><body><p>x</p></body></html>"#,
             "ACT b4f0c3: user-scalable=yes",
         ),
+        negative(
+            "zoom/viewport-locked",
+            r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="maximum-scale=-2"></head><body><p>x</p></body></html>"#,
+            "ACT b4f0c3: ein negativer Wert ist ungültig und wird verworfen",
+        )
+        .variant("Regression: negatives maximum-scale"),
         na(
             "zoom/viewport-locked",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title></head><body><p>x</p></body></html>"#,
@@ -295,6 +325,42 @@ fn headings() -> Vec<Fall> {
             "accname 1.2, 2D: leeres aria-label stiftet keinen Namen",
         )
         .variant("Regression: leeres aria-label"),
+        fail(
+            "headings/empty",
+            r#"<h1>Title</h1><p id="leer"></p><h2 aria-labelledby="leer"><b aria-hidden="true">Intro</b></h2>"#,
+            "ACT ffd0e9, accname 1.2 2B: Verweis auf ein leeres Element stiftet keinen Namen",
+        )
+        .variant("aria-labelledby auf leeres Ziel"),
+        review(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 aria-labelledby="gibt-es-nicht"></h2>"#,
+            "Regeldoku: Ziel fehlt in der Sicht (versteckt oder nicht vorhanden) → REVIEW",
+        )
+        .variant("aria-labelledby ins Leere"),
+        fail(
+            "headings/empty",
+            r#"<h1>Title</h1><h2><img src="logo.png" alt="Brand" role="presentation"></h2>"#,
+            "ACT ffd0e9, accname 1.2 2D: alt eines präsentationalen Bildes zählt nicht",
+        )
+        .variant("Bild mit role=presentation"),
+        fail(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 role="none" aria-label=""><i aria-hidden="true">Intro</i></h2>"#,
+            "ACT ffd0e9, WAI-ARIA 1.2 § 9.3: globales Attribut hebt role=none auf",
+        )
+        .variant("role=none mit globalem Attribut"),
+        review(
+            "headings/empty",
+            r#"<h1>Title</h1><p id="t" hidden>Intro</p><h2 aria-labelledby="t"></h2>"#,
+            "accname 1.2 2B: auch ein verstecktes Ziel stiftet den Namen; Tier 1 sieht es nicht → REVIEW, kein FAIL",
+        )
+        .variant("aria-labelledby auf verstecktes Ziel"),
+        na(
+            "headings/empty",
+            r#"<h1>Title</h1><h2 role="none"></h2>"#,
+            "WAI-ARIA 1.2 § 9.3: ohne globales Attribut wirkt role=none, keine Überschrift",
+        )
+        .variant("role=none wirkt"),
         fail(
             "headings/empty",
             r#"<h1>Title</h1><div role="heading" aria-level="2"></div>"#,
@@ -436,6 +502,12 @@ fn headings() -> Vec<Fall> {
             "auditmysite#709: hinter offenem Dialog nur Hinweis",
         )
         .variant("offener Dialog"),
+        review(
+            "headings/none",
+            r#"<button onclick="toggle()">Menü ausblenden</button><nav><a href="/">Home</a></nav><p>Text</p>"#,
+            "WCAG 2.4.1, ACT cf77f2: ein Skript-Bedienelement kann den Block ausblenden; das Markup zeigt nicht, ob es das tut",
+        )
+        .variant("Skript-Bedienelement"),
         negative(
             "headings/none",
             r#"<nav><a href="/">Home</a></nav><main><p>Text</p></main>"#,
@@ -482,6 +554,24 @@ fn images() -> Vec<Fall> {
             "accname 1.2, 2C: aria-label aus Leerraum stiftet keinen Namen",
         )
         .variant("leeres aria-label"),
+        fail(
+            "images/alt-missing",
+            r#"<img src="a.png" alt="  ">"#,
+            "ACT 23a2a8, HTML-AAM: nur alt=\"\" macht dekorativ; Leerraum ergibt leeren Namen",
+        )
+        .variant("alt nur Leerraum"),
+        fail(
+            "images/alt-missing",
+            r#"<img src="a.png" role="presentation" tabindex="0">"#,
+            "ACT 23a2a8, WAI-ARIA 1.2 § 9.3: fokussierbares Bild behält seine Rolle",
+        )
+        .variant("role=presentation, fokussierbar"),
+        negative(
+            "images/alt-missing",
+            r#"<img src="a.png" alt=" " title="Company logo">"#,
+            "accname 1.2 2I: title stiftet den Namen trotz leerem alt",
+        )
+        .variant("alt Leerraum, title"),
         negative(
             "images/alt-missing",
             r#"<img src="a.png" alt="Logo of ACME">"#,
@@ -901,6 +991,25 @@ fn refresh() -> Vec<Fall> {
             "HTML shared declarative refresh steps: ohne Ziffern ignoriert",
         )
         .variant("ungültiger Wert"),
+        negative(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="0; url=/a"><meta http-equiv="refresh" content="9; url=/b">"#,
+            "HTML „will declaratively refresh“: nur die erste gültige Anweisung wirkt; ACT bc659a",
+        )
+        .variant("Regression: zweite Anweisung"),
+        fail(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="0: url=/a"><meta http-equiv="refresh" content="9; url=/b">"#,
+            "HTML shared declarative refresh steps: nach der Zeit nur ; , oder Leerraum; die ungültige erste zählt nicht (ACT bisz58)",
+        )
+        .variant("Regression: ungültige erste Anweisung")
+        .count(1),
+        negative(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="+5; url=/b">"#,
+            "HTML shared declarative refresh steps: ein Vorzeichen macht die Anweisung ungültig",
+        )
+        .variant("Vorzeichen"),
         na(
             "timing/meta-refresh",
             r#"<meta name="description" content="120">"#,

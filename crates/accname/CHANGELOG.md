@@ -7,6 +7,12 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-14
+
+### Fixed
+
+- **Rolle:** `role()` wendet die Konfliktauflösung für präsentationale Rollen an (WAI-ARIA 1.2, § 9.3): an fokussierbaren Elementen oder mit globalem ARIA-Attribut gilt die implizite Rolle. Vier WPT-Fälle bestehen dadurch zusätzlich.
+
 ## [0.30.1] - 2026-11-11
 
 ### Changed

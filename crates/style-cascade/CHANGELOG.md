@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-14
+
+### Added
+
+- **Kaskade:** `Cascade::color_pairs` liefert die Farbpaare eines Textes aus Verlaufsstufen, `opacity` (gemischt nach CSS Color 4) und `text-shadow`.
+
+### Fixed
+
+- **Kaskade:** `text-shadow` wird vererbt.
+
 ## [0.3.0] - 2026-11-11
 
 ### Breaking

@@ -1,12 +1,12 @@
 {
   "cases": {
-    "cantTell": 44,
-    "correct": 408,
-    "wrong": 60
+    "cantTell": 56,
+    "correct": 451,
+    "wrong": 5
   },
   "consistency": {
-    "consistent": 8,
-    "not consistent": 21,
+    "consistent": 23,
+    "not consistent": 6,
     "partial": 8,
     "untested": 51
   },
@@ -23,7 +23,8 @@
     {
       "act": "09o5cg",
       "barrierlab": [
-        "contrast/text-enhanced"
+        "contrast/text-enhanced",
+        "contrast/text-undetermined"
       ],
       "cases": 29,
       "consistency": "partial",
@@ -33,22 +34,7 @@
         {
           "actual": "passed",
           "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/09o5cg/051137940ea6c5091641e53063b2a9207221ac3d.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/09o5cg/4ba7e75934fbd313f05a9c9cfffbd08a2949f8a8.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
           "url": "https://act-rules.github.io/testcases/09o5cg/c2dcc599d1d0b741106f0ba63b0de8c77f3ebe54.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/09o5cg/26db50757b442f0c257840671a8e7c7297711e9d.html"
         }
       ]
     },
@@ -106,26 +92,10 @@
         "names/required-missing"
       ],
       "cases": 18,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Image has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/23a2a8/0ff974acaa04b13774d731e66b0ac93335325e38.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/23a2a8/58427934e6646e0c93e1bf97a1634df1d75f7e9c.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/23a2a8/b4d009c69c53db00b6e096513ac9150f6e9b6e61.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "24afc2",
@@ -167,11 +137,6 @@
       "deprecated": false,
       "name": "Visible label is part of accessible name",
       "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/2ee8b8/a01e2129885e0f10406e23a719301da436ba2653.html"
-        },
         {
           "actual": "failed",
           "expected": "passed",
@@ -247,24 +212,14 @@
     {
       "act": "4e8ab6",
       "barrierlab": [
-        "aria/required-attribute-missing"
+        "aria/required-attribute-missing",
+        "aria/combobox-popup-missing"
       ],
       "cases": 8,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element with role attribute has required states and properties",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/4e8ab6/2d7dadf8c1245fb59907fb770e7a2ac55c6de6d3.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/4e8ab6/da13a6ea7c396248be37fd2c1b724bef551b5e02.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "59796f",
@@ -272,21 +227,10 @@
         "images/input-alt-missing"
       ],
       "cases": 12,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Image button has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/59796f/7fcd19a5b5ab7cb081df0e33cd5fda2c0bee4915.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/59796f/e5ca3711c3a3ce76e765dbc52b2d0ce370df2042.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "59br37",
@@ -315,26 +259,10 @@
         "aria/attribute-prohibited"
       ],
       "cases": 15,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "ARIA state or property is permitted",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/5c01ea/da191373f044d7c309cafdf03485c61d2f91e1ee.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/5c01ea/9fe60b403371e0e5d057f4f6c871dfed42f7ac4c.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/5c01ea/46a07f5e7ad1db02e255f3d6c7d7b0e1ecf3b1fd.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "5effbb",
@@ -373,21 +301,10 @@
         "aria/attribute-value-invalid"
       ],
       "cases": 24,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "ARIA state or property has valid value",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/6a7281/f4057693e8bc785bc79eea906fe2c74f8859ab37.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/6a7281/bfe8367fb26e19599d339e70d79d7fdc665ea866.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "6cfa84",
@@ -435,7 +352,7 @@
         "svg/name-missing"
       ],
       "cases": 10,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "SVG element with explicit role has non-empty accessible name",
       "wrong": []
@@ -458,13 +375,7 @@
       "consistency": "not consistent",
       "deprecated": false,
       "name": "Audio or video element avoids automatically playing audio",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/80f0bf/63df2c2d14957cfa0957844313864dd15273c8a3.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "8fc3b6",
@@ -472,26 +383,10 @@
         "objects/alt-missing"
       ],
       "cases": 14,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Object element rendering non-text content has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/8fc3b6/8823df5ece746b53666bce7e59f4286db83057e9.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/8fc3b6/358271acbe8d353ca18ee72d4a79dc97f2aaa28a.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/8fc3b6/ea3e21949fe5d2ff522c2f6f068628deb0e4b0bb.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "97a4e1",
@@ -499,16 +394,10 @@
         "buttons/name-missing"
       ],
       "cases": 17,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Button has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/97a4e1/6f944bcb8ab65f381d1c080f639de43242efb7f5.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "9bd38c",
@@ -552,16 +441,10 @@
         "tables/headers-attr-invalid"
       ],
       "cases": 17,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Headers attribute specified on a cell refers to cells in the same table element",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/a25f45/d496254239c30419f2d57ea643dae036d1151832.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "aaa1bf",
@@ -602,62 +485,18 @@
     {
       "act": "afw4f7",
       "barrierlab": [
-        "contrast/text-insufficient"
+        "contrast/text-insufficient",
+        "contrast/text-undetermined"
       ],
       "cases": 28,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Text has minimum contrast",
       "wrong": [
         {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/e9a5aad9a2416a190840e583fbf3d52e247843aa.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/b09119e2816b6b59ed986cf7659cbfb0834ae42a.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/0b212e48dbb2517256ee6f8235ad550ac8d5ba64.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/11ec274fc1fdac1792436368e7ad1b25bfa50370.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/71886cad36622fb466cf3177a341ade74322f0fe.html"
-        },
-        {
           "actual": "passed",
           "expected": "failed",
           "url": "https://act-rules.github.io/testcases/afw4f7/6f8fa71c663ca8e52324a3dddbd4a2d60140dba1.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/afw4f7/e1094dcd0697b11e6228556c7c4da9703786e3d2.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/afw4f7/b4cc947734c2d828a5e7c493ee58970c3b48f4d0.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/afw4f7/28a2fa1fbe147515d4abd03996e6d481616282da.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/afw4f7/9573b85ae25b158899fcba32685475efe8e97a96.html"
         }
       ]
     },
@@ -720,25 +559,13 @@
     {
       "act": "b4f0c3",
       "barrierlab": [
-        "zoom/viewport-locked",
-        "zoom/viewport-scale-limited"
+        "zoom/viewport-locked"
       ],
       "cases": 11,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Meta viewport allows for zoom",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/b4f0c3/42bfbd40933a0aa7954e841ec0b239de643e8d2a.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/b4f0c3/94bfda6abb6966e3681e234b88daf04c095ff3be.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "b5c3f8",
@@ -757,31 +584,10 @@
         "aria/required-children-missing"
       ],
       "cases": 19,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "ARIA required owned elements",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bc4a75/668eca5516086c86c0c2b7118c545642d826e0de.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bc4a75/18b5ebff3cc85d3497d22088d1179390759f3aaa.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bc4a75/81837188c0aa959e1a6de0f883c2ede340f3f5f5.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bc4a75/a7a314ced1f32dcfec0b00c0defd7858e2c77415.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "bc659a",
@@ -789,16 +595,10 @@
         "timing/meta-refresh"
       ],
       "cases": 15,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Meta element has no refresh delay",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/bc659a/beeaf6f49d37ef2d771effd40bcb3bfc9655fbf4.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "bf051a",
@@ -806,21 +606,10 @@
         "document/lang-invalid"
       ],
       "cases": 7,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "HTML page lang attribute has valid language tag",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bf051a/a0e1c0cf69971fb9faf31a5a1180cf9124aa8db9.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bf051a/6b30e5fdcfd916ef0f745359c8130cc53c46006c.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "bisz58",
@@ -828,15 +617,10 @@
         "timing/meta-refresh"
       ],
       "cases": 14,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Meta element has no refresh delay (no exception)",
       "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/bisz58/d789ff3d0c087c77117a02527e71a646a343d4a3.html"
-        },
         {
           "actual": "passed",
           "expected": "failed",
@@ -898,21 +682,10 @@
         "frames/name-missing"
       ],
       "cases": 10,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Iframe element has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/cae760/38cee2a5fee5b3d670e0d63d78dda5abaea50e0a.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/cae760/394132219ba385a90dda40efe822ab8db0cc9483.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "cc0f0a",
@@ -926,7 +699,7 @@
     {
       "act": "cf77f2",
       "barrierlab": [
-        "keyboard/skip-link-missing"
+        "headings/none"
       ],
       "cases": 14,
       "consistency": "not consistent",
@@ -940,26 +713,10 @@
         "tables/header-without-data"
       ],
       "cases": 16,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Table header cell has assigned cells",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/d0f69e/c9c8800cc765aaaabeb43cf35a7554bc9be804f1.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/d0f69e/db675b58cc2eb76b9aa743cc1778ba6ae92abd93.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/d0f69e/46645a39378f2367d97c5695325e0a9119767910.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "d7ba54",
@@ -986,16 +743,10 @@
         "names/required-missing"
       ],
       "cases": 17,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Form field has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/e086e5/09b08d811784ac228154dd08863441b11222a597.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "e6952f",
@@ -1102,25 +853,10 @@
         "aria/required-parent-missing"
       ],
       "cases": 15,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "ARIA required context role",
       "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ff89c9/e779938b19b12e48036a180ebe60e392867d13ea.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ff89c9/ff17242184b34c5dfef7d5fd0d1a9279f0ba23ea.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ff89c9/16bf36473060bd2e626a1d1a061029bd7f981319.html"
-        },
         {
           "actual": "passed",
           "expected": "failed",
@@ -1146,23 +882,7 @@
       "consistency": "partial",
       "deprecated": false,
       "name": "Heading has non-empty accessible name",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ffd0e9/bf179de06bda7f9b3e3adcbd6ad0eb413d8bcd51.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ffd0e9/3adf9351567b2e293705311c1c3236b59b2b7867.html"
-        },
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/ffd0e9/0af782abf9e6314ec4bd46d60b140e6f94b818b2.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "m6b1q3",
@@ -1191,21 +911,10 @@
         "focus/indicator-missing"
       ],
       "cases": 9,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element in sequential focus order has visible focus",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/oj04fd/8784917764b66a645bc38a751805a2aac2201e21.html"
-        },
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/oj04fd/76a1528006c193ee0fab9ea6ad41bde8c424189f.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "qt1vmo",

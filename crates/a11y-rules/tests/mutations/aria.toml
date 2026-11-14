@@ -112,8 +112,8 @@ expect = "killed"
 id = "aria/attribute-not-allowed"
 file = "src/aria.rs"
 kind = "drop-finding"
-find = 'if native_forbidden(n, attr, v) {'
-replace = 'if false && native_forbidden(n, attr, v) {'
+find = 'if !empty && native_forbidden(n, attr, v) {'
+replace = 'if false && !empty && native_forbidden(n, attr, v) {'
 test = "korpus"
 expect = "killed"
 
@@ -139,8 +139,8 @@ expect = "killed"
 id = "aria/required-children-missing"
 file = "src/aria.rs"
 kind = "invert"
-find = 'if owns(doc, n, needed, &owner) == Some(false) {'
-replace = 'if owns(doc, n, needed, &owner) != Some(true) {'
+find = 'if owns(doc, n, needed, also, &owner) == Owned::Wrong {'
+replace = 'if owns(doc, n, needed, also, &owner) != Owned::Fine {'
 test = "korpus"
 expect = "killed"
 
@@ -195,5 +195,68 @@ file = "src/roles.rs"
 kind = "invert"
 find = 'if explicit_role(n) != Some("tooltip")'
 replace = 'if explicit_role(n) == Some("tooltip")'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-value-invalid"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'ValueType::IdRef => !v.contains(|c: char| c.is_ascii_whitespace()),'
+replace = 'ValueType::IdRef => true,'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-value-invalid"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'if required_reference_missing(doc, n) {'
+replace = 'if false && required_reference_missing(doc, n) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-value-invalid"
+file = "src/aria.rs"
+kind = "drop-exception"
+find = 'Some("combobox") => n.attr("aria-expanded") != Some("false"),'
+replace = 'Some("combobox") => true,'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/attribute-not-allowed"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'if roleless && GLOBAL & (1 << ai) == 0 {'
+replace = 'if false && roleless && GLOBAL & (1 << ai) == 0 {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-parent-missing"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'Effective::Translucent if !doc.is_ignored(n) && carries_global(n) => {'
+replace = 'Effective::Translucent if false && carries_global(n) => {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-children-missing"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = 'if text && !k.text().trim().is_empty() && !doc.is_ignored(k) {'
+replace = 'if false && text && !k.text().trim().is_empty() && !doc.is_ignored(k) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/required-children-missing"
+file = "src/aria.rs"
+kind = "drop-finding"
+find = '} else if also.contains(&r) {'
+replace = '} else if true {'
 test = "korpus"
 expect = "killed"

@@ -218,9 +218,53 @@ fn lang<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
-/// Grobprüfung auf BCP 47: Primärkennung aus zwei oder drei Buchstaben,
-/// danach nur alphanumerische Untertags. Keine Registry-Prüfung — dafür
-/// bräuchte es die IANA-Liste, und die gehört nicht in dieses Crate.
+/// Die zweibuchstabigen Primärsubtags der IANA Language Subtag Registry: alle
+/// Kennungen aus ISO 639-1 und die veralteten, aber registrierten `in`, `iw`,
+/// `ji`, `jw`, `mo`. ISO 639-1 ist abgeschlossen; die Liste ändert sich nicht.
+const ISO_639_1: &[&str] = &[
+    "aa", "ab", "ae", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh",
+    "bi", "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy", "da",
+    "de", "dv", "dz", "ee", "el", "en", "eo", "es", "et", "eu", "fa", "ff", "fi", "fj", "fo", "fr",
+    "fy", "ga", "gd", "gl", "gn", "gu", "gv", "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz",
+    "ia", "id", "ie", "ig", "ii", "ik", "in", "io", "is", "it", "iu", "iw", "ja", "ji", "jv", "jw",
+    "ka", "kg", "ki", "kj", "kk", "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv", "kw", "ky", "la",
+    "lb", "lg", "li", "ln", "lo", "lt", "lu", "lv", "mg", "mh", "mi", "mk", "ml", "mn", "mo", "mr",
+    "ms", "mt", "my", "na", "nb", "nd", "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny", "oc", "oj",
+    "om", "or", "os", "pa", "pi", "pl", "ps", "pt", "qu", "rm", "rn", "ro", "ru", "rw", "sa", "sc",
+    "sd", "se", "sg", "sh", "si", "sk", "sl", "sm", "sn", "so", "sq", "sr", "ss", "st", "su", "sv",
+    "sw", "ta", "te", "tg", "th", "ti", "tk", "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty", "ug",
+    "uk", "ur", "uz", "ve", "vi", "vo", "wa", "wo", "xh", "yi", "yo", "za", "zh", "zu",
+];
+
+/// Dreibuchstabige Kennungen (ISO 639-2/T und /B) der Sprachen, die eine
+/// Kennung aus ISO 639-1 haben. RFC 5646 2.2.1: Hat eine Sprache beide, steht
+/// nur die zweibuchstabige in der Registry — `eng` ist kein gültiges
+/// Primärsubtag, `en` ist es (ACT bf051a, Failed Example „eng").
+const ISO_639_2_WITH_639_1: &[&str] = &[
+    "aar", "abk", "afr", "aka", "alb", "amh", "ara", "arg", "arm", "asm", "ava", "ave", "aym",
+    "aze", "bak", "bam", "baq", "bel", "ben", "bih", "bis", "bod", "bos", "bre", "bul", "bur",
+    "cat", "ces", "cha", "che", "chi", "chu", "chv", "cor", "cos", "cre", "cym", "cze", "dan",
+    "deu", "div", "dut", "dzo", "ell", "eng", "epo", "est", "eus", "ewe", "fao", "fas", "fij",
+    "fin", "fra", "fre", "fry", "ful", "geo", "ger", "gla", "gle", "glg", "glv", "gre", "grn",
+    "guj", "hat", "hau", "heb", "her", "hin", "hmo", "hrv", "hun", "hye", "ibo", "ice", "ido",
+    "iii", "iku", "ile", "ina", "ind", "ipk", "isl", "ita", "jav", "jpn", "kal", "kan", "kas",
+    "kat", "kau", "kaz", "khm", "kik", "kin", "kir", "kom", "kon", "kor", "kua", "kur", "lao",
+    "lat", "lav", "lim", "lin", "lit", "ltz", "lub", "lug", "mac", "mah", "mal", "mao", "mar",
+    "may", "mkd", "mlg", "mlt", "mon", "mri", "msa", "mya", "nau", "nav", "nbl", "nde", "ndo",
+    "nep", "nld", "nno", "nob", "nor", "nya", "oci", "oji", "ori", "orm", "oss", "pan", "per",
+    "pli", "pol", "por", "pus", "que", "roh", "ron", "rum", "run", "rus", "sag", "san", "sin",
+    "slk", "slo", "slv", "sme", "smo", "sna", "snd", "som", "sot", "spa", "sqi", "srd", "srp",
+    "ssw", "sun", "swa", "swe", "tah", "tam", "tat", "tel", "tgk", "tgl", "tha", "tib", "tir",
+    "ton", "tsn", "tso", "tuk", "tur", "twi", "uig", "ukr", "urd", "uzb", "ven", "vie", "vol",
+    "wel", "wln", "wol", "xho", "yid", "yor", "zha", "zho", "zul",
+];
+
+/// Prüfung auf BCP 47: Primärkennung aus zwei oder drei Buchstaben, danach nur
+/// alphanumerische Untertags. Ein zweibuchstabiges Primärsubtag muss in der
+/// Registry stehen ([`ISO_639_1`]; ACT bf051a, „em-US"); ein dreibuchstabiges
+/// darf nicht das einer Sprache mit zweibuchstabiger Kennung sein
+/// ([`ISO_639_2_WITH_639_1`]). Andere dreibuchstabige gelten ungeprüft als
+/// gültig — die gut 7 000 Kennungen aus ISO 639-3 trägt dieses Crate nicht.
 fn is_plausible_lang(l: &str) -> bool {
     let l = l.trim();
     let mut parts = l.split('-');
@@ -228,6 +272,15 @@ fn is_plausible_lang(l: &str) -> bool {
         return false;
     };
     if !(2..=3).contains(&primary.len()) || !primary.chars().all(|c| c.is_ascii_alphabetic()) {
+        return false;
+    }
+    let primary = primary.to_ascii_lowercase();
+    let known = if primary.len() == 2 {
+        ISO_639_1.contains(&primary.as_str())
+    } else {
+        !ISO_639_2_WITH_639_1.contains(&primary.as_str())
+    };
+    if !known {
         return false;
     }
     // BCP 47 (RFC 5646, 2.1): jedes weitere Untertag hat 1 bis 8 Zeichen.
@@ -305,6 +358,20 @@ fn viewport_value<'c>(content: &'c str, key: &str) -> Option<&'c str> {
     None
 }
 
+/// Der Zahlenwert einer Skalierung (`maximum-scale`) nach CSS Device
+/// Adaptation („translate a single value"): `yes` ist 1, `no` 0,1,
+/// `device-width` und `device-height` 10, sonst die Zahl. Ein negativer oder
+/// nicht lesbarer Wert wird verworfen, als stünde er nicht da (ACT b4f0c3:
+/// `maximum-scale=-1` begrenzt nichts, `maximum-scale=yes` begrenzt auf 1).
+fn scale_value(v: &str) -> Option<f32> {
+    match v {
+        "yes" => Some(1.0),
+        "no" => Some(0.1),
+        "device-width" | "device-height" => Some(10.0),
+        _ => v.parse::<f32>().ok().filter(|s| *s >= 0.0),
+    }
+}
+
 fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Die Viewport-Angabe ist ein HTML-`<meta>`; ein Fremddokument hat keine.
     if !doc.root().is_element("html") {
@@ -323,7 +390,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
         let c = content.to_ascii_lowercase();
         let locked = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
-        let max = viewport_value(&c, "maximum-scale").and_then(|v| v.parse::<f32>().ok());
+        let max = viewport_value(&c, "maximum-scale").and_then(scale_value);
 
         // Unter 200 %: verletzt 1.4.4 unmittelbar.
         if locked || max.is_some_and(|v| v < 2.0) {
@@ -399,18 +466,67 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// Der Accessible Name wäre die genauere Auskunft, aber er ist Tier 2. Diese
 /// Regel gilt Tier 1 und nähert ihn deshalb strukturell an: Sie fragt nicht,
 /// *wie* der Name lautet, sondern ob überhaupt einer gestiftet wird.
-fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
+///
+/// Seit ACT ffd0e9 genauer: `aria-labelledby` zählt nur, wenn ein Ziel Text
+/// trägt (accname 1.2, 2B: ein leeres Ergebnis fällt auf den Inhalt zurück),
+/// das `alt` eines Bildes mit wirksamer `role="presentation"` nicht (2D).
+/// Versteckter Inhalt fehlt in der Sicht der Regel ohnehin (2A).
+fn heading_naming<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Naming {
     // Ein leeres `aria-label` stiftet keinen Namen (accname 1.2, 2D).
-    if has_text(n)
-        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-        || n.has_attr("aria-labelledby")
-    {
-        return false;
+    if n.attr("aria-label").is_some_and(|v| !v.trim().is_empty()) || content_names(n, ids) {
+        return Naming::Named;
     }
-    !self_and_descendants(n).any(|d| {
-        d.attr("alt").is_some_and(|v| !v.trim().is_empty())
-            || d.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-            || d.has_attr("aria-labelledby")
+    labelledby(n, ids)
+}
+
+/// Was `aria-labelledby` zum Namen beiträgt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Naming {
+    /// Ein Ziel trägt Text.
+    Named,
+    /// Kein Attribut, oder alle Ziele sind da und leer (accname 1.2, 2B).
+    Empty,
+    /// Ein Ziel fehlt in der Sicht der Regel: Es ist versteckt — dann zählt
+    /// sein Text nach accname trotzdem — oder es gibt die ID nicht
+    /// (`aria/reference-missing`). Eine Regel auf Tier 1 sieht nur die
+    /// Sicht ohne Verstecktes und kann beides nicht unterscheiden.
+    Unknown,
+}
+
+/// Ob die Verweise in `aria-labelledby` auf ein Element mit Text zeigen —
+/// Text, ein `aria-label` oder ein Bild mit `alt` darin.
+pub(crate) fn labelledby<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> Naming {
+    let filled = |d: N, a: &str| d.attr(a).is_some_and(|v| !v.trim().is_empty());
+    let mut state = Naming::Empty;
+    for t in n.attr("aria-labelledby").unwrap_or("").split_whitespace() {
+        match ids.get(&scoped_id(n, t)) {
+            Some(r)
+                if has_text(*r)
+                    || self_and_descendants(*r).any(|d| {
+                        filled(d, "aria-label") || (d.is_element("img") && filled(d, "alt"))
+                    }) =>
+            {
+                return Naming::Named;
+            }
+            Some(_) => {}
+            None => state = Naming::Unknown,
+        }
+    }
+    state
+}
+
+/// Ob der Inhalt unterhalb von `n` einen Namen stiftet (accname 1.2, 2F):
+/// Text, ein benanntes Kind oder ein Bild mit `alt`. Ein Kind mit einem
+/// Verweis, der nicht aufzulösen ist, zählt als benannt.
+fn content_names<'a, N: Node<'a>>(n: N, ids: &HashMap<ScopedId<'a>, N>) -> bool {
+    n.children().any(|c| match c.kind() {
+        a11y_dom::NodeKind::Text => !c.text().trim().is_empty(),
+        a11y_dom::NodeKind::Element => {
+            c.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
+                || labelledby(c, ids) != Naming::Empty
+                || (c.attr("alt").is_some_and(|v| !v.trim().is_empty()) && !presentational(c))
+                || content_names(c, ids)
+        }
     })
 }
 
@@ -418,7 +534,11 @@ fn heading_is_empty<'a, N: Node<'a>>(n: N) -> bool {
 /// `aria-level` (WAI-ARIA 1.2: ohne Angabe Ebene 2). Eine andere explizite
 /// Rolle nimmt einem `hN` die Überschrift (`<h2 role="tab">`).
 fn heading_level_of<'a, N: Node<'a>>(n: N) -> Option<u8> {
-    match explicit_role(n) {
+    // Eine verworfene `role="none"` lässt die implizite Rolle stehen
+    // ([`presentational`]).
+    let role =
+        explicit_role(n).filter(|r| !matches!(*r, "none" | "presentation") || presentational(n));
+    match role {
         Some("heading") => Some(
             n.attr("aria-level")
                 .and_then(|v| v.trim().parse::<u8>().ok())
@@ -435,6 +555,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut last = 0u8;
     let mut any = false;
     let mut h1s: Vec<NodeId> = Vec::new();
+    let ids = crate::forms::id_index(doc);
 
     for n in elements(doc) {
         let Some(level) = heading_level_of(n) else {
@@ -444,19 +565,32 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         if level == 1 {
             h1s.push(n.id());
         }
-        if heading_is_empty(n) {
+        let empty = match heading_naming(n, &ids) {
+            Naming::Named => None,
+            Naming::Empty => Some(Finding::fail(
+                "headings/empty",
+                pick!(
+                    locale,
+                    "The heading has no text.",
+                    "Die Überschrift hat keinen Text.",
+                ),
+            )),
+            Naming::Unknown => Some(Finding::review(
+                "headings/empty",
+                pick!(
+                    locale,
+                    "The heading has no text of its own; its aria-labelledby points to an \
+                     element that is hidden or does not exist.",
+                    "Die Überschrift hat keinen eigenen Text; ihr aria-labelledby zeigt auf ein \
+                     verstecktes oder nicht vorhandenes Element.",
+                ),
+            )),
+        };
+        if let Some(f) = empty {
             out.push(
-                Finding::fail(
-                    "headings/empty",
-                    pick!(
-                        locale,
-                        "The heading has no text.",
-                        "Die Überschrift hat keinen Text.",
-                    ),
-                )
-                .with_severity(Severity::Medium)
-                .with_wcag(["1.3.1", "2.4.6"])
-                .at(at(n.id())),
+                f.with_severity(Severity::Medium)
+                    .with_wcag(["1.3.1", "2.4.6"])
+                    .at(at(n.id())),
             );
         }
         // Eine übersprungene Ebene ist kein Verstoß: 1.3.1 verlangt, dass die
@@ -498,6 +632,13 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 || (is_landmark(n, "header", "banner")
                     && (n.attr("role").is_some() || is_document_wide(n)))
         });
+        // Ein Bedienelement, dessen Wirkung erst ein Skript festlegt, kann den
+        // Block ausblenden oder überspringen (ACT cf77f2, Passed Examples mit
+        // `onclick`); ob es das tut, zeigt das Markup nicht.
+        let scripted = elements(doc).any(|n| {
+            n.has_attr("onclick")
+                || (n.is_element("button") && !ancestors(n).any(|a| a.is_element("form")))
+        });
         let f = if modal_open(doc) {
             Finding::review(
                 "headings/none",
@@ -508,7 +649,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-        } else if repeated {
+        } else if repeated && !scripted {
             Finding::fail(
                 "headings/none",
                 pick!(
@@ -975,14 +1116,11 @@ fn skip_link<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// dekorativ. Ihm ein `alt` abzuverlangen hieße, eine bewusste Angabe des
 /// Autors zu ignorieren und einen Befund zu melden, den niemand beheben kann,
 /// ohne die Angabe zurückzunehmen.
+///
+/// Die Rolle wirkt nur, wenn der Browser sie nicht verwirft
+/// ([`presentational`]): Ein fokussierbares Bild bleibt ein Bild.
 fn explicitly_decorative<'a, N: Node<'a>>(n: N) -> bool {
-    if n.attr("aria-hidden") == Some("true") {
-        return true;
-    }
-    n.attr("role").is_some_and(|r| {
-        r.split_whitespace()
-            .any(|x| x.eq_ignore_ascii_case("presentation") || x.eq_ignore_ascii_case("none"))
-    })
+    n.attr("aria-hidden") == Some("true") || presentational(n)
 }
 
 /// Ob ein `<img>` ohne `alt` seine Textalternative anders bekommt:
@@ -1016,6 +1154,28 @@ fn images<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 .with_wcag(["1.1.1"])
                 .at(at(n.id())),
             ),
+            // Nur das leere `alt=""` macht ein Bild dekorativ (HTML-AAM: Rolle
+            // `presentation`). `alt=" "` lässt die Rolle `img` stehen, und der
+            // Name ist nach dem Kürzen leer (accname 1.2, ACT 23a2a8).
+            Some(alt)
+                if !alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
+            {
+                out.push(
+                    Finding::fail(
+                        "images/alt-missing",
+                        pick!(
+                            locale,
+                            "The image's alt attribute contains only whitespace, so the image \
+                             has no accessible name; decorative images take alt=\"\".",
+                            "Das alt-Attribut des Bildes enthält nur Leerraum, das Bild hat also \
+                             keinen zugänglichen Namen; dekorative Bilder bekommen alt=\"\".",
+                        ),
+                    )
+                    .with_severity(Severity::High)
+                    .with_wcag(["1.1.1"])
+                    .at(at(n.id())),
+                )
+            }
             Some(alt) if suspicious_alt(alt) => out.push(
                 // Heuristisch: der Text ist da, aber vermutlich nichtssagend.
                 // Deshalb Review, nicht Fail.
@@ -1088,6 +1248,12 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             ty.as_str(),
             "hidden" | "submit" | "button" | "reset" | "image"
         ) {
+            continue;
+        }
+        // Ein deaktiviertes Feld mit `role="none"` ist kein Formularfeld: Es
+        // ist nicht fokussierbar, die Rolle greift (WAI-ARIA 1.2,
+        // „Presentational Roles Conflict Resolution"; ACT e086e5).
+        if crate::aria::presentation_applies(n) {
             continue;
         }
 
@@ -1239,6 +1405,11 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             // regelmäßig (bund.de, sachsen-anhalt.de). axe-core nimmt diesen
             // Fall bei `aria-controls` genauso aus.
             if rel == "aria-controls" && n.attr("aria-expanded") == Some("false") {
+                continue;
+            }
+            // Ein erforderlicher Verweis ins Leere ist ein ungültiger Wert und
+            // wird dort gemeldet (`aria/attribute-value-invalid`, ACT 6a7281).
+            if rel == "aria-controls" && crate::aria::required_reference_missing(doc, n) {
                 continue;
             }
             let missing: Vec<&str> = v
@@ -1483,6 +1654,18 @@ pub(crate) fn explicit_role<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
         .find(|r| VALID_ROLES.contains(r))
 }
 
+/// Ob `role="none"`/`"presentation"` an diesem Element wirkt.
+///
+/// WAI-ARIA 1.2, § 9.3 (Presentational Roles Conflict Resolution): Ist das
+/// Element fokussierbar oder trägt es ein globales ARIA-Attribut, ignoriert
+/// der Browser die präsentationale Rolle und stellt die implizite aus.
+/// `<img role="none" tabindex="0">` bleibt ein Bild, `<h1 role="none"
+/// aria-label="">` eine Überschrift (ACT 23a2a8, ffd0e9). Die Prüfung selbst
+/// steht in [`crate::aria::presentation_applies`].
+pub(crate) fn presentational<'a, N: Node<'a>>(n: N) -> bool {
+    crate::aria::presentation_applies(n)
+}
+
 /// Die Element-Kinder einer Liste im flachen Baum.
 ///
 /// Ein `<slot>` ist `display: contents` und für die Assistenztechnik
@@ -1576,8 +1759,10 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 fn orphaned_entries<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         // Ein `<li>` mit eigener Rolle (`none` im Menü-Muster, `tab`) ist kein
-        // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln.
-        if !is_list_item(n) || explicit_role(n).is_some_and(|r| r != "listitem") {
+        // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln. Ebenso
+        // über ein anderes Element mit `role="listitem"`
+        // (`aria/required-parent-missing`, ACT ff89c9).
+        if !n.is_element("li") || explicit_role(n).is_some_and(|r| r != "listitem") {
             continue;
         }
         // Die nächste Liste darüber. Ist sie per `role` etwas anderes

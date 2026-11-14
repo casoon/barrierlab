@@ -36,14 +36,18 @@ fn at(id: NodeId) -> Location {
 /// Namen. auditmysite meldete den leeren Tab (`aria-label`); ohne ihn ginge
 /// der Fall verloren.
 ///
+/// Dazu `img` für Elemente, die erst durch `role="img"` zum Bild werden
+/// (ACT 23a2a8); `<img>` meldet `images/alt-missing`, SVG `svg/name-missing`.
+///
 /// Nicht übernommen: `menu` — ein Container, kein Bedienelement; ARIA 1.2
 /// verlangt keinen Namen. Die weiteren Pflichtrollen der Spezifikation
-/// (`region`, `img`, `table`, `grid`, `tree`, …) haben eigene Regeln oder
+/// (`region`, `table`, `grid`, `tree`, …) haben eigene Regeln oder
 /// keinen Beleg im Korpus.
 const NAME_REQUIRED: &[&str] = &[
     "checkbox",
     "combobox",
     "grid",
+    "img",
     "link",
     "listbox",
     "menuitem",
@@ -101,6 +105,11 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if n.is_element("option") {
             continue;
         }
+        // Bilder mit eigener Regel: `<img>` (`images/alt-missing`) und SVG
+        // (`svg/name-missing`).
+        if role == "img" && (n.is_element("img") || crate::semantics::in_svg(n)) {
+            continue;
+        }
         if matches!(n.local_name(), "input" | "select" | "textarea") && !label_claims(n, &label_for)
         {
             continue;
@@ -110,7 +119,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         }
         // auditmysite ordnet `meter` und `progressbar` 1.1.1 zu (axe), die
         // übrigen 4.1.2.
-        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar") {
+        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar" | "img") {
             &["1.1.1"]
         } else {
             &["4.1.2"]
@@ -491,6 +500,11 @@ pub(crate) fn label_in_name<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec
         // „symbolic text characters"). Beleg: dm.de, Fußnote „¹⁾" mit dem
         // Namen „Zur Fußnote 1".
         if !visible.chars().any(char::is_alphabetic) {
+            continue;
+        }
+        // Ein einzelnes Zeichen steht ebenso für ein Symbol — das „X" zum
+        // Schließen (ACT 2ee8b8: „characters expressing non-text content").
+        if normalised(&visible).chars().count() == 1 {
             continue;
         }
         let (s, m) = (normalised(&visible), normalised(&name));

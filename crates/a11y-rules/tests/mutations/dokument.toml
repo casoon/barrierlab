@@ -162,14 +162,92 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        || n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
-        || n.has_attr("aria-labelledby")
-    {
+    if n.attr("aria-label").is_some_and(|v| !v.trim().is_empty()) || content_names(n, ids) {
 '''
 replace = '''
-        || n.has_attr("aria-label")
-        || n.has_attr("aria-labelledby")
-    {
+    if n.has_attr("aria-label") || content_names(n, ids) {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+            Some(_) => {}
+            None => state = Naming::Unknown,
+'''
+replace = '''
+            Some(_) => return Naming::Named,
+            None => state = Naming::Unknown,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+            Some(_) => {}
+            None => state = Naming::Unknown,
+'''
+replace = '''
+            Some(_) => {}
+            None => state = Naming::Empty,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+                || (c.attr("alt").is_some_and(|v| !v.trim().is_empty()) && !presentational(c))
+'''
+replace = '''
+                || c.attr("alt").is_some_and(|v| !v.trim().is_empty())
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/empty"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+        explicit_role(n).filter(|r| !matches!(*r, "none" | "presentation") || presentational(n));
+'''
+replace = '''
+        explicit_role(n);
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/aria.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+    matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n) && !focusable(n)
+'''
+replace = '''
+    matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n)
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/alt-missing"
+file = "src/structure.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+                if !alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
+'''
+replace = '''
+                if alt.is_empty() && alt.trim().is_empty() && !alternative_without_alt(n) =>
 '''
 expect = "killed"
 
@@ -263,10 +341,23 @@ file = "src/structure.rs"
 kind = "invert"
 test = "korpus"
 find = '''
-        } else if repeated {
+        } else if repeated && !scripted {
 '''
 replace = '''
-        } else if !repeated {
+        } else if !repeated && !scripted {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "headings/none"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        } else if repeated && !scripted {
+'''
+replace = '''
+        } else if repeated {
 '''
 expect = "killed"
 
@@ -535,5 +626,79 @@ find = '''
 '''
 replace = '''
         .filter(|n| is_section(*n))
+'''
+expect = "killed"
+
+[[mutation]]
+id = "forms/label-missing"
+file = "src/structure.rs"
+kind = "drop-exception"
+find = 'if crate::aria::presentation_applies(n) {'
+replace = 'if false && crate::aria::presentation_applies(n) {'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "document/lang-invalid"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        ISO_639_1.contains(&primary.as_str())
+'''
+replace = '''
+        true
+'''
+expect = "killed"
+
+[[mutation]]
+id = "document/lang-invalid"
+file = "src/structure.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        !ISO_639_2_WITH_639_1.contains(&primary.as_str())
+'''
+replace = '''
+        true
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-locked"
+file = "src/structure.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+        "yes" => Some(1.0),
+'''
+replace = '''
+        "yes" => None,
+'''
+expect = "killed"
+
+[[mutation]]
+id = "zoom/viewport-locked"
+file = "src/structure.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+        _ => v.parse::<f32>().ok().filter(|s| *s >= 0.0),
+'''
+replace = '''
+        _ => v.parse::<f32>().ok().filter(|s| *s >= -10.0),
+'''
+expect = "killed"
+
+[[mutation]]
+id = "timing/meta-refresh"
+file = "src/document.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        .is_some_and(|c| !(c == ';' || c == ',' || ws(c)))
+'''
+replace = '''
+        .is_some_and(|_| false)
 '''
 expect = "killed"

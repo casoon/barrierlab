@@ -96,15 +96,324 @@ fn cells<'a, N: Node<'a>>(table: N) -> Cells<N> {
     z
 }
 
+// --- Tabellenmodell -----------------------------------------------------------
+
+/// Der `scope` einer Kopfzelle (HTML, „The th element"). Ohne gültiges
+/// `scope` gilt die explizite Rolle: `columnheader` wie `col`, `rowheader`
+/// wie `row` (WAI-ARIA 1.2).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum HeaderScope {
+    Auto,
+    Row,
+    Col,
+    RowGroup,
+    ColGroup,
+}
+
+fn header_scope<'a, N: Node<'a>>(n: N) -> HeaderScope {
+    let scope = n
+        .is_element("th")
+        .then(|| n.attr("scope"))
+        .flatten()
+        .map(|s| s.trim().to_ascii_lowercase());
+    match scope.as_deref() {
+        Some("row") => HeaderScope::Row,
+        Some("col") => HeaderScope::Col,
+        Some("rowgroup") => HeaderScope::RowGroup,
+        Some("colgroup") => HeaderScope::ColGroup,
+        _ => match explicit_role(n) {
+            Some("columnheader") => HeaderScope::Col,
+            Some("rowheader") => HeaderScope::Row,
+            _ => HeaderScope::Auto,
+        },
+    }
+}
+
+/// Eine Zelle im Raster der Tabelle (HTML, „Forming a table").
+struct Slot<N> {
+    node: N,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+    header: bool,
+    scope: HeaderScope,
+    group: usize,
+}
+
+/// Ein Spannenattribut von `<td>`/`<th>` nach HTML: `colspan` 1 bis 1000,
+/// `rowspan` 0 bis 65534 (0: bis zum Ende der Zeilengruppe), sonst 1.
+fn span<'a, N: Node<'a>>(n: N, attr: &str, max: usize) -> usize {
+    if !(n.is_element("td") || n.is_element("th")) {
+        return 1;
+    }
+    n.attr(attr)
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .map_or(1, |v| v.min(max))
+}
+
+/// Die Zeilen einer Tabelle in Rasterordnung, je mit ihrer Zeilengruppe.
+/// `<tfoot>` rückt ans Ende (HTML, „Forming a table"); Zeilen direkt in der
+/// Tabelle bilden je Folge eine eigene Gruppe. Verschachtelte Tabellen
+/// gehören nicht dazu.
+fn rows<'a, N: Node<'a>>(table: N) -> Vec<(N, usize)> {
+    fn walk<'a, N: Node<'a>>(
+        n: N,
+        group: &mut usize,
+        loose: &mut bool,
+        out: &mut Vec<(N, usize)>,
+        foot: &mut Vec<N>,
+    ) {
+        for k in n.children() {
+            if k.kind() != NodeKind::Element || is_table(k) {
+                continue;
+            }
+            if is_row(k) {
+                if !*loose {
+                    *group += 1;
+                    *loose = true;
+                }
+                out.push((k, *group));
+            } else if is_row_group(k) {
+                if k.is_element("tfoot") && explicit_role(k).is_none() {
+                    foot.push(k);
+                    continue;
+                }
+                *group += 1;
+                *loose = false;
+                let g = *group;
+                out.extend(k.children().filter(|r| is_row(*r)).map(|r| (r, g)));
+            } else if !is_header_cell(k) && !is_data_cell(k) {
+                walk(k, group, loose, out, foot);
+            }
+        }
+    }
+    let (mut group, mut loose) = (0, false);
+    let (mut out, mut foot) = (Vec::new(), Vec::new());
+    walk(table, &mut group, &mut loose, &mut out, &mut foot);
+    for f in foot {
+        group += 1;
+        out.extend(f.children().filter(|r| is_row(*r)).map(|r| (r, group)));
+    }
+    out
+}
+
+/// Die Zellen einer Zeile, ohne in Zellen, Zeilen oder Tabellen
+/// hinabzusteigen.
+fn row_cells<'a, N: Node<'a>>(row: N, out: &mut Vec<N>) {
+    for k in row.children() {
+        if k.kind() != NodeKind::Element || is_table(k) || is_row(k) {
+            continue;
+        }
+        if is_header_cell(k) || is_data_cell(k) {
+            out.push(k);
+        } else {
+            row_cells(k, out);
+        }
+    }
+}
+
+/// Ob eine Kopfzelle nichts zeigt: kein Text, kein Element darin. Leere
+/// Zellen streicht HTML aus jeder Kopfzellenliste; die leere Ecke über den
+/// Zeilenköpfen ist keine Beschriftung, die etwas beschriften müsste.
+fn is_empty_cell<'a, N: Node<'a>>(n: N) -> bool {
+    !n.children().any(|k| {
+        k.kind() == NodeKind::Element || (k.kind() == NodeKind::Text && !k.text().trim().is_empty())
+    })
+}
+
+/// Die nicht leeren Kopfzellen der Tabelle, die keiner Zelle zugeordnet sind —
+/// nach HTML, „Forming relationships between data cells and header cells":
+/// Eine Zelle mit `headers` bekommt genau die dort genannten Zellen, jede
+/// andere die Spalten- und Zeilenköpfe, die die Suche nach oben und nach
+/// links findet, und die Zeilengruppenköpfe ihrer Gruppe.
+///
+/// Spaltengruppenköpfe (`scope="colgroup"`) stehen nie in der Liste: Ohne
+/// das Modell der `<colgroup>`-Elemente ist ihre Zuordnung nicht bestimmt,
+/// und ein Verstoß dort wäre geraten.
+fn unassigned<'a, N: Node<'a>>(table: N) -> Vec<N> {
+    let rows = rows(table);
+    let mut group_end: HashMap<usize, usize> = HashMap::new();
+    for (y, (_, g)) in rows.iter().enumerate() {
+        group_end.insert(*g, y + 1);
+    }
+    let mut slots: Vec<Slot<N>> = Vec::new();
+    let mut grid: Vec<Vec<Option<usize>>> = Vec::new();
+    for (y, (row, g)) in rows.iter().enumerate() {
+        let mut cells = Vec::new();
+        row_cells(*row, &mut cells);
+        let mut x = 0;
+        for c in cells {
+            if grid.len() <= y {
+                grid.resize(y + 1, Vec::new());
+            }
+            while grid[y].get(x).is_some_and(Option::is_some) {
+                x += 1;
+            }
+            let w = span(c, "colspan", 1000).max(1);
+            let h = match span(c, "rowspan", 65534) {
+                0 => group_end[g].saturating_sub(y).max(1),
+                h => h,
+            };
+            let i = slots.len();
+            if grid.len() < y + h {
+                grid.resize(y + h, Vec::new());
+            }
+            for line in &mut grid[y..y + h] {
+                if line.len() < x + w {
+                    line.resize(x + w, None);
+                }
+                for slot in &mut line[x..x + w] {
+                    slot.get_or_insert(i);
+                }
+            }
+            slots.push(Slot {
+                node: c,
+                x,
+                y,
+                w,
+                h,
+                header: is_header_cell(c),
+                scope: header_scope(c),
+                group: *g,
+            });
+            x += w;
+        }
+    }
+    let at = |x: usize, y: usize| grid.get(y).and_then(|l| l.get(x)).copied().flatten();
+    let data_in_rows = |y: usize, h: usize| {
+        (y..y + h).any(|r| {
+            grid.get(r)
+                .is_some_and(|l| l.iter().flatten().any(|i| !slots[*i].header))
+        })
+    };
+    let data_in_cols = |x: usize, w: usize| {
+        grid.iter().any(|l| {
+            l.iter()
+                .skip(x)
+                .take(w)
+                .flatten()
+                .any(|i| !slots[*i].header)
+        })
+    };
+    let column_header: Vec<bool> = slots
+        .iter()
+        .map(|s| {
+            s.header
+                && (s.scope == HeaderScope::Col
+                    || (s.scope == HeaderScope::Auto && !data_in_rows(s.y, s.h)))
+        })
+        .collect();
+    let row_header: Vec<bool> = slots
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            s.header
+                && (s.scope == HeaderScope::Row
+                    || (s.scope == HeaderScope::Auto
+                        && !column_header[i]
+                        && !data_in_cols(s.x, s.w)))
+        })
+        .collect();
+
+    let mut assigned = vec![false; slots.len()];
+    // HTML, „internal algorithm for scanning and assigning header cells".
+    let scan = |p: usize, x0: usize, y0: usize, dx: bool, assigned: &mut Vec<bool>| {
+        let mut opaque: Vec<usize> = Vec::new();
+        let mut block: Vec<usize> = Vec::new();
+        let mut in_block = slots[p].header;
+        if in_block {
+            block.push(p);
+        }
+        let (mut x, mut y) = (x0, y0);
+        loop {
+            if dx {
+                let Some(nx) = x.checked_sub(1) else { break };
+                x = nx;
+            } else {
+                let Some(ny) = y.checked_sub(1) else { break };
+                y = ny;
+            }
+            let Some(c) = at(x, y) else { continue };
+            if slots[c].header {
+                in_block = true;
+                block.push(c);
+                let blocked = if dx {
+                    opaque
+                        .iter()
+                        .any(|o| slots[*o].y == slots[c].y && slots[*o].h == slots[c].h)
+                        || !row_header[c]
+                } else {
+                    opaque
+                        .iter()
+                        .any(|o| slots[*o].x == slots[c].x && slots[*o].w == slots[c].w)
+                        || !column_header[c]
+                };
+                if !blocked && c != p {
+                    assigned[c] = true;
+                }
+            } else if in_block {
+                in_block = false;
+                opaque.append(&mut block);
+            }
+        }
+    };
+    let mut ids: HashMap<&str, usize> = HashMap::new();
+    for (i, s) in slots.iter().enumerate() {
+        if let Some(id) = s.node.attr("id") {
+            ids.entry(id).or_insert(i);
+        }
+    }
+    for p in 0..slots.len() {
+        let s = &slots[p];
+        if let Some(headers) = s.node.attr("headers") {
+            for id in headers.split_whitespace() {
+                if let Some(&c) = ids.get(id)
+                    && c != p
+                {
+                    assigned[c] = true;
+                }
+            }
+            continue;
+        }
+        for y in s.y..s.y + s.h {
+            scan(p, s.x, y, true, &mut assigned);
+        }
+        for x in s.x..s.x + s.w {
+            scan(p, x, s.y, false, &mut assigned);
+        }
+        for (c, g) in slots.iter().enumerate() {
+            if g.header
+                && g.scope == HeaderScope::RowGroup
+                && g.group == s.group
+                && g.x < s.x + s.w
+                && g.y < s.y + s.h
+                && c != p
+            {
+                assigned[c] = true;
+            }
+        }
+    }
+    slots
+        .iter()
+        .zip(assigned)
+        .filter(|(s, a)| {
+            s.header && !a && s.scope != HeaderScope::ColGroup && !is_empty_cell(s.node)
+        })
+        .map(|(s, _)| s.node)
+        .collect()
+}
+
 // --- tables/header-without-data -------------------------------------------
 
-/// 1.3.1: Eine Tabelle mit Kopfzellen, aber ohne eine einzige Datenzelle. Die
-/// Kopfzellen beschriften nichts.
-///
-/// Wie in auditmysite eine Aussage über die ganze Tabelle, nicht je Spalte:
-/// Eine Spalte aus Zeilenköpfen (`<th scope="row">`) unter einem
-/// Spaltenkopf ist das übliche Muster „Tabelle mit zwei Kopfrichtungen"
-/// (auditmysite#638, barrierlab.eu). Leere Datenzellen zählen mit.
+/// 1.3.1: Eine Kopfzelle, die keine Zelle beschriftet — in einer Tabelle
+/// ganz ohne Datenzelle jede Kopfzelle, sonst jede, der das Tabellenmodell
+/// von HTML keine Zelle zuordnet ([`unassigned`]; ACT d0f69e: eine Spalte
+/// ohne Zelle darunter, ein `headers`, das die Spalte umgeht, ein Grid mit
+/// kürzeren Zeilen). Eine Spalte aus Zeilenköpfen (`<th scope="row">`)
+/// unter einem Spaltenkopf ist das übliche Muster „Tabelle mit zwei
+/// Kopfrichtungen" (auditmysite#638, barrierlab.eu): Der Spaltenkopf ist
+/// den Zeilenköpfen zugeordnet und besteht. Leere Datenzellen zählen mit.
 ///
 /// Steht eine Zeilengruppe ohne Zeile in der Tabelle — die Zeilen werden noch
 /// geladen oder sind ausgeblendet, etwa der Zeilenvorrat eines virtualisierten
@@ -114,7 +423,11 @@ fn cells<'a, N: Node<'a>>(table: N) -> Cells<N> {
 pub(crate) fn header_without_data<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for t in elements(doc).filter(|n| is_table(*n)) {
         let z = cells(t);
-        if z.head.is_empty() || z.data > 0 {
+        if z.head.is_empty() {
+            continue;
+        }
+        let lonely = if z.data > 0 { unassigned(t) } else { z.head };
+        if lonely.is_empty() {
             continue;
         }
         if z.empty_group {
@@ -137,20 +450,27 @@ pub(crate) fn header_without_data<D: Document>(doc: &D, locale: Locale, out: &mu
             );
             continue;
         }
-        for k in z.head {
+        let text = if z.data > 0 {
+            pick!(
+                locale,
+                "The header cell labels no cell: no cell in its column or row, and no headers \
+                 attribute, is assigned to it.",
+                "Die Kopfzelle beschriftet keine Zelle: Keine Zelle ihrer Spalte oder Zeile und \
+                 kein headers-Attribut ist ihr zugeordnet.",
+            )
+        } else {
+            pick!(
+                locale,
+                "The header cell has no data cells: the table contains no <td> at all.",
+                "Die Kopfzelle hat keine Datenzellen: Die Tabelle enthält kein einziges <td>.",
+            )
+        };
+        for k in lonely {
             out.push(
-                Finding::fail(
-                    "tables/header-without-data",
-                    pick!(
-                        locale,
-                        "The header cell has no data cells: the table contains no <td> at all.",
-                        "Die Kopfzelle hat keine Datenzellen: Die Tabelle enthält kein einziges \
-                         <td>.",
-                    ),
-                )
-                .with_severity(Severity::High)
-                .with_wcag(["1.3.1"])
-                .at(at(k.id())),
+                Finding::fail("tables/header-without-data", text)
+                    .with_severity(Severity::High)
+                    .with_wcag(["1.3.1"])
+                    .at(at(k.id())),
             );
         }
     }
@@ -187,6 +507,16 @@ pub(crate) fn headers_attr<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
             continue;
         }
         let table = table_of(cell);
+        // In einer Tabelle mit `role="none"`/`"presentation"` erben die
+        // Zellen ohne eigene Rolle das: Sie sind keine Zellen mehr (WAI-ARIA
+        // 1.2, `presentation`, „required owned elements"; ACT a25f45).
+        if cell.attr("role").is_none()
+            && ancestors(cell)
+                .find(|a| a.is_element("table"))
+                .is_some_and(crate::aria::presentation_applies)
+        {
+            continue;
+        }
         let invalid = headers.split_whitespace().find(|r| {
             ids.get(&scoped_id(cell, r)).is_none_or(|k| {
                 !is_header_cell(*k) || *k == cell || table.is_some_and(|t| table_of(*k) != Some(t))

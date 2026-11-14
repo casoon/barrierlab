@@ -300,6 +300,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         doc.sampled_backdrop(node.inner)
     }
 
+    fn color_pairs<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::ColorPairs> {
+        let doc: &'n D = self.doc;
+        doc.color_pairs(node.inner)
+    }
+
     fn frame_reachable<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         let doc: &'n D = self.doc;
         doc.frame_reachable(node.inner)

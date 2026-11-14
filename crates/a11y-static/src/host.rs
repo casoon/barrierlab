@@ -2,7 +2,7 @@
 //! `a11y-dom`), semantics from `accname`, rendering from `style-cascade`.
 
 use a11y_dom::{
-    Backdrop, ComputedStyle, Document, Node, NodeKind, Rect, Rendering, Semantics, ancestors,
+    ColorPairs, ComputedStyle, Document, Node, NodeKind, Rect, Rendering, Semantics, ancestors,
 };
 use accname::IdIndex;
 use html5_parser::Document as Html5Document;
@@ -93,13 +93,14 @@ impl Rendering for Host<'_> {
         None
     }
 
-    fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
+    /// Gradients, `opacity` and `text-shadow`: the exact colour pairs, not
+    /// a pixel sample (the text lies over one part of a gradient, which part
+    /// a static host does not know).
+    fn color_pairs<'n>(&'n self, node: Self::N<'n>) -> Option<ColorPairs> {
         if self.incomplete {
             return None;
         }
-        self.cascade
-            .backdrop_luminances(node)
-            .map(|luminance| Backdrop { luminance })
+        self.cascade.color_pairs(node)
     }
 
     /// Neither the node nor an ancestor has `display: none` (which includes

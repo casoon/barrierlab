@@ -156,11 +156,84 @@ pub fn role<'a, N: Node<'a>>(node: N) -> Option<&'static str> {
         // Mehrere Rollen sind ein Fallback-Stapel: die erste gültige gewinnt.
         for token in explicit.split_whitespace() {
             if let Some(known) = VALID.iter().find(|v| **v == token) {
+                // WAI-ARIA 1.2, „Presentational Roles Conflict Resolution":
+                // Ist das Element fokussierbar oder trägt es ein globales
+                // ARIA-Attribut, gilt `none`/`presentation` nicht, sondern
+                // die implizite Rolle.
+                if matches!(*known, "none" | "presentation")
+                    && (focusable(node) || has_global_aria(node))
+                {
+                    return implicit(node);
+                }
                 return Some(known);
             }
         }
     }
     implicit(node)
+}
+
+/// Globale Zustände und Eigenschaften aus WAI-ARIA 1.2, die die
+/// präsentationale Rolle aufheben (§ 9.3) — ohne `aria-hidden`, das das
+/// Element ohnehin ausblendet. `aria-label` und `aria-labelledby` zählen mit,
+/// obwohl sie an `none`/`presentation` verboten sind: Gerade deshalb stellt
+/// der Browser die implizite Rolle aus (ACT ffd0e9, `<h1 role="none"
+/// aria-label="">` bleibt eine Überschrift).
+const PRESENTATION_CONFLICT: &[&str] = &[
+    "aria-atomic",
+    "aria-busy",
+    "aria-controls",
+    "aria-current",
+    "aria-describedby",
+    "aria-details",
+    "aria-dropeffect",
+    "aria-errormessage",
+    "aria-flowto",
+    "aria-grabbed",
+    "aria-haspopup",
+    "aria-invalid",
+    "aria-keyshortcuts",
+    "aria-label",
+    "aria-labelledby",
+    "aria-live",
+    "aria-owns",
+    "aria-relevant",
+    "aria-roledescription",
+];
+
+/// Ob das Element ein globales ARIA-Attribut trägt. Schon das Vorhandensein
+/// zählt, auch mit leerem Wert: WAI-ARIA 1.2, § 9.3 fragt nach dem Attribut,
+/// nicht nach seinem Wert (ACT ffd0e9, `<h1 aria-label="" role="none">` bleibt
+/// eine Überschrift).
+fn has_global_aria<'a, N: Node<'a>>(node: N) -> bool {
+    PRESENTATION_CONFLICT.iter().any(|a| node.has_attr(a))
+}
+
+/// Ob das Element nach HTML fokussierbar ist, soweit das Markup es zeigt:
+/// ein nicht deaktiviertes Bedienelement, ein Link mit `href`, `tabindex`
+/// oder `contenteditable`. Ein deaktiviertes Element ist nicht fokussierbar
+/// (HTML, „disabled"), auch nicht mit `tabindex`.
+fn focusable<'a, N: Node<'a>>(node: N) -> bool {
+    let control = matches!(
+        node.local_name(),
+        "button" | "input" | "select" | "textarea"
+    );
+    if control
+        && (node.has_attr("disabled")
+            || ancestors(node).any(|a| a.is_element("fieldset") && a.has_attr("disabled")))
+    {
+        return false;
+    }
+    (control
+        && !node
+            .attr("type")
+            .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")))
+        || (matches!(node.local_name(), "a" | "area") && node.has_attr("href"))
+        || node
+            .attr("tabindex")
+            .is_some_and(|t| t.trim().parse::<i32>().is_ok())
+        || node
+            .attr("contenteditable")
+            .is_some_and(|v| !v.trim().eq_ignore_ascii_case("false"))
 }
 
 /// Die implizite Rolle des HTML-Elements, ohne Rücksicht auf `role`.
