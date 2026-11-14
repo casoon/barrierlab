@@ -1,0 +1,16 @@
+[package]
+name = "act-runner"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[dependencies]
+a11y-report = { path = "../../crates/a11y-report" }
+a11y-static = { path = "../../crates/a11y-static" }
+serde_json = "1"
+
+# Eigener Workspace: dieses Paket gehört nicht zum Workspace des Monorepos
+# (dort unter workspace.exclude) und braucht die Zeile, damit cargo es
+# eigenständig baut.
+[workspace]

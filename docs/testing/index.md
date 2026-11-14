@@ -100,11 +100,16 @@ That is the more useful figure: an automated check, whichever engine runs it, fi
 third of what is wrong with a page. Running two independently written engines on the same page
 catches mistakes in either one; barrierlab.eu runs axe-core beside auditmysite for that reason.
 
+The neutral yardstick is the set of [W3C ACT test cases](act.md). There BarrierLab is well
+behind: 8 ACT rules consistent and 8 partially, where the W3C lists axe-core with 35 and 9. The
+page has every rule and every wrong case.
+
 ## Where it falls short
 
 - **Young and small.** The rule set is checked against real pages and its own corpus, but it
-  has seen far fewer sites than engines that have been in use for years. Expect false positives
-  that others fixed long ago, and report them.
+  has seen far fewer sites than engines that have been in use for years, and it has not been
+  fitted to the W3C ACT test cases yet: 40 missed barriers and 20 false alarms there. Expect
+  false positives that others fixed long ago, and report them.
 - **barrierlab-cli is not released.** It is built from source with a Rust toolchain; there is
   no binary to download yet.
 - **Without a browser, the page is the source.** barrierlab-cli and astro-post-audit do not see

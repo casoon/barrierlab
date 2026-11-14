@@ -212,6 +212,66 @@ for f in &report.findings {
     </p>
   </section>
 
+  <section class="code-section" aria-labelledby="suites-heading">
+    <h2 id="suites-heading">Held to public test suites</h2>
+    <p class="intro">
+      A bench of our own is one view. The other is test cases nobody here wrote: the suites that
+      browsers, validators and the W3C use to say what correct means. Each runs from this
+      repository; the parser and name suites on every change.
+    </p>
+    <div class="bench suites">
+      <table>
+        <caption>Results of 14 November 2026</caption>
+        <thead>
+          <tr>
+            <th scope="col">Suite</th>
+            <th scope="col">Published by</th>
+            <th scope="col">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">html5lib-tests, tree construction</th>
+            <td>WHATWG, the suite browsers test their parsers with</td>
+            <td>1,726 of 1,726 (210 fragment and scripting cases skipped)</td>
+          </tr>
+          <tr>
+            <th scope="row">html5lib-tests, parse errors</th>
+            <td>WHATWG</td>
+            <td>1,591 of 1,602</td>
+          </tr>
+          <tr>
+            <th scope="row">web-platform-tests, accname</th>
+            <td>W3C</td>
+            <td>373 of 489; the rest need CSS the test host does not model</td>
+          </tr>
+          <tr>
+            <th scope="row">Nu Html Checker test files</th>
+            <td>validator/validator</td>
+            <td>4,654 of 4,655 decided as vnu does (chart above)</td>
+          </tr>
+          <tr>
+            <th scope="row">ACT Rules test cases</th>
+            <td>W3C ACT Rules Community Group</td>
+            <td>
+              8 rules consistent, 8 partially; axe-core 4.14.0: 35 and 9 (W3C report)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The ACT line is the weak one, and it is shown as it came out. axe-core's rules have been
+        fitted to these cases for years and run in a browser; this was BarrierLab's first run, on
+        the page source, with nothing tuned. Of 512 cases of the rules it maps, 408 came out
+        right, 40 barriers were missed and 20 false alarms raised. Each of those is now a known
+        bug.
+      </p>
+    </div>
+    <div class="links">
+      <Button href={url('docs/testing/act/')} variant="secondary">Every ACT rule and wrong case →</Button>
+    </div>
+  </section>
+
   <section class="how" aria-labelledby="how-heading">
     <h2 id="how-heading">How it fits together</h2>
     <div class="text">
@@ -386,6 +446,9 @@ for f in &report.findings {
   .bench p {
     margin: 14px 0 0;
     font-size: 14.5px;
+  }
+  .suites + .links {
+    margin-top: 20px;
   }
   .tools .links {
     margin-top: 20px;
