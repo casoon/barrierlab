@@ -246,16 +246,31 @@ pub(crate) fn abbreviations<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 
 // --- timing/meta-refresh ----------------------------------------------------
 
-/// Die Wartezeit einer Refresh-Anweisung in Sekunden, nach HTML („shared
-/// declarative refresh steps"): die führenden Ziffern. Ohne Ziffern ignoriert
-/// der Browser die Anweisung.
+/// Die Wartezeit einer Refresh-Anweisung in Sekunden nach HTML („shared
+/// declarative refresh steps"), `None`, wenn der Browser sie verwirft: Nach
+/// Leerraum kommen Ziffern oder ein Punkt, danach Ziffern und Punkte, danach
+/// das Ende oder `;`, `,` oder Leerraum. `0: url`, `+5`, `-1`, `; 30` und
+/// `foo` sind ungültig (ACT bc659a, Inapplicable Examples).
 fn wait_time(content: &str) -> Option<u64> {
-    let s = content.trim_start();
+    let ws = |c: char| matches!(c, ' ' | '\t' | '\n' | '\x0C' | '\r');
+    let s = content.trim_start_matches(ws);
     let digits: String = s.chars().take_while(char::is_ascii_digit).collect();
-    if digits.is_empty() {
+    if digits.is_empty() && !s.starts_with('.') {
         return None;
     }
-    Some(digits.parse().unwrap_or(u64::MAX))
+    let rest = s.trim_start_matches(|c: char| c.is_ascii_digit() || c == '.');
+    if rest
+        .chars()
+        .next()
+        .is_some_and(|c| !(c == ';' || c == ',' || ws(c)))
+    {
+        return None;
+    }
+    Some(if digits.is_empty() {
+        0
+    } else {
+        digits.parse().unwrap_or(u64::MAX)
+    })
 }
 
 /// Erst *mehr* als 20 Stunden gelten als ausreichend (2.2.1, „20 Hour
@@ -271,19 +286,21 @@ const TWENTY_HOURS: u64 = 20 * 60 * 60;
 /// ohne Ziffern führt der Browser nicht aus. Beleg: auditmysite-Korpus
 /// `meta_refresh_present` (`content="120"`).
 pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    for n in elements(doc) {
-        if !n.is_element("meta")
-            || !n
-                .attr("http-equiv")
-                .is_some_and(|v| v.trim().eq_ignore_ascii_case("refresh"))
-        {
-            continue;
-        }
-        let Some(s) = n.attr("content").and_then(wait_time) else {
-            continue;
-        };
+    // Nur die erste gültige Anweisung wirkt: Danach ist das Dokument zum
+    // Neuladen vorgemerkt („will declaratively refresh"), und der Browser
+    // übergeht jede weitere (ACT bc659a, bisz58).
+    let first = elements(doc).find_map(|n| {
+        let refresh = n.is_element("meta")
+            && n.attr("http-equiv")
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("refresh"));
+        refresh
+            .then(|| n.attr("content").and_then(wait_time))
+            .flatten()
+            .map(|s| (n, s))
+    });
+    if let Some((n, s)) = first {
         if s == 0 || s > TWENTY_HOURS {
-            continue;
+            return;
         }
         out.push(
             Finding::fail(

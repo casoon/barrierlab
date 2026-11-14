@@ -789,9 +789,34 @@ fn media() -> Vec<Fall> {
         )
         .variant("Regression: versteckt (hidden, aria-hidden)")
         .count(2),
+        review(
+            "media/audio-autoplay",
+            r#"<video autoplay><source src="v.mp4" type="video/mp4"></video>"#,
+            "WCAG 1.4.2, ACT 80f0bf: auch ein Video spielt seinen Ton von selbst; ob es Ton hat, steht nicht im Markup",
+        )
+        .variant("Regression: video")
+        .count(1),
         negative(
             "media/audio-autoplay",
-            r#"<audio src="a.mp3" autoplay muted controls></audio>"#,
+            r#"<audio src="a.mp3" autoplay controls></audio>"#,
+            "WCAG 1.4.2, ACT 80f0bf/4c31df: controls gibt den Mechanismus zum Anhalten und Stummschalten",
+        )
+        .variant("controls"),
+        negative(
+            "media/audio-autoplay",
+            r#"<video autoplay><source src="v.mp4#t=4,6" type="video/mp4"><source src="v.webm#t=npt:4,6" type="video/webm"></video>"#,
+            "WCAG 1.4.2 (drei Sekunden), Media Fragments URI 1.0: das Fragment spielt zwei Sekunden",
+        )
+        .variant("Fragment unter drei Sekunden"),
+        review(
+            "media/audio-autoplay",
+            r#"<video autoplay><source src="v.mp4#t=4,6" type="video/mp4"><source src="v.webm" type="video/webm"></video>"#,
+            "Media Fragments: eine Quelle ohne Fragment spielt ganz",
+        )
+        .variant("Grenze: nur eine Quelle mit Fragment"),
+        negative(
+            "media/audio-autoplay",
+            r#"<audio src="a.mp3" autoplay muted></audio>"#,
             "WCAG 1.4.2: stummgeschaltet startet kein Ton",
         ),
         na(

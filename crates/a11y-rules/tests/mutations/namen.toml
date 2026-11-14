@@ -326,10 +326,9 @@ id = "media/audio-autoplay"
 file = "src/media.rs"
 kind = "drop-condition"
 find = '''
-        if n.is_element("audio") && n.has_attr("autoplay") && !n.has_attr("muted") {
+            && !n.has_attr("muted")
 '''
 replace = '''
-        if n.is_element("audio") && n.has_attr("autoplay") {
 '''
 test = "korpus"
 expect = "killed"
@@ -383,6 +382,43 @@ replace = '''
         out.push(
             Finding::fail(
                 "frames/name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+            && !usable_controls(n)
+'''
+replace = '''
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/media.rs"
+kind = "drop-condition"
+find = '''
+            && !plays_at_most_three_seconds(n)
+'''
+replace = '''
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/media.rs"
+kind = "threshold"
+find = '''
+            .all(|s| fragment_length(s).is_some_and(|l| l <= 3.0))
+'''
+replace = '''
+            .any(|s| fragment_length(s).is_some_and(|l| l <= 3.0))
 '''
 test = "korpus"
 expect = "killed"

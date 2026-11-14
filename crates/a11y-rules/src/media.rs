@@ -165,26 +165,93 @@ pub(crate) fn object_alt<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Fin
 
 // --- media/audio-autoplay ---------------------------------------------------
 
-/// 1.4.2: Ein `<audio autoplay>` ohne `muted` spielt beim Laden los.
+/// Eine Zeitangabe eines Medienfragments (Media Fragments URI 1.0, 4.2.1,
+/// NPT): Sekunden, `mm:ss` oder `hh:mm:ss`, mit Nachkommastellen.
+fn npt_seconds(v: &str) -> Option<f64> {
+    v.split(':').try_fold(0.0, |acc, part| {
+        Some(acc * 60.0 + part.parse::<f64>().ok()?)
+    })
+}
+
+/// Die Länge, die ein Medienfragment `#t=start,end` abspielt; `None` ohne
+/// Ende (dann läuft das Medium bis zum Schluss).
+fn fragment_length(src: &str) -> Option<f64> {
+    let (_, fragment) = src.split_once('#')?;
+    let t = fragment.split('&').find_map(|p| p.strip_prefix("t="))?;
+    let t = t.strip_prefix("npt:").unwrap_or(t);
+    let (start, end) = t.split_once(',')?;
+    let start = if start.is_empty() {
+        0.0
+    } else {
+        npt_seconds(start)?
+    };
+    Some(npt_seconds(end)? - start)
+}
+
+/// Ob jede Quelle des Mediums ein Fragment von höchstens drei Sekunden
+/// abspielt — dann endet der Ton rechtzeitig (1.4.2, ACT 80f0bf, Passed
+/// Example 2).
+fn plays_at_most_three_seconds<'a, N: Node<'a>>(n: N) -> bool {
+    let sources: Vec<&str> = n
+        .attr("src")
+        .into_iter()
+        .chain(
+            n.children()
+                .filter(|k| k.is_element("source"))
+                .filter_map(|k| k.attr("src")),
+        )
+        .collect();
+    !sources.is_empty()
+        && sources
+            .iter()
+            .all(|s| fragment_length(s).is_some_and(|l| l <= 3.0))
+}
+
+/// Ob das Medium eigene Bedienelemente zeigt, die jeder erreicht: `controls`,
+/// ohne `hidden` und ohne `aria-hidden="true"` am Element oder einem
+/// Vorfahren. Versteckte Bedienelemente sind kein Mechanismus (ACT 4c31df:
+/// sichtbar und zugänglich).
+fn usable_controls<'a, N: Node<'a>>(n: N) -> bool {
+    n.has_attr("controls")
+        && !std::iter::once(n)
+            .chain(ancestors(n))
+            .any(|a| a.has_attr("hidden") || a.attr("aria-hidden") == Some("true"))
+}
+
+/// 1.4.2: Ein `<audio autoplay>` oder `<video autoplay>` ohne `muted` spielt
+/// beim Laden los.
 ///
 /// `REVIEW` statt auditmysites Verstoß: Ob der Ton länger als drei Sekunden
-/// läuft und ob die Seite ihn anhalten lässt, steht nicht im Markup. Als
-/// Kriterium 1.4.2 (Audio Control) statt auditmysites 1.4.7 (Hintergrundton
-/// unter Sprache, AAA): Selbststartender Ton ist der Gegenstand von 1.4.2.
+/// läuft, ob ein Video überhaupt eine Tonspur hat und ob die Seite ihn
+/// anhalten lässt, steht nicht im Markup. Als Kriterium 1.4.2 (Audio Control)
+/// statt auditmysites 1.4.7 (Hintergrundton unter Sprache, AAA):
+/// Selbststartender Ton ist der Gegenstand von 1.4.2.
+///
+/// Kein Befund, wo das Markup die Frage beantwortet: `controls` gibt den
+/// Mechanismus zum Anhalten und Stummschalten (ACT 80f0bf, Passed Example 1;
+/// 4c31df), und ein Medienfragment von höchstens drei Sekunden endet
+/// rechtzeitig.
 ///
 /// Beleg: auditmysite-Korpus `media_and_visual`.
 pub(crate) fn audio_autoplay<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        if n.is_element("audio") && n.has_attr("autoplay") && !n.has_attr("muted") {
+        let media = n.is_element("audio") || n.is_element("video");
+        if media
+            && n.has_attr("autoplay")
+            && !n.has_attr("muted")
+            && !usable_controls(n)
+            && !plays_at_most_three_seconds(n)
+        {
             out.push(
                 Finding::review(
                     "media/audio-autoplay",
                     pick!(
                         locale,
-                        "This audio starts playing on its own. Check that it stops within three \
-                         seconds or that it can be paused or turned down right away.",
-                        "Der Ton startet von selbst. Prüfen, ob er nach spätestens drei Sekunden \
-                         endet oder sich sofort anhalten oder leiser stellen lässt.",
+                        "This audio or video starts playing on its own. Check that any sound \
+                         stops within three seconds or that it can be paused or turned down \
+                         right away.",
+                        "Ton oder Video startet von selbst. Prüfen, ob der Ton nach spätestens \
+                         drei Sekunden endet oder sich sofort anhalten oder leiser stellen lässt.",
                     ),
                 )
                 .with_severity(Severity::Medium)
