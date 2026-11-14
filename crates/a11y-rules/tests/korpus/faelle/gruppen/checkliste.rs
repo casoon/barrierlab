@@ -794,6 +794,12 @@ fn stylesheets() -> Vec<Fall> {
             "F78",
         )
         .variant("outline: 0"),
+        review(
+            "focus/outline-removed",
+            r#"<style>.plain:focus { outline: none } .ring.on { border: 2px solid navy }</style><span class="ring" id="r"><a class="plain" href="/" onfocus="r.classList.add('on')" onblur="r.classList.remove('on')">x</a></span>"#,
+            "WCAG 2.4.7; ACT oj04fd passed examples: a focus handler sets the indicator by script (a border on a wrapper) — a stylesheet cannot show it, so open, not failed",
+        )
+        .variant("Fokus-Handler kann den Hinweis setzen"),
         fail(
             "focus/outline-removed",
             r#"<style>button:focus { outline-width: 0px }</style><button>x</button>"#,

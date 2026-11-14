@@ -16,7 +16,7 @@
 
 use stylesheet_parse::{Declaration, Scoped, Stylesheet};
 
-use a11y_dom::{Document, Node};
+use a11y_dom::{Document, Node, elements};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, tr};
@@ -342,6 +342,31 @@ pub(crate) fn outline_removed<D: Document>(
         .copied()
         .collect::<Vec<_>>()
         .join(", ");
+    // Ein Handler auf `focus`/`focusin` kann den Hinweis per Skript setzen
+    // (eine Klasse am Element oder an einem Rahmen darum; ACT oj04fd,
+    // bestandene Beispiele). Das sieht kein Stylesheet: offen, nicht
+    // verfehlt.
+    if elements(doc).any(|n| n.has_attr("onfocus") || n.has_attr("onfocusin")) {
+        out.push(
+            Finding::review(
+                "focus/outline-removed",
+                tr!(
+                    locale,
+                    "A stylesheet removes the focus outline ({examples}) and no rule replaces \
+                     it, but the page sets focus handlers (onfocus) that may show another \
+                     indicator. Check by hand that focus stays visible.",
+                    "Ein Stylesheet entfernt den Fokusrahmen ({examples}), und keine Regel \
+                     ersetzt ihn, aber die Seite setzt Fokus-Handler (onfocus), die einen \
+                     anderen Hinweis zeigen können. Von Hand prüfen, ob der Fokus sichtbar \
+                     bleibt."
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["2.4.7"])
+            .at(page(doc)),
+        );
+        return;
+    }
     out.push(
         Finding::fail(
             "focus/outline-removed",

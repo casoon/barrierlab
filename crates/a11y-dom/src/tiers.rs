@@ -181,6 +181,27 @@ pub struct Backdrop {
     pub luminance: Vec<f64>,
 }
 
+/// Die Farben hinter einem Text, wenn keine einzelne Hintergrundfarbe gilt,
+/// der Host sie aber genau kennt: die Stufen eines Verlaufs und die Mitten
+/// dazwischen, Text unter `opacity`, Text mit Schatten. Anders als
+/// [`Backdrop`] keine Pixel des Kastens samt Glyphen: Der Text liegt über
+/// *einem* Teil davon, welchem, weiß der Host nicht.
+///
+/// Die Regel urteilt deshalb nur, wenn alle Paare dasselbe sagen: Bestehen
+/// alle, besteht der Text; verfehlen alle, verfehlt er; sonst prüft ein Mensch
+/// (ACT afw4f7: „highest possible contrast" zwischen zwei Mengen von Farben).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ColorPairs {
+    /// Je Stelle des Hintergrunds: (Textfarbe, Hintergrundfarbe), beide
+    /// deckend, Transparenz und `opacity` aufgelöst. Leer heißt: nicht
+    /// bestimmbar.
+    pub pairs: Vec<(Color, Color)>,
+    /// Farben eines Textschattens (`text-shadow`), mit Alpha. Ein Schatten
+    /// kann als Halo selbst der Hintergrund der Glyphen sein (Understanding
+    /// 1.4.3); ob er dafür reicht, sieht nur ein Mensch.
+    pub halo: Vec<Color>,
+}
+
 /// Die berechneten Stilwerte, die Accessibility-Regeln tatsächlich brauchen.
 /// Bewusst keine vollständige CSSOM-Abbildung.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -398,6 +419,15 @@ pub trait Rendering: Document {
     /// [`ComputedStyle::background_color`] fehlt. Vorgabe `None`: nicht
     /// abgetastet — dann bleibt der Kontrast nicht bestimmbar.
     fn sampled_backdrop<'n>(&'n self, _node: Self::N<'n>) -> Option<Backdrop> {
+        None
+    }
+
+    /// Die genau bekannten Farbpaare hinter dem Text des Knotens, wenn eine
+    /// einzelne Farbe ihn nicht beschreibt (siehe [`ColorPairs`]). Die
+    /// Kontrastregel nimmt sie vor [`ComputedStyle::color`] und
+    /// [`ComputedStyle::background_color`]. Vorgabe `None`: keine solchen
+    /// Paare, es gelten die berechneten Farben.
+    fn color_pairs<'n>(&'n self, _node: Self::N<'n>) -> Option<ColorPairs> {
         None
     }
 

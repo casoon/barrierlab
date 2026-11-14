@@ -24,6 +24,8 @@
 use a11y_dom::{
     Color, ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, ancestors, elements,
 };
+use std::collections::{HashMap, HashSet};
+
 use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::heuristics;
@@ -101,7 +103,8 @@ fn carries_text<'a, N: Node<'a>>(n: N) -> bool {
 /// Satzzeichen und Symbolen, etwa `·`, `|`, `→`, `•`, `›` (casoon/barrierlab#221).
 /// Ein Buchstabe oder eine Ziffer macht daraus Inhalt, der gemessen wird.
 /// Ohne `aria-hidden` bleibt das Zeichen gemessen: Dort hat der Autor es nicht als
-/// Dekoration ausgewiesen. Nähe der Prüfung: kein Buchstabe, keine Ziffer; die
+/// Dekoration ausgewiesen; verfehlt es die Schwelle, ist es offen, nicht
+/// verfehlt (siehe [`symbols_only`]). Nähe der Prüfung: kein Buchstabe, keine Ziffer; die
 /// Unicode-Kategorien P* und S* selbst kennt die Standardbibliothek nicht.
 fn pure_decoration<'a, N: Node<'a>>(n: N) -> bool {
     let hidden = std::iter::once(n)
@@ -139,10 +142,80 @@ fn inactive<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
+/// Ob das Bedienelement selbst inaktiv ist: ein Formularelement oder ein
+/// Element mit Rolle, für das [`inactive`] gilt.
+fn disabled_widget<'a, N: Node<'a>>(n: N) -> bool {
+    (matches!(
+        n.local_name(),
+        "button" | "input" | "select" | "textarea" | "meter" | "progress"
+    ) || n.has_attr("role"))
+        && inactive(n)
+}
+
+/// Die Elemente, die ein inaktives Bedienelement benennen: per
+/// `aria-labelledby`, per `<label for>` oder als umschließendes `<label>`.
+/// ACT afw4f7 nimmt sie aus („disabled label": used in the accessible name of
+/// a disabled widget); WCAG 1.4.3 nimmt Text aus, der Teil eines inaktiven
+/// Bedienelements ist, und die Beschriftung gehört dazu.
+fn disabled_labels<D: Rendering>(doc: &D) -> HashSet<NodeId> {
+    let all: Vec<_> = elements(doc).collect();
+    let mut ids = HashMap::new();
+    for n in &all {
+        if let Some(id) = n.attr("id") {
+            ids.entry(id).or_insert(*n);
+        }
+    }
+    let mut out = HashSet::new();
+    for n in &all {
+        if disabled_widget(*n) {
+            let referenced = n.attr("aria-labelledby").unwrap_or_default();
+            out.extend(
+                referenced
+                    .split_whitespace()
+                    .filter_map(|r| ids.get(r).map(|t| t.id())),
+            );
+            out.extend(
+                ancestors(*n)
+                    .find(|a| a.is_element("label"))
+                    .map(|l| l.id()),
+            );
+        }
+        if n.is_element("label")
+            && n.attr("for")
+                .and_then(|f| ids.get(f))
+                .is_some_and(|c| disabled_widget(*c))
+        {
+            out.insert(n.id());
+        }
+    }
+    out
+}
+
+/// Der eigene Text besteht nur aus Satzzeichen und Symbolen, ohne Buchstaben
+/// oder Ziffer. ACT afw4f7 nimmt Text aus, der „does not express anything in
+/// human language"; ob eine Zeichenfolge etwas sagt (eine Sternbewertung)
+/// oder nichts (`----====`), sieht nur ein Mensch.
+fn symbols_only<'a, N: Node<'a>>(n: N) -> bool {
+    n.children()
+        .filter(|k| k.kind() == NodeKind::Text)
+        .all(|k| {
+            k.text()
+                .chars()
+                .all(|c| c.is_whitespace() || !c.is_alphanumeric())
+        })
+}
+
 /// Was eine Messung am Element ergibt.
 enum Measurement {
     /// Eine Hintergrundfarbe gilt: Verhältnis und ob der Text groß ist.
     Value(f64, bool),
+    /// Genau bekannte Farbpaare (Verlauf, `opacity`, Schatten), sichtbare
+    /// nur, mit den Farben eines Schattens und ob der Text groß ist.
+    Pairs {
+        pairs: Vec<(Color, Color)>,
+        halo: Vec<Color>,
+        large: bool,
+    },
     /// Abgetasteter Hintergrund: Median und 40. Perzentil der Verhältnisse
     /// über die Stichprobe, und ob der Text groß ist.
     Span { median: f64, p40: f64, large: bool },
@@ -197,8 +270,22 @@ fn span(front: Color, sample: &[f64]) -> Option<(f64, f64)> {
 /// Text unter `aria-hidden` wird gemessen: WCAG 1.4.3 gilt für sichtbaren
 /// Text, unabhängig vom Accessibility-Tree. auditmysite nahm ihn aus (#395).
 /// Ausgenommen ist reine Dekoration (siehe [`pure_decoration`]).
-fn measure<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Measurement> {
+///
+/// Text in der Farbe seines Hintergrunds ist nicht sichtbar (ACT afw4f7,
+/// „visible": transparent gemacht, änderte er kein Pixel) und wird nicht
+/// gemessen; ebenso die Beschriftung eines inaktiven Bedienelements.
+fn measure<'d, D: Rendering>(
+    doc: &'d D,
+    n: D::N<'d>,
+    disabled_labels: &HashSet<NodeId>,
+) -> Option<Measurement> {
     if !carries_text(n) || inactive(n) || pure_decoration(n) {
+        return None;
+    }
+    if std::iter::once(n)
+        .chain(ancestors(n))
+        .any(|a| disabled_labels.contains(&a.id()))
+    {
         return None;
     }
     let style = doc.computed_style(n)?;
@@ -209,7 +296,22 @@ fn measure<'d, D: Rendering>(doc: &'d D, n: D::N<'d>) -> Option<Measurement> {
         return Some(Measurement::Undetermined(Reason::Covered));
     }
     let large = is_large_text(&style);
+    if let Some(p) = doc.color_pairs(n) {
+        if p.pairs.is_empty() {
+            return Some(Measurement::Undetermined(Reason::Color));
+        }
+        let pairs: Vec<_> = p.pairs.into_iter().filter(|(t, b)| t != b).collect();
+        if pairs.is_empty() {
+            return None;
+        }
+        return Some(Measurement::Pairs {
+            pairs,
+            halo: p.halo,
+            large,
+        });
+    }
     Some(match (style.color, style.background_color) {
+        (Some(front), Some(back)) if over(front, back) == back => return None,
         (Some(front), Some(back)) => Measurement::Value(ratio(over(front, back), back), large),
         (Some(front), None) => match doc
             .sampled_backdrop(n)
@@ -253,6 +355,12 @@ enum Verdict {
         median: f64,
         p40: f64,
     },
+    /// Genau bekannte Farbpaare sagen nicht dasselbe, oder ein Schatten
+    /// könnte die verfehlenden retten: niedrigstes und höchstes Verhältnis.
+    Mixed {
+        min: f64,
+        max: f64,
+    },
 }
 
 fn verdicts(
@@ -264,6 +372,34 @@ fn verdicts(
     // runden — 4,499:1 erreicht 4,5:1 nicht.
     let narrowly = |w: f64, s: f64| w < s;
     match *m {
+        Measurement::Pairs {
+            ref pairs,
+            ref halo,
+            large,
+        } => {
+            let s = if large {
+                threshold_large
+            } else {
+                threshold_small
+            };
+            let values: Vec<f64> = pairs.iter().map(|(t, b)| ratio(*t, *b)).collect();
+            let min = values.iter().copied().fold(f64::INFINITY, f64::min);
+            let max = values.iter().copied().fold(0.0, f64::max);
+            // Ein Schatten in einer Farbe, gegen die der Text die Schwelle
+            // erreicht, kann als Halo der Hintergrund der Glyphen sein.
+            let rescued = pairs.iter().any(|(t, b)| {
+                !narrowly(ratio(*t, *b), s)
+                    || halo.iter().any(|h| !narrowly(ratio(*t, over(*h, *b)), s))
+            });
+            let u = if !narrowly(min, s) {
+                Verdict::Passes
+            } else if !rescued {
+                Verdict::Fails(max)
+            } else {
+                Verdict::Mixed { min, max }
+            };
+            Some((u, s, large))
+        }
         Measurement::Value(w, large) => {
             let s = if large {
                 threshold_large
@@ -335,10 +471,71 @@ fn borderline(
     .at(at(n))
 }
 
+fn mixed(
+    id: &str,
+    min: f64,
+    max: f64,
+    threshold: f64,
+    wcag: &str,
+    locale: Locale,
+    n: NodeId,
+) -> Finding {
+    let (min_s, max_s, threshold_s) = (
+        number(locale, min, 2),
+        number(locale, max, 2),
+        number(locale, threshold, 1),
+    );
+    Finding::review(
+        id,
+        tr!(
+            locale,
+            "The text lies over a gradient, under partial opacity or has a text shadow. \
+             Against the colours behind it the contrast ranges from {min_s}:1 to {max_s}:1 \
+             ({threshold_s}:1 required). Check by hand where the text lies and whether a \
+             shadow sets it off.",
+            "Der Text liegt über einem Verlauf, unter teilweiser Deckkraft oder hat einen \
+             Schatten. Gegen die Farben dahinter reicht der Kontrast von {min_s}:1 bis \
+             {max_s}:1 (gefordert {threshold_s}:1). Von Hand prüfen, wo der Text liegt und \
+             ob ein Schatten ihn abhebt."
+        ),
+    )
+    .with_severity(Severity::Medium)
+    .with_wcag([wcag])
+    .with_evidence([
+        Evidence::computed("contrast_ratio_min", format!("{min:.2}")),
+        Evidence::computed("contrast_ratio", format!("{max:.2}")),
+        Evidence::computed("required_ratio", format!("{threshold:.1}")),
+    ])
+    .at(at(n))
+}
+
+fn symbols(id: &str, value: f64, threshold: f64, wcag: &str, locale: Locale, n: NodeId) -> Finding {
+    let (value_s, threshold_s) = (number(locale, value, 2), number(locale, threshold, 1));
+    Finding::review(
+        id,
+        tr!(
+            locale,
+            "The text consists only of punctuation and symbols and reaches {value_s}:1 \
+             ({threshold_s}:1 required). If it expresses nothing in human language (a \
+             separator, a decorative line), it is exempt; if it carries meaning (a rating, \
+             an arrow that labels a control), it needs the contrast. Check by hand.",
+            "Der Text besteht nur aus Satzzeichen und Symbolen und erreicht {value_s}:1 \
+             (gefordert {threshold_s}:1). Sagt er nichts in menschlicher Sprache (ein \
+             Trennzeichen, eine Zierlinie), ist er ausgenommen; trägt er Bedeutung (eine \
+             Bewertung, ein Pfeil als Beschriftung), braucht er den Kontrast. Von Hand prüfen."
+        ),
+    )
+    .with_severity(Severity::Medium)
+    .with_wcag([wcag])
+    .with_evidence(evidences(value, threshold))
+    .at(at(n))
+}
+
 /// 1.4.3 (AA): 4,5:1, bei großem Text 3:1.
 fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let labels = disabled_labels(doc);
     for n in elements(doc) {
-        let Some(measurement) = measure(doc, n) else {
+        let Some(measurement) = measure(doc, n, &labels) else {
             continue;
         };
         if let Measurement::Undetermined(reason) = measurement {
@@ -375,6 +572,14 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
         };
         match verdict {
             Verdict::Passes => {}
+            Verdict::Fails(value) if symbols_only(n) => out.push(symbols(
+                "contrast/text-undetermined",
+                value,
+                threshold,
+                "1.4.3",
+                locale,
+                n.id(),
+            )),
             Verdict::Fails(value) => out.push(
                 Finding::fail(
                     "contrast/text-insufficient",
@@ -403,6 +608,15 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                 locale,
                 n.id(),
             )),
+            Verdict::Mixed { min, max } => out.push(mixed(
+                "contrast/text-undetermined",
+                min,
+                max,
+                threshold,
+                "1.4.3",
+                locale,
+                n.id(),
+            )),
         }
     }
 }
@@ -411,21 +625,38 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 /// besteht — was schon 1.4.3 verfehlt oder dort offen ist, steht dort und
 /// nicht doppelt.
 fn text_contrast_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let labels = disabled_labels(doc);
     for n in elements(doc) {
-        let Some(measurement) = measure(doc, n) else {
+        let Some(measurement) = measure(doc, n, &labels) else {
             continue;
         };
-        if !matches!(
-            verdicts(&measurement, 4.5, 3.0),
-            Some((Verdict::Passes, _, _))
-        ) {
-            continue;
-        }
         let Some((verdict, aaa, large)) = verdicts(&measurement, 7.0, 4.5) else {
             continue;
         };
+        // Offen unter AA, aber jedes Paar verfehlt AAA: Das ist eine eigene,
+        // sichere Aussage.
+        let aa_open_aaa_fails = matches!(
+            (verdicts(&measurement, 4.5, 3.0), &verdict),
+            (Some((Verdict::Mixed { .. }, _, _)), Verdict::Fails(_))
+        );
+        if !aa_open_aaa_fails
+            && !matches!(
+                verdicts(&measurement, 4.5, 3.0),
+                Some((Verdict::Passes, _, _))
+            )
+        {
+            continue;
+        }
         match verdict {
             Verdict::Passes => {}
+            Verdict::Fails(value) if symbols_only(n) => out.push(symbols(
+                "contrast/text-enhanced",
+                value,
+                aaa,
+                "1.4.6",
+                locale,
+                n.id(),
+            )),
             Verdict::Fails(value) => out.push(
                 Finding::fail(
                     "contrast/text-enhanced",
@@ -449,6 +680,15 @@ fn text_contrast_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
                 "contrast/text-enhanced",
                 median,
                 p40,
+                aaa,
+                "1.4.6",
+                locale,
+                n.id(),
+            )),
+            Verdict::Mixed { min, max } => out.push(mixed(
+                "contrast/text-enhanced",
+                min,
+                max,
                 aaa,
                 "1.4.6",
                 locale,
