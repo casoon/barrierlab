@@ -24,10 +24,6 @@ comp_embedded_control.html#27  button aria-labelledby referencing checkbox label
 comp_embedded_control.html#4  checkbox label with embedded select[size]
 comp_embedded_control.html#6  checkbox label with embedded combobox (input[type=text])
 comp_hidden_not_referenced.html#4  heading with name from content, containing element that is visibility:hidden with nested content that is visibility:visible
-comp_host_language_label.tentative.html#2  html:label[for]+input[role=none] (role invalidated due to focusability)
-comp_host_language_label.tentative.html#3  html: label>input[role=none] (with label encapsulation, role invalidated due to focusability)
-comp_host_language_label.tentative.html#4  html: label[for][role=none]+input[role=none] (role invalidated due to focusability)
-comp_host_language_label.tentative.html#5  html: label[role=none]>input[role=none] (with label encapsulation, role invalidated due to focusability)
 comp_host_language_label.tentative.html#6  svg: svg>circle>title[role=none] (role none set on title doesn't affect circle acc name)
 comp_label.html#125  nav with trailing nbsp char aria-label is valid (nbsp is preserved in name)
 comp_label.html#126  button with leading nbsp char in aria-label is valid (and uses aria-label)

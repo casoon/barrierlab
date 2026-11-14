@@ -47,7 +47,10 @@ const MAPPING: &[(&str, &[&str])] = &[
         "5c01ea",
         &["aria/attribute-not-allowed", "aria/attribute-prohibited"],
     ),
-    ("4e8ab6", &["aria/required-attribute-missing"]),
+    (
+        "4e8ab6",
+        &["aria/required-attribute-missing", "aria/combobox-popup-missing"],
+    ),
     ("674b10", &["aria/role-invalid"]),
     ("73f2c2", &["forms/autocomplete-invalid"]),
     ("97a4e1", &["buttons/name-missing"]),

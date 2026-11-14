@@ -1090,6 +1090,12 @@ fn form_labels<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         ) {
             continue;
         }
+        // Ein deaktiviertes Feld mit `role="none"` ist kein Formularfeld: Es
+        // ist nicht fokussierbar, die Rolle greift (WAI-ARIA 1.2,
+        // „Presentational Roles Conflict Resolution"; ACT e086e5).
+        if crate::aria::presentation_applies(n) {
+            continue;
+        }
 
         let aria_named = n.attr("aria-label").is_some_and(|v| !v.trim().is_empty())
             || n.has_attr("aria-labelledby");
@@ -1239,6 +1245,11 @@ fn aria_references<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>)
             // regelmäßig (bund.de, sachsen-anhalt.de). axe-core nimmt diesen
             // Fall bei `aria-controls` genauso aus.
             if rel == "aria-controls" && n.attr("aria-expanded") == Some("false") {
+                continue;
+            }
+            // Ein erforderlicher Verweis ins Leere ist ein ungültiger Wert und
+            // wird dort gemeldet (`aria/attribute-value-invalid`, ACT 6a7281).
+            if rel == "aria-controls" && crate::aria::required_reference_missing(doc, n) {
                 continue;
             }
             let missing: Vec<&str> = v
@@ -1576,8 +1587,10 @@ fn list_structure<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
 fn orphaned_entries<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
         // Ein `<li>` mit eigener Rolle (`none` im Menü-Muster, `tab`) ist kein
-        // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln.
-        if !is_list_item(n) || explicit_role(n).is_some_and(|r| r != "listitem") {
+        // Listeneintrag; über seinen Kontext urteilen die ARIA-Regeln. Ebenso
+        // über ein anderes Element mit `role="listitem"`
+        // (`aria/required-parent-missing`, ACT ff89c9).
+        if !n.is_element("li") || explicit_role(n).is_some_and(|r| r != "listitem") {
             continue;
         }
         // Die nächste Liste darüber. Ist sie per `role` etwas anderes

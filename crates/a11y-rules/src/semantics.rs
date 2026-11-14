@@ -52,7 +52,13 @@ fn link_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 
 fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc) {
-        let is_button = n.is_element("button") || doc.role(n).as_deref() == Some("button");
+        // Ein `<button role="none">`, dessen Rolle greift (deaktiviert, ohne
+        // globales ARIA), ist kein Button mehr (WAI-ARIA 1.2,
+        // „Presentational Roles Conflict Resolution"; ACT 97a4e1).
+        let role = doc.role(n);
+        let is_button = role.as_deref() == Some("button")
+            || (n.is_element("button")
+                && !matches!(role.as_deref(), Some("none" | "presentation")));
         // Eine `<summary>` meldet `summary/name-missing` — `accname` gibt ihr
         // die Rolle `button`, Chrome nicht; so meldet jeder Host sie einmal.
         if !is_button || n.is_element("summary") || doc.is_ignored(n) {

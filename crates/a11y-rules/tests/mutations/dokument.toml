@@ -537,3 +537,12 @@ replace = '''
         .filter(|n| is_section(*n))
 '''
 expect = "killed"
+
+[[mutation]]
+id = "forms/label-missing"
+file = "src/structure.rs"
+kind = "drop-exception"
+find = 'if crate::aria::presentation_applies(n) {'
+replace = 'if false && crate::aria::presentation_applies(n) {'
+test = "korpus"
+expect = "killed"

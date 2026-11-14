@@ -386,3 +386,12 @@ replace = '''
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "buttons/name-missing"
+file = "src/semantics.rs"
+kind = "drop-exception"
+find = '&& !matches!(role.as_deref(), Some("none" | "presentation")));'
+replace = '&& true);'
+test = "korpus"
+expect = "killed"

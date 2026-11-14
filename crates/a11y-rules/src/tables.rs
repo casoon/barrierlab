@@ -187,6 +187,16 @@ pub(crate) fn headers_attr<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
             continue;
         }
         let table = table_of(cell);
+        // In einer Tabelle mit `role="none"`/`"presentation"` erben die
+        // Zellen ohne eigene Rolle das: Sie sind keine Zellen mehr (WAI-ARIA
+        // 1.2, `presentation`, „required owned elements"; ACT a25f45).
+        if cell.attr("role").is_none()
+            && ancestors(cell)
+                .find(|a| a.is_element("table"))
+                .is_some_and(crate::aria::presentation_applies)
+        {
+            continue;
+        }
         let invalid = headers.split_whitespace().find(|r| {
             ids.get(&scoped_id(cell, r)).is_none_or(|k| {
                 !is_header_cell(*k) || *k == cell || table.is_some_and(|t| table_of(*k) != Some(t))

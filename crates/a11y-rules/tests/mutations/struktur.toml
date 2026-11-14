@@ -263,3 +263,12 @@ find = '''            (false, Some(modal)) => Finding::review('''
 replace = '''            (true, Some(modal)) => Finding::review('''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "tables/headers-attr-invalid"
+file = "src/tables.rs"
+kind = "drop-exception"
+find = '.is_some_and(crate::aria::presentation_applies)'
+replace = '.is_some_and(|_| false)'
+test = "korpus"
+expect = "killed"

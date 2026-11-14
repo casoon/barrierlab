@@ -19,6 +19,8 @@ const ARIA12_ALLOWED: &str =
 const ARIA12_FORBIDDEN: &str =
     "WAI-ARIA 1.2 Prohibited States and Properties (Name From: prohibited); ACT 5c01ea";
 const ARIA12_CONTEXT: &str = "WAI-ARIA 1.2 Required Context Role; ACT ff89c9";
+const ARIA12_PRESENTATION: &str =
+    "WAI-ARIA 1.2 Presentational Roles Conflict Resolution; HTML disabled: nicht fokussierbar";
 const ARIA12_INVENTORY: &str = "WAI-ARIA 1.2 Required Owned Elements; ACT bc4a75 (leerer Behälter, aria-busy: kein Befund, docs/packages/a11y-rules.md)";
 const ARIA_IN_HTML_ROLE: &str =
     "ARIA in HTML §2 (redundante Rollen: SHOULD NOT); Best Practice, auditmysite#779";
@@ -112,6 +114,25 @@ pub fn cases() -> Vec<Fall> {
             "WAI-ARIA 1.2 §6.2: leerer Wert wie fehlend; aria-current/aria-invalid: unbekannter Wert gilt als true",
         )
         .variant("leer, aria-current/aria-invalid"),
+        fail(
+            "aria/attribute-value-invalid",
+            r#"<div role="textbox" aria-label="T" aria-invalid="true" aria-errormessage="f1 f2"></div><p id="f1">A</p><p id="f2">B</p>"#,
+            "WAI-ARIA 1.2 aria-errormessage: Werttyp ID reference (genau eine ID); ACT 6a7281",
+        )
+        .variant("mehrere IDs in einem ID-Verweis"),
+        fail(
+            "aria/attribute-value-invalid",
+            r#"<div role="scrollbar" aria-controls="fehlt" aria-valuenow="5"></div>"#,
+            "WAI-ARIA 1.2 scrollbar: aria-controls erforderlich; ein erforderlicher Verweis zeigt auf ein vorhandenes Element (ACT 6a7281)",
+        )
+        .variant("erforderliches aria-controls ins Leere")
+        .count(1),
+        negative(
+            "aria/attribute-value-invalid",
+            r#"<div role="combobox" aria-label="C" aria-controls="spaeter" aria-expanded="false"></div>"#,
+            "ACT 4e8ab6: das Popup einer eingeklappten Combobox darf erst beim Öffnen entstehen",
+        )
+        .variant("eingeklappte Combobox"),
         na(
             "aria/attribute-value-invalid",
             r#"<div aria-label="Name">x</div>"#,
@@ -358,12 +379,30 @@ pub fn cases() -> Vec<Fall> {
                <button disabled aria-disabled="true">e</button>"#,
             ARIA12_ALLOWED,
         ),
-        negative(
+        fail(
             "aria/attribute-not-allowed",
             r#"<div role="img" aria-label="Icon" aria-checked="">I</div>"#,
-            "WAI-ARIA 1.2 §6.2: leerer Wert gilt wie ein fehlendes Attribut",
+            "ACT 5c01ea: auch ein leeres Attribut ist angegeben; WAI-ARIA 1.2 img unterstützt aria-checked nicht",
         )
         .variant("leerer Wert"),
+        fail(
+            "aria/attribute-not-allowed",
+            r#"<video src="v.mp4" controls aria-orientation="horizontal"></video>"#,
+            "ARIA in HTML: video ohne Rolle, nur globale aria-*; ACT 5c01ea",
+        )
+        .variant("Element ohne Rolle"),
+        negative(
+            "aria/attribute-not-allowed",
+            r#"<button role="none" aria-pressed="false">B</button>"#,
+            ARIA12_PRESENTATION,
+        )
+        .variant("role=none am fokussierbaren Button"),
+        negative(
+            "aria/attribute-prohibited",
+            r#"<span role="none" aria-label="">x</span>"#,
+            "WAI-ARIA 1.2 §6.2: ein leerer Name stiftet nichts; Verbot betrifft nur einen wirksamen Wert",
+        )
+        .variant("leerer Name"),
         na(
             "aria/attribute-not-allowed",
             r#"<div aria-hidden="true"><div role="img" aria-checked="true">I</div></div>"#,
@@ -418,6 +457,24 @@ pub fn cases() -> Vec<Fall> {
             "ARIA in HTML: li in ul ist listitem; WAI-ARIA 1.2 tab braucht tablist (auditmysite#715)",
         )
         .variant("li dazwischen"),
+        fail(
+            "aria/required-parent-missing",
+            r#"<div role="listitem">Allein</div>"#,
+            ARIA12_CONTEXT,
+        )
+        .variant("verwaister listitem"),
+        fail(
+            "aria/required-parent-missing",
+            r#"<div role="list"><div role="note"><div role="listitem">A</div></div></div>"#,
+            "WAI-ARIA 1.2 listitem: Required Context Role list; der Elternknoten im Accessibility-Tree zählt (ACT ff89c9)",
+        )
+        .variant("listitem unter fremder Rolle"),
+        fail(
+            "aria/required-parent-missing",
+            r#"<div role="list"><div aria-live="polite"><div role="listitem">A</div></div></div>"#,
+            "WAI-ARIA 1.2: generic mit globalem Attribut steht im Accessibility-Tree (ACT ff89c9)",
+        )
+        .variant("generic mit globalem Attribut"),
         negative(
             "aria/required-parent-missing",
             r#"<div role="tablist" aria-label="T"><span><div role="tab" tabindex="0" aria-selected="true">A</div></span></div><div role="tabpanel">P</div>"#,
@@ -466,6 +523,37 @@ pub fn cases() -> Vec<Fall> {
             ARIA12_INVENTORY,
         )
         .variant("Tabelle nur mit Beschriftung"),
+        fail(
+            "aria/required-children-missing",
+            r#"<div role="list"><span>Nur Text</span></div>"#,
+            "WAI-ARIA 1.2 Required Owned Elements: any element that will be owned; Text ist kein listitem (ACT bc4a75)",
+        )
+        .variant("nur Text"),
+        fail(
+            "aria/required-children-missing",
+            r#"<div role="list"><div role="listitem">A</div><div role="button" tabindex="0">B</div></div>"#,
+            "WAI-ARIA 1.2 Required Owned Elements: any element that will be owned (ACT bc4a75)",
+        )
+        .variant("fremde Rolle neben listitem"),
+        fail(
+            "aria/required-children-missing",
+            r#"<div role="menu"><div role="group"><div role="menuitem">A</div><div role="treeitem">B</div></div></div>"#,
+            "WAI-ARIA 1.2 Required Owned Elements: auch die Gruppe besitzt nur erlaubte Rollen (ACT bc4a75)",
+        )
+        .variant("Gruppe mit fremder Rolle"),
+        negative(
+            "aria/required-children-missing",
+            r#"<div role="list"><div role="listitem">A</div><div role="group"><div role="listitem">B</div></div></div>
+               <div role="menu"><div role="menuitem">A</div><div role="separator"></div><div role="menuitem">B</div></div>"#,
+            "WAI-ARIA 1.2 listitem: Kontext group; separator im Menü (APG Menu); ACT bc4a75",
+        )
+        .variant("Gruppe, Trenner"),
+        negative(
+            "aria/required-children-missing",
+            r#"<div role="listbox" aria-label="L"><div role="group" aria-labelledby="g"><div role="presentation" id="g">Obst</div><div role="option">Apfel</div></div></div>"#,
+            "APG Listbox mit Gruppen: Beschriftung der Gruppe als Text in der Gruppe",
+        )
+        .variant("Gruppenbeschriftung"),
         negative(
             "aria/required-children-missing",
             r#"<div role="listbox" aria-label="L"><div role="group"><div role="option">o</div></div></div>
@@ -495,6 +583,31 @@ pub fn cases() -> Vec<Fall> {
             r#"<table><tbody><tr><td>nativ</td></tr></tbody></table><ul><li>nativ</li></ul>"#,
             "Native Tabellen und Listen: Bestandteile durch HTML gegeben (auditmysite#659)",
         ),
+        // --- Presentational Roles Conflict Resolution ----------------------
+        na(
+            "buttons/name-missing",
+            r#"<button role="none" disabled></button>"#,
+            ARIA12_PRESENTATION,
+        )
+        .variant("deaktiviert, role=none"),
+        na(
+            "forms/label-missing",
+            r#"<select role="none" disabled><option>a</option></select>"#,
+            ARIA12_PRESENTATION,
+        )
+        .variant("deaktiviert, role=none"),
+        na(
+            "tables/headers-attr-invalid",
+            r#"<table role="presentation"><tr><td id="k">K</td></tr><tr><td headers="k">1</td></tr></table>"#,
+            "WAI-ARIA 1.2 presentation: Zellen erben die Rolle; ACT a25f45",
+        )
+        .variant("Tabelle role=presentation"),
+        fail(
+            "buttons/name-missing",
+            r#"<button role="none"></button>"#,
+            ARIA12_PRESENTATION,
+        )
+        .variant("fokussierbar, role=none gilt nicht"),
         // --- aria/role-redundant --------------------------------------------
         review(
             "aria/role-redundant",

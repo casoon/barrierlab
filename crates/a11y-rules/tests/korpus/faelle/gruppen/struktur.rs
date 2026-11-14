@@ -436,10 +436,10 @@ fn lists() -> Vec<Fall> {
             r#"<div><li>Allein</li></div>"#,
             "HTML li: Elternelement ol, ul oder menu; WAI-ARIA 1.2 listitem: Required Context list",
         ),
-        fail(
+        na(
             OUTSIDE,
             r#"<div role="listitem">Allein</div>"#,
-            "WAI-ARIA 1.2 listitem: Required Context Role list",
+            "Kontext von role=listitem außerhalb von <li>: aria/required-parent-missing (ACT ff89c9)",
         )
         .variant("ARIA listitem"),
         fail(

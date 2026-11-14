@@ -241,6 +241,8 @@ enum ValueType {
     List(&'static [&'static str]),
     Integer,
     Number,
+    /// Genau eine ID: Leerraum ist darin nicht erlaubt.
+    IdRef,
 }
 
 const TRUE_WRONG: &[&str] = &["true", "false"];
@@ -249,7 +251,9 @@ const TRISTATE: &[&str] = &["true", "false", "mixed", "undefined"];
 
 /// Der Werttyp nach WAI-ARIA 1.2, Abschnitt 6.6/6.7.
 ///
-/// Nicht geprüft: IDREFs (das ist `aria/reference-missing`), freie Zeichenketten
+/// Bei ID-Verweisen nur die Form — eine einzige ID ohne Leerraum (ACT 6a7281);
+/// ob sie auf etwas zeigen, prüft `aria/reference-missing`, bis auf
+/// [`required_reference_missing`]. Nicht geprüft: freie Zeichenketten
 /// und `aria-current`/`aria-invalid` — für diese beiden legt die Spezifikation
 /// fest, dass ein unbekannter Wert als `true` gilt; der Wert tut damit, was
 /// gemeint ist. auditmysite meldet sie; hier bewusst nicht.
@@ -276,6 +280,7 @@ fn value_type(attr: &str) -> Option<ValueType> {
         "aria-colcount" | "aria-colindex" | "aria-colspan" | "aria-level" | "aria-posinset"
         | "aria-rowcount" | "aria-rowindex" | "aria-rowspan" | "aria-setsize" => Integer,
         "aria-valuemax" | "aria-valuemin" | "aria-valuenow" => Number,
+        "aria-activedescendant" | "aria-errormessage" => IdRef,
         _ => return None,
     })
 }
@@ -309,6 +314,7 @@ fn value_valid(ty: &ValueType, v: &str) -> bool {
         ValueType::List(l) => v.split_whitespace().all(|t| a_of(l, t)),
         ValueType::Integer => v.parse::<i64>().is_ok(),
         ValueType::Number => is_number(v),
+        ValueType::IdRef => !v.contains(|c: char| c.is_ascii_whitespace()),
     }
 }
 
@@ -331,6 +337,7 @@ pub(crate) fn attribute_values<D: Document>(doc: &D, locale: Locale, out: &mut V
                 ValueType::One(l) | ValueType::List(l) => l.join(", "),
                 ValueType::Integer => pick!(locale, "an integer", "eine ganze Zahl").to_string(),
                 ValueType::Number => pick!(locale, "a number", "eine Zahl").to_string(),
+                ValueType::IdRef => pick!(locale, "a single ID", "eine einzige ID").to_string(),
             };
             out.push(
                 Finding::fail(
@@ -346,7 +353,39 @@ pub(crate) fn attribute_values<D: Document>(doc: &D, locale: Locale, out: &mut V
                 .at(at(n.id())),
             );
         }
+        if required_reference_missing(doc, n) {
+            out.push(
+                Finding::fail(
+                    "aria/attribute-value-invalid",
+                    pick!(
+                        locale,
+                        "aria-controls is required on this role, but references no existing element.",
+                        "aria-controls ist an dieser Rolle erforderlich, verweist aber auf kein vorhandenes Element.",
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["4.1.2"])
+                .at(at(n.id())),
+            );
+        }
     }
+}
+
+/// Ob ein erforderlicher ID-Verweis auf kein vorhandenes Element zeigt:
+/// `aria-controls` ist an `scrollbar` und `combobox` erforderlich (WAI-ARIA
+/// 1.2), ein Verweis ins Leere ist dann kein gültiger Wert (ACT 6a7281). Eine
+/// eingeklappte Combobox darf auf ein Popup zeigen, das erst beim Öffnen
+/// entsteht (ACT 4e8ab6, wie `aria/reference-missing`).
+pub(crate) fn required_reference_missing<'n, D: Document>(doc: &'n D, n: D::N<'n>) -> bool {
+    let required = match explicit_role(n) {
+        Some("scrollbar") => true,
+        Some("combobox") => n.attr("aria-expanded") != Some("false"),
+        _ => false,
+    };
+    required
+        && n.attr("aria-controls").is_some_and(|v| {
+            !v.trim().is_empty() && v.split_whitespace().all(|id| with_id(doc, n, id).is_none())
+        })
 }
 
 // --- aria/owns-conflict ---------------------------------------------------
@@ -643,16 +682,37 @@ pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mu
             continue;
         }
         let role = doc.role(n).and_then(|r| roles_index(&r));
+        // `<audio>` und `<video>` haben keine Rolle; ARIA in HTML erlaubt an
+        // ihnen nur globale Attribute (ACT 5c01ea).
+        let roleless = role.is_none() && matches!(n.local_name(), "audio" | "video");
         for (name, value) in n.attributes() {
             let v = value.trim();
             let Some(ai) = attribute_index(name) else {
                 continue;
             };
             let attr = ATTRIBUTE[ai];
-            if v.is_empty() {
+            if roleless && GLOBAL & (1 << ai) == 0 {
+                out.push(
+                    Finding::fail(
+                        "aria/attribute-not-allowed",
+                        tr!(
+                            locale,
+                            "{attr} is not supported on <{}>, which has no role.",
+                            "{attr} wird an <{}> nicht unterstützt: Das Element hat keine Rolle.",
+                            n.local_name()
+                        ),
+                    )
+                    .with_severity(Severity::High)
+                    .with_wcag(["4.1.2"])
+                    .at(at(n.id())),
+                );
                 continue;
             }
-            if native_forbidden(n, attr, v) {
+            // Ein leeres Attribut ist trotzdem angegeben: Ob die Rolle es
+            // unterstützt, gilt auch dann (ACT 5c01ea). Verbote am nativen
+            // Element und Namensverbote betreffen nur einen wirksamen Wert.
+            let empty = v.is_empty();
+            if !empty && native_forbidden(n, attr, v) {
                 out.push(
                     Finding::fail(
                         "aria/attribute-not-allowed",
@@ -674,6 +734,9 @@ pub(crate) fn attributes_allowed<D: Semantics>(doc: &D, locale: Locale, out: &mu
             };
             let r = VALID_ROLES[ri];
             if forbidden(r, attr) {
+                if empty {
+                    continue;
+                }
                 out.push(
                     Finding::fail(
                         "aria/attribute-prohibited",
@@ -799,7 +862,59 @@ fn li_in_list<'a, N: Node<'a>>(n: N) -> Option<N> {
 /// `tablist → tab`, obwohl das `<li>` dazwischen steht (auditmysite#715, axe
 /// meldet es). Nur wenn die Liste `none`/`presentation` ist, erbt der Eintrag
 /// das (ARIA 1.2, `presentation`: „required owned elements").
+///
+/// Ein durchlässiger Knoten mit einem globalen ARIA-Attribut (etwa
+/// `aria-live`) steht dagegen als `generic` im Accessibility-Tree und ist
+/// selbst Kontext oder Bestandteil (ACT ff89c9, bc4a75).
 fn effective_role<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Effective {
+    match role_in_tree(doc, n) {
+        Effective::Translucent if !doc.is_ignored(n) && carries_global(n) => {
+            Effective::Role(roles_index("generic").unwrap_or_default())
+        }
+        e => e,
+    }
+}
+
+/// Ob `n` ein globales ARIA-Attribut mit Wert trägt (`aria-hidden` zählt
+/// nicht: Es nimmt den Knoten aus dem Baum, statt ihn hineinzustellen).
+fn carries_global<'a, N: Node<'a>>(n: N) -> bool {
+    n.attributes().any(|(k, v)| {
+        attribute_index(k).is_some_and(|i| {
+            GLOBAL & (1 << i) != 0 && ATTRIBUTE[i] != "aria-hidden" && !v.trim().is_empty()
+        })
+    })
+}
+
+/// Ob `role="none"`/`"presentation"` an `n` greift. WAI-ARIA 1.2,
+/// „Presentational Roles Conflict Resolution": An einem fokussierbaren
+/// Element oder einem mit globalem ARIA-Attribut gilt sie nicht. Ein
+/// deaktiviertes Bedienelement ist nicht fokussierbar (HTML, „disabled").
+/// Dieselbe Auslegung wie `accname::role`, hier für die Regeln ohne
+/// [`Semantics`].
+pub(crate) fn presentation_applies<'a, N: Node<'a>>(n: N) -> bool {
+    matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n) && !focusable(n)
+}
+
+fn focusable<'a, N: Node<'a>>(n: N) -> bool {
+    let control = matches!(n.local_name(), "button" | "input" | "select" | "textarea");
+    if control
+        && (n.has_attr("disabled")
+            || ancestors(n).any(|a| a.is_element("fieldset") && a.has_attr("disabled")))
+    {
+        return false;
+    }
+    (control
+        && !n
+            .attr("type")
+            .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")))
+        || (matches!(n.local_name(), "a" | "area") && n.has_attr("href"))
+        || n.attr("tabindex")
+            .is_some_and(|t| t.trim().parse::<i32>().is_ok())
+        || n.attr("contenteditable")
+            .is_some_and(|v| !v.trim().eq_ignore_ascii_case("false"))
+}
+
+fn role_in_tree<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Effective {
     if let Some(r) = explicit_role(n) {
         return classify(r);
     }
@@ -877,45 +992,98 @@ fn in_context<'n, D: Semantics>(
     None
 }
 
-/// Ob `n` eines der geforderten Elemente besitzt: seine Kinder, durch
-/// durchlässige Knoten hindurch, und was es per `aria-owns` an sich zieht.
-/// Was einem anderen per `aria-owns` gehört, zählt dort, nicht hier.
-/// `None`: nichts besessen oder nicht entscheidbar.
+/// Rollen, die ein Behälter neben seinen erforderlichen Bestandteilen
+/// besitzen darf, ohne dass sie die Anforderung erfüllen: die Beschriftung
+/// einer Tabelle (`caption` nennt sie als Kontext), der Trenner im Menü und
+/// die Gruppe von Listeneinträgen (`listitem` nennt `group` als Kontext).
+const ALSO_ALLOWED: &[(&str, &[&str])] = &[
+    ("grid", &["caption"]),
+    ("list", &["group"]),
+    ("menu", &["separator"]),
+    ("menubar", &["separator"]),
+    ("table", &["caption"]),
+    ("treegrid", &["caption"]),
+];
+
+/// Was ein Behälter besitzt, gemessen an seinen erforderlichen Bestandteilen.
+#[derive(Debug, PartialEq)]
+enum Owned {
+    /// Ein erforderlicher Bestandteil und nichts Fremdes.
+    Fine,
+    /// Etwas, das kein erlaubter Bestandteil ist — oder nur Erlaubtes ohne
+    /// einen einzigen erforderlichen Bestandteil.
+    Wrong,
+    /// Nichts besessen oder nicht entscheidbar.
+    Undecided,
+}
+
+/// Was `n` besitzt: seine Kinder, durch durchlässige Knoten hindurch, und was
+/// es per `aria-owns` an sich zieht. Was einem anderen per `aria-owns` gehört,
+/// zählt dort, nicht hier.
+///
+/// Ein Behälter besitzt nur Elemente der erforderlichen Rollen (WAI-ARIA 1.2,
+/// „Required Owned Elements": „Any element that will be owned by the element
+/// with this role"; ACT bc4a75). Text, der unmittelbar im Behälter steht, ist
+/// ebenso fremd. Eine besessene `group` muss ihrerseits nur erlaubte Rollen
+/// besitzen — ihren Text (die Beschriftung im Listbox-Muster) zählt das nicht.
 fn owns<'n, D: Semantics>(
     doc: &'n D,
     n: D::N<'n>,
     needed: &[&str],
+    also: &[&str],
     owner: &Owner<'n, D::N<'n>>,
-) -> Option<bool> {
-    let foreign = |k: D::N<'n>| owner_of(owner, k).is_some_and(|b| b != n);
-    let mut stack: Vec<D::N<'n>> = n
-        .attr("aria-owns")
-        .into_iter()
-        .flat_map(str::split_whitespace)
-        .filter_map(|id| with_id(doc, n, id))
-        .collect();
-    stack.extend(n.children());
+) -> Owned {
+    let owned_by = |b: D::N<'n>| {
+        b.attr("aria-owns")
+            .into_iter()
+            .flat_map(str::split_whitespace)
+            .filter_map(move |id| with_id(doc, b, id))
+    };
+    // (Knoten, sein Besitzer, ob Text darin zählt)
+    let mut stack: Vec<(D::N<'n>, D::N<'n>, bool)> = owned_by(n).map(|k| (k, n, true)).collect();
+    stack.extend(n.children().map(|k| (k, n, true)));
+    let mut needed_seen = false;
     let mut something = false;
     let mut unknown = false;
-    while let Some(k) = stack.pop() {
-        if k.kind() != a11y_dom::NodeKind::Element
-            || matches!(k.local_name(), "script" | "style" | "template")
-            || (k.parent() == Some(n) && foreign(k))
-        {
+    while let Some((k, b, text)) = stack.pop() {
+        if owner_of(owner, k).is_some_and(|o| o != b) {
+            continue;
+        }
+        if k.kind() == a11y_dom::NodeKind::Text {
+            if text && !k.text().trim().is_empty() && !doc.is_ignored(k) {
+                return Owned::Wrong;
+            }
+            continue;
+        }
+        if matches!(k.local_name(), "script" | "style" | "template") {
             continue;
         }
         match effective_role(doc, k) {
-            Effective::Translucent => stack.extend(k.children().filter(|c| !foreign(*c))),
+            Effective::Translucent => stack.extend(k.children().map(|c| (c, b, text))),
             Effective::Unknown => unknown = true,
             Effective::Role(i) => {
-                if needed.contains(&VALID_ROLES[i]) {
-                    return Some(true);
+                let r = VALID_ROLES[i];
+                if needed.contains(&r) {
+                    needed_seen = true;
+                } else if also.contains(&r) {
+                    something = true;
+                } else {
+                    return Owned::Wrong;
                 }
-                something = true;
+                if r == "group" {
+                    stack.extend(owned_by(k).map(|c| (c, k, false)));
+                    stack.extend(k.children().map(|c| (c, k, false)));
+                }
             }
         }
     }
-    (something && !unknown).then_some(false)
+    if needed_seen {
+        Owned::Fine
+    } else if something && !unknown {
+        Owned::Wrong
+    } else {
+        Owned::Undecided
+    }
 }
 
 /// Kontext und Bestandteile nach WAI-ARIA 1.2, geprüft am DOM.
@@ -927,7 +1095,8 @@ fn owns<'n, D: Semantics>(
 ///   mehr ist. Beleg: auditmysite-Korpus `aria_attribute_validation`
 ///   (verwaister Tab) und auditmysite#715 (`ul[role=tablist] > li > a[role=tab]`).
 /// - `aria/required-children-missing`: Ein Behälter mit expliziter Rolle
-///   besitzt keines seiner erforderlichen Elemente. Native Tabellen und Listen
+///   besitzt keines seiner erforderlichen Elemente oder etwas, das keines
+///   ist — eine fremde Rolle oder Text (ACT bc4a75, siehe [`owns`]). Native Tabellen und Listen
 ///   ohne `role` prüft das nicht — ihre Bestandteile sind durch HTML gegeben
 ///   (auditmysite#659, #674: `<table><tbody><tr>`), die `lists/*`-Regeln
 ///   decken sie ab. Ohne jeden besessenen Knoten, mit `aria-busy="true"` oder
@@ -954,10 +1123,11 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             continue;
         };
 
-        // Der Kontext eines `listitem` ist Sache der Listen-Familie
+        // Der Kontext eines `<li>` ist Sache der Listen-Familie
         // (`lists/item-outside-list`) — sonst meldeten zwei Regeln denselben
         // verwaisten Eintrag (auditmysite-Kalibrierung `invalid_aria.html`).
-        if role != "listitem"
+        // Ein anderes Element mit `role="listitem"` prüft diese Regel.
+        if !(role == "listitem" && n.is_element("li"))
             && let Some(allowed) = look_up(CONTEXT, role)
             && in_context(doc, n, allowed, &owner) == Some(false)
         {
@@ -989,7 +1159,8 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
             {
                 continue;
             }
-            if owns(doc, n, needed, &owner) == Some(false) {
+            let also = look_up(ALSO_ALLOWED, role).unwrap_or_default();
+            if owns(doc, n, needed, also, &owner) == Owned::Wrong {
                 let parts = needed.join(", ");
                 out.push(
                     Finding::fail(
