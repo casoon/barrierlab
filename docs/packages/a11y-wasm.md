@@ -105,7 +105,9 @@ The feature is on by default; `--no-default-features` builds the lean variant
 without the methods. The columns pull the bodies of the five rules into the
 artifact, about 9 KB gzip. Budget decision of 2026-11-09 (liveaudit#16): the gzip
 budget rises from 170 KB to 180 KB (earlier steps: 110, 130, 150, 170 KB) and the
-columns ship in the default build (measured 183,122 bytes gzip, 178.8 KiB).
+columns ship in the default build (measured 183,122 bytes gzip, 178.8 KiB). Since
+2026-11-14 the budget is 195 KB: the corrections from the W3C ACT test cases
+(barrierlab#225) brought the default build to 192.5 KB gzip.
 
 ## Limits
 

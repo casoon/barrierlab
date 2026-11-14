@@ -15,7 +15,7 @@ readme = "README.md"
 [features]
 default = ["probes"]
 # Messspalten für die seitenabhängigen Regeln (`Scan::withFrames` und Verwandte).
-# Standardmäßig an (Größenbudget 180 KB gzip, 09.11.2026); mit
+# Standardmäßig an (Größenbudget 195 KB gzip seit 14.11.2026); mit
 # `--no-default-features` entsteht die schlanke Variante ohne die Spalten.
 probes = []
 
