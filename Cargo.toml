@@ -31,6 +31,7 @@ exclude = [
     "crates/html-conform/fuzz",
     "crates/html-conform/xtask/check-file",
     "examples/a11y",
+    "xtask/act",
 ]
 resolver = "3"
 

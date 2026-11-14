@@ -1,0 +1,1241 @@
+{
+  "cases": {
+    "cantTell": 44,
+    "correct": 408,
+    "wrong": 60
+  },
+  "consistency": {
+    "consistent": 8,
+    "not consistent": 21,
+    "partial": 8,
+    "untested": 51
+  },
+  "perRule": [
+    {
+      "act": "047fe0",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has heading for non-repeated content",
+      "wrong": []
+    },
+    {
+      "act": "09o5cg",
+      "barrierlab": [
+        "contrast/text-enhanced"
+      ],
+      "cases": 29,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Text has enhanced contrast",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/09o5cg/051137940ea6c5091641e53063b2a9207221ac3d.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/09o5cg/4ba7e75934fbd313f05a9c9cfffbd08a2949f8a8.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/09o5cg/c2dcc599d1d0b741106f0ba63b0de8c77f3ebe54.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/09o5cg/26db50757b442f0c257840671a8e7c7297711e9d.html"
+        }
+      ]
+    },
+    {
+      "act": "0ssw9k",
+      "barrierlab": [
+        "keyboard/scrollable-region-not-focusable"
+      ],
+      "cases": 10,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Scrollable element is keyboard accessible",
+      "wrong": []
+    },
+    {
+      "act": "0va7u6",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML graphics contain no text",
+      "wrong": []
+    },
+    {
+      "act": "1a02b0",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio and visuals of video element have transcript",
+      "wrong": []
+    },
+    {
+      "act": "1ea59c",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has audio description",
+      "wrong": []
+    },
+    {
+      "act": "1ec09b",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has strict accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "23a2a8",
+      "barrierlab": [
+        "images/alt-missing",
+        "names/required-missing"
+      ],
+      "cases": 18,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Image has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/23a2a8/0ff974acaa04b13774d731e66b0ac93335325e38.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/23a2a8/58427934e6646e0c93e1bf97a1634df1d75f7e9c.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/23a2a8/b4d009c69c53db00b6e096513ac9150f6e9b6e61.html"
+        }
+      ]
+    },
+    {
+      "act": "24afc2",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Letter spacing in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "2779a5",
+      "barrierlab": [
+        "document/title-missing",
+        "document/title-empty"
+      ],
+      "cases": 11,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page has non-empty title",
+      "wrong": []
+    },
+    {
+      "act": "2eb176",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content has transcript",
+      "wrong": []
+    },
+    {
+      "act": "2ee8b8",
+      "barrierlab": [
+        "label-in-name/mismatch"
+      ],
+      "cases": 13,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Visible label is part of accessible name",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/2ee8b8/a01e2129885e0f10406e23a719301da436ba2653.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/2ee8b8/65be0004543e57d44dd4a53d9f582c482503727c.html"
+        }
+      ]
+    },
+    {
+      "act": "307n5z",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Element with presentational children has no focusable content",
+      "wrong": []
+    },
+    {
+      "act": "36b590",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Error message describes invalid form field value",
+      "wrong": []
+    },
+    {
+      "act": "3e12e1",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Block of repeated content is collapsible",
+      "wrong": []
+    },
+    {
+      "act": "3ea0c8",
+      "barrierlab": [
+        "ids/duplicate"
+      ],
+      "cases": 10,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Id attribute value is unique",
+      "wrong": []
+    },
+    {
+      "act": "46ca7f",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Element marked as decorative is not exposed",
+      "wrong": []
+    },
+    {
+      "act": "4b1c6c",
+      "barrierlab": null,
+      "cases": 23,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Iframe elements with identical accessible names have equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "4c31df",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio or video element that plays automatically has a control mechanism",
+      "wrong": []
+    },
+    {
+      "act": "4e8ab6",
+      "barrierlab": [
+        "aria/required-attribute-missing"
+      ],
+      "cases": 8,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Element with role attribute has required states and properties",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/4e8ab6/2d7dadf8c1245fb59907fb770e7a2ac55c6de6d3.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/4e8ab6/da13a6ea7c396248be37fd2c1b724bef551b5e02.html"
+        }
+      ]
+    },
+    {
+      "act": "59796f",
+      "barrierlab": [
+        "images/input-alt-missing"
+      ],
+      "cases": 12,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Image button has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/59796f/7fcd19a5b5ab7cb081df0e33cd5fda2c0bee4915.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/59796f/e5ca3711c3a3ce76e765dbc52b2d0ce370df2042.html"
+        }
+      ]
+    },
+    {
+      "act": "59br37",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Zoomed text node is not clipped with CSS overflow",
+      "wrong": []
+    },
+    {
+      "act": "5b7ae0",
+      "barrierlab": [
+        "document/lang-mismatch"
+      ],
+      "cases": 12,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page lang and xml:lang attributes have matching values",
+      "wrong": []
+    },
+    {
+      "act": "5c01ea",
+      "barrierlab": [
+        "aria/attribute-not-allowed",
+        "aria/attribute-prohibited"
+      ],
+      "cases": 15,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "ARIA state or property is permitted",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/5c01ea/da191373f044d7c309cafdf03485c61d2f91e1ee.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/5c01ea/9fe60b403371e0e5d057f4f6c871dfed42f7ac4c.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/5c01ea/46a07f5e7ad1db02e255f3d6c7d7b0e1ecf3b1fd.html"
+        }
+      ]
+    },
+    {
+      "act": "5effbb",
+      "barrierlab": null,
+      "cases": 18,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Link in context is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "5f99a7",
+      "barrierlab": [
+        "aria/attribute-unknown"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA attribute is defined in WAI-ARIA",
+      "wrong": []
+    },
+    {
+      "act": "674b10",
+      "barrierlab": [
+        "aria/role-invalid"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Role attribute has valid value",
+      "wrong": []
+    },
+    {
+      "act": "6a7281",
+      "barrierlab": [
+        "aria/attribute-value-invalid"
+      ],
+      "cases": 24,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "ARIA state or property has valid value",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/6a7281/f4057693e8bc785bc79eea906fe2c74f8859ab37.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/6a7281/bfe8367fb26e19599d339e70d79d7fdc665ea866.html"
+        }
+      ]
+    },
+    {
+      "act": "6cfa84",
+      "barrierlab": [
+        "keyboard/hidden-focusable"
+      ],
+      "cases": 14,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Element with aria-hidden has no content in sequential focus navigation",
+      "wrong": []
+    },
+    {
+      "act": "73f2c2",
+      "barrierlab": [
+        "forms/autocomplete-invalid"
+      ],
+      "cases": 20,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Autocomplete attribute has valid value",
+      "wrong": []
+    },
+    {
+      "act": "7677a9",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Device motion based changes to the content can also be created from the user interface",
+      "wrong": []
+    },
+    {
+      "act": "78fd32",
+      "barrierlab": null,
+      "cases": 21,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Line height in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "7d6734",
+      "barrierlab": [
+        "svg/name-missing"
+      ],
+      "cases": 10,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "SVG element with explicit role has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "80af7b",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap",
+      "wrong": []
+    },
+    {
+      "act": "80f0bf",
+      "barrierlab": [
+        "media/audio-autoplay"
+      ],
+      "cases": 8,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Audio or video element avoids automatically playing audio",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/80f0bf/63df2c2d14957cfa0957844313864dd15273c8a3.html"
+        }
+      ]
+    },
+    {
+      "act": "8fc3b6",
+      "barrierlab": [
+        "objects/alt-missing"
+      ],
+      "cases": 14,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Object element rendering non-text content has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/8fc3b6/8823df5ece746b53666bce7e59f4286db83057e9.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/8fc3b6/358271acbe8d353ca18ee72d4a79dc97f2aaa28a.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/8fc3b6/ea3e21949fe5d2ff522c2f6f068628deb0e4b0bb.html"
+        }
+      ]
+    },
+    {
+      "act": "97a4e1",
+      "barrierlab": [
+        "buttons/name-missing"
+      ],
+      "cases": 17,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Button has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/97a4e1/6f944bcb8ab65f381d1c080f639de43242efb7f5.html"
+        }
+      ]
+    },
+    {
+      "act": "9bd38c",
+      "barrierlab": null,
+      "cases": 21,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Content has alternative for visual reference",
+      "wrong": []
+    },
+    {
+      "act": "9e45ec",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Word spacing in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "9eb3f6",
+      "barrierlab": null,
+      "cases": 15,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Image filename is accessible name for image",
+      "wrong": []
+    },
+    {
+      "act": "a1b64e",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap via standard navigation",
+      "wrong": []
+    },
+    {
+      "act": "a25f45",
+      "barrierlab": [
+        "tables/headers-attr-invalid"
+      ],
+      "cases": 17,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Headers attribute specified on a cell refers to cells in the same table element",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/a25f45/d496254239c30419f2d57ea643dae036d1151832.html"
+        }
+      ]
+    },
+    {
+      "act": "aaa1bf",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio or video element that plays automatically has no audio that lasts more than 3 seconds",
+      "wrong": []
+    },
+    {
+      "act": "ab4d13",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "ac7dc6",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Video element visual-only content has description track",
+      "wrong": []
+    },
+    {
+      "act": "afb423",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "afw4f7",
+      "barrierlab": [
+        "contrast/text-insufficient"
+      ],
+      "cases": 28,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Text has minimum contrast",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/e9a5aad9a2416a190840e583fbf3d52e247843aa.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/b09119e2816b6b59ed986cf7659cbfb0834ae42a.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/0b212e48dbb2517256ee6f8235ad550ac8d5ba64.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/11ec274fc1fdac1792436368e7ad1b25bfa50370.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/71886cad36622fb466cf3177a341ade74322f0fe.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/6f8fa71c663ca8e52324a3dddbd4a2d60140dba1.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/afw4f7/e1094dcd0697b11e6228556c7c4da9703786e3d2.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/afw4f7/b4cc947734c2d828a5e7c493ee58970c3b48f4d0.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/afw4f7/28a2fa1fbe147515d4abd03996e6d481616282da.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/afw4f7/9573b85ae25b158899fcba32685475efe8e97a96.html"
+        }
+      ]
+    },
+    {
+      "act": "aizyf1",
+      "barrierlab": null,
+      "cases": 12,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Link is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "akn7bn",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Iframe with negative tabindex has no interactive elements",
+      "wrong": []
+    },
+    {
+      "act": "b20e66",
+      "barrierlab": null,
+      "cases": 21,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Links with identical accessible names have equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "b33eff",
+      "barrierlab": [
+        "orientation/root-rotated"
+      ],
+      "cases": 10,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Orientation of the page is not restricted using CSS transform property",
+      "wrong": []
+    },
+    {
+      "act": "b40fd1",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has a landmark with non-repeated content",
+      "wrong": []
+    },
+    {
+      "act": "b49b2e",
+      "barrierlab": null,
+      "cases": 17,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Heading is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "b4f0c3",
+      "barrierlab": [
+        "zoom/viewport-locked",
+        "zoom/viewport-scale-limited"
+      ],
+      "cases": 11,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Meta viewport allows for zoom",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/b4f0c3/42bfbd40933a0aa7954e841ec0b239de643e8d2a.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/b4f0c3/94bfda6abb6966e3681e234b88daf04c095ff3be.html"
+        }
+      ]
+    },
+    {
+      "act": "b5c3f8",
+      "barrierlab": [
+        "document/lang-missing"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page has lang attribute",
+      "wrong": []
+    },
+    {
+      "act": "bc4a75",
+      "barrierlab": [
+        "aria/required-children-missing"
+      ],
+      "cases": 19,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "ARIA required owned elements",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bc4a75/668eca5516086c86c0c2b7118c545642d826e0de.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bc4a75/18b5ebff3cc85d3497d22088d1179390759f3aaa.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bc4a75/81837188c0aa959e1a6de0f883c2ede340f3f5f5.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bc4a75/a7a314ced1f32dcfec0b00c0defd7858e2c77415.html"
+        }
+      ]
+    },
+    {
+      "act": "bc659a",
+      "barrierlab": [
+        "timing/meta-refresh"
+      ],
+      "cases": 15,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Meta element has no refresh delay",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/bc659a/beeaf6f49d37ef2d771effd40bcb3bfc9655fbf4.html"
+        }
+      ]
+    },
+    {
+      "act": "bf051a",
+      "barrierlab": [
+        "document/lang-invalid"
+      ],
+      "cases": 7,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "HTML page lang attribute has valid language tag",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bf051a/a0e1c0cf69971fb9faf31a5a1180cf9124aa8db9.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bf051a/6b30e5fdcfd916ef0f745359c8130cc53c46006c.html"
+        }
+      ]
+    },
+    {
+      "act": "bisz58",
+      "barrierlab": [
+        "timing/meta-refresh"
+      ],
+      "cases": 14,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Meta element has no refresh delay (no exception)",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/bisz58/d789ff3d0c087c77117a02527e71a646a343d4a3.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bisz58/4f9bb0a8ab7bd76505483c47da831440b864fe50.html"
+        }
+      ]
+    },
+    {
+      "act": "c249d5",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Device motion based changes to the content can be disabled",
+      "wrong": []
+    },
+    {
+      "act": "c3232f",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "c487ae",
+      "barrierlab": [
+        "links/name-missing",
+        "images/area-alt-missing"
+      ],
+      "cases": 28,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Link has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "c4a8a4",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML page title is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "c5a4ea",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "cae760",
+      "barrierlab": [
+        "frames/name-missing"
+      ],
+      "cases": 10,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Iframe element has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/cae760/38cee2a5fee5b3d670e0d63d78dda5abaea50e0a.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/cae760/394132219ba385a90dda40efe822ab8db0cc9483.html"
+        }
+      ]
+    },
+    {
+      "act": "cc0f0a",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Form field label is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "cf77f2",
+      "barrierlab": [
+        "keyboard/skip-link-missing"
+      ],
+      "cases": 14,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Bypass Blocks of Repeated Content",
+      "wrong": []
+    },
+    {
+      "act": "d0f69e",
+      "barrierlab": [
+        "tables/header-without-data"
+      ],
+      "cases": 16,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Table header cell has assigned cells",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/d0f69e/c9c8800cc765aaaabeb43cf35a7554bc9be804f1.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/d0f69e/db675b58cc2eb76b9aa743cc1778ba6ae92abd93.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/d0f69e/46645a39378f2367d97c5695325e0a9119767910.html"
+        }
+      ]
+    },
+    {
+      "act": "d7ba54",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has audio track alternative",
+      "wrong": []
+    },
+    {
+      "act": "de46e4",
+      "barrierlab": null,
+      "cases": 19,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Element with lang attribute has valid language tag",
+      "wrong": []
+    },
+    {
+      "act": "e086e5",
+      "barrierlab": [
+        "forms/label-missing",
+        "names/required-missing"
+      ],
+      "cases": 17,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Form field has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/e086e5/09b08d811784ac228154dd08863441b11222a597.html"
+        }
+      ]
+    },
+    {
+      "act": "e6952f",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Attribute is not duplicated",
+      "wrong": []
+    },
+    {
+      "act": "e7aa44",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content has text alternative",
+      "wrong": []
+    },
+    {
+      "act": "e88epe",
+      "barrierlab": null,
+      "cases": 20,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Image not in the accessibility tree is decorative",
+      "wrong": []
+    },
+    {
+      "act": "eac66b",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element auditory content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "ebe86a",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap via non-standard navigation",
+      "wrong": []
+    },
+    {
+      "act": "ee13b5",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has transcript",
+      "wrong": []
+    },
+    {
+      "act": "efbfc7",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Text content that changes automatically can be paused, stopped or hidden",
+      "wrong": []
+    },
+    {
+      "act": "f196ce",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Video element visual content has description track",
+      "wrong": []
+    },
+    {
+      "act": "f51b46",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element auditory content has captions",
+      "wrong": []
+    },
+    {
+      "act": "fd26cf",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "fd3a94",
+      "barrierlab": null,
+      "cases": 19,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Links with identical accessible names and same context serve equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "ff89c9",
+      "barrierlab": [
+        "aria/required-parent-missing"
+      ],
+      "cases": 15,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "ARIA required context role",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ff89c9/e779938b19b12e48036a180ebe60e392867d13ea.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ff89c9/ff17242184b34c5dfef7d5fd0d1a9279f0ba23ea.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ff89c9/16bf36473060bd2e626a1d1a061029bd7f981319.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ff89c9/289c7bc0b1fb7ac0bfe22337f428db57d50bc599.html"
+        }
+      ]
+    },
+    {
+      "act": "ffbc54",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "No keyboard shortcut uses only printable characters",
+      "wrong": []
+    },
+    {
+      "act": "ffd0e9",
+      "barrierlab": [
+        "headings/empty"
+      ],
+      "cases": 15,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Heading has non-empty accessible name",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ffd0e9/bf179de06bda7f9b3e3adcbd6ad0eb413d8bcd51.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ffd0e9/3adf9351567b2e293705311c1c3236b59b2b7867.html"
+        },
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/ffd0e9/0af782abf9e6314ec4bd46d60b140e6f94b818b2.html"
+        }
+      ]
+    },
+    {
+      "act": "m6b1q3",
+      "barrierlab": [
+        "names/required-missing"
+      ],
+      "cases": 8,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Menuitem has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "off6ek",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML element language subtag matches language",
+      "wrong": []
+    },
+    {
+      "act": "oj04fd",
+      "barrierlab": [
+        "focus/outline-removed",
+        "focus/indicator-missing"
+      ],
+      "cases": 9,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Element in sequential focus order has visible focus",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/oj04fd/8784917764b66a645bc38a751805a2aac2201e21.html"
+        },
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/oj04fd/76a1528006c193ee0fab9ea6ad41bde8c424189f.html"
+        }
+      ]
+    },
+    {
+      "act": "qt1vmo",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Image accessible name is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "ucwvc8",
+      "barrierlab": null,
+      "cases": 15,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML page language subtag matches default language",
+      "wrong": []
+    },
+    {
+      "act": "ye5d6e",
+      "barrierlab": null,
+      "cases": 12,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has an instrument to move focus to non-repeated content",
+      "wrong": []
+    }
+  ],
+  "rules": 88,
+  "source": "https://act-rules.github.io/testcases.json",
+  "testcases": 1134
+}
