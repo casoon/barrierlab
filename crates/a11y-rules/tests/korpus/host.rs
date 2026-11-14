@@ -13,7 +13,9 @@
 //!   `--obscured`, `--hides-focus`, `--focus-visible`, `--animating`,
 //!   `--infinite-animation`, `--flex-reversed`, `--visually-hidden` (je `1`/`0`),
 //!   `--scroll-overflow` (px), `--backdrop` (Leuchtdichten, kommagetrennt),
-//!   `--bg-unknown: 1` (effektiver Hintergrund nicht auflösbar).
+//!   `--bg-unknown: 1` (effektiver Hintergrund nicht auflösbar), `--pairs`
+//!   (genau bekannte Farbpaare `Text/Grund`, kommagetrennt; ohne lesbares Paar
+//!   leer) und `--halo` (Schattenfarben, kommagetrennt).
 //!   `--unmeasured` am `<html>` nennt Felder, die der Host an keinem Element
 //!   misst: `layout`, `focus-visible`, `obscured`, `order`, `min-width`,
 //!   `cursor`, `animation`, `pointer-events`, `hides-focus`, `scroll`,
@@ -36,9 +38,9 @@
 //! - **Stylesheets:** der Text aller `<style>`-Elemente, in Dokumentreihenfolge.
 
 use a11y_dom::{
-    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ComputedStyle, Document,
-    FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics, SpacingClip,
-    ancestors, elements,
+    Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ColorPairs, ComputedStyle,
+    Document, FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics,
+    SpacingClip, ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -599,6 +601,23 @@ impl Rendering for Host<'_> {
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
         own(node, "--backdrop").map(|v| Backdrop {
             luminance: v.split(',').filter_map(|s| s.trim().parse().ok()).collect(),
+        })
+    }
+
+    fn color_pairs<'n>(&'n self, node: Self::N<'n>) -> Option<ColorPairs> {
+        let colors = |v: Option<String>| -> Vec<Color> {
+            v.map(|v| v.split(',').filter_map(make_color).collect())
+                .unwrap_or_default()
+        };
+        own(node, "--pairs").map(|v| ColorPairs {
+            pairs: v
+                .split(',')
+                .filter_map(|p| {
+                    let (t, b) = p.split_once('/')?;
+                    Some((make_color(t)?, make_color(b)?))
+                })
+                .collect(),
+            halo: colors(own(node, "--halo")),
         })
     }
 }

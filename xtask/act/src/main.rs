@@ -82,8 +82,14 @@ const MAPPING: &[(&str, &[&str])] = &[
     ),
     ("b33eff", &["orientation/root-rotated"]),
     ("80f0bf", &["media/audio-autoplay"]),
-    ("afw4f7", &["contrast/text-insufficient"]),
-    ("09o5cg", &["contrast/text-enhanced"]),
+    (
+        "afw4f7",
+        &["contrast/text-insufficient", "contrast/text-undetermined"],
+    ),
+    (
+        "09o5cg",
+        &["contrast/text-enhanced", "contrast/text-undetermined"],
+    ),
     (
         "oj04fd",
         &["focus/outline-removed", "focus/indicator-missing"],

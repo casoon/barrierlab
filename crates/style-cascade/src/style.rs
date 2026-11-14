@@ -5,7 +5,7 @@
 //! [`ComputedStyle::background_color`]: ein Hintergrundbild, ein Verlauf, eine
 //! Mischung oder ein absolut positioniertes Element machen ihn unbestimmt.
 
-use a11y_dom::{Color, ComputedStyle, Node, NodeKind, ancestors};
+use a11y_dom::{Color, ColorPairs, ComputedStyle, Node, NodeKind, ancestors};
 
 use crate::cascade::{Cascade, Specified};
 use crate::color::{luminance, over, parse_color, teile_oberste_ebene};
@@ -139,24 +139,69 @@ impl Cascade {
     /// einem Vorfahren die Farben, die die DOM-Kette ergibt? Das gilt für Text
     /// und Hintergrund.
     fn darstellung_unsicher<'a, N: Node<'a>>(&self, n: N) -> bool {
+        self.mischt_farben(n)
+            || std::iter::once(n)
+                .chain(ancestors(n))
+                .filter(|a| a.kind() == NodeKind::Element)
+                .any(|a| self.opazitaet(a).is_none_or(|o| o < 1.0))
+    }
+
+    /// Filter oder Mischmodus am Element oder einem Vorfahren: Die Farben der
+    /// DOM-Kette sind nicht die gezeichneten.
+    fn mischt_farben<'a, N: Node<'a>>(&self, n: N) -> bool {
         std::iter::once(n).chain(ancestors(n)).any(|a| {
-            if a.kind() != NodeKind::Element {
-                return false;
-            }
-            let opazitaet = match self.specified(a, "opacity") {
-                Specified::Unset => false,
-                Specified::Unknown => true,
-                Specified::Set(v) => v
-                    .trim()
-                    .trim_end_matches('%')
-                    .parse::<f32>()
-                    .map_or(true, |o| if v.contains('%') { o < 100.0 } else { o < 1.0 }),
-            };
-            opazitaet
-                || self.ungleich(a, "filter", &["none"])
-                || self.ungleich(a, "mix-blend-mode", &["normal"])
-                || self.ungleich(a, "background-blend-mode", &["normal"])
+            a.kind() == NodeKind::Element
+                && (self.ungleich(a, "filter", &["none"])
+                    || self.ungleich(a, "mix-blend-mode", &["normal"])
+                    || self.ungleich(a, "background-blend-mode", &["normal"]))
         })
+    }
+
+    /// `opacity` am Element, 0 bis 1 (CSS Color 4 §15.1: Zahl oder Prozent,
+    /// auf 0 bis 1 begrenzt). `None`, wenn unbestimmt oder nicht lesbar.
+    fn opazitaet<'a, N: Node<'a>>(&self, a: N) -> Option<f64> {
+        match self.specified(a, "opacity") {
+            Specified::Unset => Some(1.0),
+            Specified::Unknown => None,
+            Specified::Set(v) => {
+                let v = v.trim();
+                let (zahl, teiler) = match v.strip_suffix('%') {
+                    Some(z) => (z, 100.0),
+                    None => (v, 1.0),
+                };
+                zahl.trim()
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|o| o.is_finite())
+                    .map(|o| (o / teiler).clamp(0.0, 1.0))
+            }
+        }
+    }
+
+    /// Die Farben des `text-shadow` (erbt; CSS Text Decoration 3 §4): leer
+    /// ohne Schatten, `None`, wenn ein Schatten keine lesbare Farbe hat. Ohne
+    /// Farbangabe gilt `currentcolor`.
+    fn schattenfarben<'a, N: Node<'a>>(&self, n: N) -> Option<Vec<Color>> {
+        let wert = match self.specified(n, "text-shadow") {
+            Specified::Unset => return Some(Vec::new()),
+            Specified::Unknown => return None,
+            Specified::Set(v) => v,
+        };
+        if wert.trim().eq_ignore_ascii_case("none") {
+            return Some(Vec::new());
+        }
+        teile_oberste_ebene(&wert, ',')
+            .into_iter()
+            .map(|schatten| {
+                let farbe = tokens(schatten).into_iter().find(|t| {
+                    !t.starts_with(|c: char| c.is_ascii_digit() || matches!(c, '-' | '+' | '.'))
+                });
+                match farbe {
+                    Some(t) if !t.eq_ignore_ascii_case("currentcolor") => self.parse_at(n, t),
+                    _ => self.color(n),
+                }
+            })
+            .collect()
     }
 
     /// `backdrop-filter` mit mehr als Weichzeichnen: ein Weichzeichner mittelt
@@ -343,6 +388,122 @@ impl Cascade {
             }));
         }
         Some(proben)
+    }
+
+    /// Die Farbpaare (Text, Hintergrund) hinter dem Text des Elements, wenn
+    /// eine einzelne Farbe ihn nicht beschreibt, aber jede Stelle genau
+    /// bekannt ist: ein Verlauf (je Stufe und Mitte zwischen zwei Stufen ein
+    /// Paar), `opacity` an Element oder Vorfahr, ein `text-shadow` (als Halo).
+    ///
+    /// `opacity` legt die fertig gezeichnete Gruppe mit diesem Anteil über
+    /// das, was dahinter liegt (CSS Color 4 §15.1, Compositing 1 §3.3); für
+    /// den normalen Mischmodus ist das eine lineare Mischung zwischen beidem,
+    /// für Text und Hintergrund gleichermaßen.
+    ///
+    /// `None`, wenn nichts davon im Spiel ist (dann gelten
+    /// [`ComputedStyle::color`] und [`ComputedStyle::background_color`]) oder
+    /// die Kette ohnehin unbestimmt ist (Bild, Filter, Mischmodus, absolute
+    /// Lage, unbestimmte Regel). Leere Paare: nötig, aber nicht bestimmbar.
+    pub fn color_pairs<'a, N: Node<'a>>(&self, n: N) -> Option<ColorPairs> {
+        if self.mischt_farben(n) || self.lage_unsicher(n) {
+            return None;
+        }
+        let kette: Vec<N> = std::iter::once(n)
+            .chain(ancestors(n))
+            .filter(|a| a.kind() == NodeKind::Element)
+            .collect();
+        let opaz: Vec<f64> = kette
+            .iter()
+            .map(|a| self.opazitaet(*a))
+            .collect::<Option<_>>()?;
+        // Schichten von innen nach außen, bis zur ersten deckenden Farbe,
+        // hinter der keine Deckkraft mehr mischt.
+        let mut schichten: Vec<(Option<Color>, Option<Vec<Color>>, f64)> = Vec::new();
+        let mut grund = None;
+        for (i, a) in kette.iter().enumerate() {
+            let stufen = match self.specified(*a, "background-image") {
+                Specified::Unknown => return None,
+                Specified::Set(v) if !v.trim().eq_ignore_ascii_case("none") => {
+                    Some(verlaufsstufen(&v, self.is_dark(*a)?)?)
+                }
+                _ => None,
+            };
+            let farbe = match self.specified(*a, "background-color") {
+                Specified::Unknown => return None,
+                Specified::Unset => None,
+                Specified::Set(v) if v.trim().eq_ignore_ascii_case("currentcolor") => {
+                    Some(self.color(*a)?)
+                }
+                Specified::Set(v) => Some(self.parse_at(*a, &v)?),
+            };
+            let deckend = stufen.is_none() && farbe.is_some_and(|c| c.a == 255);
+            schichten.push((farbe, stufen, opaz[i]));
+            if deckend && opaz[i..].iter().all(|o| *o >= 1.0) {
+                grund = farbe;
+                break;
+            }
+        }
+        let halo = self.schattenfarben(n);
+        let verlaeufe = schichten.iter().filter(|s| s.1.is_some()).count();
+        let gemischt = schichten.iter().any(|s| s.2 < 1.0);
+        if verlaeufe == 0 && !gemischt && halo.as_ref().is_some_and(Vec::is_empty) {
+            return None;
+        }
+        let (Some(halo), true) = (halo, verlaeufe <= 1) else {
+            return Some(ColorPairs::default());
+        };
+        let Some(text) = self.color(n) else {
+            return Some(ColorPairs::default());
+        };
+        let Some(grund) = grund.or_else(|| self.canvas(n)) else {
+            return Some(ColorPairs::default());
+        };
+        schichten.reverse();
+        let mische = |hinten: Color, vorn: Color, o: f64| {
+            let m = |h: u8, v: u8| (f64::from(h) * (1.0 - o) + f64::from(v) * o).round() as u8;
+            Color {
+                r: m(hinten.r, vorn.r),
+                g: m(hinten.g, vorn.g),
+                b: m(hinten.b, vorn.b),
+                a: 255,
+            }
+        };
+        let varianten = schichten
+            .iter()
+            .find_map(|s| s.1.as_ref())
+            .map_or(1, |st| (2 * st.len()).saturating_sub(1).max(1));
+        let mut pairs = Vec::with_capacity(varianten);
+        for v in 0..varianten {
+            let mut c = grund;
+            let mut hinten = Vec::with_capacity(schichten.len());
+            for (farbe, stufen, _) in &schichten {
+                hinten.push(c);
+                if let Some(f) = farbe {
+                    c = over(*f, c);
+                }
+                if let Some(st) = stufen {
+                    let farben: Vec<Color> = st.iter().map(|s| over(*s, c)).collect();
+                    let mitte = |a: u8, b: u8| ((u16::from(a) + u16::from(b)) / 2) as u8;
+                    let mut proben = farben.clone();
+                    proben.extend(farben.windows(2).map(|w| Color {
+                        r: mitte(w[0].r, w[1].r),
+                        g: mitte(w[0].g, w[1].g),
+                        b: mitte(w[0].b, w[1].b),
+                        a: 255,
+                    }));
+                    c = *proben.get(v)?;
+                }
+            }
+            let (mut t, mut b) = (over(text, c), c);
+            for (i, (_, _, o)) in schichten.iter().enumerate().rev() {
+                if *o < 1.0 {
+                    t = mische(hinten[i], t, *o);
+                    b = mische(hinten[i], b, *o);
+                }
+            }
+            pairs.push((t, b));
+        }
+        Some(ColorPairs { pairs, halo })
     }
 
     /// Die berechneten Werte, die Regeln des Darstellungs-Tiers lesen.

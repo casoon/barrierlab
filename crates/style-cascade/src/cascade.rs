@@ -115,6 +115,7 @@ const VERERBT: &[&str] = &[
     "white-space",
     "cursor",
     "direction",
+    "text-shadow",
 ];
 
 fn vererbt(prop: &str) -> bool {

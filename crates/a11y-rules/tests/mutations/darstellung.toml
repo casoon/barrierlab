@@ -30,14 +30,14 @@ expect = "killed"
 note = "Ausnahme für inaktive Bedienelemente entfernt."
 
 [[mutation]]
-id = "contrast/text-insufficient"
+id = "contrast/text-undetermined"
 file = "src/rendering.rs"
 kind = "drop-condition"
 find = '''    if !carries_text(n) || inactive(n) || pure_decoration(n) {'''
 replace = '''    if !carries_text(n) || inactive(n) {'''
 test = "korpus"
 expect = "killed"
-note = "Ausnahme für reine Dekoration entfernt (barrierlab#221): aria-hidden Trennzeichen müssen wieder Befunde sein."
+note = "Ausnahme für reine Dekoration entfernt (barrierlab#221): aria-hidden Trennzeichen wären wieder Befunde (seit ACT afw4f7 offen statt FAIL)."
 
 [[mutation]]
 id = "contrast/text-undetermined"
@@ -323,3 +323,55 @@ find = '''            || descendants(n).any(|d| per_tab_reachable(d) && !inert(d
 replace = '''            || false'''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''        .any(|a| disabled_labels.contains(&a.id()))'''
+replace = '''        .any(|_| false)'''
+test = "korpus"
+expect = "killed"
+note = "Ausnahme für die Beschriftung inaktiver Bedienelemente entfernt (ACT afw4f7, disabled label)."
+
+[[mutation]]
+id = "contrast/text-insufficient"
+file = "src/rendering.rs"
+kind = "early-return"
+find = '''        (Some(front), Some(back)) if over(front, back) == back => return None,'''
+replace = '''        (Some(front), Some(back)) if false => return None,'''
+test = "korpus"
+expect = "killed"
+note = "Text in der Farbe seines Hintergrunds ist nicht sichtbar (ACT afw4f7)."
+
+[[mutation]]
+id = "contrast/text-undetermined"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''            Verdict::Fails(value) if symbols_only(n) => out.push(symbols(
+                "contrast/text-undetermined",'''
+replace = '''            Verdict::Fails(value) if false => out.push(symbols(
+                "contrast/text-undetermined",'''
+test = "korpus"
+expect = "killed"
+note = "Nur Satzzeichen und Symbole: offen statt FAIL (ACT afw4f7, not human language)."
+
+[[mutation]]
+id = "contrast/text-undetermined"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''                    || halo.iter().any(|h| !narrowly(ratio(*t, over(*h, *b)), s))'''
+replace = '''                    || false'''
+test = "korpus"
+expect = "killed"
+note = "Ein Schatten als Halo macht aus FAIL eine offene Frage (Understanding 1.4.3, ACT afw4f7)."
+
+[[mutation]]
+id = "contrast/text-enhanced"
+file = "src/rendering.rs"
+kind = "drop-condition"
+find = '''        if !aa_open_aaa_fails'''
+replace = '''        if true'''
+test = "korpus"
+expect = "killed"
+note = "AA offen, AAA an jeder Stelle verfehlt: FAIL unter 1.4.6."

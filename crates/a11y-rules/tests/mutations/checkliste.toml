@@ -1049,3 +1049,13 @@ replace = '''
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "focus/outline-removed"
+file = "src/stylesheet_rules.rs"
+kind = "drop-condition"
+find = '''    if elements(doc).any(|n| n.has_attr("onfocus") || n.has_attr("onfocusin")) {'''
+replace = '''    if false {'''
+test = "korpus"
+expect = "killed"
+note = "Ein Fokus-Handler kann den Hinweis per Skript setzen (ACT oj04fd): offen, nicht FAIL."
