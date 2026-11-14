@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "type": "bar",
+  "orientation": "horizontal",
+  "title": "Barriers reported as a failure, of 22 known ones",
+  "description": "Test bench of barrierlab.eu, measured 12 and 13 November 2026: practice pages with 22 known barriers. Lighthouse and Alfa report 10, QualWeb 9, axe-core, IBM Equal Access and barrierlab-cli 8, Pa11y with HTML_CodeSniffer 7, html-validate 5. barrierlab-cli and html-validate read the page without a browser; the others run in one.",
+  "source": "barrierlab.eu/tools/coverage/",
+  "width": 720,
+  "height": 320,
+  "showValues": true,
+  "valueAxis": { "title": "Barriers found", "max": 22 },
+  "data": [
+    { "label": "Lighthouse 13.6", "value": 10 },
+    { "label": "Alfa 0.84", "value": 10 },
+    { "label": "QualWeb 0.7", "value": 9 },
+    { "label": "axe-core 4.13", "value": 8 },
+    { "label": "IBM Equal Access 4.0", "value": 8 },
+    { "label": "barrierlab-cli 0.1", "value": 8 },
+    { "label": "Pa11y / HTML_CodeSniffer", "value": 7 },
+    { "label": "html-validate 11.21", "value": 5 }
+  ]
+}

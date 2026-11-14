@@ -151,6 +151,67 @@ for f in &report.findings {
     </p>
   </section>
 
+  <section class="code-section" aria-labelledby="bench-heading">
+    <h2 id="bench-heading">Measured next to axe-core</h2>
+    <p class="intro">
+      The test bench of <a href="https://barrierlab.eu/tools/coverage/">barrierlab.eu</a> is a
+      set of practice pages with 22 known barriers, each page also in a corrected version. Every
+      tool runs with its default WCAG A and AA rules, and the page lists for each barrier which
+      rule of which tool reported it. Here: axe-core, the engine inside Lighthouse and most test
+      setups, and barrierlab-cli, which runs the BarrierLab rules on the page source.
+    </p>
+    <div class="bench">
+        <table>
+          <caption>Test bench, measured 12 and 13 November 2026</caption>
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col">axe-core 4.13</th>
+              <th scope="col">barrierlab-cli 0.1</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Barriers reported as a failure</th>
+              <td>8 of 22</td>
+              <td>8 of 22</td>
+            </tr>
+            <tr>
+              <th scope="row">Of those, the same barriers</th>
+              <td colspan="2">all 8</td>
+            </tr>
+            <tr>
+              <th scope="row">Further barriers handed to a person for review</th>
+              <td>1</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <th scope="row">Failures reported on the corrected pages</th>
+              <td>0</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <th scope="row">Needs a browser</th>
+              <td>yes</td>
+              <td>no</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          barrierlab-cli asks for a review of missing landmarks, vague link text and a table
+          without headers; axe-core of missing captions. Twelve barriers neither reports: focus,
+          tab order, dialogs, error messages, colour as the only signal, moving content. No tool
+          on the bench found more than 10 of the 22.
+        </p>
+    </div>
+    <Diagram name="testbench" format="svg" />
+    <p class="intro" style="margin-top: 20px">
+      The figures say two things: the rule set finds what an established engine finds, without a
+      browser, and an automated check of any make finds less than half. Bench and tool come from
+      the same maintainer; the raw results per tool and barrier are on the bench page.
+    </p>
+  </section>
+
   <section class="how" aria-labelledby="how-heading">
     <h2 id="how-heading">How it fits together</h2>
     <div class="text">
@@ -287,6 +348,44 @@ for f in &report.findings {
     display: block;
     color: var(--heading);
     font-size: 16px;
+  }
+  .code-section .intro a {
+    text-decoration: underline;
+  }
+  .bench {
+    max-width: 720px;
+  }
+  .bench table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  .bench caption {
+    margin-bottom: 8px;
+    text-align: left;
+    font-size: 13.5px;
+  }
+  .bench th,
+  .bench td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .bench thead th,
+  .bench tbody th {
+    color: var(--heading);
+    font-weight: 600;
+  }
+  .bench tbody th {
+    font-weight: 500;
+  }
+  .bench td {
+    font-variant-numeric: tabular-nums;
+  }
+  .bench p {
+    margin: 14px 0 0;
+    font-size: 14.5px;
   }
   .tools .links {
     margin-top: 20px;
