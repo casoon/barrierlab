@@ -227,14 +227,14 @@ expect = "killed"
 
 [[mutation]]
 id = "images/alt-missing"
-file = "src/structure.rs"
+file = "src/aria.rs"
 kind = "revert-fix"
 test = "korpus"
 find = '''
-        && !crate::landmarks::focusable(n)
+    matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n) && !focusable(n)
 '''
 replace = '''
-        && (true || !crate::landmarks::focusable(n))
+    matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n)
 '''
 expect = "killed"
 

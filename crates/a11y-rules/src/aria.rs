@@ -875,14 +875,37 @@ fn effective_role<'n, D: Semantics>(doc: &'n D, n: D::N<'n>) -> Effective {
     }
 }
 
-/// Ob `n` ein globales ARIA-Attribut mit Wert trägt (`aria-hidden` zählt
-/// nicht: Es nimmt den Knoten aus dem Baum, statt ihn hineinzustellen).
+/// Die globalen Zustände und Eigenschaften aus WAI-ARIA 1.2, § 6.4, die die
+/// präsentationale Rolle aufheben (§ 9.3), ohne `aria-hidden`: Es nimmt den
+/// Knoten aus dem Baum, statt ihn hineinzustellen. Dieselbe Liste wie in
+/// `accname::role`.
+const PRESENTATION_CONFLICT: &[&str] = &[
+    "aria-atomic",
+    "aria-busy",
+    "aria-controls",
+    "aria-current",
+    "aria-describedby",
+    "aria-details",
+    "aria-dropeffect",
+    "aria-errormessage",
+    "aria-flowto",
+    "aria-grabbed",
+    "aria-haspopup",
+    "aria-invalid",
+    "aria-keyshortcuts",
+    "aria-label",
+    "aria-labelledby",
+    "aria-live",
+    "aria-owns",
+    "aria-relevant",
+    "aria-roledescription",
+];
+
+/// Ob `n` eines dieser Attribute trägt. Schon das Vorhandensein zählt, auch
+/// mit leerem Wert (ACT ffd0e9: `<h1 role="none" aria-label="">` bleibt eine
+/// Überschrift).
 fn carries_global<'a, N: Node<'a>>(n: N) -> bool {
-    n.attributes().any(|(k, v)| {
-        attribute_index(k).is_some_and(|i| {
-            GLOBAL & (1 << i) != 0 && ATTRIBUTE[i] != "aria-hidden" && !v.trim().is_empty()
-        })
-    })
+    PRESENTATION_CONFLICT.iter().any(|a| n.has_attr(a))
 }
 
 /// Ob `role="none"`/`"presentation"` an `n` greift. WAI-ARIA 1.2,

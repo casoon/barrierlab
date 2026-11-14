@@ -172,10 +172,13 @@ pub fn role<'a, N: Node<'a>>(node: N) -> Option<&'static str> {
     implicit(node)
 }
 
-/// Globale Zustände und Eigenschaften aus WAI-ARIA 1.2 — ohne
-/// `aria-label`/`aria-labelledby`, die an `none`/`presentation` verboten
-/// sind, und ohne `aria-hidden`, das das Element ohnehin ausblendet.
-const GLOBAL: &[&str] = &[
+/// Globale Zustände und Eigenschaften aus WAI-ARIA 1.2, die die
+/// präsentationale Rolle aufheben (§ 9.3) — ohne `aria-hidden`, das das
+/// Element ohnehin ausblendet. `aria-label` und `aria-labelledby` zählen mit,
+/// obwohl sie an `none`/`presentation` verboten sind: Gerade deshalb stellt
+/// der Browser die implizite Rolle aus (ACT ffd0e9, `<h1 role="none"
+/// aria-label="">` bleibt eine Überschrift).
+const PRESENTATION_CONFLICT: &[&str] = &[
     "aria-atomic",
     "aria-busy",
     "aria-controls",
@@ -189,18 +192,20 @@ const GLOBAL: &[&str] = &[
     "aria-haspopup",
     "aria-invalid",
     "aria-keyshortcuts",
+    "aria-label",
+    "aria-labelledby",
     "aria-live",
     "aria-owns",
     "aria-relevant",
     "aria-roledescription",
 ];
 
-/// Ob das Element ein globales ARIA-Attribut mit Wert trägt; ein leerer Wert
-/// gilt wie ein fehlendes Attribut.
+/// Ob das Element ein globales ARIA-Attribut trägt. Schon das Vorhandensein
+/// zählt, auch mit leerem Wert: WAI-ARIA 1.2, § 9.3 fragt nach dem Attribut,
+/// nicht nach seinem Wert (ACT ffd0e9, `<h1 aria-label="" role="none">` bleibt
+/// eine Überschrift).
 fn has_global_aria<'a, N: Node<'a>>(node: N) -> bool {
-    GLOBAL
-        .iter()
-        .any(|a| node.attr(a).is_some_and(|v| !v.trim().is_empty()))
+    PRESENTATION_CONFLICT.iter().any(|a| node.has_attr(a))
 }
 
 /// Ob das Element nach HTML fokussierbar ist, soweit das Markup es zeigt:

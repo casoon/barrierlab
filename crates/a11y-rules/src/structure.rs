@@ -1654,42 +1654,16 @@ pub(crate) fn explicit_role<'a, N: Node<'a>>(n: N) -> Option<&'a str> {
         .find(|r| VALID_ROLES.contains(r))
 }
 
-/// Die globalen Zustände und Eigenschaften aus WAI-ARIA 1.2, § 6.4.
-const GLOBAL_ARIA: &[&str] = &[
-    "aria-atomic",
-    "aria-busy",
-    "aria-controls",
-    "aria-current",
-    "aria-describedby",
-    "aria-details",
-    "aria-disabled",
-    "aria-dropeffect",
-    "aria-errormessage",
-    "aria-flowto",
-    "aria-grabbed",
-    "aria-haspopup",
-    "aria-hidden",
-    "aria-invalid",
-    "aria-keyshortcuts",
-    "aria-label",
-    "aria-labelledby",
-    "aria-live",
-    "aria-owns",
-    "aria-relevant",
-    "aria-roledescription",
-];
-
 /// Ob `role="none"`/`"presentation"` an diesem Element wirkt.
 ///
 /// WAI-ARIA 1.2, § 9.3 (Presentational Roles Conflict Resolution): Ist das
 /// Element fokussierbar oder trägt es ein globales ARIA-Attribut, ignoriert
 /// der Browser die präsentationale Rolle und stellt die implizite aus.
 /// `<img role="none" tabindex="0">` bleibt ein Bild, `<h1 role="none"
-/// aria-label="">` eine Überschrift (ACT 23a2a8, ffd0e9).
+/// aria-label="">` eine Überschrift (ACT 23a2a8, ffd0e9). Die Prüfung selbst
+/// steht in [`crate::aria::presentation_applies`].
 pub(crate) fn presentational<'a, N: Node<'a>>(n: N) -> bool {
-    explicit_role(n).is_some_and(|r| matches!(r, "none" | "presentation"))
-        && !crate::landmarks::focusable(n)
-        && !GLOBAL_ARIA.iter().any(|a| n.has_attr(a))
+    crate::aria::presentation_applies(n)
 }
 
 /// Die Element-Kinder einer Liste im flachen Baum.
