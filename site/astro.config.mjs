@@ -40,6 +40,7 @@ export default defineConfig({
       ],
       docsGroups: {
         '': 'Start',
+        testing: 'Testing a website',
         packages: 'Packages',
         a11y: 'Accessibility in detail',
         'html-conform': 'Conformance in detail',

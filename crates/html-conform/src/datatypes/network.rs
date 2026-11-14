@@ -161,14 +161,10 @@ fn has_invalid_special_scheme_slashes(value: &str) -> bool {
             return true;
         }
     }
-    if lower.starts_with("data:/")
+    lower.starts_with("data:/")
         || (lower.starts_with("file:")
             && !lower.starts_with("file:///")
             && !lower.starts_with("file://"))
-    {
-        return true;
-    }
-    false
 }
 
 fn has_disallowed_userinfo(value: &str) -> bool {

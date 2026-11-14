@@ -188,7 +188,14 @@ for f in &report.findings {
         <strong><a href="https://github.com/casoon/liveaudit">liveaudit</a></strong>
         Audits the running page inside the browser, via the WebAssembly package.
       </li>
+      <li>
+        <strong><a href="https://github.com/casoon/barrierlab-cli">barrierlab-cli</a></strong>
+        Audits a page from the terminal without a browser, from its HTML and stylesheets.
+      </li>
     </ul>
+    <div class="links">
+      <Button href={url('docs/testing/')}>Test a website →</Button>
+    </div>
   </section>
 
   {latestRelease && <ReleaseHighlights release={latestRelease} />}
@@ -197,11 +204,11 @@ for f in &report.findings {
     items={[
       {
         q: 'Is BarrierLab itself a tool that checks a page?',
-        a: 'No. This repository contains libraries only: Rust crates for accessibility, HTML conformance, perception and web checks. To audit a page you need one of the tools that embed them, such as auditmysite or liveaudit.',
+        a: 'No. This repository contains libraries only: Rust crates for accessibility, HTML conformance, perception and web checks. To audit a page you need one of the tools that embed them, such as auditmysite, barrierlab-cli or liveaudit; “Testing a website” in the documentation shows where to start.',
       },
       {
         q: 'Which tools use the libraries today?',
-        a: 'auditmysite, astro-post-audit and liveaudit use the crates from crates.io and npm. Because they share the rule set, a finding ID means the same thing in all three.',
+        a: 'auditmysite, astro-post-audit, liveaudit and barrierlab-cli use the crates from crates.io and npm. Because they share the rule set, a finding ID means the same thing in all of them.',
       },
       {
         q: 'What does it mean when a rule is marked “not run”?',
@@ -280,6 +287,9 @@ for f in &report.findings {
     display: block;
     color: var(--heading);
     font-size: 16px;
+  }
+  .tools .links {
+    margin-top: 20px;
   }
   .links {
     display: flex;
