@@ -90,12 +90,30 @@ fn language() -> Vec<Fall> {
             "RFC 5646 2.1: Untertags haben höchstens 8 Zeichen",
         )
         .variant("Regression: Grenze 9 Zeichen im Untertag"),
+        fail(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="deu"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "RFC 5646 2.2.1, ACT bf051a: hat eine Sprache eine Kennung aus ISO 639-1, ist die dreibuchstabige nicht registriert",
+        )
+        .variant("Regression: ISO 639-2 statt 639-1"),
+        fail(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="xq-DE"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "ACT bf051a: das Primärsubtag muss in der IANA Language Subtag Registry stehen",
+        )
+        .variant("Regression: unbekanntes Zweibuchstabenkürzel"),
         negative(
             "document/lang-invalid",
-            r#"<!DOCTYPE html><html lang="eng"><head><title>T</title></head><body><p>x</p></body></html>"#,
-            "RFC 5646 2.2.1: dreibuchstabiges Primärsubtag (ISO 639-2/3)",
+            r#"<!DOCTYPE html><html lang="gsw"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "RFC 5646 2.2.1: dreibuchstabiges Primärsubtag (ISO 639-3) ohne zweibuchstabige Kennung",
         )
         .variant("Grenze: 3 Buchstaben"),
+        negative(
+            "document/lang-invalid",
+            r#"<!DOCTYPE html><html lang="IW"><head><title>T</title></head><body><p>x</p></body></html>"#,
+            "IANA Registry: veraltete Kennungen bleiben registriert; BCP 47 ohne Rücksicht auf Schreibung",
+        )
+        .variant("veraltet, groß geschrieben"),
         negative(
             "document/lang-invalid",
             r#"<!DOCTYPE html><html lang="zh-Hant-TW"><head><title>T</title></head><body><p>x</p></body></html>"#,
@@ -216,11 +234,23 @@ fn viewport() -> Vec<Fall> {
             "ACT b4f0c3: maximum-scale 2 erlaubt 200 %",
         )
         .variant("Grenze: 2"),
+        fail(
+            "zoom/viewport-locked",
+            r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="maximum-scale=yes"></head><body><p>x</p></body></html>"#,
+            "CSS Device Adaptation „translate a single value“: yes ist 1; ACT b4f0c3",
+        )
+        .variant("Regression: maximum-scale=yes"),
         negative(
             "zoom/viewport-locked",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="width=device-width, user-scalable=yes"></head><body><p>x</p></body></html>"#,
             "ACT b4f0c3: user-scalable=yes",
         ),
+        negative(
+            "zoom/viewport-locked",
+            r#"<!DOCTYPE html><html lang="en"><head><title>T</title><meta name="viewport" content="maximum-scale=-2"></head><body><p>x</p></body></html>"#,
+            "ACT b4f0c3: ein negativer Wert ist ungültig und wird verworfen",
+        )
+        .variant("Regression: negatives maximum-scale"),
         na(
             "zoom/viewport-locked",
             r#"<!DOCTYPE html><html lang="en"><head><title>T</title></head><body><p>x</p></body></html>"#,
@@ -436,6 +466,12 @@ fn headings() -> Vec<Fall> {
             "auditmysite#709: hinter offenem Dialog nur Hinweis",
         )
         .variant("offener Dialog"),
+        review(
+            "headings/none",
+            r#"<button onclick="toggle()">Menü ausblenden</button><nav><a href="/">Home</a></nav><p>Text</p>"#,
+            "WCAG 2.4.1, ACT cf77f2: ein Skript-Bedienelement kann den Block ausblenden; das Markup zeigt nicht, ob es das tut",
+        )
+        .variant("Skript-Bedienelement"),
         negative(
             "headings/none",
             r#"<nav><a href="/">Home</a></nav><main><p>Text</p></main>"#,
@@ -901,6 +937,25 @@ fn refresh() -> Vec<Fall> {
             "HTML shared declarative refresh steps: ohne Ziffern ignoriert",
         )
         .variant("ungültiger Wert"),
+        negative(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="0; url=/a"><meta http-equiv="refresh" content="9; url=/b">"#,
+            "HTML „will declaratively refresh“: nur die erste gültige Anweisung wirkt; ACT bc659a",
+        )
+        .variant("Regression: zweite Anweisung"),
+        fail(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="0: url=/a"><meta http-equiv="refresh" content="9; url=/b">"#,
+            "HTML shared declarative refresh steps: nach der Zeit nur ; , oder Leerraum; die ungültige erste zählt nicht (ACT bisz58)",
+        )
+        .variant("Regression: ungültige erste Anweisung")
+        .count(1),
+        negative(
+            "timing/meta-refresh",
+            r#"<meta http-equiv="refresh" content="+5; url=/b">"#,
+            "HTML shared declarative refresh steps: ein Vorzeichen macht die Anweisung ungültig",
+        )
+        .variant("Vorzeichen"),
         na(
             "timing/meta-refresh",
             r#"<meta name="description" content="120">"#,

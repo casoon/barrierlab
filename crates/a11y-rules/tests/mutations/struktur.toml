@@ -214,8 +214,8 @@ expect = "killed"
 id = "tables/header-without-data"
 file = "src/tables.rs"
 kind = "threshold"
-find = '''        if z.head.is_empty() || z.data > 0 {'''
-replace = '''        if z.head.is_empty() || z.data > 1 {'''
+find = '''        let lonely = if z.data > 0 { unassigned(t) } else { z.head };'''
+replace = '''        let lonely = if z.data > 1 { unassigned(t) } else { z.head };'''
 test = "korpus"
 expect = "killed"
 
@@ -223,8 +223,8 @@ expect = "killed"
 id = "tables/header-without-data"
 file = "src/tables.rs"
 kind = "drop-finding"
-find = '''        for k in z.head {'''
-replace = '''        for k in z.head.into_iter().take(0) {'''
+find = '''        for k in lonely {'''
+replace = '''        for k in lonely.into_iter().take(0) {'''
 test = "korpus"
 expect = "killed"
 
@@ -270,5 +270,23 @@ file = "src/tables.rs"
 kind = "drop-exception"
 find = '.is_some_and(crate::aria::presentation_applies)'
 replace = '.is_some_and(|_| false)'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-without-data"
+file = "src/tables.rs"
+kind = "drop-condition"
+find = '''        if let Some(headers) = s.node.attr("headers") {'''
+replace = '''        if let Some(headers) = s.node.attr("headers-x") {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-without-data"
+file = "src/tables.rs"
+kind = "disable"
+find = '''            scan(p, x, s.y, false, &mut assigned);'''
+replace = '''            let _ = x;'''
 test = "korpus"
 expect = "killed"

@@ -218,9 +218,53 @@ fn lang<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
-/// Grobprüfung auf BCP 47: Primärkennung aus zwei oder drei Buchstaben,
-/// danach nur alphanumerische Untertags. Keine Registry-Prüfung — dafür
-/// bräuchte es die IANA-Liste, und die gehört nicht in dieses Crate.
+/// Die zweibuchstabigen Primärsubtags der IANA Language Subtag Registry: alle
+/// Kennungen aus ISO 639-1 und die veralteten, aber registrierten `in`, `iw`,
+/// `ji`, `jw`, `mo`. ISO 639-1 ist abgeschlossen; die Liste ändert sich nicht.
+const ISO_639_1: &[&str] = &[
+    "aa", "ab", "ae", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh",
+    "bi", "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy", "da",
+    "de", "dv", "dz", "ee", "el", "en", "eo", "es", "et", "eu", "fa", "ff", "fi", "fj", "fo", "fr",
+    "fy", "ga", "gd", "gl", "gn", "gu", "gv", "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz",
+    "ia", "id", "ie", "ig", "ii", "ik", "in", "io", "is", "it", "iu", "iw", "ja", "ji", "jv", "jw",
+    "ka", "kg", "ki", "kj", "kk", "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv", "kw", "ky", "la",
+    "lb", "lg", "li", "ln", "lo", "lt", "lu", "lv", "mg", "mh", "mi", "mk", "ml", "mn", "mo", "mr",
+    "ms", "mt", "my", "na", "nb", "nd", "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny", "oc", "oj",
+    "om", "or", "os", "pa", "pi", "pl", "ps", "pt", "qu", "rm", "rn", "ro", "ru", "rw", "sa", "sc",
+    "sd", "se", "sg", "sh", "si", "sk", "sl", "sm", "sn", "so", "sq", "sr", "ss", "st", "su", "sv",
+    "sw", "ta", "te", "tg", "th", "ti", "tk", "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty", "ug",
+    "uk", "ur", "uz", "ve", "vi", "vo", "wa", "wo", "xh", "yi", "yo", "za", "zh", "zu",
+];
+
+/// Dreibuchstabige Kennungen (ISO 639-2/T und /B) der Sprachen, die eine
+/// Kennung aus ISO 639-1 haben. RFC 5646 2.2.1: Hat eine Sprache beide, steht
+/// nur die zweibuchstabige in der Registry — `eng` ist kein gültiges
+/// Primärsubtag, `en` ist es (ACT bf051a, Failed Example „eng").
+const ISO_639_2_WITH_639_1: &[&str] = &[
+    "aar", "abk", "afr", "aka", "alb", "amh", "ara", "arg", "arm", "asm", "ava", "ave", "aym",
+    "aze", "bak", "bam", "baq", "bel", "ben", "bih", "bis", "bod", "bos", "bre", "bul", "bur",
+    "cat", "ces", "cha", "che", "chi", "chu", "chv", "cor", "cos", "cre", "cym", "cze", "dan",
+    "deu", "div", "dut", "dzo", "ell", "eng", "epo", "est", "eus", "ewe", "fao", "fas", "fij",
+    "fin", "fra", "fre", "fry", "ful", "geo", "ger", "gla", "gle", "glg", "glv", "gre", "grn",
+    "guj", "hat", "hau", "heb", "her", "hin", "hmo", "hrv", "hun", "hye", "ibo", "ice", "ido",
+    "iii", "iku", "ile", "ina", "ind", "ipk", "isl", "ita", "jav", "jpn", "kal", "kan", "kas",
+    "kat", "kau", "kaz", "khm", "kik", "kin", "kir", "kom", "kon", "kor", "kua", "kur", "lao",
+    "lat", "lav", "lim", "lin", "lit", "ltz", "lub", "lug", "mac", "mah", "mal", "mao", "mar",
+    "may", "mkd", "mlg", "mlt", "mon", "mri", "msa", "mya", "nau", "nav", "nbl", "nde", "ndo",
+    "nep", "nld", "nno", "nob", "nor", "nya", "oci", "oji", "ori", "orm", "oss", "pan", "per",
+    "pli", "pol", "por", "pus", "que", "roh", "ron", "rum", "run", "rus", "sag", "san", "sin",
+    "slk", "slo", "slv", "sme", "smo", "sna", "snd", "som", "sot", "spa", "sqi", "srd", "srp",
+    "ssw", "sun", "swa", "swe", "tah", "tam", "tat", "tel", "tgk", "tgl", "tha", "tib", "tir",
+    "ton", "tsn", "tso", "tuk", "tur", "twi", "uig", "ukr", "urd", "uzb", "ven", "vie", "vol",
+    "wel", "wln", "wol", "xho", "yid", "yor", "zha", "zho", "zul",
+];
+
+/// Prüfung auf BCP 47: Primärkennung aus zwei oder drei Buchstaben, danach nur
+/// alphanumerische Untertags. Ein zweibuchstabiges Primärsubtag muss in der
+/// Registry stehen ([`ISO_639_1`]; ACT bf051a, „em-US"); ein dreibuchstabiges
+/// darf nicht das einer Sprache mit zweibuchstabiger Kennung sein
+/// ([`ISO_639_2_WITH_639_1`]). Andere dreibuchstabige gelten ungeprüft als
+/// gültig — die gut 7 000 Kennungen aus ISO 639-3 trägt dieses Crate nicht.
 fn is_plausible_lang(l: &str) -> bool {
     let l = l.trim();
     let mut parts = l.split('-');
@@ -228,6 +272,15 @@ fn is_plausible_lang(l: &str) -> bool {
         return false;
     };
     if !(2..=3).contains(&primary.len()) || !primary.chars().all(|c| c.is_ascii_alphabetic()) {
+        return false;
+    }
+    let primary = primary.to_ascii_lowercase();
+    let known = if primary.len() == 2 {
+        ISO_639_1.contains(&primary.as_str())
+    } else {
+        !ISO_639_2_WITH_639_1.contains(&primary.as_str())
+    };
+    if !known {
         return false;
     }
     // BCP 47 (RFC 5646, 2.1): jedes weitere Untertag hat 1 bis 8 Zeichen.
@@ -305,6 +358,20 @@ fn viewport_value<'c>(content: &'c str, key: &str) -> Option<&'c str> {
     None
 }
 
+/// Der Zahlenwert einer Skalierung (`maximum-scale`) nach CSS Device
+/// Adaptation („translate a single value"): `yes` ist 1, `no` 0,1,
+/// `device-width` und `device-height` 10, sonst die Zahl. Ein negativer oder
+/// nicht lesbarer Wert wird verworfen, als stünde er nicht da (ACT b4f0c3:
+/// `maximum-scale=-1` begrenzt nichts, `maximum-scale=yes` begrenzt auf 1).
+fn scale_value(v: &str) -> Option<f32> {
+    match v {
+        "yes" => Some(1.0),
+        "no" => Some(0.1),
+        "device-width" | "device-height" => Some(10.0),
+        _ => v.parse::<f32>().ok().filter(|s| *s >= 0.0),
+    }
+}
+
 fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     // Die Viewport-Angabe ist ein HTML-`<meta>`; ein Fremddokument hat keine.
     if !doc.root().is_element("html") {
@@ -323,7 +390,7 @@ fn viewport<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // normiert, und `user-scalable=NO` sperrt den Zoom genauso.
         let c = content.to_ascii_lowercase();
         let locked = matches!(viewport_value(&c, "user-scalable"), Some("no" | "0"));
-        let max = viewport_value(&c, "maximum-scale").and_then(|v| v.parse::<f32>().ok());
+        let max = viewport_value(&c, "maximum-scale").and_then(scale_value);
 
         // Unter 200 %: verletzt 1.4.4 unmittelbar.
         if locked || max.is_some_and(|v| v < 2.0) {
@@ -498,6 +565,13 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 || (is_landmark(n, "header", "banner")
                     && (n.attr("role").is_some() || is_document_wide(n)))
         });
+        // Ein Bedienelement, dessen Wirkung erst ein Skript festlegt, kann den
+        // Block ausblenden oder überspringen (ACT cf77f2, Passed Examples mit
+        // `onclick`); ob es das tut, zeigt das Markup nicht.
+        let scripted = elements(doc).any(|n| {
+            n.has_attr("onclick")
+                || (n.is_element("button") && !ancestors(n).any(|a| a.is_element("form")))
+        });
         let f = if modal_open(doc) {
             Finding::review(
                 "headings/none",
@@ -508,7 +582,7 @@ fn headings<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
                 ),
             )
             .with_severity(Severity::Low)
-        } else if repeated {
+        } else if repeated && !scripted {
             Finding::fail(
                 "headings/none",
                 pick!(
