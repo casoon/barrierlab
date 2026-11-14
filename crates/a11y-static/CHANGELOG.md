@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-14
+
+### Fixed
+
+- **Kontrast:** liefert Farbpaare (`Rendering::color_pairs`) statt Verlaufsstufen als Pixelstichproben; dadurch keine falschen `FAIL` mehr bei Verläufen. Mit den Regelkorrekturen aus `a11y-rules` 0.30.2.
+
 ## [0.5.0] - 2026-11-11
 
 ### Added

@@ -10,6 +10,22 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-14
+
+### Fixed
+
+- **ARIA:** `role="none"`/`"presentation"` greift nicht an fokussierbaren Elementen oder solchen mit globalem ARIA-Attribut (WAI-ARIA 1.2, § 9.3); ein deaktiviertes Bedienelement ist nicht fokussierbar. Davon hängen Bild-, Überschriften-, Button-, Formular-, Objekt-, Frame- und Tabellenregeln ab.
+- **ARIA:** `aria/required-children-missing` prüft, dass ein Container nur erlaubte Rollen besitzt; `aria/required-parent-missing` prüft `role="listitem"` außerhalb von `<li>`; `aria/attribute-not-allowed` zählt leere Werte bei der Rollenunterstützung mit; `aria/attribute-value-invalid` verlangt in `aria-errormessage`/`aria-activedescendant` genau eine ID und bei Pflicht-`aria-controls` ein vorhandenes Ziel.
+- **Namen:** `alt` nur aus Leerraum, `role="img"` ohne Namen und leere Überschriften (auch über `aria-labelledby` auf leere Ziele) werden gemeldet; `input type="image"` nimmt `title` als Namen; ein Verweis auf ein Ziel außerhalb der Sicht ergibt `REVIEW` statt eines Urteils; `svg/name-missing` prüft auch Grafikrollen innerhalb eines `svg`; `label-in-name/mismatch` behandelt ein einzelnes sichtbares Zeichen als Symbol.
+- **Dokument:** `document/lang-invalid` erkennt unbekannte Sprachkürzel (`em`) und dreibuchstabige Kürzel für Sprachen mit zweibuchstabigem (`eng`); `zoom/viewport-locked` liest `maximum-scale` nach CSS Device Adaptation; `timing/meta-refresh` wertet nur das erste gültige `meta refresh` nach HTML aus.
+- **Medien:** `media/audio-autoplay` prüft auch `<video>` und meldet nichts bei nutzbaren `controls`.
+- **Tabellen:** `tables/header-without-data` entscheidet je Kopfzelle nach dem HTML-Tabellenmodell (auch `headers`, `grid`/`columnheader`); `tables/headers-attr-invalid` übergeht Tabellen mit `role="presentation"`.
+- **Kontrast:** Verläufe, `opacity` und `text-shadow` werden aus Farbpaaren entschieden statt aus Stichproben; Text in Hintergrundfarbe, Beschriftungen deaktivierter Bedienelemente und reine Symbolzeichen ergeben keinen `FAIL` mehr (Symbolzeichen: `REVIEW`).
+- **Fokus:** `focus/outline-removed` ergibt `REVIEW` statt `FAIL`, wenn ein Element einen `onfocus`-Handler hat.
+- **Überschriften:** `headings/none` ergibt `REVIEW`, wenn ein Skript den Block umgehbar machen könnte.
+
+Alle Änderungen gehen auf Testfälle der W3C-ACT-Regeln zurück: [Ergebnis je Regel](https://casoon.github.io/barrierlab/docs/testing/act/); casoon/barrierlab#225.
+
 ## [0.30.1] - 2026-11-11
 
 ### Fixed
