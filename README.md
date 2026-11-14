@@ -57,7 +57,8 @@ are in the documentation.
 
 ## Documentation
 
-**<https://casoon.github.io/barrierlab/>**: package pages, the accessibility guide, the
+**<https://casoon.github.io/barrierlab/>**: [testing a website](https://casoon.github.io/barrierlab/docs/testing/)
+with the tools built on it (strengths and limits included), package pages, the accessibility guide, the
 html-conform guide (including the [comparison with the Nu Html Checker](https://casoon.github.io/barrierlab/docs/html-conform/guides/vnu-comparison/)),
 rule reference and releases.
 
