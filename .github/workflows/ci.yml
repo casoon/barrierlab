@@ -100,6 +100,9 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
+      # 195 KB seit 14.11.2026 (Entscheidung des Nutzers, barrierlab#225):
+      # gemessen 192,5 KB gzip mit den Korrekturen aus den W3C-ACT-Testfaellen
+      # (HTML-Tabellenmodell, Sprachlisten, Farbpaare, ARIA-Konfliktaufloesung).
       # 180 KB seit 09.11.2026 (Entscheidung des Nutzers, liveaudit#16): die
       # Messspalten fuer die seitenabhaengigen Regeln (Feature `probes`) sind im
       # Standardbau, sie brauchen rund 9 KB gzip.
@@ -111,7 +114,7 @@ jobs:
       # angehoben (Entscheidung vom 01.10.2026): alle Regeln sollen auch in der
       # laufenden Seite (LiveAudit) greifen, die deutschen Texte bleiben drin.
       # Vorher 110 KB seit B1 (30.09.2026).
-      - name: Groessenbudget (180 KB gzip)
+      - name: Groessenbudget (195 KB gzip)
         run: |
           python3 - <<'EOF'
           import gzip, sys
@@ -119,8 +122,8 @@ jobs:
           raw = open(p, "rb").read()
           gz = len(gzip.compress(raw, 9)) / 1024
           print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
-          if gz > 180:
-              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 180 KB")
+          if gz > 195:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 195 KB")
           EOF
       # Groessenbudget (782 KiB gzip) und Fixture-Tests des Pakets
       # html-conform-wasm (barrierlab#73): build.mjs bricht bei Ueberschreitung ab.
