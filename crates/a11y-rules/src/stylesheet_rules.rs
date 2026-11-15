@@ -826,6 +826,174 @@ pub(crate) fn visual_presentation<D: Document>(
     }
 }
 
+// --- text-spacing/*-important -------------------------------------------------
+
+/// Die drei Abstände aus 1.4.12 mit dem Mindestwert, den ein Nutzer muss
+/// einstellen können, als Vielfaches der Schriftgröße.
+const SPACING: &[(&str, &str, f64)] = &[
+    ("letter-spacing", "text-spacing/letter-important", 0.12),
+    ("word-spacing", "text-spacing/word-important", 0.16),
+    ("line-height", "text-spacing/line-height-important", 1.5),
+];
+
+/// Der wirksame `!important`-Wert einer Eigenschaft im `style`-Attribut: die
+/// letzte Angabe mit `!important`; eine spätere ohne ändert nichts.
+fn important_in_style<'a, N: Node<'a>>(n: N, property: &str) -> Option<String> {
+    n.attr("style")?
+        .split(';')
+        .rev()
+        .filter_map(|d| d.split_once(':'))
+        .filter(|(k, _)| k.trim().eq_ignore_ascii_case(property))
+        .find_map(|(_, v)| {
+            let v = v.trim();
+            let without = v.to_ascii_lowercase().strip_suffix("!important")?.len();
+            Some(v[..without].trim().to_string())
+        })
+}
+
+/// Der eigene Wert eines Elements für eine nicht vererbte Eigenschaft.
+fn own<'a, N: Node<'a>>(
+    e: N,
+    property: &str,
+    rules: &[(Selector, String, bool)],
+) -> Option<String> {
+    in_style_attribute(e, property).map(|(v, _)| v).or_else(|| {
+        rules
+            .iter()
+            .filter(|(sel, _, _)| sel.matches(e, Mode::Possible) == Match::Yes)
+            .max_by_key(|(_, _, important)| *important)
+            .map(|(_, v, _)| v.clone())
+    })
+}
+
+/// Ein Abstand als Vielfaches der Schriftgröße; `None`, wenn er sich ohne
+/// Layout nicht bestimmen lässt.
+fn spacing_factor(property: &str, v: &str, font_px: Option<f64>) -> Option<f64> {
+    let v = v.trim().to_ascii_lowercase();
+    let line = property == "line-height";
+    match v.as_str() {
+        // `normal` ist bei Zeilenhöhe etwa 1,2, bei Zeichen- und Wortabstand 0.
+        "normal" | "initial" => return Some(if line { 1.2 } else { 0.0 }),
+        "0" => return Some(0.0),
+        _ => {}
+    }
+    if line {
+        if let Ok(x) = v.parse::<f64>() {
+            return Some(x);
+        }
+        if let Some(percent) = v.strip_suffix('%') {
+            return percent.parse::<f64>().ok().map(|p| p / 100.0);
+        }
+    }
+    if let Some(r) = v.strip_suffix("rem") {
+        return r
+            .parse::<f64>()
+            .ok()
+            .zip(font_px)
+            .map(|(r, f)| r * 16.0 / f);
+    }
+    if let Some(e) = v.strip_suffix("em") {
+        return e.parse().ok();
+    }
+    let px = v.strip_suffix("px")?.parse::<f64>().ok()?;
+    font_px.map(|f| px / f)
+}
+
+/// 1.4.12: Ein Abstand im `style`-Attribut mit `!important` unter dem Wert,
+/// den 1.4.12 verlangt. Gegen eine Angabe im `style`-Attribut mit
+/// `!important` kommt ein Nutzer-Stylesheet nicht an (CSS Cascade 4: das
+/// `!important` des Autors schlägt nur das des Nutzers nicht, und
+/// Lesezeichen-Skripte setzen Autorenstile), der Abstand lässt sich also nicht
+/// vergrößern.
+///
+/// `inherit`, `unset` und `revert` übernehmen einen Wert, der nicht fest
+/// steht, und zählen nicht. Steht das Element außerhalb des Flusses
+/// (`position: absolute`/`fixed`, auch an einem Vorfahren) oder bricht die
+/// Zeile in einem waagerecht scrollenden Vorfahren womöglich nie um, ist
+/// ohne Layout offen, ob der Text zu sehen ist oder umbricht: `REVIEW`.
+/// Schriftgröße ohne Angabe 16 px; nur in `px` angegebene werden gelesen.
+/// Beleg: ACT 24afc2, 9e45ec, 78fd32.
+pub(crate) fn spacing_important<D: Document>(
+    doc: &D,
+    sheets: &[Stylesheet],
+    locale: Locale,
+    out: &mut Vec<Finding>,
+) {
+    let sizes = rules_for(sheets, "font-size");
+    let positions = rules_for(sheets, "position");
+    let overflows = rules_for(sheets, "overflow");
+    let overflows_x = rules_for(sheets, "overflow-x");
+    let displays = rules_for(sheets, "display");
+    for n in elements(doc) {
+        if n.attr("style").is_none() || !a11y_dom::has_text(n) {
+            continue;
+        }
+        // Diese Stufe sieht keine berechneten Stile; `display: none` liest sie
+        // selbst, am Element und an seinen Vorfahren.
+        let shown = std::iter::once(n).chain(a11y_dom::ancestors(n)).all(|e| {
+            !own(e, "display", &displays).is_some_and(|d| d.trim().eq_ignore_ascii_case("none"))
+        });
+        if !shown {
+            continue;
+        }
+        for &(property, id, minimum) in SPACING {
+            let Some(v) = important_in_style(n, property) else {
+                continue;
+            };
+            if matches!(
+                v.to_ascii_lowercase().as_str(),
+                "inherit" | "unset" | "revert" | "revert-layer"
+            ) {
+                continue;
+            }
+            let font_px = match effective(n, "font-size", &sizes) {
+                None => Some(16.0),
+                Some(f) => f
+                    .trim()
+                    .strip_suffix("px")
+                    .and_then(|p| p.trim().parse().ok()),
+            };
+            let factor = spacing_factor(property, &v, font_px);
+            if factor.is_some_and(|f| f >= minimum) {
+                continue;
+            }
+            let lineage = || std::iter::once(n).chain(a11y_dom::ancestors(n));
+            let out_of_flow = lineage().any(|e| {
+                own(e, "position", &positions).is_some_and(|p| {
+                    matches!(p.trim().to_ascii_lowercase().as_str(), "absolute" | "fixed")
+                })
+            });
+            let no_wrap = property == "line-height"
+                && a11y_dom::ancestors(n).any(|e| {
+                    [
+                        own(e, "overflow", &overflows),
+                        own(e, "overflow-x", &overflows_x),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .any(|o| o.split_whitespace().any(|o| matches!(o, "scroll" | "auto")))
+                });
+            let text = tr!(
+                locale,
+                "{property}: {v} !important in the style attribute is below {minimum} times the \
+                 font size; users cannot increase it (1.4.12).",
+                "{property}: {v} !important im style-Attribut liegt unter dem {minimum}-Fachen \
+                 der Schriftgröße; Nutzer können ihn nicht vergrößern (1.4.12)."
+            );
+            let f = if factor.is_none() || out_of_flow || no_wrap {
+                Finding::review(id, text)
+            } else {
+                Finding::fail(id, text)
+            };
+            out.push(
+                f.with_severity(Severity::Medium)
+                    .with_wcag(["1.4.12"])
+                    .at(Location::node(n.id().to_string())),
+            );
+        }
+    }
+}
+
 // --- Registrierung ------------------------------------------------------------
 
 use a11y_dom::Tier;
@@ -872,6 +1040,23 @@ pub(crate) const METAS: &[Meta] = &[
         ),
     },
     Meta {
+        ids: &[
+            "text-spacing/letter-important",
+            "text-spacing/word-important",
+            "text-spacing/line-height-important",
+        ],
+        tier: Tier::Stylesheets,
+        scope: Scope::Rendered,
+        wcag: &["1.4.12"],
+        severity: Severity::Medium,
+        help: "Do not fix letter spacing, word spacing or line height below the 1.4.12 values \
+               with !important in a style attribute.",
+        help_de: de_text!(
+            "Zeichen-, Wortabstand und Zeilenhöhe nicht mit !important im style-Attribut \
+                  unter den Werten aus 1.4.12 festsetzen."
+        ),
+    },
+    Meta {
         ids: &["text/justified", "text/line-height-tight"],
         tier: Tier::Stylesheets,
         scope: Scope::AccessibilityTree,
@@ -884,10 +1069,11 @@ pub(crate) const METAS: &[Meta] = &[
 
 pub(crate) fn rules<D: Document>() -> Vec<StylesheetRule<D>> {
     type Run<D> = fn(&D, &[Stylesheet], Locale, &mut Vec<Finding>);
-    let functions: [Run<D>; 4] = [
+    let functions: [Run<D>; 5] = [
         outline_removed,
         reduced_motion_ignored,
         orientation_content_hidden,
+        spacing_important,
         visual_presentation,
     ];
     METAS

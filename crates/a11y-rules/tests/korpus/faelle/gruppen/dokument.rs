@@ -130,6 +130,46 @@ fn language() -> Vec<Fall> {
             r#"<!DOCTYPE html><html><head><title>T</title></head><body><p>x</p></body></html>"#,
             "ACT bf051a: anwendbar nur auf ein nicht leeres lang",
         ),
+        // --- language/part-invalid
+        fail(
+            "language/part-invalid",
+            r#"<p lang="dutch">Zij liepen een vreemde Tiki bar binnen.</p>"#,
+            "WCAG 3.1.2, ACT de46e4: kein gültiges BCP-47-Primärsubtag",
+        ),
+        fail(
+            "language/part-invalid",
+            r#"<div lang="invalid"><img src="a.png" alt="Fireworks over Paris"></div>"#,
+            "ACT de46e4: ein Bild trägt Text über sein alt",
+        )
+        .variant("nur Bild mit alt"),
+        fail(
+            "language/part-invalid",
+            r#"<article lang="english"><p aria-hidden="true">They wandered into a bar.</p></article>"#,
+            "ACT de46e4: Text unter aria-hidden wird gezeichnet und zählt",
+        )
+        .variant("aria-hidden"),
+        negative(
+            "language/part-invalid",
+            r#"<p lang="en-US-GB">They wandered into a bar.</p>"#,
+            "ACT de46e4: nur das Primärsubtag muss bekannt sein",
+        ),
+        negative(
+            "language/part-invalid",
+            r#"<article lang="invalid"><div lang="en">They wandered into a bar.</div></article>"#,
+            "ACT de46e4: der Text gehört dem inneren lang",
+        )
+        .variant("inneres lang"),
+        na(
+            "language/part-invalid",
+            r#"<article lang="">They wandered into a bar.</article>"#,
+            "ACT de46e4: lang=\"\" nennt ausdrücklich keine Sprache",
+        ),
+        na(
+            "language/part-invalid",
+            r#"<div lang="invalid"><img src="a.png" alt=""></div>"#,
+            "ACT de46e4: kein Text, den das lang bestimmt",
+        )
+        .variant("schmückendes Bild"),
         // --- document/lang-mismatch
         fail(
             "document/lang-mismatch",

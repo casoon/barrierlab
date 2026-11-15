@@ -265,7 +265,7 @@ const ISO_639_2_WITH_639_1: &[&str] = &[
 /// darf nicht das einer Sprache mit zweibuchstabiger Kennung sein
 /// ([`ISO_639_2_WITH_639_1`]). Andere dreibuchstabige gelten ungeprüft als
 /// gültig — die gut 7 000 Kennungen aus ISO 639-3 trägt dieses Crate nicht.
-fn is_plausible_lang(l: &str) -> bool {
+pub(crate) fn is_plausible_lang(l: &str) -> bool {
     let l = l.trim();
     let mut parts = l.split('-');
     let Some(primary) = parts.next() else {
@@ -2124,6 +2124,31 @@ pub const METAS: &[Meta] = &[
         help_de: de_text!("ARIA-Attribute brauchen einen Wert ihres Typs."),
     },
     Meta {
+        ids: &["aria/presentation-conflict"],
+        tier: Tier::Structure,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.3.1", "4.1.2"],
+        severity: Severity::Medium,
+        help: "An element marked as decorative needs no global ARIA attribute and no focus.",
+        help_de: de_text!(
+            "Ein als schmückend ausgezeichnetes Element braucht kein globales ARIA-Attribut \
+                  und keinen Fokus."
+        ),
+    },
+    Meta {
+        ids: &["aria/presentational-children-focusable"],
+        tier: Tier::Structure,
+        // Auch unter aria-hidden hält die Tastatur an.
+        scope: Scope::Rendered,
+        wcag: &["1.3.1", "4.1.2"],
+        severity: Severity::High,
+        help: "Buttons, checkboxes, tabs and similar roles must not contain focusable elements.",
+        help_de: de_text!(
+            "Buttons, Checkboxen, Tabs und ähnliche Rollen dürfen keine fokussierbaren \
+                  Elemente enthalten."
+        ),
+    },
+    Meta {
         ids: &["aria/owns-conflict"],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
@@ -2469,6 +2494,20 @@ pub const METAS: &[Meta] = &[
         help_de: de_text!("lang und xml:lang am <html>-Element müssen dieselbe Sprache nennen."),
     },
     Meta {
+        ids: &["language/part-invalid"],
+        tier: Tier::Structure,
+        // Auch Text unter aria-hidden oder außerhalb des Bildschirms wird
+        // gelesen oder gezeichnet (ACT de46e4, Failed Examples 4 und 5).
+        scope: Scope::Rendered,
+        wcag: &["3.1.2"],
+        severity: Severity::Medium,
+        help: "The lang attribute of a passage must name a language as a valid BCP 47 tag.",
+        help_de: de_text!(
+            "Das lang-Attribut einer Passage muss eine Sprache als gültiges BCP-47-Kürzel \
+                  nennen."
+        ),
+    },
+    Meta {
         ids: &["language/part-unmarked", "language/part-undetermined"],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
@@ -2551,7 +2590,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
+fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 60] {
     [
         lang,
         title,
@@ -2571,6 +2610,8 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
         skip_link,
         crate::aria::attribute_names,
         crate::aria::attribute_values,
+        crate::aria::presentation_conflict,
+        crate::aria::presentational_children,
         crate::aria::owns_conflict,
         crate::aria::widgets,
         crate::aria::popover,
@@ -2603,6 +2644,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
         crate::tables::header_without_data,
         crate::tables::headers_attr,
         crate::document::lang_mismatch,
+        crate::document::part_invalid,
         crate::document::part_unmarked,
         crate::document::abbreviations,
         crate::document::meta_refresh,
@@ -2613,7 +2655,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 57] {
     ]
 }
 
-const _: () = assert!(METAS.len() == 57);
+const _: () = assert!(METAS.len() == 60);
 
 /// Alle Tier-1-Regeln.
 pub fn rules<D: Document>() -> Vec<StructureRule<D>> {

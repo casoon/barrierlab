@@ -260,3 +260,21 @@ find = '} else if also.contains(&r) {'
 replace = '} else if true {'
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "aria/presentation-conflict"
+file = "src/aria.rs"
+kind = "remove"
+find = 'None => n.is_element("img") && n.attr("alt") == Some(""),'
+replace = 'None => false,'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "aria/presentational-children-focusable"
+file = "src/aria.rs"
+kind = "invert"
+find = 'if descendants(n).any(|d| d.kind() == NodeKind::Element && focusable(d)) {'
+replace = 'if descendants(n).any(|d| d.kind() == NodeKind::Element && !focusable(d)) {'
+test = "korpus"
+expect = "killed"

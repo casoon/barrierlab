@@ -14,11 +14,11 @@ may deviate from it. Each row has an anchor: the ID with `/` replaced by `-`
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.30.0 declares 168 IDs.
+a11y-rules 0.30.2 declares 174 IDs.
 
 ## Tier 1: Structure
 
-107 IDs, `Document`, runs on every host.
+110 IDs, `Document`, runs on every host.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -60,6 +60,8 @@ a11y-rules 0.30.0 declares 168 IDs.
 | `keyboard/skip-link-missing`<a id="keyboard-skip-link-missing"></a> | 2.4.1 | medium | A skip link bypasses blocks that repeat before the content. |
 | `aria/attribute-unknown`<a id="aria-attribute-unknown"></a> | 4.1.2 | high | Use only aria-\* attributes defined by WAI-ARIA. |
 | `aria/attribute-value-invalid`<a id="aria-attribute-value-invalid"></a> | 4.1.2 | high | ARIA attributes need a value of their type. |
+| `aria/presentation-conflict`<a id="aria-presentation-conflict"></a> | 1.3.1, 4.1.2 | medium | An element marked as decorative needs no global ARIA attribute and no focus. |
+| `aria/presentational-children-focusable`<a id="aria-presentational-children-focusable"></a> | 1.3.1, 4.1.2 | high | Buttons, checkboxes, tabs and similar roles must not contain focusable elements. |
 | `aria/owns-conflict`<a id="aria-owns-conflict"></a> | 4.1.2 | high | An element may be owned by only one aria-owns. |
 | `aria/tab-selected-missing`<a id="aria-tab-selected-missing"></a> | 1.3.1, 4.1.2 | medium | Tabs mark the selected tab; an expanded combobox references its popup. |
 | `aria/tabpanel-missing`<a id="aria-tabpanel-missing"></a> | 1.3.1, 4.1.2 | medium | Tabs mark the selected tab; an expanded combobox references its popup. |
@@ -121,6 +123,7 @@ a11y-rules 0.30.0 declares 168 IDs.
 | `tables/data-undetermined`<a id="tables-data-undetermined"></a> | 1.3.1 | high | Header cells need data cells to label; a table of headers only labels nothing. |
 | `tables/headers-attr-invalid`<a id="tables-headers-attr-invalid"></a> | 1.3.1 | high | The headers attribute of a cell must list the ids of header cells in the same table. |
 | `document/lang-mismatch`<a id="document-lang-mismatch"></a> | 3.1.1 | medium | lang and xml:lang on `<html>` must name the same language. |
+| `language/part-invalid`<a id="language-part-invalid"></a> | 3.1.2 | medium | The lang attribute of a passage must name a language as a valid BCP 47 tag. |
 | `language/part-unmarked`<a id="language-part-unmarked"></a> | 3.1.2 | medium | A passage in another language than the page needs its own lang attribute. |
 | `language/part-undetermined`<a id="language-part-undetermined"></a> | 3.1.2 | medium | A passage in another language than the page needs its own lang attribute. |
 | `language/abbreviation-unexpanded`<a id="language-abbreviation-unexpanded"></a> | 3.1.4 | low | Make the expansion of an abbreviation available, e.g. in the title of `<abbr>`. |
@@ -202,13 +205,16 @@ a11y-rules 0.30.0 declares 168 IDs.
 
 ## Stylesheets
 
-5 IDs, needs the page's parsed stylesheets and runs via `run_stylesheets`.
+8 IDs, needs the page's parsed stylesheets and runs via `run_stylesheets`.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
 | `focus/outline-removed`<a id="focus-outline-removed"></a> | 2.4.7 | high | Keep a visible focus indicator: do not remove the outline on :focus without a replacement, or limit the removal to :focus:not(:focus-visible). |
 | `motion/reduced-motion-ignored`<a id="motion-reduced-motion-ignored"></a> | 2.3.3 | medium | Switch off movement under @media (prefers-reduced-motion: reduce). |
 | `orientation/content-hidden`<a id="orientation-content-hidden"></a> | 1.3.4 | medium | Content must work in portrait and landscape; do not hide or rotate it per orientation. |
+| `text-spacing/letter-important`<a id="text-spacing-letter-important"></a> | 1.4.12 | medium | Do not fix letter spacing, word spacing or line height below the 1.4.12 values with !important in a style attribute. |
+| `text-spacing/word-important`<a id="text-spacing-word-important"></a> | 1.4.12 | medium | Do not fix letter spacing, word spacing or line height below the 1.4.12 values with !important in a style attribute. |
+| `text-spacing/line-height-important`<a id="text-spacing-line-height-important"></a> | 1.4.12 | medium | Do not fix letter spacing, word spacing or line height below the 1.4.12 values with !important in a style attribute. |
 | `text/justified`<a id="text-justified"></a> | 1.4.8 | low | Running text: no justified alignment, line height at least 1.5. |
 | `text/line-height-tight`<a id="text-line-height-tight"></a> | 1.4.8 | low | Running text: no justified alignment, line height at least 1.5. |
 

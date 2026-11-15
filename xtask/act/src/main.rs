@@ -19,12 +19,27 @@
 //!   or did not run (its input was missing);
 //! - `passed`: all mapped rules ran and reported nothing.
 //!
-//! An ACT rule without a mapping is `untested`. The categories per rule are
-//! those of the W3C ACT implementation reports: **consistent** when no passed
-//! or inapplicable example comes out `failed`, every failed example comes out
-//! `failed` and not every case is `cantTell`; **partial** (partially
-//! consistent) when there is no such false positive and at least one failed
-//! example comes out `failed`; otherwise **not consistent**.
+//! - `inapplicable`: the test case is not an HTML page (SVG, XHTML, XML) and
+//!   the ACT rule applies to HTML pages only (see [`HTML_PAGE_ONLY`]). For the
+//!   other rules such a file goes through `a11y-static` like an HTML page: the
+//!   HTML parser puts its elements in the SVG or MathML namespace or leaves
+//!   them unknown, and rules about HTML elements do not apply to them.
+//!
+//! An ACT rule without a mapping is `untested`. The categories per rule follow
+//! `getConsistency` in `act-rules/act-tools`, the code behind the W3C ACT
+//! implementation reports:
+//!
+//! - **consistent** (`complete` there): no passed or inapplicable example comes
+//!   out `failed`, no failed example comes out `passed`, `inapplicable` or
+//!   `untested`, no case is `untested`, and at least one failed example comes
+//!   out `failed`. `cantTell` on some examples is allowed;
+//! - **partial**: no such false positive, and at least one failed example comes
+//!   out `failed` — or some case is `cantTell` and every inapplicable example
+//!   comes out `passed` or `inapplicable`;
+//! - otherwise **not consistent**.
+//!
+//! The W3C report also checks that the reported success criteria match the
+//! rule's; that check is not repeated here.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -34,12 +49,23 @@ use a11y_report::{Outcome, Report};
 use a11y_static::{Environment, Locale, Page, Sheet, StylesheetRef};
 use serde_json::{Value, json};
 
+/// ACT rules whose applicability is the `html` element of an HTML page (a
+/// document served as `text/html`). A test case in another format has no such
+/// element, so the rule is inapplicable there whatever the page contains.
+const HTML_PAGE_ONLY: &[&str] = &["2779a5", "5b7ae0", "b5c3f8", "bf051a", "cf77f2"];
+
 /// ACT rule → the BarrierLab rule IDs that decide the same question. Only
 /// rules whose check is the same as the ACT rule's are listed; an ACT rule
 /// that needs judgement (descriptive names, media alternatives) or a running
 /// browser that `a11y-static` does not have stays out and is `untested`.
 const MAPPING: &[(&str, &[&str])] = &[
     ("5f99a7", &["aria/attribute-unknown"]),
+    ("de46e4", &["language/part-invalid"]),
+    ("24afc2", &["text-spacing/letter-important"]),
+    ("9e45ec", &["text-spacing/word-important"]),
+    ("78fd32", &["text-spacing/line-height-important"]),
+    ("46ca7f", &["aria/presentation-conflict"]),
+    ("307n5z", &["aria/presentational-children-focusable"]),
     ("ff89c9", &["aria/required-parent-missing"]),
     ("bc4a75", &["aria/required-children-missing"]),
     ("6a7281", &["aria/attribute-value-invalid"]),
@@ -49,7 +75,10 @@ const MAPPING: &[(&str, &[&str])] = &[
     ),
     (
         "4e8ab6",
-        &["aria/required-attribute-missing", "aria/combobox-popup-missing"],
+        &[
+            "aria/required-attribute-missing",
+            "aria/combobox-popup-missing",
+        ],
     ),
     ("674b10", &["aria/role-invalid"]),
     ("73f2c2", &["forms/autocomplete-invalid"]),
@@ -203,7 +232,11 @@ fn main() {
         let url = case["url"].as_str().unwrap().to_string();
         let actual = match mapping.get(rule.as_str()) {
             None => "untested",
-            Some(ids) if url.ends_with(".html") => match fs::read_to_string(local(&cache, &url)) {
+            // SVG, XHTML and XML files: not an HTML page.
+            Some(_) if !url.ends_with(".html") && HTML_PAGE_ONLY.contains(&rule.as_str()) => {
+                "inapplicable"
+            }
+            Some(ids) => match fs::read_to_string(local(&cache, &url)) {
                 Ok(html) => {
                     let page = Page::parse(&html);
                     let report = page.audit(
@@ -215,8 +248,6 @@ fn main() {
                 }
                 Err(_) => "cantTell",
             },
-            // SVG, XHTML and script files: a11y-static reads HTML only.
-            Some(_) => "untested",
         };
         if actual != "untested" {
             earl.push(json!({
@@ -237,19 +268,28 @@ fn main() {
     let mut per_rule = Vec::new();
     for (id, (name, cases)) in &rules {
         let deprecated = name.starts_with("DEPRECATED");
-        // The categories of the W3C ACT implementation reports.
+        // `getConsistency` of act-rules/act-tools (see the module comment).
         let false_positive = cases
             .iter()
             .any(|(e, a, _)| e != "failed" && *a == "failed");
-        let failed: Vec<_> = cases.iter().filter(|c| c.0 == "failed").collect();
-        let hit = failed.iter().filter(|c| c.1 == "failed").count();
+        let false_negative = cases
+            .iter()
+            .any(|(e, a, _)| e == "failed" && matches!(*a, "passed" | "inapplicable" | "untested"));
+        let true_positive = cases
+            .iter()
+            .any(|(e, a, _)| e == "failed" && *a == "failed");
+        let untested = cases.iter().any(|c| c.1 == "untested");
+        let cant_tell = cases.iter().any(|c| c.1 == "cantTell");
+        let inapplicable_right = cases
+            .iter()
+            .all(|(e, a, _)| e != "inapplicable" || matches!(*a, "passed" | "inapplicable"));
         let consistency = if cases.iter().all(|c| c.1 == "untested") {
             "untested"
         } else if false_positive {
             "not consistent"
-        } else if hit == failed.len() && cases.iter().any(|c| c.1 != "cantTell") {
+        } else if !untested && !false_negative && true_positive {
             "consistent"
-        } else if hit > 0 {
+        } else if true_positive || (cant_tell && inapplicable_right) {
             "partial"
         } else {
             "not consistent"
@@ -260,7 +300,8 @@ fn main() {
         let wrong: Vec<_> = cases
             .iter()
             .filter(|(e, a, _)| {
-                (e == "failed" && *a == "passed") || (e != "failed" && *a == "failed")
+                (e == "failed" && matches!(*a, "passed" | "inapplicable"))
+                    || (e != "failed" && *a == "failed")
             })
             .map(|(e, a, u)| json!({ "expected": e, "actual": a, "url": u }))
             .collect();

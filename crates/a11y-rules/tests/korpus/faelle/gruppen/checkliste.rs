@@ -965,6 +965,83 @@ fn stylesheets() -> Vec<Fall> {
             r#"<style>h1 { text-align: justify }</style><h1>Title</h1>"#,
             "WCAG 1.4.8: kein Fließtextabsatz",
         ),
+        // --- text-spacing/*-important (1.4.12) -------------------------------
+        fail(
+            "text-spacing/letter-important",
+            r#"<p style="letter-spacing: 0.1em !important">Running text.</p>"#,
+            "WCAG 1.4.12; ACT 24afc2",
+        ),
+        fail(
+            "text-spacing/letter-important",
+            r#"<style>p { font-size: 20px }</style><p style="letter-spacing: 2px !important">Running text.</p>"#,
+            "ACT 24afc2: 2 px bei 20 px Schrift = 0,1",
+        )
+        .variant("px"),
+        negative(
+            "text-spacing/letter-important",
+            r#"<p style="letter-spacing: 0.12em !important">Running text.</p>"#,
+            "WCAG 1.4.12: genau 0,12",
+        )
+        .variant("Grenze 0,12"),
+        negative(
+            "text-spacing/letter-important",
+            r#"<p style="letter-spacing: 0.15em !important; letter-spacing: 0.1em">Running text.</p>"#,
+            "ACT 24afc2: die spätere Angabe ohne !important ändert nichts",
+        ),
+        review(
+            "text-spacing/letter-important",
+            r#"<p style="position: absolute; top: -999em; letter-spacing: 0.1em !important">Running text.</p>"#,
+            "ACT 24afc2: ohne Layout offen, ob der Text zu sehen ist",
+        ),
+        na(
+            "text-spacing/letter-important",
+            r#"<p style="display: none; letter-spacing: 0.1em !important">Running text.</p>"#,
+            "ACT 24afc2: nicht dargestellt",
+        ),
+        fail(
+            "text-spacing/word-important",
+            r#"<p style="word-spacing: normal !important">Running text.</p>"#,
+            "WCAG 1.4.12; ACT 9e45ec",
+        ),
+        negative(
+            "text-spacing/word-important",
+            r#"<p style="word-spacing: 0.16em !important">Running text.</p>"#,
+            "WCAG 1.4.12: genau 0,16",
+        )
+        .variant("Grenze 0,16"),
+        negative(
+            "text-spacing/word-important",
+            r#"<p style="word-spacing: 0.1em"><span style="word-spacing: inherit !important">Running text.</span></p>"#,
+            "ACT 9e45ec: inherit übernimmt einen Wert, der nicht feststeht",
+        )
+        .variant("inherit"),
+        na(
+            "text-spacing/word-important",
+            r#"<p style="width: 60%">Running text.</p>"#,
+            "ACT 9e45ec: keine Angabe",
+        ),
+        fail(
+            "text-spacing/line-height-important",
+            r#"<style>p { font-size: 16px }</style><p style="line-height: 120% !important">Running text.</p>"#,
+            "WCAG 1.4.12; ACT 78fd32",
+        ),
+        negative(
+            "text-spacing/line-height-important",
+            r#"<p style="line-height: 1.5 !important">Running text.</p>"#,
+            "WCAG 1.4.12: genau 1,5",
+        )
+        .variant("Grenze 1,5"),
+        review(
+            "text-spacing/line-height-important",
+            r#"<div style="overflow-x: scroll"><p style="line-height: 1em !important; width: 1000px">Running text.</p></div>"#,
+            "ACT 78fd32: ob die Zeile umbricht, zeigt erst das Layout",
+        )
+        .variant("waagerecht scrollend"),
+        na(
+            "text-spacing/line-height-important",
+            r#"<p style="line-height: 1em">Running text.</p>"#,
+            "ACT 78fd32: ohne !important lässt sich der Wert überschreiben",
+        ),
         // --- text/line-height-tight (1.4.8) ---------------------------------
         review(
             "text/line-height-tight",
