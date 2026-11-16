@@ -1,0 +1,259 @@
+{
+  "version": 2,
+  "modules": {
+    "a11y-wasm": {
+      "accepted": "2026-11-13",
+      "reason": "Measures the wasm-bindgen output in packages/a11y-wasm/pkg instead of the raw cargo build",
+      "values": {
+        "raw": 402952,
+        "gzip": 168280,
+        "brotli": 138265
+      },
+      "contract": {
+        "runner_schema": 1,
+        "warmup_runs": 1,
+        "compression": "gzip-9 brotli-11-w22",
+        "artifact_sha256": "919c1065dfb353bf9ceddb7565f7b1d684a003ae5cc46e3a5e777f6a8b674b0c"
+      },
+      "inventory": {
+        "imports": [
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg_Error_67e7344beaa85059",
+            "kind": "func",
+            "type": "(i32, i32) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg___wbindgen_throw_5d9e815e6fdf150f",
+            "kind": "func",
+            "type": "(i32, i32) -> ()"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg_new_bebc3f4757acf305",
+            "kind": "func",
+            "type": "() -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg_new_ffa92086ea89f79c",
+            "kind": "func",
+            "type": "() -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg_set_13d25b81ab403f5e",
+            "kind": "func",
+            "type": "(i32, i32, i32) -> ()"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg_set_6be42768c690e380",
+            "kind": "func",
+            "type": "(i32, i32, i32) -> ()"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbindgen_generic_0000000000000001",
+            "kind": "func",
+            "type": "(f64) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbindgen_generic_0000000000000002",
+            "kind": "func",
+            "type": "(i32, i32) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbindgen_generic_0000000000000003",
+            "kind": "func",
+            "type": "(i64) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbindgen_object_clone_ref",
+            "kind": "func",
+            "type": "(i32) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbindgen_object_drop_ref",
+            "kind": "func",
+            "type": "(i32) -> ()"
+          }
+        ],
+        "exports": [
+          {
+            "name": "__abort_handler",
+            "kind": "global",
+            "type": "i32"
+          },
+          {
+            "name": "__instance_terminated",
+            "kind": "global",
+            "type": "i32"
+          },
+          {
+            "name": "__wbg_scan_free",
+            "kind": "func",
+            "type": "(i32, i32) -> ()"
+          },
+          {
+            "name": "__wbindgen_add_to_stack_pointer",
+            "kind": "func",
+            "type": "(i32) -> i32"
+          },
+          {
+            "name": "__wbindgen_export",
+            "kind": "func",
+            "type": "(i32, i32) -> i32"
+          },
+          {
+            "name": "__wbindgen_export2",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32) -> i32"
+          },
+          {
+            "name": "memory",
+            "kind": "memory",
+            "type": "18.."
+          },
+          {
+            "name": "scan_new",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_nodeCount",
+            "kind": "func",
+            "type": "(i32) -> i32"
+          },
+          {
+            "name": "scan_run",
+            "kind": "func",
+            "type": "(i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withLayout",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withRendering",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
+          }
+        ],
+        "tables": [
+          {
+            "name": "#0",
+            "kind": "table",
+            "type": "funcref 328..328"
+          }
+        ],
+        "features": [
+          "bulk_memory",
+          "sign_extension",
+          "saturating_float_to_int"
+        ],
+        "sections": {
+          "code": 311048,
+          "data": 89130,
+          "names": 0,
+          "debug": 0,
+          "custom": 60,
+          "structure": 2673,
+          "overhead": 41
+        },
+        "functions": {
+          "count": 950,
+          "body_bytes": 309634,
+          "largest": [
+            {
+              "size": 8683,
+              "export": "scan_run"
+            },
+            {
+              "id": 11,
+              "size": 5313
+            },
+            {
+              "id": 13,
+              "size": 4930
+            },
+            {
+              "size": 4630,
+              "export": "scan_new"
+            },
+            {
+              "id": 12,
+              "size": 4513
+            },
+            {
+              "id": 500,
+              "size": 4074
+            },
+            {
+              "id": 15,
+              "size": 3819
+            },
+            {
+              "id": 14,
+              "size": 3746
+            },
+            {
+              "id": 482,
+              "size": 3659
+            },
+            {
+              "id": 27,
+              "size": 3244
+            },
+            {
+              "id": 222,
+              "size": 3061
+            },
+            {
+              "id": 202,
+              "size": 3008
+            },
+            {
+              "id": 341,
+              "size": 2702
+            },
+            {
+              "id": 76,
+              "size": 2685
+            },
+            {
+              "id": 90,
+              "size": 2514
+            },
+            {
+              "id": 52,
+              "size": 2480
+            },
+            {
+              "id": 851,
+              "size": 2422
+            },
+            {
+              "id": 19,
+              "size": 2387
+            },
+            {
+              "id": 24,
+              "size": 2312
+            },
+            {
+              "id": 101,
+              "size": 2194
+            }
+          ]
+        }
+      }
+    }
+  }
+}

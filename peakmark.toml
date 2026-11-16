@@ -1,0 +1,7 @@
+# Size of the accessibility checker the package ships. `peakmark check` fails when it grows over the budget.
+[[module]]
+name     = "a11y-wasm"
+artifact = "packages/a11y-wasm/pkg/a11y_wasm_bg.wasm"
+
+[module.budget]
+brotli = "139700 B"
