@@ -1080,6 +1080,12 @@ fn stylesheets() -> Vec<Fall> {
         .variant("Grenze 150 %"),
         negative(
             "text/line-height-tight",
+            r#"<div style="display: none"><p style="line-height: 1">Running text.</p></div>"#,
+            "WCAG 1.4.8: nicht gezeichneter Text hat keinen Zeilenabstand (auditmysite-Korpus visual_text_spacing_important_na)",
+        )
+        .variant("display: none am Vorfahren"),
+        negative(
+            "text/line-height-tight",
             r#"<style>html { line-height: 1.15 } p { line-height: 1.6 }</style><p>Running text.</p>"#,
             "WCAG 1.4.8: am Absatz kommt 1,6 an",
         )

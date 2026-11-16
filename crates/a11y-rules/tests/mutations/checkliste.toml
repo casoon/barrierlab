@@ -1059,3 +1059,12 @@ replace = '''    if false {'''
 test = "korpus"
 expect = "killed"
 note = "Ein Fokus-Handler kann den Hinweis per Skript setzen (ACT oj04fd): offen, nicht FAIL."
+
+[[mutation]]
+id = "text/line-height-tight"
+file = "src/stylesheet_rules.rs"
+kind = "drop-condition"
+find = '''        .filter(|n| n.is_element("p") && a11y_dom::has_text(*n) && shown(*n, &displays))'''
+replace = '''        .filter(|n| n.is_element("p") && a11y_dom::has_text(*n))'''
+test = "korpus"
+expect = "killed"

@@ -771,8 +771,9 @@ pub(crate) fn visual_presentation<D: Document>(
     locale: Locale,
     out: &mut Vec<Finding>,
 ) {
+    let displays = rules_for(sheets, "display");
     let paragraphs: Vec<_> = a11y_dom::elements(doc)
-        .filter(|n| n.is_element("p") && a11y_dom::has_text(*n))
+        .filter(|n| n.is_element("p") && a11y_dom::has_text(*n) && shown(*n, &displays))
         .collect();
     if paragraphs.is_empty() {
         return;
@@ -852,6 +853,15 @@ fn important_in_style<'a, N: Node<'a>>(n: N, property: &str) -> Option<String> {
 }
 
 /// Der eigene Wert eines Elements für eine nicht vererbte Eigenschaft.
+/// Ob das Element gezeichnet wird: Diese Stufe sieht keine berechneten
+/// Stile; `display: none` liest sie selbst, am Element und an seinen
+/// Vorfahren.
+fn shown<'a, N: Node<'a>>(n: N, displays: &[(Selector, String, bool)]) -> bool {
+    std::iter::once(n).chain(a11y_dom::ancestors(n)).all(|e| {
+        !own(e, "display", displays).is_some_and(|d| d.trim().eq_ignore_ascii_case("none"))
+    })
+}
+
 fn own<'a, N: Node<'a>>(
     e: N,
     property: &str,
@@ -928,12 +938,7 @@ pub(crate) fn spacing_important<D: Document>(
         if n.attr("style").is_none() || !a11y_dom::has_text(n) {
             continue;
         }
-        // Diese Stufe sieht keine berechneten Stile; `display: none` liest sie
-        // selbst, am Element und an seinen Vorfahren.
-        let shown = std::iter::once(n).chain(a11y_dom::ancestors(n)).all(|e| {
-            !own(e, "display", &displays).is_some_and(|d| d.trim().eq_ignore_ascii_case("none"))
-        });
-        if !shown {
+        if !shown(n, &displays) {
             continue;
         }
         for &(property, id, minimum) in SPACING {

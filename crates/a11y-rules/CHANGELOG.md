@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.5] - 2026-11-16
+
+### Fixed
+
+- **Text:** `text/line-height-tight` und `text/justified` zählen nur gezeichnete Absätze; einer unter `display: none` (am Absatz oder einem Vorfahren) wurde mitgezählt.
+
 ## [0.30.4] - 2026-11-16
 
 ### Fixed

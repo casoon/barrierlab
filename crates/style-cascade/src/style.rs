@@ -8,7 +8,8 @@
 use a11y_dom::{Color, ColorPairs, ComputedStyle, Node, NodeKind, ancestors};
 
 use crate::cascade::{Cascade, Specified};
-use crate::color::{luminance, over, parse_color, teile_oberste_ebene};
+use crate::color::{luminance, over, parse_color};
+use crate::pairs::{PaintLayer, compose_color_pairs, gradient_stops, shadow_tokens};
 use crate::value::{font_size_px, font_weight, laenge, tokens};
 
 /// Das verwendete Farbschema aus dem Wert von `color-scheme`.
@@ -187,19 +188,11 @@ impl Cascade {
             Specified::Unknown => return None,
             Specified::Set(v) => v,
         };
-        if wert.trim().eq_ignore_ascii_case("none") {
-            return Some(Vec::new());
-        }
-        teile_oberste_ebene(&wert, ',')
+        shadow_tokens(&wert)
             .into_iter()
-            .map(|schatten| {
-                let farbe = tokens(schatten).into_iter().find(|t| {
-                    !t.starts_with(|c: char| c.is_ascii_digit() || matches!(c, '-' | '+' | '.'))
-                });
-                match farbe {
-                    Some(t) if !t.eq_ignore_ascii_case("currentcolor") => self.parse_at(n, t),
-                    _ => self.color(n),
-                }
+            .map(|t| match t {
+                Some(t) => self.parse_at(n, t),
+                None => self.color(n),
             })
             .collect()
     }
@@ -341,7 +334,7 @@ impl Cascade {
             }
         }
         let (element, wert, eigene_farbe) = bild?;
-        let stufen = verlaufsstufen(&wert, self.is_dark(element)?)?;
+        let stufen = gradient_stops(&wert, self.is_dark(element)?)?;
         // Untergrund: die eigene Farbe des Elements, dann die Vorfahren.
         let mut unten = vec![];
         if let Some(c) = eigene_farbe {
@@ -417,18 +410,18 @@ impl Cascade {
             .map(|a| self.opazitaet(*a))
             .collect::<Option<_>>()?;
         // Schichten von innen nach außen, bis zur ersten deckenden Farbe,
-        // hinter der keine Deckkraft mehr mischt.
-        let mut schichten: Vec<(Option<Color>, Option<Vec<Color>>, f64)> = Vec::new();
-        let mut grund = None;
+        // hinter der keine Deckkraft mehr mischt; was dahinter liegt, liest
+        // die Kaskade gar nicht erst.
+        let mut schichten = Vec::new();
         for (i, a) in kette.iter().enumerate() {
-            let stufen = match self.specified(*a, "background-image") {
+            let gradient = match self.specified(*a, "background-image") {
                 Specified::Unknown => return None,
                 Specified::Set(v) if !v.trim().eq_ignore_ascii_case("none") => {
-                    Some(verlaufsstufen(&v, self.is_dark(*a)?)?)
+                    Some(gradient_stops(&v, self.is_dark(*a)?)?)
                 }
                 _ => None,
             };
-            let farbe = match self.specified(*a, "background-color") {
+            let background_color = match self.specified(*a, "background-color") {
                 Specified::Unknown => return None,
                 Specified::Unset => None,
                 Specified::Set(v) if v.trim().eq_ignore_ascii_case("currentcolor") => {
@@ -436,74 +429,22 @@ impl Cascade {
                 }
                 Specified::Set(v) => Some(self.parse_at(*a, &v)?),
             };
-            let deckend = stufen.is_none() && farbe.is_some_and(|c| c.a == 255);
-            schichten.push((farbe, stufen, opaz[i]));
+            let deckend = gradient.is_none() && background_color.is_some_and(|c| c.a == 255);
+            schichten.push(PaintLayer {
+                background_color,
+                gradient,
+                opacity: opaz[i],
+            });
             if deckend && opaz[i..].iter().all(|o| *o >= 1.0) {
-                grund = farbe;
                 break;
             }
         }
-        let halo = self.schattenfarben(n);
-        let verlaeufe = schichten.iter().filter(|s| s.1.is_some()).count();
-        let gemischt = schichten.iter().any(|s| s.2 < 1.0);
-        if verlaeufe == 0 && !gemischt && halo.as_ref().is_some_and(Vec::is_empty) {
-            return None;
-        }
-        let (Some(halo), true) = (halo, verlaeufe <= 1) else {
-            return Some(ColorPairs::default());
-        };
-        let Some(text) = self.color(n) else {
-            return Some(ColorPairs::default());
-        };
-        let Some(grund) = grund.or_else(|| self.canvas(n)) else {
-            return Some(ColorPairs::default());
-        };
-        schichten.reverse();
-        let mische = |hinten: Color, vorn: Color, o: f64| {
-            let m = |h: u8, v: u8| (f64::from(h) * (1.0 - o) + f64::from(v) * o).round() as u8;
-            Color {
-                r: m(hinten.r, vorn.r),
-                g: m(hinten.g, vorn.g),
-                b: m(hinten.b, vorn.b),
-                a: 255,
-            }
-        };
-        let varianten = schichten
-            .iter()
-            .find_map(|s| s.1.as_ref())
-            .map_or(1, |st| (2 * st.len()).saturating_sub(1).max(1));
-        let mut pairs = Vec::with_capacity(varianten);
-        for v in 0..varianten {
-            let mut c = grund;
-            let mut hinten = Vec::with_capacity(schichten.len());
-            for (farbe, stufen, _) in &schichten {
-                hinten.push(c);
-                if let Some(f) = farbe {
-                    c = over(*f, c);
-                }
-                if let Some(st) = stufen {
-                    let farben: Vec<Color> = st.iter().map(|s| over(*s, c)).collect();
-                    let mitte = |a: u8, b: u8| ((u16::from(a) + u16::from(b)) / 2) as u8;
-                    let mut proben = farben.clone();
-                    proben.extend(farben.windows(2).map(|w| Color {
-                        r: mitte(w[0].r, w[1].r),
-                        g: mitte(w[0].g, w[1].g),
-                        b: mitte(w[0].b, w[1].b),
-                        a: 255,
-                    }));
-                    c = *proben.get(v)?;
-                }
-            }
-            let (mut t, mut b) = (over(text, c), c);
-            for (i, (_, _, o)) in schichten.iter().enumerate().rev() {
-                if *o < 1.0 {
-                    t = mische(hinten[i], t, *o);
-                    b = mische(hinten[i], b, *o);
-                }
-            }
-            pairs.push((t, b));
-        }
-        Some(ColorPairs { pairs, halo })
+        compose_color_pairs(
+            self.color(n),
+            &schichten,
+            self.canvas(n),
+            self.schattenfarben(n),
+        )
     }
 
     /// Die berechneten Werte, die Regeln des Darstellungs-Tiers lesen.
@@ -579,55 +520,4 @@ impl Cascade {
             ),
         }
     }
-}
-
-/// Die Farbstufen eines `background-image`, das nur aus Verläufen besteht.
-fn verlaufsstufen(wert: &str, dark: bool) -> Option<Vec<Color>> {
-    let mut out = Vec::new();
-    for schicht in teile_oberste_ebene(wert, ',') {
-        let schicht = schicht.trim();
-        if schicht.eq_ignore_ascii_case("none") {
-            continue;
-        }
-        let lower = schicht.to_ascii_lowercase();
-        let (name, rest) = lower.split_once('(')?;
-        if !matches!(
-            name.trim(),
-            "linear-gradient"
-                | "radial-gradient"
-                | "conic-gradient"
-                | "repeating-linear-gradient"
-                | "repeating-radial-gradient"
-                | "repeating-conic-gradient"
-        ) {
-            return None;
-        }
-        let inhalt = rest.strip_suffix(')')?;
-        for teil in teile_oberste_ebene(inhalt, ',') {
-            let t = tokens(teil);
-            let erstes = t.first()?;
-            // Richtung, Form, Ort, Farbraum und Farbhinweise sind keine Stufen.
-            let keine_stufe = erstes.starts_with("to")
-                || *erstes == "circle"
-                || *erstes == "ellipse"
-                || *erstes == "closest-side"
-                || *erstes == "farthest-side"
-                || *erstes == "closest-corner"
-                || *erstes == "farthest-corner"
-                || *erstes == "from"
-                || *erstes == "at"
-                || *erstes == "in"
-                || erstes.ends_with("deg")
-                || erstes.ends_with("turn")
-                || erstes.ends_with("rad")
-                || erstes.ends_with("grad")
-                || erstes.ends_with('%')
-                || erstes.parse::<f32>().is_ok();
-            if keine_stufe {
-                continue;
-            }
-            out.push(parse_color(erstes, dark)?);
-        }
-    }
-    (!out.is_empty()).then_some(out)
 }

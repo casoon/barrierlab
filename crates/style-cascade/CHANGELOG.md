@@ -5,6 +5,12 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-16
+
+### Added
+
+- **Farbpaare:** `compose_color_pairs`, `PaintLayer`, `gradient_stops` und `shadow_colors` verrechnen Hintergrund, Verlauf, `opacity` und `text-shadow` zu den Farbpaaren für `Rendering::color_pairs`, auch aus berechneten Werten eines Browsers. `Cascade::color_pairs` rechnet seitdem über dieselbe Funktion, mit unverändertem Ergebnis.
+
 ## [0.3.1] - 2026-11-14
 
 ### Added
