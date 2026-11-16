@@ -10,11 +10,11 @@ Paket hier liegt.
 
 | Werkzeug | Repository | benutzt heute | wird benutzen |
 |---|---|---|---|
-| auditmysite | `casoon/auditmysite` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `a11y-perception`, `web-checks` |
-| astro-post-audit | `casoon/astro-post-audit` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform` | `web-checks`, `style-cascade` (casoon/astro-post-audit#115) |
-| liveaudit | `casoon/liveaudit` | die vier a11y-Crates direkt (WASM-Adapter im Repo) | `a11y-wasm` als npm-Paket |
-| Relief | `casoon/relief` | `a11y-perception`, `a11y-dom`, `accname`, `a11y-report` | `a11y-rules` |
-| barrierlab-cli | `casoon/barrierlab-cli` (noch nicht veröffentlicht) | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `style-cascade` | — |
+| auditmysite | `casoon/auditmysite` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `a11y-perception`, `html-conform`, `web-checks`, `stylesheet-parse`, `style-cascade` | — |
+| astro-post-audit | `casoon/astro-post-audit` | `a11y-report`, `a11y-dom`, `a11y-rules`, `accname`, `html-conform`, `web-checks`, `stylesheet-parse`, `style-cascade` | — |
+| liveaudit | `casoon/liveaudit` | `a11y-wasm` als npm-Paket `@casoon/a11y-wasm` | — |
+| Relief | `casoon/relief` | `a11y-perception`, `a11y-dom`, `accname`, `a11y-report`, `a11y-rules` | — |
+| barrierlab-cli | `casoon/barrierlab-cli` (noch nicht veröffentlicht) | `a11y-report`, `a11y-static` | — |
 | auditmysite_studio | `casoon/auditmysite_studio` | `auditmysite` als Bibliothek | — |
 
 Regeln, die sich daraus ergeben:

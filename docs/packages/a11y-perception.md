@@ -9,12 +9,14 @@ the difference between two snapshots. The package computes, it does not collect.
 
 ## Status
 
-0.2.1. Extracted from auditmysite
+On [crates.io](https://crates.io/crates/a11y-perception), used by auditmysite and Relief.
+Extracted from auditmysite
 (`accessibility/{tree,diff,snapshot}.rs`, `screen_reader/{linearizer,types}.rs`)
 after the rework that was measured on 133 pages with 692 journey instances.
 27 tests came along and run without a browser.
 
-New in 0.2.0 is the **announcement structure** (`announce`). The renderer from
+The **announcement structure** (`announce`) is the part of the screen reader output that is
+the same in every host. The renderer from
 auditmysite's `announcer.rs` could not be separated from it, because it handled structure and
 words in one go: which parts an announcement has, in which
 order, and which state adds nothing — and right next to it, what that is called

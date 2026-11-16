@@ -9,8 +9,9 @@ WCAG mapping and a stable JSON contract. It evaluates nothing itself.
 
 ## Status
 
-0.26.0 on crates.io. Used by auditmysite, astro-post-audit and liveaudit —
-the first package that is really in use everywhere.
+On [crates.io](https://crates.io/crates/a11y-report), versioned in lockstep with the other
+three a11y crates. Used by auditmysite, astro-post-audit, Relief and barrierlab-cli directly
+and by liveaudit through `a11y-wasm` — the package that is really in use everywhere.
 
 ## Structure
 
@@ -52,8 +53,8 @@ flowchart LR
 
 ## Dependencies
 
-Downward: only `serde`. Upward: `a11y-rules`, `a11y-perception` (planned),
-all hosts.
+Downward: only `serde`. Upward: `a11y-rules`, `a11y-static`, `html-conform`, `a11y-wasm`,
+`html-conform-wasm`, all hosts.
 
 ## Limits
 

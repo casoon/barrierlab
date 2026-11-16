@@ -10,11 +10,11 @@ evaluate.
 
 ## Status
 
-Crate 0.14.0 on crates.io, extracted from `liveaudit/packages/core`
+Crate on [crates.io](https://crates.io/crates/a11y-wasm), extracted from `liveaudit/packages/core`
 (`liveaudit-core`, was `publish = false`). The WASM artifact is published as
-the npm package `@casoon/a11y-wasm`; the npm release runs under its own tag
+the npm package [`@casoon/a11y-wasm`](https://www.npmjs.com/package/@casoon/a11y-wasm); the npm release runs under its own tag
 (`a11y-wasm-npm-vX.Y.Z`, see [Releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md)) and may lag behind the crate.
-The first consumer is liveaudit.
+liveaudit uses the npm package (`packages/liveaudit`, `packages/browser`).
 
 ## Structure
 

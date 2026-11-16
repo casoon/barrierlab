@@ -9,7 +9,8 @@ translates, it does not check.
 
 ## Status
 
-Crate `html-conform-wasm` 0.1.0 and npm package `@casoon/html-conform-wasm`, not yet published.
+Crate on [crates.io](https://crates.io/crates/html-conform-wasm) and npm package
+[`@casoon/html-conform-wasm`](https://www.npmjs.com/package/@casoon/html-conform-wasm).
 The npm release runs under its own tag (`html-conform-wasm-npm-vX.Y.Z`, see
 [Releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md)). Use cases are editor
 integrations, browser extensions, Cloudflare Workers and LiveAudit.

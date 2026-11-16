@@ -14,7 +14,8 @@ One sentence: what the package computes and what it does not.
 
 ## Status
 
-Version, registry, who uses it. Honest about anything half-built.
+Registry (linked; no version number, the registry shows the current one), who uses
+it. Honest about anything half-built.
 
 ## Structure
 
