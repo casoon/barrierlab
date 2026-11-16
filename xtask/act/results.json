@@ -10,6 +10,7 @@
     "partial": 6,
     "untested": 45
   },
+  "host": "BarrierLab a11y-static",
   "perRule": [
     {
       "act": "047fe0",
