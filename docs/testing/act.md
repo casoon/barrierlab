@@ -42,6 +42,39 @@ and the icon-font false alarm. The axe-core figures are the W3C's, from
 its [implementation report](https://www.w3.org/WAI/standards-guidelines/act/implementations/axe-core/).
 The BarrierLab figures are this repository's own run and have not been submitted to the W3C.
 
+## In a browser
+
+The same rules run inside a browser when a host hands them the rendered page.
+[auditmysite](https://github.com/casoon/auditmysite) does that in Chrome: computed styles,
+layout, scroll extents, the colours text is drawn with. Run of 16 November 2026 with auditmysite
+on `a11y-rules` 0.30.5 and `style-cascade` 0.3.2
+([casoon/auditmysite#1078](https://github.com/casoon/auditmysite/pull/1078)), all 601 mapped
+test cases, `--level aaa` so that the AAA contrast rule runs too:
+
+| | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
+|---|---|---|---|
+| ACT rules implemented consistently | 37 | 34 | 35 |
+| implemented partially consistently | 3 | 6 | 9 |
+| test cases right / undecided / wrong | 575 / 33 / 3 | 556 / 50 / 5 | — |
+
+The browser decides what the page source cannot: contrast over gradients, under `opacity` and
+behind a text shadow, scrollable regions, the AAA contrast cases. Three cases stay wrong: the
+icon-font false alarm and the refresh delay above 20 hours from the run above, and a page that
+rotates its `body` without an orientation media query, which the orientation rule reports
+although the rotation applies in both orientations. A rule that judges the rendered page sees
+one snapshot and no stylesheets, so it cannot tell that rotation from an orientation lock.
+
+To repeat the run:
+
+```bash
+cargo run --manifest-path xtask/act/Cargo.toml -- target/act --urls target/act/urls.txt
+auditmysite --url-file target/act/urls.txt --modules a11y --level aaa -f json --per-page-reports -o target/act/auditmysite
+cargo run --manifest-path xtask/act/Cargo.toml -- target/act --auditmysite target/act/auditmysite --summary xtask/act/results-auditmysite.json
+```
+
+A finding auditmysite files as a review hint is undecided, never passed; a rule auditmysite has
+not taken up yet is undecided too.
+
 ## Categories
 
 The categories follow `getConsistency` in
