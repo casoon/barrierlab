@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.7] - 2026-11-16
+
 ### Added
 
 - **Ausrichtung:** `orientation/locked` vergleicht die Drehung eines Elements unter `@media (orientation: …)` in beiden Ausrichtungen und meldet eine Vierteldrehung Unterschied als Verstoß (1.3.4, ACT b33eff).
@@ -18,6 +20,12 @@ abweichen, steht je Schritt in
 
 - **Ausrichtung:** `orientation/root-rotated` meldet eine gedrehte Wurzel zur Prüfung statt als Verstoß: Ein Schnappschuss sieht nur eine Ausrichtung, und eine Drehung in beiden sperrt keine.
 - **Ausrichtung:** `orientation/content-hidden` meldet nur noch ausgeblendeten Inhalt; Drehen prüft `orientation/locked`.
+
+## [0.30.6] - 2026-11-16
+
+### Fixed
+
+- **ARIA:** Ein `role="listitem"` außerhalb einer Liste meldet `aria/required-parent-missing` mit Schwere mittel wie ein `<li>` außerhalb einer Liste (`lists/item-outside-list`); seit 0.30.2 war er kritisch.
 
 ## [0.30.5] - 2026-11-16
 
