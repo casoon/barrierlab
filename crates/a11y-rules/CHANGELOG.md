@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.8] - 2026-11-16
+
+### Fixed
+
+- **Namen:** `label-in-name/mismatch` zählt Text in einer Ligatur-Symbolschrift (Material Icons, Material Symbols) nicht als sichtbare Beschriftung, wenn der Host berechnete Stile liefert: `<button aria-label="Find">search</button>` zeigt eine Lupe, kein Wort (ACT 2ee8b8).
+
 ## [0.30.7] - 2026-11-16
 
 ### Added

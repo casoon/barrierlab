@@ -7,6 +7,12 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.30.8] - 2026-11-16
+
+### Changed
+
+- **Gleichschritt:** mit `a11y-rules` 0.30.8; keine eigene Änderung.
+
 ## [0.30.7] - 2026-11-16
 
 ### Changed

@@ -543,3 +543,29 @@ replace = '''
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/visibility.rs"
+kind = "drop-branch"
+find = '''
+    first.starts_with("material icons") || first.starts_with("material symbols")
+'''
+replace = '''
+    first.starts_with("material icons")
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "label-in-name/mismatch"
+file = "src/visibility.rs"
+kind = "drop-condition"
+find = '''
+        if scope == Scope::Rendered && ids.iter().any(|id| GLYPHS_ARE_NOT_TEXT.contains(id)) {
+'''
+replace = '''
+        if false {
+'''
+test = "korpus"
+expect = "killed"

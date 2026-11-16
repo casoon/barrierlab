@@ -19,14 +19,13 @@ W3C counts:
 
 | | BarrierLab (own run) | axe-core 4.14.0 (W3C report of 31 October 2026) |
 |---|---|---|
-| ACT rules implemented consistently | 34 | 35 (30 WCAG rules, 5 proposed) |
+| ACT rules implemented consistently | 35 | 35 (30 WCAG rules, 5 proposed) |
 | implemented partially consistently | 6 | 9 |
 
-Of the 611 test cases of the rules BarrierLab maps, 556 come out right, 50 undecided and 5
-wrong. Three of the five need a script to run before the content exists (a shadow root built
-by script), which a check of the page source never sees. One is a false alarm on a button
-whose visible label is an icon-font ligature, one a missed refresh delay above 20 hours that
-only the stricter AAA rule fails.
+Of the 611 test cases of the rules BarrierLab maps, 557 come out right, 50 undecided and 4
+wrong. Three of the four need a script to run before the content exists (a shadow root built
+by script), which a check of the page source never sees. One is a missed refresh delay above 20
+hours that only the stricter AAA rule fails.
 
 The first run, before any rule was changed, gave 8 consistent and 8 partial rules, with 60
 wrong cases. Each of those 60 was looked at and the rule corrected against the specification
@@ -35,10 +34,10 @@ where a static decision is possible; the list is in
 answer where the page source does not hold the answer: background images, the length of a
 media file, layout, which block is the main content.
 
-Of the 35 rules axe-core implements consistently, BarrierLab implements 28 consistently too,
-and it is consistent on 5 that axe-core is not. The 7 others are contrast, scrolling and
-orientation, which need a browser to decide, the AAA refresh delay, one missed context role
-and the icon-font false alarm. The axe-core figures are the W3C's, from
+Of the 35 rules axe-core implements consistently, BarrierLab implements 29 consistently too,
+and it is consistent on 5 that axe-core is not. The 6 others are contrast, scrolling and
+orientation, which need a browser to decide, the AAA refresh delay and one missed context
+role. The axe-core figures are the W3C's, from
 its [implementation report](https://www.w3.org/WAI/standards-guidelines/act/implementations/axe-core/).
 The BarrierLab figures are this repository's own run and have not been submitted to the W3C.
 
@@ -53,9 +52,9 @@ test cases, `--level aaa` so that the AAA contrast rule runs too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
 |---|---|---|---|
-| ACT rules implemented consistently | 38 | 34 | 35 |
+| ACT rules implemented consistently | 38 | 35 | 35 |
 | implemented partially consistently | 3 | 6 | 9 |
-| test cases right / undecided / wrong | 576 / 33 / 2 | 556 / 50 / 5 | — |
+| test cases right / undecided / wrong | 576 / 33 / 2 | 557 / 50 / 4 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
 behind a text shadow, scrollable regions, the AAA contrast cases. Two cases stay wrong: the
@@ -104,7 +103,7 @@ count as untested.
 | [Image has non-empty accessible name](https://act-rules.github.io/rules/23a2a8) | consistent | `images/alt-missing`, `names/required-missing` | 0 of 18 |
 | [Letter spacing in style attributes is not !important](https://act-rules.github.io/rules/24afc2) | consistent | `text-spacing/letter-important` | 0 of 16 |
 | [HTML page has non-empty title](https://act-rules.github.io/rules/2779a5) | consistent | `document/title-missing`, `document/title-empty` | 0 of 11 |
-| [Visible label is part of accessible name](https://act-rules.github.io/rules/2ee8b8) | not consistent | `label-in-name/mismatch` | 1 of 13 |
+| [Visible label is part of accessible name](https://act-rules.github.io/rules/2ee8b8) | consistent | `label-in-name/mismatch` | 0 of 13 |
 | [Element with presentational children has no focusable content](https://act-rules.github.io/rules/307n5z) | consistent | `aria/presentational-children-focusable` | 0 of 7 |
 | [Id attribute value is unique](https://act-rules.github.io/rules/3ea0c8) | partial | `ids/duplicate` | 0 of 10 |
 | [Element marked as decorative is not exposed](https://act-rules.github.io/rules/46ca7f) | consistent | `aria/presentation-conflict` | 0 of 10 |
