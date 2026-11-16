@@ -10,7 +10,8 @@ name.
 
 ## Status
 
-0.26.0 on crates.io. Checked differentially against Chrome: auditmysite has
+On [crates.io](https://crates.io/crates/accname), versioned in lockstep with the other three
+a11y crates. Checked differentially against Chrome: auditmysite has
 `accname-diff` for this; on the first corpus 381 of 395 names matched, and
 the deviations all came from `contents` — the dominant cause is CSS
 `text-transform`, which Chrome applies to the name and `accname` does not.

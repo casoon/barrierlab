@@ -10,10 +10,12 @@ build time, CI and the live page. The result is always a `Report` from
 
 ## Status
 
-0.26.0 on crates.io. Used by auditmysite (`wcag/shared.rs` calls
-`run_with_semantics`), astro-post-audit and liveaudit. The identifiers are stable across
-all surfaces and declared in `Meta::ids`: 107 in tier 1 (structure),
-35 in tier 2 (semantics), 22 in tier 3 (rendering), 6 over stylesheets. The
+On [crates.io](https://crates.io/crates/a11y-rules), versioned in lockstep with the other
+three a11y crates. Used by auditmysite (`wcag/shared.rs` calls `run_with_semantics`),
+astro-post-audit and Relief directly, by liveaudit through `a11y-wasm` and by barrierlab-cli
+through `a11y-static`. The identifiers are stable across all surfaces and declared in
+`Meta::ids`: 110 in tier 1 (structure), 35 in tier 2 (semantics), 21 in tier 3 (rendering),
+9 over stylesheets. The
 complete list is in the [rule reference](../a11y/reference/regeln.mdx).
 
 ## Structure
@@ -87,8 +89,8 @@ a suspicion that only a reviewer decides, it is `REVIEW`. The yardstick is WCAG
 2.2 with Understanding and Techniques (Fxx are failure techniques, everything else
 only sufficient), the W3C's ACT rules and, for comparison, axe-core.
 
-All `FAIL` findings with a criterion were reviewed (as of 0.26.0,
-auditmysite#779):
+All `FAIL` findings with a criterion were reviewed (casoon/auditmysite#779,
+first in 0.26.0):
 
 | Rule | Decision | Rationale |
 |---|---|---|

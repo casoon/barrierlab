@@ -10,10 +10,8 @@ read the syntax the check needs.
 
 ## Status
 
-0.2.1 on crates.io, used by auditmysite (`src/html_conform/`) and
-astro-post-audit (`checks/html_validation.rs`). `main` contains changes
-after 0.2.1: MSRV raised to 1.88, additional findings (`img` without `alt`, interactive
-content in `a`).
+On [crates.io](https://crates.io/crates/html-conform), used by auditmysite (`src/html_conform/`)
+and astro-post-audit (`checks/html_validation.rs`). MSRV 1.88.
 
 **With the move, the `=` pins are gone.** Previously html-conform depended on exact
 versions of four of its six dependencies, because every change needed a

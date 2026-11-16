@@ -10,8 +10,9 @@ auditmysite via a live page in Chrome, astro-post-audit via a built
 
 ## Status
 
-0.5.0, families `robots`, `meta`, `social`, `structured_data` and `hreflang`. More follow
-individually; render-blocking was examined and stays out (shared, it would be about
+On [crates.io](https://crates.io/crates/web-checks), used by auditmysite and
+astro-post-audit. Families `robots`, `meta`, `social`, `structured_data`, `hreflang` and
+`third_party`. More follow individually; render-blocking was examined and stays out (shared, it would be about
 five lines, the rest are different checks).
 
 ## What the package does not do

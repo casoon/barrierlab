@@ -4,7 +4,7 @@ description: "Was im Repository liegt und wo die offenen Aufgaben stehen."
 order: 5
 ---
 
-**Stand: 2026-11-11**
+**Stand: 2026-11-16**
 
 ## Was ist das
 

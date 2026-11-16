@@ -10,8 +10,10 @@ over a browser AX tree and over the live page.
 
 ## Status
 
-0.26.0 on crates.io. Used by `accname`, `a11y-rules` and all hosts;
-auditmysite builds a tree from CDP data out of it in `dom_document.rs`.
+On [crates.io](https://crates.io/crates/a11y-dom), versioned in lockstep with `a11y-report`,
+`accname` and `a11y-rules`. Used by `accname`, `style-cascade`, `a11y-rules`, `a11y-static`,
+`a11y-wasm` and the hosts auditmysite, astro-post-audit and Relief; auditmysite builds a tree
+from CDP data out of it in `dom_document.rs`.
 
 ## Structure
 

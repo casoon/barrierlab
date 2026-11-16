@@ -12,9 +12,9 @@ It does no layout and runs no scripts.
 
 ## Status
 
-0.1.0, not yet published. Used by `a11y-rules` for the selector match of its stylesheet rules,
-and by `barrierlab-cli` as the rendering tier of a browser-free audit. astro-post-audit is the
-planned second host for the cascade (casoon/astro-post-audit#115).
+On [crates.io](https://crates.io/crates/style-cascade). Used by `a11y-rules` for the selector
+match of its stylesheet rules, by `a11y-static` as the rendering tier of a browser-free audit,
+and by the hosts auditmysite and astro-post-audit (casoon/astro-post-audit#115).
 
 Compared with Chrome's `getComputedStyle` on five real pages (casoon.dev, the auditmysite and
 barrierlab sites, Hacker News, a Wikipedia article; 1280 px light, dark and 390 px wide where the

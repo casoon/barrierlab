@@ -11,9 +11,9 @@ discovery, and the right order of `run_full` and `run_stylesheets`.
 
 ## Status
 
-0.1.0, not yet published. `barrierlab-cli` will adopt it once it is on crates.io; it does
-not yet. The crate is the third place the same chain exists, and astro-post-audit
-(casoon/astro-post-audit#115) is the second consumer of the cascade.
+On [crates.io](https://crates.io/crates/a11y-static). Used by barrierlab-cli (not yet
+published), which leaves the whole chain to it. auditmysite and astro-post-audit still wire
+`accname` and `style-cascade` themselves.
 
 ## Structure
 

@@ -12,9 +12,9 @@ core"), apart from a dev-dependency of `xpath-eval`'s tests.
 
 ## Status
 
-0.1.0, not yet published. The first version of a new crate has to be published by hand (see
-[Releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md)). Only `roxmltree`; other trees (`xmltree`, `quick-xml` DOMs) are
-open under casoon/barrierlab#75.
+On [crates.io](https://crates.io/crates/xml-adapters). Only `roxmltree`; adapters for other
+trees (`xmltree`, `quick-xml` DOMs) have no user yet and get an issue once one needs them
+(see casoon/barrierlab#75).
 
 ## Structure
 
