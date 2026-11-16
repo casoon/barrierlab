@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.4] - 2026-11-16
+
+### Fixed
+
+- **Tastatur:** `keyboard/scrollable-region-not-focusable` zählt Bilder mit Alternativtext als Inhalt; ein scrollender Streifen aus Logos ohne Text wurde übersehen (ACT 0ssw9k).
+
 ## [0.30.3] - 2026-11-16
 
 ### Added

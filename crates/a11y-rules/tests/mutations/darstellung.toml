@@ -20,6 +20,15 @@ expect = "killed"
 note = "Die frühere Rundungstoleranz; der Grenzfall 4,49995:1 muss sie töten."
 
 [[mutation]]
+id = "keyboard/scrollable-region-not-focusable"
+file = "src/presentation.rs"
+kind = "drop-condition"
+find = '''            .any(|d| d.is_element("img") && d.attr("alt").is_some_and(|a| !a.trim().is_empty()))'''
+replace = '''            .any(|_| false)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
 id = "contrast/text-insufficient"
 file = "src/rendering.rs"
 kind = "drop-condition"

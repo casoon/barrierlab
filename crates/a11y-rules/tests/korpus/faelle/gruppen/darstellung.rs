@@ -561,6 +561,12 @@ fn scroll_area() -> Vec<Fall> {
             "ACT 0ssw9k: no visible text content to reach",
         )
         .variant("ohne Text"),
+        fail(
+            id,
+            r#"<div style="--scroll-overflow:160px"><img src="a.png" alt="W3C"><img src="b.png" alt="EU"></div>"#,
+            "ACT 0ssw9k Failed Example 2: images with alternative text are content to reach",
+        )
+        .variant("Bilder mit alt"),
         negative(
             id,
             r#"<div inert style="--scroll-overflow:100px">Long text</div>"#,

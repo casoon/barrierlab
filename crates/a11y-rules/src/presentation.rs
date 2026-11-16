@@ -410,6 +410,14 @@ fn inert<'a, N: Node<'a>>(n: N) -> bool {
         .any(|a| a.has_attr("inert"))
 }
 
+/// Ob Scrollen etwas zeigen würde: Text oder ein Bild mit Alternativtext
+/// (ACT 0ssw9k, Failed Example 2: eine Reihe Logos mit `alt`).
+fn has_content<'a, N: Node<'a>>(n: N) -> bool {
+    !subtree_text(n).trim().is_empty()
+        || descendants(n)
+            .any(|d| d.is_element("img") && d.attr("alt").is_some_and(|a| !a.trim().is_empty()))
+}
+
 /// 2.1.1: Ein Bereich, dessen Inhalt scrollt, muss per Tastatur erreichbar
 /// sein — selbst (`tabindex="0"`) oder über ein fokussierbares Element darin.
 /// Sonst bleibt der verdeckte Teil für Tastaturnutzer unerreichbar.
@@ -429,7 +437,7 @@ pub(crate) fn scroll_area<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
         };
         measured = true;
         if overhang <= SCROLL_BUFFER_PX
-            || subtree_text(n).trim().is_empty()
+            || !has_content(n)
             || inert(n)
             || per_tab_reachable(n)
             || descendants(n).any(|d| per_tab_reachable(d) && !inert(d))

@@ -11,6 +11,22 @@
 //! `--summary <file>` also writes the summary as JSON, `--markdown <file>` the
 //! per-rule table for the documentation.
 //!
+//! With a browser as host, auditmysite renders the test cases in Chrome and
+//! the runner reads its per-page reports instead of running `a11y-static`:
+//!
+//! ```text
+//! cargo run --release --manifest-path xtask/act/Cargo.toml -- target/act \
+//!   --urls target/act/urls.txt
+//! auditmysite --url-file target/act/urls.txt --modules a11y -f json \
+//!   --per-page-reports -o target/act/auditmysite
+//! cargo run --release --manifest-path xtask/act/Cargo.toml -- target/act \
+//!   --auditmysite target/act/auditmysite
+//! ```
+//!
+//! auditmysite reports the BarrierLab rules it has adopted under the same IDs;
+//! a rule it has not adopted is listed as not run, and its cases come out
+//! `cantTell`. The EARL report is then `<cache>/earl-auditmysite.json`.
+//!
 //! The outcome of one test case for one ACT rule, from the findings of the
 //! mapped BarrierLab rules (see [`MAPPING`]):
 //!
@@ -201,6 +217,67 @@ fn outcome(report: &Report, ids: &[&str]) -> &'static str {
     if ran { "passed" } else { "cantTell" }
 }
 
+/// The outcome of one test case from an auditmysite page report: the same
+/// decision as [`outcome`], over `findings[].contract.outcome` and
+/// `rule_outcomes[]` (a rule counts as run when one viewport ran it).
+fn outcome_auditmysite(page: &Value, ids: &[&str]) -> &'static str {
+    let mine = |v: &Value| v.as_str().is_some_and(|id| ids.contains(&id));
+    let verdicts: Vec<&str> = page["findings"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|f| mine(&f["rule_id"]))
+        .map(|f| f["contract"]["outcome"].as_str().unwrap_or(""))
+        .collect();
+    if verdicts.contains(&"fail") {
+        return "failed";
+    }
+    if !verdicts.is_empty() {
+        return "cantTell";
+    }
+    let runs = page["rule_outcomes"].as_array();
+    // Findings with outcome review land in `accessibility_assessments`, not in
+    // `findings[]`; `rule_outcomes` still counts them. A rule that reported
+    // something did not pass.
+    let reported = runs
+        .into_iter()
+        .flatten()
+        .any(|r| mine(&r["rule_id"]) && r["findings"].as_u64().is_some_and(|n| n > 0));
+    if reported {
+        return "cantTell";
+    }
+    let ran = ids.iter().all(|id| {
+        runs.into_iter()
+            .flatten()
+            .any(|r| r["rule_id"] == *id && r.get("not_run").is_none())
+    });
+    if ran { "passed" } else { "cantTell" }
+}
+
+/// The page reports auditmysite wrote with `--per-page-reports`, by URL.
+fn auditmysite_pages(dir: &Path) -> BTreeMap<String, Value> {
+    let mut pages = BTreeMap::new();
+    for entry in fs::read_dir(dir).expect("auditmysite report directory") {
+        let path = entry.expect("directory entry").path();
+        if path.extension().is_none_or(|e| e != "json") {
+            continue;
+        }
+        let Ok(report) = serde_json::from_str::<Value>(&fs::read_to_string(&path).unwrap()) else {
+            continue;
+        };
+        // `index.json` lists the same URLs without findings; only full page
+        // reports carry `rule_outcomes`.
+        for page in report["pages"].as_array().into_iter().flatten() {
+            if let Some(url) = page["url"].as_str()
+                && page.get("rule_outcomes").is_some()
+            {
+                pages.insert(url.to_string(), page.clone());
+            }
+        }
+    }
+    pages
+}
+
 /// One test case: expected outcome, actual outcome, URL.
 type Case = (String, &'static str, String);
 
@@ -209,13 +286,19 @@ fn main() {
     let cache = PathBuf::from(args.next().unwrap_or_else(|| "target/act".into()));
     let mut summary_out = None;
     let mut markdown_out = None;
+    let mut urls_out = None;
+    let mut auditmysite = None;
     while let Some(a) = args.next() {
         match a.as_str() {
             "--summary" => summary_out = args.next().map(PathBuf::from),
             "--markdown" => markdown_out = args.next().map(PathBuf::from),
+            "--urls" => urls_out = args.next().map(PathBuf::from),
+            "--auditmysite" => auditmysite = args.next().map(PathBuf::from),
             _ => {}
         }
     }
+    let browser_pages = auditmysite.as_deref().map(auditmysite_pages);
+    let mut urls = Vec::new();
     let index: Value = serde_json::from_str(
         &fs::read_to_string(cache.join("testcases.json")).expect("run xtask/act/fetch.py first"),
     )
@@ -236,8 +319,17 @@ fn main() {
             Some(_) if !url.ends_with(".html") && HTML_PAGE_ONLY.contains(&rule.as_str()) => {
                 "inapplicable"
             }
+            Some(ids) if browser_pages.is_some() => {
+                urls.push(url.clone());
+                match browser_pages.as_ref().and_then(|p| p.get(&url)) {
+                    Some(page) => outcome_auditmysite(page, ids),
+                    // No report: the page did not load in the browser.
+                    None => "cantTell",
+                }
+            }
             Some(ids) => match fs::read_to_string(local(&cache, &url)) {
                 Ok(html) => {
+                    urls.push(url.clone());
                     let page = Page::parse(&html);
                     let report = page.audit(
                         &sheets(&page, &cache, &url),
@@ -336,23 +428,34 @@ fn main() {
     }
     println!("test cases of implemented rules: {cases:?}");
 
+    if let Some(out) = urls_out {
+        fs::write(out, urls.join("\n") + "\n").expect("write URL list");
+    }
+    let (assertor, earl_file) = match auditmysite {
+        Some(_) => (
+            "auditmysite (BarrierLab rules in Chrome)",
+            "earl-auditmysite.json",
+        ),
+        None => ("BarrierLab a11y-static", "earl.json"),
+    };
     let report = json!({
         "@context": "https://act-rules.github.io/earl-context.json",
         "@graph": [{
             "@type": "Assertor",
-            "name": "BarrierLab a11y-static",
+            "name": assertor,
             "release": { "revision": env!("CARGO_PKG_VERSION") },
             "assertions": earl,
         }],
     });
     fs::write(
-        cache.join("earl.json"),
+        cache.join(earl_file),
         serde_json::to_string_pretty(&report).unwrap(),
     )
-    .expect("write earl.json");
+    .expect("write EARL report");
     if let Some(out) = summary_out {
         let summary = json!({
             "source": "https://act-rules.github.io/testcases.json",
+            "host": assertor,
             "testcases": index["count"],
             "rules": total,
             "consistency": counts,
