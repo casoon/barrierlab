@@ -25,4 +25,6 @@ pub use cascade::{Cascade, RuleSet, Specified};
 pub use imports::{
     ExpandedImports, Import, ImportLayer, Resolution, expand_imports, imports_in, wrap_media,
 };
+mod pairs;
+pub use pairs::{PaintLayer, compose_color_pairs, gradient_stops, shadow_colors};
 mod style;
