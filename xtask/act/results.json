@@ -1,12 +1,12 @@
 {
   "cases": {
     "cantTell": 50,
-    "correct": 556,
-    "wrong": 5
+    "correct": 557,
+    "wrong": 4
   },
   "consistency": {
-    "consistent": 34,
-    "not consistent": 3,
+    "consistent": 35,
+    "not consistent": 2,
     "partial": 6,
     "untested": 45
   },
@@ -136,16 +136,10 @@
         "label-in-name/mismatch"
       ],
       "cases": 13,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Visible label is part of accessible name",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "passed",
-          "url": "https://act-rules.github.io/testcases/2ee8b8/65be0004543e57d44dd4a53d9f582c482503727c.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "307n5z",

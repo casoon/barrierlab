@@ -42,12 +42,38 @@ pub enum Scope {
 pub(crate) struct Hidden {
     not_rendered: HashSet<NodeId>,
     skipped: HashSet<NodeId>,
+    /// Nicht dargestellt oder in einer Ligatur-Symbolschrift gezeichnet:
+    /// Der Text darunter erscheint als Symbol, nicht als Wort (siehe
+    /// [`GLYPHS_ARE_NOT_TEXT`]).
+    not_rendered_or_glyph: HashSet<NodeId>,
+}
+
+/// Regeln, für die Text in einer Ligatur-Symbolschrift kein sichtbarer Text
+/// ist. `<button aria-label="Find">search</button>` in `Material Icons` zeigt
+/// eine Lupe, kein „search" (ACT 2ee8b8, „characters expressing non-text
+/// content"). Für andere Regeln bleibt der Text, was er ist: Er steht im
+/// Accessibility-Tree und wird vorgelesen.
+pub(crate) const GLYPHS_ARE_NOT_TEXT: &[&str] = &["label-in-name/mismatch"];
+
+/// Ob die erste Schrift eines berechneten `font-family` eine
+/// Ligatur-Symbolschrift ist, die ein Wort als Symbol zeichnet. Nur
+/// Ligaturschriften: Font Awesome und ähnliche zeichnen über `::before` und
+/// haben keinen Textinhalt. Beleg: ACT 2ee8b8 (Material Icons).
+fn ligature_icon_font(family: &str) -> bool {
+    let first = family
+        .split(',')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .trim_matches(['"', '\''])
+        .to_ascii_lowercase();
+    first.starts_with("material icons") || first.starts_with("material symbols")
 }
 
 impl Hidden {
     /// Ohne berechnete Stile: versteckt ist, was das `hidden`-Attribut trägt.
     pub(crate) fn by_attribute<D: Document>(doc: &D) -> Self {
-        Self::determine(doc, |n| n.has_attr("hidden"))
+        Self::determine(doc, |n| n.has_attr("hidden"), |_| false)
     }
 
     /// Mit berechneten Stilen: `display: none` und `visibility: hidden`.
@@ -58,14 +84,26 @@ impl Hidden {
     /// `visible` sein; ein solcher Nachfahre fällt hier mit weg. Das ist
     /// selten und die bewusste Grenze dieser Sicht.
     pub(crate) fn by_style<D: Rendering>(doc: &D) -> Self {
-        Self::determine(doc, |n| match doc.computed_style(n) {
-            Some(_) if invisible_by_ua(n) => n.has_attr("hidden"),
-            Some(style) => hidden_per_style(&style),
-            None => n.has_attr("hidden"),
-        })
+        Self::determine(
+            doc,
+            |n| match doc.computed_style(n) {
+                Some(_) if invisible_by_ua(n) => n.has_attr("hidden"),
+                Some(style) => hidden_per_style(&style),
+                None => n.has_attr("hidden"),
+            },
+            |n| {
+                doc.computed_style(n)
+                    .and_then(|s| s.font_family)
+                    .is_some_and(|f| ligature_icon_font(&f))
+            },
+        )
     }
 
-    fn determine<'d, D: Document>(doc: &'d D, hidden: impl Fn(D::N<'d>) -> bool) -> Self {
+    fn determine<'d, D: Document>(
+        doc: &'d D,
+        hidden: impl Fn(D::N<'d>) -> bool,
+        glyph: impl Fn(D::N<'d>) -> bool,
+    ) -> Self {
         let root = doc.root();
         let collect_where = |also: &dyn Fn(D::N<'d>) -> bool| {
             let mut away = HashSet::new();
@@ -102,7 +140,15 @@ impl Hidden {
         Hidden {
             not_rendered: collect_where(&|_| false),
             skipped: collect_where(&|n| n.attr("aria-hidden") == Some("true")),
+            not_rendered_or_glyph: collect_where(&glyph),
         }
+    }
+
+    fn for_rule(&self, scope: Scope, ids: &[&str]) -> Option<&HashSet<NodeId>> {
+        if scope == Scope::Rendered && ids.iter().any(|id| GLYPHS_ARE_NOT_TEXT.contains(id)) {
+            return Some(&self.not_rendered_or_glyph);
+        }
+        self.for_scope(scope)
     }
 
     fn for_scope(&self, scope: Scope) -> Option<&HashSet<NodeId>> {
@@ -140,10 +186,12 @@ pub(crate) struct Visibility<'d, D> {
 }
 
 impl<'d, D> Visibility<'d, D> {
-    pub(crate) fn new(doc: &'d D, hidden: &'d Hidden, scope: Scope) -> Self {
+    /// Die Sicht einer Regel: ihr Geltungsbereich, für die Regeln in
+    /// [`GLYPHS_ARE_NOT_TEXT`] ohne Text in einer Ligatur-Symbolschrift.
+    pub(crate) fn new(doc: &'d D, hidden: &'d Hidden, scope: Scope, ids: &[&str]) -> Self {
         Visibility {
             doc,
-            away: hidden.for_scope(scope),
+            away: hidden.for_rule(scope, ids),
         }
     }
 }
@@ -426,7 +474,7 @@ mod tests {
         let arena = Arena::builder().open("html").close().build();
         let host = Full(&arena);
         let v = Hidden::by_attribute(&host);
-        let visibility = Visibility::new(&host, &v, Scope::Markup);
+        let visibility = Visibility::new(&host, &v, Scope::Markup, &[]);
         let n = visibility.root();
         assert!(visibility.computed_style(n).is_some());
         assert!(visibility.bounds(n).is_some());

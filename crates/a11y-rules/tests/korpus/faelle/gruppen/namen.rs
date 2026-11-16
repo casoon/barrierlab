@@ -691,6 +691,25 @@ fn label_in_name() -> Vec<Fall> {
             "ACT 2ee8b8: Name aus dem Inhalt enthält ihn",
         )
         .variant("Name aus Inhalt"),
+        negative(
+            ID,
+            r#"<button aria-label="Find" style="font-family: 'Material Icons'">search</button>"#,
+            "ACT 2ee8b8 (Passed, 65be00): Ligatur in einer Symbolschrift zeichnet eine Lupe, keinen Text",
+        )
+        .variant("Ligatur-Symbolschrift"),
+        fail(
+            ID,
+            r#"<button aria-label="Find" style="font-family: 'Material Icons'">search</button>"#,
+            "Ohne berechnete Stile ist die Symbolschrift unbekannt: der Text zählt",
+        )
+        .variant("Ligatur ohne Stile")
+        .mode(Mode::Semantics),
+        negative(
+            ID,
+            r#"<button aria-label="Search all"><span style="font-family: 'Material Symbols Outlined'">search</span> Search all</button>"#,
+            "ACT 2ee8b8: das Symbol fällt weg, der übrige sichtbare Text steht im Namen",
+        )
+        .variant("Symbol plus Text"),
         na(
             ID,
             r#"<p aria-label="Other">Text</p>"#,

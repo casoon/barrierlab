@@ -185,7 +185,11 @@ fn without_stylesheets_reason(locale: Locale) -> &'static str {
 fn run_structure<D: Document>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
     for rule in structure_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        (rule.run)(
+            &Visibility::new(doc, v, rule.meta.scope, rule.meta.ids),
+            locale,
+            &mut out,
+        );
         record_runs(&rule.meta, out, report);
     }
 }
@@ -248,7 +252,11 @@ pub fn run_with_semantics_in<D: Semantics>(doc: &D, locale: Locale) -> Report {
 fn run_semantics<D: Semantics>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
     for rule in semantics_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        (rule.run)(
+            &Visibility::new(doc, v, rule.meta.scope, rule.meta.ids),
+            locale,
+            &mut out,
+        );
         record_runs(&rule.meta, out, report);
     }
 }
@@ -256,7 +264,11 @@ fn run_semantics<D: Semantics>(doc: &D, v: &Hidden, locale: Locale, report: &mut
 fn run_rendering<D: Rendering>(doc: &D, v: &Hidden, locale: Locale, report: &mut Report) {
     for rule in rendering_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
-        (rule.run)(&Visibility::new(doc, v, rule.meta.scope), locale, &mut out);
+        (rule.run)(
+            &Visibility::new(doc, v, rule.meta.scope, rule.meta.ids),
+            locale,
+            &mut out,
+        );
         record_runs(&rule.meta, out, report);
     }
 }
@@ -353,7 +365,7 @@ pub fn run_stylesheets_in<D: Document>(
     for rule in stylesheet_rules::<Visibility<'_, D>>() {
         let mut out: Vec<Finding> = Vec::new();
         (rule.run)(
-            &Visibility::new(doc, &v, rule.meta.scope),
+            &Visibility::new(doc, &v, rule.meta.scope, rule.meta.ids),
             sheets,
             locale,
             &mut out,
