@@ -702,3 +702,12 @@ replace = '''
         .is_some_and(|_| false)
 '''
 expect = "killed"
+
+[[mutation]]
+id = "language/part-invalid"
+file = "src/document.rs"
+kind = "remove"
+find = 'NodeKind::Element if !k.has_attr("lang") => {'
+replace = 'NodeKind::Element => {'
+test = "korpus"
+expect = "killed"

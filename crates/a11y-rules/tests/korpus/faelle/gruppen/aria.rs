@@ -712,6 +712,74 @@ pub fn cases() -> Vec<Fall> {
             "accname 1.2: aria-labelledby macht den Tooltip zum Namen, er wird angesagt",
         )
         .variant("aria-labelledby"),
+        // --- aria/presentation-conflict
+        fail(
+            "aria/presentation-conflict",
+            r#"<nav role="presentation" aria-label="global"><a href="/">ACT rules</a></nav>"#,
+            "WAI-ARIA 1.2 Presentational Roles Conflict Resolution; ACT 46ca7f",
+        ),
+        fail(
+            "aria/presentation-conflict",
+            r#"<img src="a.png" alt="" aria-labelledby="l"><span hidden id="l">W3C logo</span>"#,
+            "HTML-AAM: img mit alt=\"\" hat die Rolle presentation; ACT 46ca7f",
+        )
+        .variant("img alt=\"\" mit aria-labelledby"),
+        fail(
+            "aria/presentation-conflict",
+            r#"<span role="none" tabindex="0">Mehr</span>"#,
+            "WAI-ARIA 1.2: fokussierbar hebt presentation auf",
+        )
+        .variant("fokussierbar"),
+        negative(
+            "aria/presentation-conflict",
+            r#"<img src="a.png" role="presentation" alt="W3C logo">"#,
+            "ACT 46ca7f: alt ist kein globales ARIA-Attribut",
+        ),
+        negative(
+            "aria/presentation-conflict",
+            r#"<nav role="presentation"><a href="/" aria-label="ACT rules">ACT rules</a></nav>"#,
+            "ACT 46ca7f: das Attribut am Kind zählt nicht",
+        )
+        .variant("Attribut am Kind"),
+        na(
+            "aria/presentation-conflict",
+            r#"<img src="a.png" aria-label="W3C logo">"#,
+            "ACT 46ca7f: nicht als schmückend ausgezeichnet",
+        ),
+        na(
+            "aria/presentation-conflict",
+            r#"<img src="a.png" alt="" hidden aria-label="x">"#,
+            "ACT 46ca7f: nicht im Accessibility-Tree",
+        )
+        .variant("hidden"),
+        // --- aria/presentational-children-focusable
+        fail(
+            "aria/presentational-children-focusable",
+            r#"<button>Save <span role="button" tabindex="0" aria-label="save options">▼</span></button>"#,
+            "WAI-ARIA 1.2 Children Presentational: True; ACT 307n5z",
+        ),
+        fail(
+            "aria/presentational-children-focusable",
+            r#"<ul role="menu"><li role="menuitemcheckbox" aria-checked="true"><input type="checkbox" checked> Sort</li></ul>"#,
+            "ACT 307n5z: Eingabefeld in einem menuitemcheckbox",
+        )
+        .variant("explizite Rolle"),
+        negative(
+            "aria/presentational-children-focusable",
+            r#"<ul role="menu"><li role="menuitemcheckbox" aria-checked="true"><input type="checkbox" role="none" disabled checked> Sort</li></ul>"#,
+            "ACT 307n5z: deaktiviert ist nicht fokussierbar",
+        ),
+        negative(
+            "aria/presentational-children-focusable",
+            r#"<button>Save</button><button aria-label="save options">▼</button>"#,
+            "ACT 307n5z: Geschwister statt Kind",
+        )
+        .variant("Geschwister"),
+        na(
+            "aria/presentational-children-focusable",
+            r#"<a href="/">W3C Website</a>"#,
+            "ACT 307n5z: keine Rolle mit präsentationalen Kindern",
+        ),
         na(
             "patterns/tooltip-unreferenced",
             r#"<div role="note" id="n">Kein Tooltip</div>"#,

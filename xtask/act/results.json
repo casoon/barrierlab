@@ -1,14 +1,14 @@
 {
   "cases": {
-    "cantTell": 56,
-    "correct": 451,
+    "cantTell": 60,
+    "correct": 546,
     "wrong": 5
   },
   "consistency": {
-    "consistent": 23,
-    "not consistent": 6,
-    "partial": 8,
-    "untested": 51
+    "consistent": 33,
+    "not consistent": 4,
+    "partial": 6,
+    "untested": 45
   },
   "perRule": [
     {
@@ -99,9 +99,11 @@
     },
     {
       "act": "24afc2",
-      "barrierlab": null,
+      "barrierlab": [
+        "text-spacing/letter-important"
+      ],
       "cases": 16,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Letter spacing in style attributes is not !important",
       "wrong": []
@@ -146,9 +148,11 @@
     },
     {
       "act": "307n5z",
-      "barrierlab": null,
+      "barrierlab": [
+        "aria/presentational-children-focusable"
+      ],
       "cases": 7,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element with presentational children has no focusable content",
       "wrong": []
@@ -177,16 +181,18 @@
         "ids/duplicate"
       ],
       "cases": 10,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Id attribute value is unique",
       "wrong": []
     },
     {
       "act": "46ca7f",
-      "barrierlab": null,
+      "barrierlab": [
+        "aria/presentation-conflict"
+      ],
       "cases": 10,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element marked as decorative is not exposed",
       "wrong": []
@@ -227,7 +233,7 @@
         "images/input-alt-missing"
       ],
       "cases": 12,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Image button has non-empty accessible name",
       "wrong": []
@@ -312,7 +318,7 @@
         "keyboard/hidden-focusable"
       ],
       "cases": 14,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element with aria-hidden has no content in sequential focus navigation",
       "wrong": []
@@ -339,9 +345,11 @@
     },
     {
       "act": "78fd32",
-      "barrierlab": null,
+      "barrierlab": [
+        "text-spacing/line-height-important"
+      ],
       "cases": 21,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Line height in style attributes is not !important",
       "wrong": []
@@ -383,7 +391,7 @@
         "objects/alt-missing"
       ],
       "cases": 14,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Object element rendering non-text content has non-empty accessible name",
       "wrong": []
@@ -410,9 +418,11 @@
     },
     {
       "act": "9e45ec",
-      "barrierlab": null,
+      "barrierlab": [
+        "text-spacing/word-important"
+      ],
       "cases": 16,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Word spacing in style attributes is not !important",
       "wrong": []
@@ -702,7 +712,7 @@
         "headings/none"
       ],
       "cases": 14,
-      "consistency": "not consistent",
+      "consistency": "partial",
       "deprecated": false,
       "name": "Bypass Blocks of Repeated Content",
       "wrong": []
@@ -729,9 +739,11 @@
     },
     {
       "act": "de46e4",
-      "barrierlab": null,
+      "barrierlab": [
+        "language/part-invalid"
+      ],
       "cases": 19,
-      "consistency": "untested",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Element with lang attribute has valid language tag",
       "wrong": []
@@ -879,7 +891,7 @@
         "headings/empty"
       ],
       "cases": 15,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Heading has non-empty accessible name",
       "wrong": []

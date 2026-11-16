@@ -105,6 +105,62 @@ fn reading_text<'a, N: Node<'a>>(n: N, out: &mut String) {
     }
 }
 
+// --- language/part-invalid --------------------------------------------------
+
+/// 3.1.2: Ein Element unterhalb von `<html>` trägt ein `lang`, das keine
+/// Sprache nennt (`dutch`, `eng`, `#!`), und bestimmt die Sprache von Text,
+/// der gezeichnet oder vorgelesen wird. Geprüft wird wie bei
+/// `document/lang-invalid`.
+///
+/// Es zählt nur Inhalt, dessen nächstes `lang` dieses ist: Ein inneres
+/// Element mit eigenem `lang` nimmt seinen Text mit (ACT de46e4, Passed
+/// Example 4). Text unter `aria-hidden` oder außerhalb des Bildschirms zählt
+/// mit, nicht Dargestelltes nicht (Scope `Rendered`). Ein Bild trägt Text
+/// über ein nicht leeres `alt`. `lang=""` nennt ausdrücklich keine Sprache
+/// und ist kein Befund. Beleg: ACT de46e4.
+pub(crate) fn part_invalid<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let root = doc.root().id();
+    for n in elements(doc) {
+        let Some(l) = n.attr("lang") else {
+            continue;
+        };
+        if n.id() == root || l.is_empty() || crate::structure::is_plausible_lang(l) {
+            continue;
+        }
+        let mut stack: Vec<_> = n.children().collect();
+        let mut carries = false;
+        while let Some(k) = stack.pop() {
+            match k.kind() {
+                NodeKind::Text => carries |= !k.text().trim().is_empty(),
+                NodeKind::Element if !k.has_attr("lang") => {
+                    carries |=
+                        k.is_element("img") && k.attr("alt").is_some_and(|a| !a.trim().is_empty());
+                    stack.extend(k.children());
+                }
+                _ => {}
+            }
+        }
+        if !carries {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "language/part-invalid",
+                tr!(
+                    locale,
+                    "The language code \"{l}\" is not a valid BCP-47 tag; the text in this \
+                     element gets no language.",
+                    "Der Sprachcode \"{l}\" ist kein gültiges BCP-47-Kürzel; der Text in diesem \
+                     Element bekommt keine Sprache."
+                ),
+            )
+            .with_severity(Severity::Medium)
+            .with_wcag(["3.1.2"])
+            .at(at(n.id())),
+        );
+    }
+}
+
 /// Die erkannte Sprache eines Textes: mindestens fünf Funktionswörter der
 /// einen und höchstens eines der anderen.
 fn detected(words: &[String]) -> Option<&'static str> {

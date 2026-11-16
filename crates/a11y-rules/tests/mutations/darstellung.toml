@@ -375,3 +375,30 @@ replace = '''        if true'''
 test = "korpus"
 expect = "killed"
 note = "AA offen, AAA an jeder Stelle verfehlt: FAIL unter 1.4.6."
+
+[[mutation]]
+id = "text-spacing/letter-important"
+file = "src/stylesheet_rules.rs"
+kind = "threshold"
+find = '("letter-spacing", "text-spacing/letter-important", 0.12),'
+replace = '("letter-spacing", "text-spacing/letter-important", 0.13),'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "text-spacing/word-important"
+file = "src/stylesheet_rules.rs"
+kind = "threshold"
+find = '("word-spacing", "text-spacing/word-important", 0.16),'
+replace = '("word-spacing", "text-spacing/word-important", 0.17),'
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "text-spacing/line-height-important"
+file = "src/stylesheet_rules.rs"
+kind = "threshold"
+find = '("line-height", "text-spacing/line-height-important", 1.5),'
+replace = '("line-height", "text-spacing/line-height-important", 1.51),'
+test = "korpus"
+expect = "killed"

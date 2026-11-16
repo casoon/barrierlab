@@ -10,6 +10,17 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.3] - 2026-11-16
+
+### Added
+
+- **ARIA:** `aria/presentation-conflict` meldet ein als schmückend ausgezeichnetes Element (`role="none"`/`"presentation"`, `<img alt="">`), das ein globales ARIA-Attribut oder seine Fokussierbarkeit doch im Accessibility-Tree hält.
+- **ARIA:** `aria/presentational-children-focusable` meldet Fokussierbares in einem Element mit präsentationalen Kindern (Button, Checkbox, Tab, Menüpunkt …).
+- **Sprache:** `language/part-invalid` meldet ein `lang` unterhalb von `<html>`, das kein gültiges BCP-47-Kürzel ist und die Sprache von Text bestimmt.
+- **Textabstände:** `text-spacing/letter-important`, `text-spacing/word-important` und `text-spacing/line-height-important` melden Abstände, die mit `!important` im `style`-Attribut unter den Werten aus 1.4.12 festgesetzt sind.
+
+Alle Regeln gehen auf Testfälle der W3C-ACT-Regeln zurück: [Ergebnis je Regel](https://casoon.github.io/barrierlab/docs/testing/act/).
+
 ## [0.30.2] - 2026-11-14
 
 ### Fixed

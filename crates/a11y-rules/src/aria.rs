@@ -12,7 +12,8 @@
 //! zählt jedes Kilobyte.
 
 use a11y_dom::{
-    Document, Node, NodeId, ScopedId, Semantics, ancestors, descendants, elements, scoped_id,
+    Document, Node, NodeId, NodeKind, ScopedId, Semantics, ancestors, descendants, elements,
+    scoped_id,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -916,6 +917,100 @@ fn carries_global<'a, N: Node<'a>>(n: N) -> bool {
 /// [`Semantics`].
 pub(crate) fn presentation_applies<'a, N: Node<'a>>(n: N) -> bool {
     matches!(explicit_role(n), Some("none" | "presentation")) && !carries_global(n) && !focusable(n)
+}
+
+// --- aria/presentation-conflict, aria/presentational-children-focusable ------
+
+/// 4.1.2 / 1.3.1: Als schmückend ausgezeichnet (`role="none"`/`"presentation"`
+/// oder `<img alt="">`), aber wegen eines globalen ARIA-Attributs oder weil
+/// fokussierbar doch im Accessibility-Tree — die Auszeichnung greift nicht
+/// (WAI-ARIA 1.2, „Presentational Roles Conflict Resolution"; HTML-AAM: `img`
+/// mit leerem `alt` hat die Rolle `presentation`). Was jemand verstecken
+/// wollte, liest der Screenreader dann doch vor. Beleg: ACT 46ca7f.
+pub(crate) fn presentation_conflict<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        let decorative = match explicit_role(n) {
+            Some(r) => matches!(r, "none" | "presentation"),
+            None => n.is_element("img") && n.attr("alt") == Some(""),
+        };
+        if decorative && (carries_global(n) || focusable(n)) {
+            out.push(
+                Finding::fail(
+                    "aria/presentation-conflict",
+                    pick!(
+                        locale,
+                        "The element is marked as decorative, but a global ARIA attribute or its \
+                         focusability keeps it in the accessibility tree.",
+                        "Das Element ist als schmückend ausgezeichnet, aber ein globales \
+                         ARIA-Attribut oder seine Fokussierbarkeit hält es im Accessibility-Tree.",
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.3.1", "4.1.2"])
+                .at(at(n.id())),
+            );
+        }
+    }
+}
+
+/// Rollen, deren Kinder präsentational sind (WAI-ARIA 1.2, „Children
+/// Presentational: True").
+const PRESENTATIONAL_CHILDREN: &[&str] = &[
+    "button",
+    "checkbox",
+    "img",
+    "math",
+    "menuitemcheckbox",
+    "menuitemradio",
+    "meter",
+    "option",
+    "progressbar",
+    "radio",
+    "scrollbar",
+    "separator",
+    "slider",
+    "switch",
+    "tab",
+];
+
+/// 4.1.2 / 1.3.1: Ein Element, dessen Kinder präsentational sind, enthält
+/// etwas Fokussierbares. Die Tastatur hält dort an, aber ein Screenreader
+/// findet im Baum weder Rolle noch Namen dafür (axe `nested-interactive`).
+/// Beleg: ACT 307n5z.
+pub(crate) fn presentational_children<D: Document>(
+    doc: &D,
+    locale: Locale,
+    out: &mut Vec<Finding>,
+) {
+    for n in elements(doc) {
+        let role = explicit_role(n).or(match n.local_name() {
+            "button" => Some("button"),
+            "option" => Some("option"),
+            "progress" => Some("progressbar"),
+            "meter" => Some("meter"),
+            _ => None,
+        });
+        if !role.is_some_and(|r| PRESENTATIONAL_CHILDREN.contains(&r)) {
+            continue;
+        }
+        if descendants(n).any(|d| d.kind() == NodeKind::Element && focusable(d)) {
+            out.push(
+                Finding::fail(
+                    "aria/presentational-children-focusable",
+                    pick!(
+                        locale,
+                        "A focusable element sits inside an element whose children are \
+                         presentational; screen readers get no role or name for it.",
+                        "In einem Element mit präsentationalen Kindern steckt ein fokussierbares \
+                         Element; Screenreader bekommen dafür weder Rolle noch Namen.",
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["1.3.1", "4.1.2"])
+                .at(at(n.id())),
+            );
+        }
+    }
 }
 
 fn focusable<'a, N: Node<'a>>(n: N) -> bool {

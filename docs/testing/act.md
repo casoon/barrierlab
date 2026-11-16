@@ -13,15 +13,16 @@ the ACT Rules Community Group, not by the tool's maker.
 
 ## Result
 
-Run of 14 November 2026 against all 1,134 test cases, with `a11y-static` 0.5.1 and
-`a11y-rules` 0.30.2 (the BarrierLab rules on the page source, no browser):
+Run of 16 November 2026 against all 1,134 test cases, with `a11y-static` 0.5.1 and
+`a11y-rules` 0.30.3 (the BarrierLab rules on the page source, no browser), counted the way the
+W3C counts:
 
 | | BarrierLab (own run) | axe-core 4.14.0 (W3C report of 31 October 2026) |
 |---|---|---|
-| ACT rules implemented consistently | 23 | 35 (30 WCAG rules, 5 proposed) |
-| implemented partially consistently | 8 | 9 |
+| ACT rules implemented consistently | 33 | 35 (30 WCAG rules, 5 proposed) |
+| implemented partially consistently | 6 | 9 |
 
-Of the 512 test cases of the rules BarrierLab maps, 451 come out right, 56 undecided and 5
+Of the 611 test cases of the rules BarrierLab maps, 546 come out right, 60 undecided and 5
 wrong. Three of the five need a script to run before the content exists (a shadow root built
 by script), which a check of the page source never sees. One is a false alarm on a button
 whose visible label is an icon-font ligature, one a missed refresh delay above 20 hours that
@@ -34,24 +35,35 @@ where a static decision is possible; the list is in
 answer where the page source does not hold the answer: background images, the length of a
 media file, layout, which block is the main content.
 
-The gap to axe-core is mostly rules that need a browser (focus, keyboard traps, scrolling,
-orientation) and rules BarrierLab does not map yet. The axe-core figures are the W3C's, from
+Of the 35 rules axe-core implements consistently, BarrierLab implements 28 consistently too,
+and it is consistent on 5 that axe-core is not. The 7 others are contrast, scrolling and
+orientation, which need a browser to decide, the AAA refresh delay, one missed context role
+and the icon-font false alarm. The axe-core figures are the W3C's, from
 its [implementation report](https://www.w3.org/WAI/standards-guidelines/act/implementations/axe-core/).
 The BarrierLab figures are this repository's own run and have not been submitted to the W3C.
 
 ## Categories
 
-The categories are those of the W3C implementation reports:
+The categories follow `getConsistency` in
+[act-rules/act-tools](https://github.com/act-rules/act-tools), the code behind the W3C
+implementation reports:
 
-- **consistent**: no passing or inapplicable example is reported as failing, every failing
-  example is reported as failing, and not every case is undecided;
-- **partial**: no false alarm, and at least one failing example is found;
-- **not consistent**: a false alarm, or no failing example found.
+- **consistent**: no passing or inapplicable example is reported as failing, no failing example
+  is reported as passing or inapplicable, every case has a result, and at least one failing
+  example is found. Undecided is allowed on some examples;
+- **partial**: no false alarm, and at least one failing example is found — or some case is
+  undecided and every inapplicable example is reported as passing or inapplicable;
+- **not consistent**: anything else.
+
+The W3C report also checks that the success criteria a tool names match the rule's; the run
+here does not repeat that check.
 
 A test case counts as failing for BarrierLab when one of the mapped rules reports `FAIL`; as
 undecided when they only report `REVIEW` or `UNTESTED`, or did not run; as passing otherwise.
-ACT rules that need human judgement (descriptive names, media alternatives) or a browser are
-not mapped and count as untested.
+A test case that is not an HTML page (SVG, XHTML, XML) is inapplicable for rules that apply
+to HTML pages only, and otherwise goes through the same check as an HTML page. ACT rules that
+need human judgement (descriptive names, media alternatives) or a browser are not mapped and
+count as untested.
 
 ## Per rule
 
@@ -60,22 +72,27 @@ not mapped and count as untested.
 | [Text has enhanced contrast](https://act-rules.github.io/rules/09o5cg) | partial | `contrast/text-enhanced`, `contrast/text-undetermined` | 1 of 29 |
 | [Scrollable element is keyboard accessible](https://act-rules.github.io/rules/0ssw9k) | not consistent | `keyboard/scrollable-region-not-focusable` | 0 of 10 |
 | [Image has non-empty accessible name](https://act-rules.github.io/rules/23a2a8) | consistent | `images/alt-missing`, `names/required-missing` | 0 of 18 |
+| [Letter spacing in style attributes is not !important](https://act-rules.github.io/rules/24afc2) | consistent | `text-spacing/letter-important` | 0 of 16 |
 | [HTML page has non-empty title](https://act-rules.github.io/rules/2779a5) | consistent | `document/title-missing`, `document/title-empty` | 0 of 11 |
 | [Visible label is part of accessible name](https://act-rules.github.io/rules/2ee8b8) | not consistent | `label-in-name/mismatch` | 1 of 13 |
-| [Id attribute value is unique](https://act-rules.github.io/rules/3ea0c8) | not consistent | `ids/duplicate` | 0 of 10 |
+| [Element with presentational children has no focusable content](https://act-rules.github.io/rules/307n5z) | consistent | `aria/presentational-children-focusable` | 0 of 7 |
+| [Id attribute value is unique](https://act-rules.github.io/rules/3ea0c8) | partial | `ids/duplicate` | 0 of 10 |
+| [Element marked as decorative is not exposed](https://act-rules.github.io/rules/46ca7f) | consistent | `aria/presentation-conflict` | 0 of 10 |
 | [Element with role attribute has required states and properties](https://act-rules.github.io/rules/4e8ab6) | consistent | `aria/required-attribute-missing`, `aria/combobox-popup-missing` | 0 of 8 |
-| [Image button has non-empty accessible name](https://act-rules.github.io/rules/59796f) | partial | `images/input-alt-missing` | 0 of 12 |
+| [Image button has non-empty accessible name](https://act-rules.github.io/rules/59796f) | consistent | `images/input-alt-missing` | 0 of 12 |
 | [HTML page lang and xml:lang attributes have matching values](https://act-rules.github.io/rules/5b7ae0) | consistent | `document/lang-mismatch` | 0 of 12 |
 | [ARIA state or property is permitted](https://act-rules.github.io/rules/5c01ea) | consistent | `aria/attribute-not-allowed`, `aria/attribute-prohibited` | 0 of 15 |
 | [ARIA attribute is defined in WAI-ARIA](https://act-rules.github.io/rules/5f99a7) | consistent | `aria/attribute-unknown` | 0 of 7 |
 | [Role attribute has valid value](https://act-rules.github.io/rules/674b10) | consistent | `aria/role-invalid` | 0 of 10 |
 | [ARIA state or property has valid value](https://act-rules.github.io/rules/6a7281) | consistent | `aria/attribute-value-invalid` | 0 of 24 |
-| [Element with aria-hidden has no content in sequential focus navigation](https://act-rules.github.io/rules/6cfa84) | partial | `keyboard/hidden-focusable` | 0 of 14 |
+| [Element with aria-hidden has no content in sequential focus navigation](https://act-rules.github.io/rules/6cfa84) | consistent | `keyboard/hidden-focusable` | 0 of 14 |
 | [Autocomplete attribute has valid value](https://act-rules.github.io/rules/73f2c2) | consistent | `forms/autocomplete-invalid` | 0 of 20 |
+| [Line height in style attributes is not !important](https://act-rules.github.io/rules/78fd32) | consistent | `text-spacing/line-height-important` | 0 of 21 |
 | [SVG element with explicit role has non-empty accessible name](https://act-rules.github.io/rules/7d6734) | consistent | `svg/name-missing` | 0 of 10 |
 | [Audio or video element avoids automatically playing audio](https://act-rules.github.io/rules/80f0bf) | not consistent | `media/audio-autoplay` | 0 of 8 |
-| [Object element rendering non-text content has non-empty accessible name](https://act-rules.github.io/rules/8fc3b6) | partial | `objects/alt-missing` | 0 of 14 |
+| [Object element rendering non-text content has non-empty accessible name](https://act-rules.github.io/rules/8fc3b6) | consistent | `objects/alt-missing` | 0 of 14 |
 | [Button has non-empty accessible name](https://act-rules.github.io/rules/97a4e1) | consistent | `buttons/name-missing` | 0 of 17 |
+| [Word spacing in style attributes is not !important](https://act-rules.github.io/rules/9e45ec) | consistent | `text-spacing/word-important` | 0 of 16 |
 | [Headers attribute specified on a cell refers to cells in the same table element](https://act-rules.github.io/rules/a25f45) | consistent | `tables/headers-attr-invalid` | 0 of 17 |
 | [Text has minimum contrast](https://act-rules.github.io/rules/afw4f7) | partial | `contrast/text-insufficient`, `contrast/text-undetermined` | 1 of 28 |
 | [Orientation of the page is not restricted using CSS transform property](https://act-rules.github.io/rules/b33eff) | not consistent | `orientation/root-rotated` | 0 of 10 |
@@ -87,11 +104,12 @@ not mapped and count as untested.
 | [Meta element has no refresh delay (no exception)](https://act-rules.github.io/rules/bisz58) | partial | `timing/meta-refresh` | 1 of 14 |
 | [Link has non-empty accessible name](https://act-rules.github.io/rules/c487ae) | consistent | `links/name-missing`, `images/area-alt-missing` | 0 of 28 |
 | [Iframe element has non-empty accessible name](https://act-rules.github.io/rules/cae760) | consistent | `frames/name-missing` | 0 of 10 |
-| [Bypass Blocks of Repeated Content](https://act-rules.github.io/rules/cf77f2) | not consistent | `headings/none` | 0 of 14 |
+| [Bypass Blocks of Repeated Content](https://act-rules.github.io/rules/cf77f2) | partial | `headings/none` | 0 of 14 |
 | [Table header cell has assigned cells](https://act-rules.github.io/rules/d0f69e) | consistent | `tables/header-without-data` | 0 of 16 |
+| [Element with lang attribute has valid language tag](https://act-rules.github.io/rules/de46e4) | consistent | `language/part-invalid` | 0 of 19 |
 | [Form field has non-empty accessible name](https://act-rules.github.io/rules/e086e5) | consistent | `forms/label-missing`, `names/required-missing` | 0 of 17 |
 | [ARIA required context role](https://act-rules.github.io/rules/ff89c9) | partial | `aria/required-parent-missing` | 1 of 15 |
-| [Heading has non-empty accessible name](https://act-rules.github.io/rules/ffd0e9) | partial | `headings/empty` | 0 of 15 |
+| [Heading has non-empty accessible name](https://act-rules.github.io/rules/ffd0e9) | consistent | `headings/empty` | 0 of 15 |
 | [Menuitem has non-empty accessible name](https://act-rules.github.io/rules/m6b1q3) | consistent | `names/required-missing` | 0 of 8 |
 | [Element in sequential focus order has visible focus](https://act-rules.github.io/rules/oj04fd) | consistent | `focus/outline-removed`, `focus/indicator-missing` | 0 of 9 |
 
