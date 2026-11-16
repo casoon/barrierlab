@@ -1,0 +1,951 @@
+{
+  "cases": {
+    "cantTell": 33,
+    "correct": 575,
+    "wrong": 3
+  },
+  "consistency": {
+    "consistent": 37,
+    "not consistent": 3,
+    "partial": 3,
+    "untested": 45
+  },
+  "host": "auditmysite (BarrierLab rules in Chrome)",
+  "perRule": [
+    {
+      "act": "047fe0",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has heading for non-repeated content",
+      "wrong": []
+    },
+    {
+      "act": "09o5cg",
+      "barrierlab": [
+        "contrast/text-enhanced",
+        "contrast/text-undetermined"
+      ],
+      "cases": 29,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Text has enhanced contrast",
+      "wrong": []
+    },
+    {
+      "act": "0ssw9k",
+      "barrierlab": [
+        "keyboard/scrollable-region-not-focusable"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Scrollable element is keyboard accessible",
+      "wrong": []
+    },
+    {
+      "act": "0va7u6",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML graphics contain no text",
+      "wrong": []
+    },
+    {
+      "act": "1a02b0",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio and visuals of video element have transcript",
+      "wrong": []
+    },
+    {
+      "act": "1ea59c",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has audio description",
+      "wrong": []
+    },
+    {
+      "act": "1ec09b",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has strict accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "23a2a8",
+      "barrierlab": [
+        "images/alt-missing",
+        "names/required-missing"
+      ],
+      "cases": 18,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Image has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "24afc2",
+      "barrierlab": [
+        "text-spacing/letter-important"
+      ],
+      "cases": 16,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Letter spacing in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "2779a5",
+      "barrierlab": [
+        "document/title-missing",
+        "document/title-empty"
+      ],
+      "cases": 11,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page has non-empty title",
+      "wrong": []
+    },
+    {
+      "act": "2eb176",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content has transcript",
+      "wrong": []
+    },
+    {
+      "act": "2ee8b8",
+      "barrierlab": [
+        "label-in-name/mismatch"
+      ],
+      "cases": 13,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Visible label is part of accessible name",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "passed",
+          "url": "https://act-rules.github.io/testcases/2ee8b8/65be0004543e57d44dd4a53d9f582c482503727c.html"
+        }
+      ]
+    },
+    {
+      "act": "307n5z",
+      "barrierlab": [
+        "aria/presentational-children-focusable"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element with presentational children has no focusable content",
+      "wrong": []
+    },
+    {
+      "act": "36b590",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Error message describes invalid form field value",
+      "wrong": []
+    },
+    {
+      "act": "3e12e1",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Block of repeated content is collapsible",
+      "wrong": []
+    },
+    {
+      "act": "3ea0c8",
+      "barrierlab": [
+        "ids/duplicate"
+      ],
+      "cases": 10,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Id attribute value is unique",
+      "wrong": []
+    },
+    {
+      "act": "46ca7f",
+      "barrierlab": [
+        "aria/presentation-conflict"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element marked as decorative is not exposed",
+      "wrong": []
+    },
+    {
+      "act": "4b1c6c",
+      "barrierlab": null,
+      "cases": 23,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Iframe elements with identical accessible names have equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "4c31df",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio or video element that plays automatically has a control mechanism",
+      "wrong": []
+    },
+    {
+      "act": "4e8ab6",
+      "barrierlab": [
+        "aria/required-attribute-missing",
+        "aria/combobox-popup-missing"
+      ],
+      "cases": 8,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element with role attribute has required states and properties",
+      "wrong": []
+    },
+    {
+      "act": "59796f",
+      "barrierlab": [
+        "images/input-alt-missing"
+      ],
+      "cases": 12,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Image button has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "59br37",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Zoomed text node is not clipped with CSS overflow",
+      "wrong": []
+    },
+    {
+      "act": "5b7ae0",
+      "barrierlab": [
+        "document/lang-mismatch"
+      ],
+      "cases": 12,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page lang and xml:lang attributes have matching values",
+      "wrong": []
+    },
+    {
+      "act": "5c01ea",
+      "barrierlab": [
+        "aria/attribute-not-allowed",
+        "aria/attribute-prohibited"
+      ],
+      "cases": 15,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA state or property is permitted",
+      "wrong": []
+    },
+    {
+      "act": "5effbb",
+      "barrierlab": null,
+      "cases": 18,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Link in context is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "5f99a7",
+      "barrierlab": [
+        "aria/attribute-unknown"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA attribute is defined in WAI-ARIA",
+      "wrong": []
+    },
+    {
+      "act": "674b10",
+      "barrierlab": [
+        "aria/role-invalid"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Role attribute has valid value",
+      "wrong": []
+    },
+    {
+      "act": "6a7281",
+      "barrierlab": [
+        "aria/attribute-value-invalid"
+      ],
+      "cases": 24,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA state or property has valid value",
+      "wrong": []
+    },
+    {
+      "act": "6cfa84",
+      "barrierlab": [
+        "keyboard/hidden-focusable"
+      ],
+      "cases": 14,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element with aria-hidden has no content in sequential focus navigation",
+      "wrong": []
+    },
+    {
+      "act": "73f2c2",
+      "barrierlab": [
+        "forms/autocomplete-invalid"
+      ],
+      "cases": 20,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Autocomplete attribute has valid value",
+      "wrong": []
+    },
+    {
+      "act": "7677a9",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Device motion based changes to the content can also be created from the user interface",
+      "wrong": []
+    },
+    {
+      "act": "78fd32",
+      "barrierlab": [
+        "text-spacing/line-height-important"
+      ],
+      "cases": 21,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Line height in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "7d6734",
+      "barrierlab": [
+        "svg/name-missing"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "SVG element with explicit role has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "80af7b",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap",
+      "wrong": []
+    },
+    {
+      "act": "80f0bf",
+      "barrierlab": [
+        "media/audio-autoplay"
+      ],
+      "cases": 8,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Audio or video element avoids automatically playing audio",
+      "wrong": []
+    },
+    {
+      "act": "8fc3b6",
+      "barrierlab": [
+        "objects/alt-missing"
+      ],
+      "cases": 14,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Object element rendering non-text content has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "97a4e1",
+      "barrierlab": [
+        "buttons/name-missing"
+      ],
+      "cases": 17,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Button has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "9bd38c",
+      "barrierlab": null,
+      "cases": 21,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Content has alternative for visual reference",
+      "wrong": []
+    },
+    {
+      "act": "9e45ec",
+      "barrierlab": [
+        "text-spacing/word-important"
+      ],
+      "cases": 16,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Word spacing in style attributes is not !important",
+      "wrong": []
+    },
+    {
+      "act": "9eb3f6",
+      "barrierlab": null,
+      "cases": 15,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Image filename is accessible name for image",
+      "wrong": []
+    },
+    {
+      "act": "a1b64e",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap via standard navigation",
+      "wrong": []
+    },
+    {
+      "act": "a25f45",
+      "barrierlab": [
+        "tables/headers-attr-invalid"
+      ],
+      "cases": 17,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Headers attribute specified on a cell refers to cells in the same table element",
+      "wrong": []
+    },
+    {
+      "act": "aaa1bf",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio or video element that plays automatically has no audio that lasts more than 3 seconds",
+      "wrong": []
+    },
+    {
+      "act": "ab4d13",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "ac7dc6",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Video element visual-only content has description track",
+      "wrong": []
+    },
+    {
+      "act": "afb423",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "afw4f7",
+      "barrierlab": [
+        "contrast/text-insufficient",
+        "contrast/text-undetermined"
+      ],
+      "cases": 28,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Text has minimum contrast",
+      "wrong": []
+    },
+    {
+      "act": "aizyf1",
+      "barrierlab": null,
+      "cases": 12,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Link is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "akn7bn",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Iframe with negative tabindex has no interactive elements",
+      "wrong": []
+    },
+    {
+      "act": "b20e66",
+      "barrierlab": null,
+      "cases": 21,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Links with identical accessible names have equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "b33eff",
+      "barrierlab": [
+        "orientation/root-rotated"
+      ],
+      "cases": 10,
+      "consistency": "not consistent",
+      "deprecated": false,
+      "name": "Orientation of the page is not restricted using CSS transform property",
+      "wrong": [
+        {
+          "actual": "failed",
+          "expected": "inapplicable",
+          "url": "https://act-rules.github.io/testcases/b33eff/6c7e305140195228a939d3fac4c8904df7b01e80.html"
+        }
+      ]
+    },
+    {
+      "act": "b40fd1",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has a landmark with non-repeated content",
+      "wrong": []
+    },
+    {
+      "act": "b49b2e",
+      "barrierlab": null,
+      "cases": 17,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Heading is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "b4f0c3",
+      "barrierlab": [
+        "zoom/viewport-locked"
+      ],
+      "cases": 11,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Meta viewport allows for zoom",
+      "wrong": []
+    },
+    {
+      "act": "b5c3f8",
+      "barrierlab": [
+        "document/lang-missing"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page has lang attribute",
+      "wrong": []
+    },
+    {
+      "act": "bc4a75",
+      "barrierlab": [
+        "aria/required-children-missing"
+      ],
+      "cases": 19,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA required owned elements",
+      "wrong": []
+    },
+    {
+      "act": "bc659a",
+      "barrierlab": [
+        "timing/meta-refresh"
+      ],
+      "cases": 15,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Meta element has no refresh delay",
+      "wrong": []
+    },
+    {
+      "act": "bf051a",
+      "barrierlab": [
+        "document/lang-invalid"
+      ],
+      "cases": 7,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "HTML page lang attribute has valid language tag",
+      "wrong": []
+    },
+    {
+      "act": "bisz58",
+      "barrierlab": [
+        "timing/meta-refresh"
+      ],
+      "cases": 14,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Meta element has no refresh delay (no exception)",
+      "wrong": [
+        {
+          "actual": "passed",
+          "expected": "failed",
+          "url": "https://act-rules.github.io/testcases/bisz58/4f9bb0a8ab7bd76505483c47da831440b864fe50.html"
+        }
+      ]
+    },
+    {
+      "act": "c249d5",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Device motion based changes to the content can be disabled",
+      "wrong": []
+    },
+    {
+      "act": "c3232f",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "c487ae",
+      "barrierlab": [
+        "links/name-missing",
+        "images/area-alt-missing"
+      ],
+      "cases": 28,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Link has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "c4a8a4",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML page title is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "c5a4ea",
+      "barrierlab": null,
+      "cases": 9,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "cae760",
+      "barrierlab": [
+        "frames/name-missing"
+      ],
+      "cases": 10,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Iframe element has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "cc0f0a",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Form field label is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "cf77f2",
+      "barrierlab": [
+        "headings/none"
+      ],
+      "cases": 14,
+      "consistency": "partial",
+      "deprecated": false,
+      "name": "Bypass Blocks of Repeated Content",
+      "wrong": []
+    },
+    {
+      "act": "d0f69e",
+      "barrierlab": [
+        "tables/header-without-data"
+      ],
+      "cases": 16,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Table header cell has assigned cells",
+      "wrong": []
+    },
+    {
+      "act": "d7ba54",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has audio track alternative",
+      "wrong": []
+    },
+    {
+      "act": "de46e4",
+      "barrierlab": [
+        "language/part-invalid"
+      ],
+      "cases": 19,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element with lang attribute has valid language tag",
+      "wrong": []
+    },
+    {
+      "act": "e086e5",
+      "barrierlab": [
+        "forms/label-missing",
+        "names/required-missing"
+      ],
+      "cases": 17,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Form field has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "e6952f",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Attribute is not duplicated",
+      "wrong": []
+    },
+    {
+      "act": "e7aa44",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Audio element content has text alternative",
+      "wrong": []
+    },
+    {
+      "act": "e88epe",
+      "barrierlab": null,
+      "cases": 20,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Image not in the accessibility tree is decorative",
+      "wrong": []
+    },
+    {
+      "act": "eac66b",
+      "barrierlab": null,
+      "cases": 6,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element auditory content has accessible alternative",
+      "wrong": []
+    },
+    {
+      "act": "ebe86a",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Focusable element has no keyboard trap via non-standard navigation",
+      "wrong": []
+    },
+    {
+      "act": "ee13b5",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content has transcript",
+      "wrong": []
+    },
+    {
+      "act": "efbfc7",
+      "barrierlab": null,
+      "cases": 11,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Text content that changes automatically can be paused, stopped or hidden",
+      "wrong": []
+    },
+    {
+      "act": "f196ce",
+      "barrierlab": null,
+      "cases": 5,
+      "consistency": "untested",
+      "deprecated": true,
+      "name": "DEPRECATED — Video element visual content has description track",
+      "wrong": []
+    },
+    {
+      "act": "f51b46",
+      "barrierlab": null,
+      "cases": 8,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element auditory content has captions",
+      "wrong": []
+    },
+    {
+      "act": "fd26cf",
+      "barrierlab": null,
+      "cases": 7,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Video element visual-only content is media alternative for text",
+      "wrong": []
+    },
+    {
+      "act": "fd3a94",
+      "barrierlab": null,
+      "cases": 19,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Links with identical accessible names and same context serve equivalent purpose",
+      "wrong": []
+    },
+    {
+      "act": "ff89c9",
+      "barrierlab": [
+        "aria/required-parent-missing"
+      ],
+      "cases": 15,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "ARIA required context role",
+      "wrong": []
+    },
+    {
+      "act": "ffbc54",
+      "barrierlab": null,
+      "cases": 10,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "No keyboard shortcut uses only printable characters",
+      "wrong": []
+    },
+    {
+      "act": "ffd0e9",
+      "barrierlab": [
+        "headings/empty"
+      ],
+      "cases": 15,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Heading has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "m6b1q3",
+      "barrierlab": [
+        "names/required-missing"
+      ],
+      "cases": 8,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Menuitem has non-empty accessible name",
+      "wrong": []
+    },
+    {
+      "act": "off6ek",
+      "barrierlab": null,
+      "cases": 14,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML element language subtag matches language",
+      "wrong": []
+    },
+    {
+      "act": "oj04fd",
+      "barrierlab": [
+        "focus/outline-removed",
+        "focus/indicator-missing"
+      ],
+      "cases": 9,
+      "consistency": "consistent",
+      "deprecated": false,
+      "name": "Element in sequential focus order has visible focus",
+      "wrong": []
+    },
+    {
+      "act": "qt1vmo",
+      "barrierlab": null,
+      "cases": 16,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Image accessible name is descriptive",
+      "wrong": []
+    },
+    {
+      "act": "ucwvc8",
+      "barrierlab": null,
+      "cases": 15,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "HTML page language subtag matches default language",
+      "wrong": []
+    },
+    {
+      "act": "ye5d6e",
+      "barrierlab": null,
+      "cases": 12,
+      "consistency": "untested",
+      "deprecated": false,
+      "name": "Document has an instrument to move focus to non-repeated content",
+      "wrong": []
+    }
+  ],
+  "rules": 88,
+  "source": "https://act-rules.github.io/testcases.json",
+  "testcases": 1134
+}
