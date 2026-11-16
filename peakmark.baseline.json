@@ -2,18 +2,52 @@
   "version": 2,
   "modules": {
     "a11y-wasm": {
-      "accepted": "2026-11-13",
-      "reason": "Measures the wasm-bindgen output in packages/a11y-wasm/pkg instead of the raw cargo build",
+      "accepted": "2026-11-16",
+      "reason": "Adds a scan scenario (synthetic flat tree, no DOM). The size baseline moves with the rules added since 2026-11-13 (a11y 0.30.4 to 0.30.6): brotli 138.3 kB to 160.8 kB, budget raised to match",
       "values": {
-        "raw": 402952,
-        "gzip": 168280,
-        "brotli": 138265
+        "raw": 473647,
+        "gzip": 198581,
+        "brotli": 160796,
+        "peak_memory": 1638400,
+        "growth_per_run": 0
       },
       "contract": {
         "runner_schema": 1,
         "warmup_runs": 1,
         "compression": "gzip-9 brotli-11-w22",
-        "artifact_sha256": "919c1065dfb353bf9ceddb7565f7b1d684a003ae5cc46e3a5e777f6a8b674b0c"
+        "node": "v24.22.1",
+        "artifact_sha256": "9662598a79d1535adb55cac5d85bbc5e27e616843834a74d22395b88addb06e3"
+      },
+      "scenarios": {
+        "scripts/peakmark/scan.mjs": {
+          "sha256": "9f9739aa3ea9ee51eddc51f61b23cde9126d646ee3e27a5ca16926836a494231",
+          "repeat": 20,
+          "peak_memory": 1638400,
+          "growth_per_run": 0,
+          "after_instantiate": 1179648,
+          "after_run": [
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400,
+            1638400
+          ]
+        }
       },
       "inventory": {
         "imports": [
@@ -22,6 +56,12 @@
             "name": "__wbg_Error_67e7344beaa85059",
             "kind": "func",
             "type": "(i32, i32) -> i32"
+          },
+          {
+            "module": "./a11y_wasm_bg.js",
+            "name": "__wbg___wbindgen_string_get_92ab86bb19cbc12f",
+            "kind": "func",
+            "type": "(i32, i32) -> ()"
           },
           {
             "module": "./a11y_wasm_bg.js",
@@ -136,21 +176,51 @@
             "type": "(i32, i32) -> ()"
           },
           {
+            "name": "scan_withFocusCover",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withFrames",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
             "name": "scan_withLayout",
             "kind": "func",
             "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
           },
           {
+            "name": "scan_withPasteProbes",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
             "name": "scan_withRendering",
             "kind": "func",
             "type": "(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withScopes",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withTextSpacing",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32) -> ()"
+          },
+          {
+            "name": "scan_withTransforms",
+            "kind": "func",
+            "type": "(i32, i32, i32, i32, i32, i32, i32, i32) -> ()"
           }
         ],
         "tables": [
           {
             "name": "#0",
             "kind": "table",
-            "type": "funcref 328..328"
+            "type": "funcref 351..351"
           }
         ],
         "features": [
@@ -159,97 +229,97 @@
           "saturating_float_to_int"
         ],
         "sections": {
-          "code": 311048,
-          "data": 89130,
+          "code": 367503,
+          "data": 102928,
           "names": 0,
           "debug": 0,
           "custom": 60,
-          "structure": 2673,
+          "structure": 3115,
           "overhead": 41
         },
         "functions": {
-          "count": 950,
-          "body_bytes": 309634,
+          "count": 1085,
+          "body_bytes": 365886,
           "largest": [
             {
-              "size": 8683,
-              "export": "scan_run"
+              "id": 317,
+              "size": 12266
             },
             {
-              "id": 11,
-              "size": 5313
-            },
-            {
-              "id": 13,
-              "size": 4930
-            },
-            {
-              "size": 4630,
-              "export": "scan_new"
+              "id": 97,
+              "size": 8449
             },
             {
               "id": 12,
-              "size": 4513
-            },
-            {
-              "id": 500,
-              "size": 4074
-            },
-            {
-              "id": 15,
-              "size": 3819
+              "size": 5388
             },
             {
               "id": 14,
+              "size": 4930
+            },
+            {
+              "id": 91,
+              "size": 4699
+            },
+            {
+              "size": 4695,
+              "export": "scan_new"
+            },
+            {
+              "id": 13,
+              "size": 4492
+            },
+            {
+              "id": 33,
+              "size": 4261
+            },
+            {
+              "id": 15,
               "size": 3746
             },
             {
-              "id": 482,
-              "size": 3659
+              "id": 18,
+              "size": 3744
+            },
+            {
+              "id": 551,
+              "size": 3695
+            },
+            {
+              "id": 232,
+              "size": 3473
+            },
+            {
+              "id": 16,
+              "size": 2806
+            },
+            {
+              "id": 65,
+              "size": 2768
+            },
+            {
+              "id": 89,
+              "size": 2569
+            },
+            {
+              "id": 983,
+              "size": 2484
+            },
+            {
+              "id": 62,
+              "size": 2459
+            },
+            {
+              "id": 25,
+              "size": 2384
+            },
+            {
+              "id": 17,
+              "size": 2352
             },
             {
               "id": 27,
-              "size": 3244
-            },
-            {
-              "id": 222,
-              "size": 3061
-            },
-            {
-              "id": 202,
-              "size": 3008
-            },
-            {
-              "id": 341,
-              "size": 2702
-            },
-            {
-              "id": 76,
-              "size": 2685
-            },
-            {
-              "id": 90,
-              "size": 2514
-            },
-            {
-              "id": 52,
-              "size": 2480
-            },
-            {
-              "id": 851,
-              "size": 2422
-            },
-            {
-              "id": 19,
-              "size": 2387
-            },
-            {
-              "id": 24,
-              "size": 2312
-            },
-            {
-              "id": 101,
-              "size": 2194
+              "size": 2343
             }
           ]
         }

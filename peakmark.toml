@@ -2,6 +2,14 @@
 [[module]]
 name     = "a11y-wasm"
 artifact = "packages/a11y-wasm/pkg/a11y_wasm_bg.wasm"
+glue     = "packages/a11y-wasm/pkg/a11y_wasm.js"
 
 [module.budget]
-brotli = "139700 B"
+brotli         = "162500 B"
+peak_memory    = "1.8 MiB"
+growth_per_run = "0"
+
+[[scenario]]
+module = "a11y-wasm"
+file   = "scripts/peakmark/scan.mjs"
+repeat = 20
