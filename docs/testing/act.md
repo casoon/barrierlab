@@ -47,22 +47,19 @@ The BarrierLab figures are this repository's own run and have not been submitted
 The same rules run inside a browser when a host hands them the rendered page.
 [auditmysite](https://github.com/casoon/auditmysite) does that in Chrome: computed styles,
 layout, scroll extents, the colours text is drawn with. Run of 16 November 2026 with auditmysite
-on `a11y-rules` 0.30.5 and `style-cascade` 0.3.2
-([casoon/auditmysite#1078](https://github.com/casoon/auditmysite/pull/1078)), all 601 mapped
+on `a11y-rules` 0.30.7 and `style-cascade` 0.3.2
+([casoon/auditmysite#1082](https://github.com/casoon/auditmysite/pull/1082)), all 601 mapped
 test cases, `--level aaa` so that the AAA contrast rule runs too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
 |---|---|---|---|
-| ACT rules implemented consistently | 37 | 34 | 35 |
+| ACT rules implemented consistently | 38 | 34 | 35 |
 | implemented partially consistently | 3 | 6 | 9 |
-| test cases right / undecided / wrong | 575 / 33 / 3 | 556 / 50 / 5 | — |
+| test cases right / undecided / wrong | 576 / 33 / 2 | 556 / 50 / 5 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
-behind a text shadow, scrollable regions, the AAA contrast cases. Three cases stay wrong: the
-icon-font false alarm and the refresh delay above 20 hours from the run above, and a page that
-rotates its `body` without an orientation media query, which the orientation rule reports
-although the rotation applies in both orientations. A rule that judges the rendered page sees
-one snapshot and no stylesheets, so it cannot tell that rotation from an orientation lock.
+behind a text shadow, scrollable regions, the AAA contrast cases. Two cases stay wrong: the
+icon-font false alarm and the refresh delay above 20 hours from the run above.
 
 To repeat the run:
 

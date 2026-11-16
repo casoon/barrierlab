@@ -1,12 +1,12 @@
 {
   "cases": {
     "cantTell": 33,
-    "correct": 575,
-    "wrong": 3
+    "correct": 576,
+    "wrong": 2
   },
   "consistency": {
-    "consistent": 37,
-    "not consistent": 3,
+    "consistent": 38,
+    "not consistent": 2,
     "partial": 3,
     "untested": 45
   },
@@ -529,19 +529,13 @@
     {
       "act": "b33eff",
       "barrierlab": [
-        "orientation/root-rotated"
+        "orientation/locked"
       ],
       "cases": 10,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Orientation of the page is not restricted using CSS transform property",
-      "wrong": [
-        {
-          "actual": "failed",
-          "expected": "inapplicable",
-          "url": "https://act-rules.github.io/testcases/b33eff/6c7e305140195228a939d3fac4c8904df7b01e80.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "b40fd1",
