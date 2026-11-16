@@ -46,19 +46,19 @@ The BarrierLab figures are this repository's own run and have not been submitted
 The same rules run inside a browser when a host hands them the rendered page.
 [auditmysite](https://github.com/casoon/auditmysite) does that in Chrome: computed styles,
 layout, scroll extents, the colours text is drawn with. Run of 16 November 2026 with auditmysite
-on `a11y-rules` 0.30.7 and `style-cascade` 0.3.2
-([casoon/auditmysite#1082](https://github.com/casoon/auditmysite/pull/1082)), all 601 mapped
+on `a11y-rules` 0.30.8 and `style-cascade` 0.3.2
+([casoon/auditmysite#1084](https://github.com/casoon/auditmysite/pull/1084)), all 601 mapped
 test cases, `--level aaa` so that the AAA contrast rule runs too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
 |---|---|---|---|
-| ACT rules implemented consistently | 38 | 35 | 35 |
+| ACT rules implemented consistently | 39 | 35 | 35 |
 | implemented partially consistently | 3 | 6 | 9 |
-| test cases right / undecided / wrong | 576 / 33 / 2 | 557 / 50 / 4 | — |
+| test cases right / undecided / wrong | 577 / 33 / 1 | 557 / 50 / 4 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
-behind a text shadow, scrollable regions, the AAA contrast cases. Two cases stay wrong: the
-icon-font false alarm and the refresh delay above 20 hours from the run above.
+behind a text shadow, scrollable regions, the AAA contrast cases. One case stays wrong: the
+refresh delay above 20 hours from the run above.
 
 To repeat the run:
 

@@ -103,7 +103,7 @@ catches mistakes in either one; barrierlab.eu runs axe-core beside auditmysite f
 The neutral yardstick is the set of [W3C ACT test cases](act.md). There BarrierLab implements
 35 ACT rules consistently and 6 partially, counted as the W3C counts, where the W3C lists
 axe-core with 35 and 9; of 611 test cases, 4 come out wrong. Inside a browser, run by
-auditmysite, the same rules reach 38 and 3, with 2 wrong cases. The page has every rule and
+auditmysite, the same rules reach 39 and 3, with 1 wrong case. The page has every rule and
 every remaining wrong case.
 
 ## Where it falls short
