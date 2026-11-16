@@ -260,11 +260,21 @@ fn dialog_asks_to_rotate_welt_de() {
 
 #[test]
 fn whole_content_is_hard() {
-    let css = "@media (orientation: portrait) { body { transform: rotate(90deg) } }";
+    let css = "@media (orientation: portrait) { body { display: none } }";
     assert_eq!(
         verdicts(&check("<p>x</p>", css), "orientation/content-hidden"),
         [(Outcome::Review, Severity::High)]
     );
+}
+
+#[test]
+fn rotated_root_locks_the_orientation() {
+    let css = "@media (orientation: portrait) { body { transform: rotate(90deg) } }";
+    assert_eq!(
+        verdicts(&check("<p>x</p>", css), "orientation/locked"),
+        [(Outcome::Fail, Severity::High)]
+    );
+    assert!(verdicts(&check("<p>x</p>", css), "orientation/content-hidden").is_empty());
 }
 
 // --- text/justified, text/line-height-tight ---------------------------------

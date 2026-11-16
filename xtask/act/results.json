@@ -1,12 +1,12 @@
 {
   "cases": {
-    "cantTell": 60,
-    "correct": 546,
+    "cantTell": 50,
+    "correct": 556,
     "wrong": 5
   },
   "consistency": {
-    "consistent": 33,
-    "not consistent": 4,
+    "consistent": 34,
+    "not consistent": 3,
     "partial": 6,
     "untested": 45
   },
@@ -541,10 +541,10 @@
     {
       "act": "b33eff",
       "barrierlab": [
-        "orientation/root-rotated"
+        "orientation/locked"
       ],
       "cases": 10,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Orientation of the page is not restricted using CSS transform property",
       "wrong": []

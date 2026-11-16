@@ -125,7 +125,7 @@ const MAPPING: &[(&str, &[&str])] = &[
     ("bc659a", &["timing/meta-refresh"]),
     ("bisz58", &["timing/meta-refresh"]),
     ("b4f0c3", &["zoom/viewport-locked"]),
-    ("b33eff", &["orientation/root-rotated"]),
+    ("b33eff", &["orientation/locked"]),
     ("80f0bf", &["media/audio-autoplay"]),
     (
         "afw4f7",

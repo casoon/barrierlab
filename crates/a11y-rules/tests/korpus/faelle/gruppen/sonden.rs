@@ -109,21 +109,21 @@ macro_rules! root {
 fn orientation() -> Vec<Fall> {
     let id = "orientation/root-rotated";
     vec![
-        fail(
+        review(
             id,
             root!("", "transform: matrix(6.12323e-17, 1, -1, 6.12323e-17, 0, 0)"),
             ORIENT_FIXTURES,
         )
         .variant("visual_orientation_lock: body rotate(90deg)")
         .count(1),
-        fail(
+        review(
             id,
             root!("transform: matrix(6.12323e-17, -1, 1, 6.12323e-17, 0, 0)", ""),
             ORIENT_FIXTURES,
         )
         .variant("visual_orientation_script_lock: html rotate(-90deg), Script setzt es")
         .count(1),
-        fail(
+        review(
             id,
             root!(
                 "",
@@ -133,28 +133,28 @@ fn orientation() -> Vec<Fall> {
         )
         .variant("matrix3d: rotateZ(90deg)")
         .count(1),
-        fail(
+        review(
             id,
             root!("rotate: 90deg", ""),
             "issue #134: a rotate angle off a multiple of 180 degrees counts",
         )
         .variant("rotate: 90deg an html")
         .count(1),
-        fail(
+        review(
             id,
             root!("rotate: 0.25turn", ""),
             "CSS Transforms 2: angles in turn are 360 degrees",
         )
         .variant("rotate in turn")
         .count(1),
-        fail(
+        review(
             id,
             root!("rotate: 0 0 1 90deg", ""),
             "CSS Transforms 2: axis (0, 0, 1) is the z axis, a rotation in the picture plane",
         )
         .variant("rotate um die Z-Achse in Langform")
         .count(1),
-        fail(
+        review(
             id,
             root!(
                 "transform: matrix(1, 0.0101, -0.0101, 1, 0, 0)",
