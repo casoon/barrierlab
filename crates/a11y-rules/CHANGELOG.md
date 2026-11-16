@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.6] - 2026-11-16
+
+### Fixed
+
+- **ARIA:** Ein `role="listitem"` außerhalb einer Liste meldet `aria/required-parent-missing` mit Schwere mittel wie ein `<li>` außerhalb einer Liste (`lists/item-outside-list`); seit 0.30.2 war er kritisch.
+
 ## [0.30.5] - 2026-11-16
 
 ### Fixed
