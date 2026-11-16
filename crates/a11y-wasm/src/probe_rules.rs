@@ -133,7 +133,7 @@ fn transforms_gedrehte_wurzel_ist_ein_befund() {
     let report = scan.report();
     let f = findings(&report, "orientation/root-rotated");
     assert_eq!(f.len(), 1);
-    assert_eq!(f[0].outcome, Outcome::Fail);
+    assert_eq!(f[0].outcome, Outcome::Review);
     // Ungedreht: gelaufen, kein Befund.
     scan.with_transforms(
         vec![html, body],

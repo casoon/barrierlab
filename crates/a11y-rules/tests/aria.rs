@@ -296,6 +296,29 @@ fn tab_list_from_list_items_auditmysite_715() {
     );
 }
 
+/// Ein verwaister `role="listitem"` wiegt wie ein `<li>` außerhalb einer
+/// Liste (mittel), ein verwaister Tab bleibt kritisch (auditmysite-
+/// Kalibrierung `invalid_aria.html`).
+#[test]
+fn orphaned_listitem_is_medium_orphaned_tab_critical() {
+    let severity = |src: &str| {
+        with_semantics(src)
+            .findings
+            .iter()
+            .find(|f| f.rule_id == "aria/required-parent-missing")
+            .unwrap()
+            .severity
+    };
+    assert_eq!(
+        severity(r#"<div role="listitem">Orphaned list item</div>"#),
+        a11y_report::Severity::Medium
+    );
+    assert_eq!(
+        severity(r##"<a role="tab" href="#a">A</a>"##),
+        a11y_report::Severity::Critical
+    );
+}
+
 #[test]
 fn tab_list_from_list_items_even_if_host_flattens_the_li_auditmysite_715() {
     let r = like_chrome(TAB_LIST_OFF_LI);

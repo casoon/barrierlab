@@ -126,6 +126,23 @@ fn matrix_rotates(value: &str) -> Option<bool> {
     Some(b.abs() > 0.01 && (b + c).abs() < 0.01)
 }
 
+/// Ein CSS-Winkel in Grad (CSS Values 4 §6.1: `deg`, `grad`, `rad`, `turn`);
+/// `0` ohne Einheit ist erlaubt. `None`: kein Winkel.
+pub(crate) fn angle_degrees(angle: &str) -> Option<f64> {
+    let angle = angle.trim().to_ascii_lowercase();
+    if let Some(v) = angle.strip_suffix("deg") {
+        v.parse::<f64>().ok()
+    } else if let Some(v) = angle.strip_suffix("grad") {
+        Some(v.parse::<f64>().ok()? * 0.9)
+    } else if let Some(v) = angle.strip_suffix("rad") {
+        Some(v.parse::<f64>().ok()?.to_degrees())
+    } else if let Some(v) = angle.strip_suffix("turn") {
+        Some(v.parse::<f64>().ok()? * 360.0)
+    } else {
+        (angle.parse::<f64>().ok()? == 0.0).then_some(0.0)
+    }
+}
+
 /// Ob die Eigenschaft `rotate` um einen Winkel abseits eines Vielfachen von
 /// 180° um die Z-Achse dreht. Achsen in X oder Y kippen und drehen nicht in
 /// der Bildebene. `None`: nicht auswertbar.
@@ -145,22 +162,16 @@ fn rotate_turns(value: &str) -> Option<bool> {
         }
         _ => return None,
     };
-    let degrees = if let Some(v) = angle.strip_suffix("deg") {
-        v.parse::<f64>().ok()?
-    } else if let Some(v) = angle.strip_suffix("grad") {
-        v.parse::<f64>().ok()? * 0.9
-    } else if let Some(v) = angle.strip_suffix("rad") {
-        v.parse::<f64>().ok()?.to_degrees()
-    } else {
-        angle.strip_suffix("turn")?.parse::<f64>().ok()? * 360.0
-    };
+    let degrees = angle_degrees(angle)?;
     let off = degrees.rem_euclid(180.0);
     Some(axis && off > 0.01 && off < 179.99)
 }
 
-/// 1.3.4: Die Seite dreht ihre Wurzel, um nur eine Ausrichtung nutzbar zu
-/// machen. Sichtbar ist das an `html` und `body`; ob die Ausrichtung
-/// wesentlich ist, entscheidet ein Mensch.
+/// 1.3.4: Die Wurzel der Seite ist gedreht. Ein Schnappschuss zeigt nur
+/// eine Ausrichtung; ob die Drehung die andere sperrt, sieht er nicht, und
+/// eine dauerhafte Drehung sperrt nichts (ACT b33eff, Inapplicable 4).
+/// Deshalb `REVIEW`; den Vergleich beider Ausrichtungen macht
+/// `orientation/locked` aus den Stilregeln.
 fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut roots = false;
     let mut measured = false;
@@ -177,23 +188,24 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         }
         let tag = n.local_name();
         out.push(
-            Finding::fail(
+            Finding::review(
                 "orientation/root-rotated",
                 tr!(
                     locale,
-                    "The <{tag}> element is rotated, which can force a single display                      orientation. Unless a specific orientation is essential, content must not                      restrict its view and operation to one.",
-                    "Das Element <{tag}> ist gedreht, was eine einzige Bildschirmausrichtung                      erzwingen kann. Außer eine bestimmte Ausrichtung ist wesentlich, darf der                      Inhalt Ansicht und Bedienung nicht auf eine beschränken."
+                    "The <{tag}> element is rotated. Check that this does not force a single \
+                     display orientation (1.3.4); orientation/locked compares both \
+                     orientations.",
+                    "Das Element <{tag}> ist gedreht. Prüfen, dass das keine einzige \
+                     Bildschirmausrichtung erzwingt (1.3.4); orientation/locked vergleicht \
+                     beide Ausrichtungen."
                 ),
             )
             .with_severity(Severity::High)
             .with_wcag(["1.3.4"])
             .with_evidence(
-                [
-                    ("transform", &value.transform),
-                    ("rotate", &value.rotate),
-                ]
-                .into_iter()
-                .filter_map(|(field, v)| v.as_deref().map(|v| Evidence::computed(field, v))),
+                [("transform", &value.transform), ("rotate", &value.rotate)]
+                    .into_iter()
+                    .filter_map(|(field, v)| v.as_deref().map(|v| Evidence::computed(field, v))),
             )
             .at(at(n.id())),
         );
@@ -502,14 +514,16 @@ pub(crate) const METAS: &[Meta] = &[
         scope: Scope::Rendered,
         wcag: &["1.3.4"],
         severity: Severity::High,
-        help: "A page that rotates its root (html or body) by a quarter turn to force one \
-               display orientation fails 1.3.4. Seen: the computed transform matrix and the \
+        help: "A page that rotates its root (html or body) by a quarter turn may force one \
+               display orientation (1.3.4); a person checks, orientation/locked compares both \
+               orientations from the style rules. Seen: the computed transform matrix and the \
                rotate property of html and body, in the one viewport the host measured; a lock \
                that applies only in the other orientation needs a second snapshot there \
                (RuleRun::in_viewport). That an orientation is essential is a human judgement.",
         help_de: de_text!(
-            "Eine Seite, die ihre Wurzel (html oder body) um eine Vierteldrehung dreht, um \
-                  eine Ausrichtung zu erzwingen, verfehlt 1.3.4. Gesehen werden die berechnete \
+            "Eine Seite, die ihre Wurzel (html oder body) um eine Vierteldrehung dreht, kann \
+                  eine Ausrichtung erzwingen (1.3.4); ein Mensch prüft, orientation/locked \
+                  vergleicht beide Ausrichtungen aus den Stilregeln. Gesehen werden die berechnete \
                   transform-Matrix und die Eigenschaft rotate von html und body, in dem einen \
                   Viewport, den der Host gemessen hat; eine Sperre nur in der anderen \
                   Ausrichtung braucht dort einen zweiten Schnappschuss (RuleRun::in_viewport). \

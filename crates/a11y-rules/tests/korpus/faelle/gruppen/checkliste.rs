@@ -909,10 +909,10 @@ fn stylesheets() -> Vec<Fall> {
             r#"<style>@media (orientation: landscape) { main { display: none } }</style><main>x</main>"#,
             "WCAG 1.3.4: Inhalt nur in einer Ausrichtung; REVIEW (dokumentiert, Umbau meist zulässig)",
         ),
-        review(
+        negative(
             "orientation/content-hidden",
             r#"<style>@media (orientation: portrait) { .app { transform: rotate(90deg) } }</style><div class="app">x</div>"#,
-            "WCAG 1.3.4: Drehen erzwingt eine Ausrichtung",
+            "WCAG 1.3.4: Drehen prüft orientation/locked",
         )
         .variant("rotate"),
         negative(
@@ -937,6 +937,106 @@ fn stylesheets() -> Vec<Fall> {
             r#"<main>x</main>"#,
             "WCAG 1.3.4: keine Stylesheets",
         ),
+        // --- orientation/locked (1.3.4) -------------------------------------
+        fail(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { html { transform: rotate(1.5708rad) } }</style><p>x</p>"#,
+            "ACT b33eff Failed 1: html im Hochformat um 90° gedreht",
+        ),
+        fail(
+            "orientation/locked",
+            r#"<style>@media (orientation: landscape) { body { transform: matrix3d(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) } }</style><p>x</p>"#,
+            "ACT b33eff Failed 2: matrix3d, −90° im Querformat",
+        )
+        .variant("matrix3d"),
+        fail(
+            "orientation/locked",
+            r#"<style>.p { transform: rotate(2.5deg) } @media (orientation: landscape) { .p { transform: rotate(92.5deg) } }</style><div class="p">x</div>"#,
+            "ACT b33eff Failed 3: Grunddrehung 2,5°, im Querformat 92,5°",
+        )
+        .variant("Differenz zur Grunddrehung"),
+        fail(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { body { rotate: 90deg } }</style><p>x</p>"#,
+            "ACT b33eff Failed 4: Eigenschaft rotate",
+        )
+        .variant("rotate-Eigenschaft"),
+        negative(
+            "orientation/locked",
+            r#"<style>@media (orientation: landscape) { body { transform: rotateZ(1turn) } }</style><p>x</p>"#,
+            "ACT b33eff Passed 1: volle Umdrehung",
+        ),
+        negative(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { body { transform: matrix(1, 0, 0, 1, 0, 0) } }</style><p>x</p>"#,
+            "ACT b33eff Passed 2: Einheitsmatrix",
+        )
+        .variant("matrix"),
+        negative(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { body { rotate: 0turn } }</style><p>x</p>"#,
+            "ACT b33eff Passed 3: rotate 0turn",
+        )
+        .variant("rotate 0turn"),
+        negative(
+            "orientation/locked",
+            r#"<style>@media (orientation: landscape) { body { transform: rotate(45deg) } }</style><p>x</p>"#,
+            "WCAG 1.3.4: 45° ist keine Vierteldrehung",
+        )
+        .variant("45°"),
+        negative(
+            "orientation/locked",
+            r#"<style>@media (orientation: landscape) { .x { transform: rotate(90deg) } }</style><p>x</p>"#,
+            "WCAG 1.3.4: trifft kein Element",
+        )
+        .variant("kein Treffer"),
+        negative(
+            "orientation/locked",
+            r#"<style>.p { display: none } @media (orientation: portrait) { .p { transform: rotate(90deg) } }</style><div class="p">x</div>"#,
+            "ACT b33eff: nur sichtbare Elemente; display: none aus dem Stylesheet",
+        )
+        .variant("verborgen"),
+        review(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) and (max-width: 600px) { body { transform: rotate(90deg) } }</style><p>x</p>"#,
+            "WCAG 1.3.4: weitere Bedingung neben der Ausrichtung, die diese Stufe nicht entscheidet",
+        )
+        .variant("weitere Bedingung"),
+        review(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { body { transform: rotate(var(--turn)) } }</style><p>x</p>"#,
+            "WCAG 1.3.4: Wert nicht auswertbar",
+        )
+        .variant("var()"),
+        na(
+            "orientation/locked",
+            r#"<p>No styles</p>"#,
+            "ACT b33eff Inapplicable 1: keine Stile",
+        ),
+        na(
+            "orientation/locked",
+            r#"<style>@media (min-width: 600px) { body { color: red } }</style><p>x</p>"#,
+            "ACT b33eff Inapplicable 2: keine Ausrichtungsabfrage",
+        )
+        .variant("Breite"),
+        na(
+            "orientation/locked",
+            r#"<style>@media (orientation: lanscape) { body { transform: rotate(90deg) } }</style><p>x</p>"#,
+            "ACT b33eff Inapplicable 3: ungültiger Wert, Abfrage falsch",
+        )
+        .variant("ungültiger Wert"),
+        na(
+            "orientation/locked",
+            r#"<style>body { transform: rotate(90deg) }</style><p>x</p>"#,
+            "ACT b33eff Inapplicable 4: Drehung ohne Bedingung",
+        )
+        .variant("ohne Bedingung"),
+        na(
+            "orientation/locked",
+            r#"<style>@media (orientation: portrait) { body { transform: translateX(10px) } }</style><p>x</p>"#,
+            "ACT b33eff Inapplicable 5: nur Verschiebung",
+        )
+        .variant("translateX"),
         // --- text/justified (1.4.8) -----------------------------------------
         review(
             "text/justified",

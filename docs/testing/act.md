@@ -19,10 +19,10 @@ W3C counts:
 
 | | BarrierLab (own run) | axe-core 4.14.0 (W3C report of 31 October 2026) |
 |---|---|---|
-| ACT rules implemented consistently | 33 | 35 (30 WCAG rules, 5 proposed) |
+| ACT rules implemented consistently | 34 | 35 (30 WCAG rules, 5 proposed) |
 | implemented partially consistently | 6 | 9 |
 
-Of the 611 test cases of the rules BarrierLab maps, 546 come out right, 60 undecided and 5
+Of the 611 test cases of the rules BarrierLab maps, 556 come out right, 50 undecided and 5
 wrong. Three of the five need a script to run before the content exists (a shadow root built
 by script), which a check of the page source never sees. One is a false alarm on a button
 whose visible label is an icon-font ligature, one a missed refresh delay above 20 hours that
@@ -53,9 +53,9 @@ test cases, `--level aaa` so that the AAA contrast rule runs too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
 |---|---|---|---|
-| ACT rules implemented consistently | 37 | 33 | 35 |
+| ACT rules implemented consistently | 37 | 34 | 35 |
 | implemented partially consistently | 3 | 6 | 9 |
-| test cases right / undecided / wrong | 575 / 33 / 3 | 546 / 60 / 5 | — |
+| test cases right / undecided / wrong | 575 / 33 / 3 | 556 / 50 / 5 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
 behind a text shadow, scrollable regions, the AAA contrast cases. Three cases stay wrong: the
@@ -128,7 +128,7 @@ count as untested.
 | [Word spacing in style attributes is not !important](https://act-rules.github.io/rules/9e45ec) | consistent | `text-spacing/word-important` | 0 of 16 |
 | [Headers attribute specified on a cell refers to cells in the same table element](https://act-rules.github.io/rules/a25f45) | consistent | `tables/headers-attr-invalid` | 0 of 17 |
 | [Text has minimum contrast](https://act-rules.github.io/rules/afw4f7) | partial | `contrast/text-insufficient`, `contrast/text-undetermined` | 1 of 28 |
-| [Orientation of the page is not restricted using CSS transform property](https://act-rules.github.io/rules/b33eff) | not consistent | `orientation/root-rotated` | 0 of 10 |
+| [Orientation of the page is not restricted using CSS transform property](https://act-rules.github.io/rules/b33eff) | consistent | `orientation/locked` | 0 of 10 |
 | [Meta viewport allows for zoom](https://act-rules.github.io/rules/b4f0c3) | consistent | `zoom/viewport-locked` | 0 of 11 |
 | [HTML page has lang attribute](https://act-rules.github.io/rules/b5c3f8) | consistent | `document/lang-missing` | 0 of 7 |
 | [ARIA required owned elements](https://act-rules.github.io/rules/bc4a75) | consistent | `aria/required-children-missing` | 0 of 19 |

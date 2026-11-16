@@ -19,7 +19,7 @@ use stylesheet_parse::{Declaration, Scoped, Stylesheet};
 use a11y_dom::{Document, Node, elements};
 use a11y_report::{Finding, Location, Severity};
 
-use crate::locale::{Locale, de_text, tr};
+use crate::locale::{Locale, de_text, pick, tr};
 use style_cascade::selector::{Match, Mode, Selector, any_match};
 
 fn page<D: Document>(doc: &D) -> Location {
@@ -599,7 +599,7 @@ fn whole_content(s: &str) -> bool {
 }
 
 /// 1.3.4: Unter einer Media Query auf die Ausrichtung wird Inhalt
-/// ausgeblendet oder gedreht.
+/// ausgeblendet. Drehen prüft `orientation/locked`.
 ///
 /// `REVIEW` statt auditmysites Verstoß: Meist ist das gewöhnliches Umbauen
 /// eines Layouts. Echte Sperren sehen so aus wie auf welt.de (2026-10-03):
@@ -632,10 +632,7 @@ pub(crate) fn orientation_content_hidden<D: Document>(
         let d = r.declarations;
         let hidden = value(d, "display").is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
             || value(d, "visibility").is_some_and(|v| v.trim().eq_ignore_ascii_case("hidden"));
-        let rotated = value(d, "transform")
-            .is_some_and(|v| v.to_ascii_lowercase().contains("rotate"))
-            || value(d, "rotate").is_some_and(|v| !v.trim().eq_ignore_ascii_case("none"));
-        if !hidden && !rotated {
+        if !hidden {
             continue;
         }
         for sel in &r.selectors {
@@ -665,10 +662,10 @@ pub(crate) fn orientation_content_hidden<D: Document>(
             "orientation/content-hidden",
             tr!(
                 locale,
-                "{count} style rules hide or rotate content depending on the orientation \
-                 ({examples}). Check that the content is available in portrait and landscape.",
-                "{count} Stilregeln blenden je nach Ausrichtung Inhalt aus oder drehen ihn \
-                 ({examples}). Prüfen, ob der Inhalt hoch- und querformatig erreichbar ist."
+                "{count} style rules hide content depending on the orientation ({examples}). \
+                 Check that the content is available in portrait and landscape.",
+                "{count} Stilregeln blenden je nach Ausrichtung Inhalt aus ({examples}). \
+                 Prüfen, ob der Inhalt hoch- und querformatig erreichbar ist."
             ),
         )
         .with_severity(if whole {
@@ -679,6 +676,328 @@ pub(crate) fn orientation_content_hidden<D: Document>(
         .with_wcag(["1.3.4"])
         .at(page(doc)),
     );
+}
+
+// --- orientation/locked -------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Orientation {
+    Landscape,
+    Portrait,
+}
+
+/// Unter welcher Ausrichtung eine Stilregel gilt, nach ihren `@media`-Listen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Condition {
+    /// Ohne Media Query.
+    Always,
+    /// Nur in dieser Ausrichtung; `certain` ist falsch, wenn weitere
+    /// Bedingungen daneben stehen, deren Wert diese Stufe nicht kennt.
+    Only(Orientation, bool),
+    /// Nie: ein ungültiger Wert für `orientation` (Media Queries 4 §3.2:
+    /// ein unbekannter Wert macht die Abfrage falsch).
+    Never,
+    /// Eine Media Query ohne Ausrichtung: gehört nicht zu dieser Regel.
+    Other,
+}
+
+fn condition(media: &[&str]) -> Condition {
+    let mut found: Option<(Orientation, bool)> = None;
+    for m in media {
+        let m = m.to_ascii_lowercase();
+        if m.contains(',') || m.split_whitespace().any(|w| w == "not") {
+            return Condition::Other;
+        }
+        let features: Vec<&str> = m
+            .split('(')
+            .skip(1)
+            .filter_map(|f| f.split(')').next())
+            .collect();
+        let mut here = None;
+        let mut others = false;
+        for f in features {
+            let Some((name, value)) = f.split_once(':') else {
+                others = true;
+                continue;
+            };
+            if name.trim() != "orientation" {
+                others = true;
+                continue;
+            }
+            here = Some(match value.trim() {
+                "landscape" => Orientation::Landscape,
+                "portrait" => Orientation::Portrait,
+                _ => return Condition::Never,
+            });
+        }
+        let Some(o) = here else {
+            return Condition::Other;
+        };
+        match found {
+            Some((f, _)) if f != o => return Condition::Never,
+            _ => found = Some((o, !others && found.is_none_or(|(_, c)| c))),
+        }
+    }
+    match found {
+        Some((o, certain)) => Condition::Only(o, certain),
+        None => Condition::Always,
+    }
+}
+
+/// Die Drehung um die Z-Achse, die ein `transform` bewirkt, in Grad.
+/// Verschiebung, Skalierung, Neigung und Perspektive drehen nicht; `None`:
+/// ein Wert, den diese Stufe nicht auswertet.
+fn transform_angle(value: &str) -> Option<f64> {
+    let value = value.trim().to_ascii_lowercase();
+    if value == "none" {
+        return Some(0.0);
+    }
+    let mut total = 0.0;
+    let mut rest = value.as_str();
+    while let Some(open) = rest.find('(') {
+        let name = rest[..open].trim();
+        let close = open + rest[open..].find(')')?;
+        let args: Vec<&str> = rest[open + 1..close].split(',').map(str::trim).collect();
+        let numbers = || -> Option<Vec<f64>> { args.iter().map(|a| a.parse().ok()).collect() };
+        total += match name {
+            "rotate" | "rotatez" => crate::probes::angle_degrees(args.first()?)?,
+            "rotatex" | "rotatey" => 0.0,
+            "rotate3d" => {
+                let [x, y, z, angle] = args.as_slice() else {
+                    return None;
+                };
+                let axis: Vec<f64> = [x, y, z]
+                    .iter()
+                    .map(|v| v.parse().ok())
+                    .collect::<Option<_>>()?;
+                let angle = crate::probes::angle_degrees(angle)?;
+                if axis[0] == 0.0 && axis[1] == 0.0 && axis[2] != 0.0 {
+                    angle * axis[2].signum()
+                } else if axis[2] == 0.0 {
+                    0.0
+                } else {
+                    return None;
+                }
+            }
+            "matrix" | "matrix3d" => {
+                let m = numbers()?;
+                if m.len() != if name == "matrix" { 6 } else { 16 } {
+                    return None;
+                }
+                m[1].atan2(m[0]).to_degrees()
+            }
+            n if n.starts_with("translate")
+                || n.starts_with("scale")
+                || n.starts_with("skew")
+                || n == "perspective" =>
+            {
+                0.0
+            }
+            _ => return None,
+        };
+        rest = &rest[close + 1..];
+    }
+    rest.trim().is_empty().then_some(total)
+}
+
+/// Die Drehung um die Z-Achse, die die Eigenschaft `rotate` bewirkt
+/// (CSS Transforms 2 §5.2), in Grad.
+fn rotate_angle(value: &str) -> Option<f64> {
+    let tokens: Vec<String> = value
+        .split_whitespace()
+        .map(str::to_ascii_lowercase)
+        .collect();
+    let tokens: Vec<&str> = tokens.iter().map(String::as_str).collect();
+    match tokens.as_slice() {
+        ["none"] => Some(0.0),
+        [angle] | ["z", angle] => crate::probes::angle_degrees(angle),
+        ["x" | "y", _] => Some(0.0),
+        [x, y, z, angle] => {
+            let axis: Vec<f64> = [x, y, z]
+                .iter()
+                .map(|v| v.parse().ok())
+                .collect::<Option<_>>()?;
+            let angle = crate::probes::angle_degrees(angle)?;
+            if axis[0] == 0.0 && axis[1] == 0.0 && axis[2] != 0.0 {
+                Some(angle * axis[2].signum())
+            } else if axis[2] == 0.0 {
+                Some(0.0)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Ob ein `transform` eine der Funktionen enthält, die drehen können (ACT
+/// b33eff, Anwendbarkeit).
+fn may_rotate(transform: &str) -> bool {
+    let t = transform.to_ascii_lowercase();
+    ["rotate(", "rotate3d(", "rotatez(", "matrix(", "matrix3d("]
+        .iter()
+        .any(|f| t.contains(f))
+}
+
+/// Eine Stilregel mit `transform` oder `rotate`, samt Bedingung.
+struct Turn {
+    selector: Selector,
+    condition: Condition,
+    transform: Option<(String, bool)>,
+    rotate: Option<(String, bool)>,
+}
+
+/// Der Wert, der in einer Ausrichtung gilt: `!important` vor allem anderen,
+/// sonst das `style`-Attribut, sonst die letzte passende Regel.
+fn turn_value<'a, N: Node<'a>>(
+    n: N,
+    property: &str,
+    turns: &[(&Turn, Match)],
+    o: Orientation,
+    pick: fn(&Turn) -> &Option<(String, bool)>,
+) -> Option<String> {
+    let rules = turns
+        .iter()
+        .filter(|(t, _)| match t.condition {
+            Condition::Always => true,
+            Condition::Only(w, _) => w == o,
+            Condition::Never | Condition::Other => false,
+        })
+        .filter_map(|(t, _)| pick(t).as_ref());
+    let attribute = in_style_attribute(n, property);
+    let important = rules.clone().rfind(|(_, i)| *i);
+    match (attribute, important) {
+        (Some((v, true)), _) => Some(v),
+        (_, Some((v, _))) => Some(v.clone()),
+        (Some((v, false)), _) => Some(v),
+        (None, None) => rules.clone().next_back().map(|(v, _)| v.clone()),
+    }
+}
+
+/// 1.3.4 (ACT b33eff): Ein Element ist im Querformat um eine Vierteldrehung
+/// anders gedreht als im Hochformat — es bleibt beim Drehen des Geräts
+/// stehen, die Ausrichtung ist gesperrt.
+///
+/// Anwendbar ist ein gezeichnetes Element, an dem eine Regel unter
+/// `@media (orientation: landscape|portrait)` `rotate` oder ein `transform`
+/// mit `rotate()`, `rotate3d()`, `rotateZ()`, `matrix()` oder `matrix3d()`
+/// setzt. Verglichen wird die Drehung in beiden Ausrichtungen: 90° (modulo
+/// 180°) Unterschied ist `FAIL`. Eine Drehung ohne Media Query gilt in beiden
+/// und sperrt nichts. `REVIEW`, wo diese Stufe nicht sicher ist: weitere
+/// Bedingungen neben der Ausrichtung, ein Selektor, den sie nicht entscheidet,
+/// ein Wert, den sie nicht auswertet. Ob eine Ausrichtung wesentlich ist,
+/// sieht keine Regel.
+pub(crate) fn orientation_locked<D: Document>(
+    doc: &D,
+    sheets: &[Stylesheet],
+    locale: Locale,
+    out: &mut Vec<Finding>,
+) {
+    let property = |decls: &[Declaration], name: &str| {
+        decls
+            .iter()
+            .filter(|d| d.name == name)
+            .max_by_key(|d| d.important)
+            .map(|d| (d.value.clone(), d.important))
+    };
+    let turns: Vec<Turn> = sheets
+        .iter()
+        .flat_map(|s| s.style_rules())
+        .filter_map(|r| {
+            let condition = condition(&r.context.media);
+            let transform = property(r.declarations, "transform");
+            let rotate = property(r.declarations, "rotate");
+            (!matches!(condition, Condition::Never | Condition::Other)
+                && (transform.is_some() || rotate.is_some()))
+            .then(|| Turn {
+                selector: Selector::parse(&r.selectors.join(", ")),
+                condition,
+                transform,
+                rotate,
+            })
+        })
+        .collect();
+    if !turns
+        .iter()
+        .any(|t| matches!(t.condition, Condition::Only(..)))
+    {
+        return;
+    }
+    let displays = rules_for(sheets, "display");
+    for n in elements(doc) {
+        let matching: Vec<(&Turn, Match)> = turns
+            .iter()
+            .map(|t| (t, t.selector.matches(n, Mode::Possible)))
+            .filter(|(_, m)| *m != Match::No)
+            .collect();
+        let applicable = matching.iter().any(|(t, _)| {
+            matches!(t.condition, Condition::Only(..))
+                && (t.transform.as_ref().is_some_and(|(v, _)| may_rotate(v)) || t.rotate.is_some())
+        });
+        if !applicable || !shown(n, &displays) {
+            continue;
+        }
+        let angle = |o| -> Option<f64> {
+            let transform = turn_value(n, "transform", &matching, o, |t| &t.transform);
+            let rotate = turn_value(n, "rotate", &matching, o, |t| &t.rotate);
+            Some(
+                transform.as_deref().map_or(Some(0.0), transform_angle)?
+                    + rotate.as_deref().map_or(Some(0.0), rotate_angle)?,
+            )
+        };
+        let certain = matching
+            .iter()
+            .all(|(t, m)| *m == Match::Yes && !matches!(t.condition, Condition::Only(_, false)));
+        let text = |extra: &str| {
+            tr!(
+                locale,
+                "This element is turned by a quarter turn in one orientation relative to the \
+                 other, so it stays in place when the device is rotated (1.3.4){extra}.",
+                "Dieses Element ist in einer Ausrichtung um eine Vierteldrehung anders gedreht \
+                 als in der anderen und bleibt beim Drehen des Geräts stehen (1.3.4){extra}."
+            )
+        };
+        let finding = match (angle(Orientation::Landscape), angle(Orientation::Portrait)) {
+            (Some(l), Some(p)) => {
+                let diff = (l - p).rem_euclid(180.0);
+                if (diff - 90.0).abs() >= 0.5 {
+                    continue;
+                }
+                if certain {
+                    Finding::fail("orientation/locked", text(""))
+                } else {
+                    Finding::review(
+                        "orientation/locked",
+                        text(pick!(
+                            locale,
+                            "; the media query or selector has conditions this check cannot \
+                             decide",
+                            "; Media Query oder Selektor haben Bedingungen, die diese Prüfung \
+                             nicht entscheidet",
+                        )),
+                    )
+                }
+            }
+            _ => Finding::review(
+                "orientation/locked",
+                tr!(
+                    locale,
+                    "This element is rotated depending on the orientation, with a transform \
+                     this check cannot evaluate. Check that it does not lock one orientation \
+                     (1.3.4).",
+                    "Dieses Element wird je nach Ausrichtung mit einer Transformation gedreht, \
+                     die diese Prüfung nicht auswertet. Prüfen, dass sie keine Ausrichtung \
+                     erzwingt (1.3.4)."
+                ),
+            ),
+        };
+        out.push(
+            finding
+                .with_severity(Severity::High)
+                .with_wcag(["1.3.4"])
+                .at(Location::node(n.id().to_string())),
+        );
+    }
 }
 
 // --- text/justified, text/line-height-tight -----------------------------------
@@ -1037,11 +1356,27 @@ pub(crate) const METAS: &[Meta] = &[
         scope: Scope::Rendered,
         wcag: &["1.3.4"],
         severity: Severity::Medium,
-        help: "Content must work in portrait and landscape; do not hide or rotate it per \
-               orientation.",
+        help: "Content must work in portrait and landscape; do not hide it per orientation.",
         help_de: de_text!(
             "Inhalt muss hoch- und querformatig funktionieren; ihn nicht je nach \
-                  Ausrichtung ausblenden oder drehen."
+                  Ausrichtung ausblenden."
+        ),
+    },
+    Meta {
+        ids: &["orientation/locked"],
+        tier: Tier::Stylesheets,
+        scope: Scope::Rendered,
+        wcag: &["1.3.4"],
+        severity: Severity::High,
+        help: "Do not rotate an element by a quarter turn in only one orientation: it then \
+               stays in place when the device turns and locks the other orientation (ACT \
+               b33eff). Compared: rotate and transform under @media (orientation) against the \
+               value in the other orientation.",
+        help_de: de_text!(
+            "Ein Element nicht nur in einer Ausrichtung um eine Vierteldrehung drehen: Es \
+                  bleibt dann beim Drehen des Geräts stehen und sperrt die andere Ausrichtung \
+                  (ACT b33eff). Verglichen werden rotate und transform unter @media \
+                  (orientation) mit dem Wert in der anderen Ausrichtung."
         ),
     },
     Meta {
@@ -1074,10 +1409,11 @@ pub(crate) const METAS: &[Meta] = &[
 
 pub(crate) fn rules<D: Document>() -> Vec<StylesheetRule<D>> {
     type Run<D> = fn(&D, &[Stylesheet], Locale, &mut Vec<Finding>);
-    let functions: [Run<D>; 5] = [
+    let functions: [Run<D>; 6] = [
         outline_removed,
         reduced_motion_ignored,
         orientation_content_hidden,
+        orientation_locked,
         spacing_important,
         visual_presentation,
     ];

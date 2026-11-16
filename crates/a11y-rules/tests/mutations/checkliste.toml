@@ -910,10 +910,10 @@ id = "orientation/content-hidden"
 file = "src/stylesheet_rules.rs"
 kind = "drop-condition"
 find = '''
-        if !hidden && !rotated {
+        if !hidden {
 '''
 replace = '''
-        if !hidden {
+        if false {
 '''
 test = "korpus"
 expect = "killed"
@@ -941,6 +941,71 @@ find = '''
 '''
 replace = '''
             .find(|m| !m.to_ascii_lowercase().contains("orientation"))
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/locked"
+file = "src/stylesheet_rules.rs"
+kind = "boundary"
+find = '''
+                if (diff - 90.0).abs() >= 0.5 {
+'''
+replace = '''
+                if (diff - 90.0).abs() >= 50.0 {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/locked"
+file = "src/stylesheet_rules.rs"
+kind = "drop-condition"
+find = '''
+            .all(|(t, m)| *m == Match::Yes && !matches!(t.condition, Condition::Only(_, false)));
+'''
+replace = '''
+            .all(|(_, m)| *m == Match::Yes);
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/locked"
+file = "src/stylesheet_rules.rs"
+kind = "swap-branch"
+find = '''
+                _ => return Condition::Never,
+'''
+replace = '''
+                _ => Orientation::Portrait,
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/locked"
+file = "src/stylesheet_rules.rs"
+kind = "drop-condition"
+find = '''
+        if !applicable || !shown(n, &displays) {
+'''
+replace = '''
+        if !applicable {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "orientation/locked"
+file = "src/stylesheet_rules.rs"
+kind = "swap-operands"
+find = '''
+                m[1].atan2(m[0]).to_degrees()
+'''
+replace = '''
+                m[0].atan2(m[1]).to_degrees()
 '''
 test = "korpus"
 expect = "killed"

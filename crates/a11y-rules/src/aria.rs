@@ -1259,7 +1259,15 @@ pub(crate) fn required_context<D: Semantics>(doc: &D, locale: Locale, out: &mut 
                         "role=\"{role}\" muss in einem Element mit der Rolle {context} stehen oder ihm gehören."
                     ),
                 )
-                .with_severity(Severity::Critical)
+                // Ein verwaister Listeneintrag wiegt so schwer wie ein `<li>`
+                // außerhalb einer Liste (`lists/item-outside-list`, mittel);
+                // seit 0.30.2 kommt er hierher, war aber kritisch geworden
+                // (auditmysite-Kalibrierung `invalid_aria.html`).
+                .with_severity(if role == "listitem" {
+                    Severity::Medium
+                } else {
+                    Severity::Critical
+                })
                 .with_wcag(["1.3.1", "4.1.2"])
                 .at(at(n.id())),
             );
