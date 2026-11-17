@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.9] - 2026-11-17
+
+### Added
+
+- **Zeit:** `timing/meta-refresh-enhanced` meldet jede verzögerte Refresh-Anweisung als AAA-Verstoß (2.2.4, 3.2.5), auch über 20 Stunden, wo `timing/meta-refresh` die Ausnahme von 2.2.1 gelten lässt (ACT bisz58).
+
 ## [0.30.8] - 2026-11-16
 
 ### Fixed

@@ -1055,6 +1055,34 @@ fn refresh() -> Vec<Fall> {
             r#"<meta name="description" content="120">"#,
             "ACT bc659a: nur meta http-equiv=refresh",
         ),
+        // --- timing/meta-refresh-enhanced (2.2.4, 3.2.5; AAA) ---------------
+        fail(
+            "timing/meta-refresh-enhanced",
+            r#"<meta http-equiv="refresh" content="72001; http://example.com">"#,
+            "ACT bisz58 (Failed): auch über 20 Stunden, ohne Ausnahme",
+        ),
+        fail(
+            "timing/meta-refresh-enhanced",
+            r#"<meta http-equiv="refresh" content="1">"#,
+            "ACT bisz58: jede Frist über 0",
+        )
+        .variant("Grenze: 1 s"),
+        negative(
+            "timing/meta-refresh-enhanced",
+            r#"<meta http-equiv="refresh" content="0; url=/next">"#,
+            "ACT bisz58 (Passed): sofortige Weiterleitung",
+        ),
+        negative(
+            "timing/meta-refresh-enhanced",
+            r#"<meta http-equiv="refresh" content="0; url=/next"><meta http-equiv="refresh" content="30">"#,
+            "ACT bisz58: nur die erste gültige Anweisung wirkt",
+        )
+        .variant("zweite Anweisung"),
+        na(
+            "timing/meta-refresh-enhanced",
+            r#"<meta http-equiv="refresh" content="+5">"#,
+            "ACT bisz58 (Inapplicable): ungültiger Inhalt",
+        ),
     ]
 }
 

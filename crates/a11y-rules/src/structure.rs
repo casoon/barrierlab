@@ -2544,6 +2544,20 @@ pub const METAS: &[Meta] = &[
         ),
     },
     Meta {
+        ids: &["timing/meta-refresh-enhanced"],
+        tier: Tier::Structure,
+        scope: Scope::Markup,
+        wcag: &["2.2.4", "3.2.5"],
+        severity: Severity::Medium,
+        help: "Do not reload or redirect with a delayed <meta http-equiv=\"refresh\"> at all, \
+               not even after more than 20 hours (AAA, no exception; ACT bisz58).",
+        help_de: de_text!(
+            "Gar nicht mit verzögertem <meta http-equiv=\"refresh\"> neu laden oder \
+                  weiterleiten, auch nicht nach mehr als 20 Stunden (AAA, ohne Ausnahme; ACT \
+                  bisz58)."
+        ),
+    },
+    Meta {
         ids: &["headings/section-without-heading"],
         tier: Tier::Structure,
         scope: Scope::AccessibilityTree,
@@ -2590,7 +2604,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 60] {
+fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 61] {
     [
         lang,
         title,
@@ -2648,6 +2662,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 60] {
         crate::document::part_unmarked,
         crate::document::abbreviations,
         crate::document::meta_refresh,
+        crate::document::meta_refresh_enhanced,
         crate::document::section_without_heading,
         crate::roles::redundant,
         crate::roles::title_only,
@@ -2655,7 +2670,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 60] {
     ]
 }
 
-const _: () = assert!(METAS.len() == 60);
+const _: () = assert!(METAS.len() == 61);
 
 /// Alle Tier-1-Regeln.
 pub fn rules<D: Document>() -> Vec<StructureRule<D>> {

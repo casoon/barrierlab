@@ -14,7 +14,7 @@ On [crates.io](https://crates.io/crates/a11y-rules), versioned in lockstep with 
 three a11y crates. Used by auditmysite (`wcag/shared.rs` calls `run_full_in`, without
 computed styles `run_with_semantics_in`, then `run_stylesheets_in`), astro-post-audit and Relief directly, by liveaudit through `a11y-wasm` and by barrierlab-cli
 through `a11y-static`. The identifiers are stable across all surfaces and declared in
-`Meta::ids`: 110 in tier 1 (structure), 35 in tier 2 (semantics), 21 in tier 3 (rendering),
+`Meta::ids`: 111 in tier 1 (structure), 35 in tier 2 (semantics), 21 in tier 3 (rendering),
 9 over stylesheets. The
 complete list is in the [rule reference](../a11y/reference/regeln.mdx).
 

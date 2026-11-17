@@ -1,13 +1,13 @@
 {
   "cases": {
     "cantTell": 50,
-    "correct": 557,
-    "wrong": 4
+    "correct": 558,
+    "wrong": 3
   },
   "consistency": {
-    "consistent": 35,
+    "consistent": 36,
     "not consistent": 2,
-    "partial": 6,
+    "partial": 5,
     "untested": 45
   },
   "host": "BarrierLab a11y-static",
@@ -619,19 +619,13 @@
     {
       "act": "bisz58",
       "barrierlab": [
-        "timing/meta-refresh"
+        "timing/meta-refresh-enhanced"
       ],
       "cases": 14,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Meta element has no refresh delay (no exception)",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bisz58/4f9bb0a8ab7bd76505483c47da831440b864fe50.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "c249d5",

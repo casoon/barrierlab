@@ -123,7 +123,7 @@ const MAPPING: &[(&str, &[&str])] = &[
     ("a25f45", &["tables/headers-attr-invalid"]),
     ("d0f69e", &["tables/header-without-data"]),
     ("bc659a", &["timing/meta-refresh"]),
-    ("bisz58", &["timing/meta-refresh"]),
+    ("bisz58", &["timing/meta-refresh-enhanced"]),
     ("b4f0c3", &["zoom/viewport-locked"]),
     ("b33eff", &["orientation/locked"]),
     ("80f0bf", &["media/audio-autoplay"]),

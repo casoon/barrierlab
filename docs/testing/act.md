@@ -19,13 +19,12 @@ W3C counts:
 
 | | BarrierLab (own run) | axe-core 4.14.0 (W3C report of 31 October 2026) |
 |---|---|---|
-| ACT rules implemented consistently | 35 | 35 (30 WCAG rules, 5 proposed) |
-| implemented partially consistently | 6 | 9 |
+| ACT rules implemented consistently | 36 | 35 (30 WCAG rules, 5 proposed) |
+| implemented partially consistently | 5 | 9 |
 
-Of the 611 test cases of the rules BarrierLab maps, 557 come out right, 50 undecided and 4
-wrong. Three of the four need a script to run before the content exists (a shadow root built
-by script), which a check of the page source never sees. One is a missed refresh delay above 20
-hours that only the stricter AAA rule fails.
+Of the 611 test cases of the rules BarrierLab maps, 558 come out right, 50 undecided and 3
+wrong. All three need a script to run before the content exists (a shadow root built by
+script), which a check of the page source never sees.
 
 The first run, before any rule was changed, gave 8 consistent and 8 partial rules, with 60
 wrong cases. Each of those 60 was looked at and the rule corrected against the specification
@@ -34,10 +33,9 @@ where a static decision is possible; the list is in
 answer where the page source does not hold the answer: background images, the length of a
 media file, layout, which block is the main content.
 
-Of the 35 rules axe-core implements consistently, BarrierLab implements 29 consistently too,
-and it is consistent on 5 that axe-core is not. The 6 others are contrast, scrolling and
-orientation, which need a browser to decide, the AAA refresh delay and one missed context
-role. The axe-core figures are the W3C's, from
+Of the 35 rules axe-core implements consistently, BarrierLab implements 30 consistently too,
+and it is consistent on 5 that axe-core is not. The 5 others are contrast, scrolling and
+orientation, which need a browser to decide, and one missed context role. The axe-core figures are the W3C's, from
 its [implementation report](https://www.w3.org/WAI/standards-guidelines/act/implementations/axe-core/).
 The BarrierLab figures are this repository's own run and have not been submitted to the W3C.
 
@@ -52,9 +50,9 @@ test cases, `--level aaa` so that the AAA contrast rule runs too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |
 |---|---|---|---|
-| ACT rules implemented consistently | 39 | 35 | 35 |
-| implemented partially consistently | 3 | 6 | 9 |
-| test cases right / undecided / wrong | 577 / 33 / 1 | 557 / 50 / 4 | — |
+| ACT rules implemented consistently | 39 | 36 | 35 |
+| implemented partially consistently | 3 | 5 | 9 |
+| test cases right / undecided / wrong | 577 / 33 / 1 | 558 / 50 / 3 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
 behind a text shadow, scrollable regions, the AAA contrast cases. One case stays wrong: the
@@ -130,7 +128,7 @@ count as untested.
 | [ARIA required owned elements](https://act-rules.github.io/rules/bc4a75) | consistent | `aria/required-children-missing` | 0 of 19 |
 | [Meta element has no refresh delay](https://act-rules.github.io/rules/bc659a) | consistent | `timing/meta-refresh` | 0 of 15 |
 | [HTML page lang attribute has valid language tag](https://act-rules.github.io/rules/bf051a) | consistent | `document/lang-invalid` | 0 of 7 |
-| [Meta element has no refresh delay (no exception)](https://act-rules.github.io/rules/bisz58) | partial | `timing/meta-refresh` | 1 of 14 |
+| [Meta element has no refresh delay (no exception)](https://act-rules.github.io/rules/bisz58) | consistent | `timing/meta-refresh-enhanced` | 0 of 14 |
 | [Link has non-empty accessible name](https://act-rules.github.io/rules/c487ae) | consistent | `links/name-missing`, `images/area-alt-missing` | 0 of 28 |
 | [Iframe element has non-empty accessible name](https://act-rules.github.io/rules/cae760) | consistent | `frames/name-missing` | 0 of 10 |
 | [Bypass Blocks of Repeated Content](https://act-rules.github.io/rules/cf77f2) | partial | `headings/none` | 0 of 14 |
