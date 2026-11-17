@@ -126,7 +126,10 @@ const MAPPING: &[(&str, &[&str])] = &[
     ("bisz58", &["timing/meta-refresh-enhanced"]),
     ("b4f0c3", &["zoom/viewport-locked"]),
     ("b33eff", &["orientation/locked"]),
-    ("80f0bf", &["media/audio-autoplay", "media/audio-autoplay-measured"]),
+    (
+        "80f0bf",
+        &["media/audio-autoplay", "media/audio-autoplay-measured"],
+    ),
     (
         "afw4f7",
         &["contrast/text-insufficient", "contrast/text-undetermined"],
@@ -262,6 +265,14 @@ fn outcome_auditmysite(page: &Value, ids: &[&str]) -> &'static str {
             .any(|r| r["rule_id"] == *id && r.get("not_run").is_none())
     });
     if ran { "passed" } else { "cantTell" }
+}
+
+/// The release of `a11y-rules` this runner is built against, from its manifest.
+fn rules_version() -> &'static str {
+    include_str!("../../../crates/a11y-rules/Cargo.toml")
+        .lines()
+        .find_map(|l| l.strip_prefix("version = \"")?.strip_suffix('"'))
+        .expect("a11y-rules manifest has a version")
 }
 
 /// The page reports auditmysite wrote with `--per-page-reports`, by URL.
@@ -448,12 +459,24 @@ fn main() {
         ),
         None => ("BarrierLab a11y-static", "earl.json"),
     };
+    // The version of what produced the results: auditmysite's own, from the
+    // index it wrote; for the static host the `a11y-rules` release.
+    let revision = match &auditmysite {
+        Some(dir) => serde_json::from_str::<Value>(
+            &fs::read_to_string(dir.join("index.json")).expect("auditmysite index.json"),
+        )
+        .expect("auditmysite index.json is JSON")["tool_version"]
+            .as_str()
+            .expect("auditmysite index.json has tool_version")
+            .to_owned(),
+        None => rules_version().to_owned(),
+    };
     let report = json!({
         "@context": "https://act-rules.github.io/earl-context.json",
         "@graph": [{
             "@type": "Assertor",
             "name": assertor,
-            "release": { "revision": env!("CARGO_PKG_VERSION") },
+            "release": { "@type": "Version", "revision": revision },
             "assertions": earl,
         }],
     });

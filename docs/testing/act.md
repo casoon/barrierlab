@@ -37,7 +37,9 @@ Of the 35 rules axe-core implements consistently, BarrierLab implements 30 consi
 and it is consistent on 5 that axe-core is not. The 5 others are contrast, scrolling and
 orientation, which need a browser to decide, and one missed context role. The axe-core figures are the W3C's, from
 its [implementation report](https://www.w3.org/WAI/standards-guidelines/act/implementations/axe-core/).
-The BarrierLab figures are this repository's own run and have not been submitted to the W3C.
+The BarrierLab figures are this repository's own run. The EARL reports of both runs are published
+at fixed addresses, [a11y-static](https://casoon.github.io/barrierlab/act/earl-a11y-static.json)
+and [auditmysite](https://casoon.github.io/barrierlab/act/earl-auditmysite.json).
 
 ## In a browser
 
@@ -155,3 +157,8 @@ repository). The second runs them, prints every wrong case with its URL and writ
 `target/act/earl.json`, an EARL report in the form the W3C takes implementation reports in. The
 mapping from ACT rules to BarrierLab rule IDs is the table `MAPPING` in
 [`xtask/act/src/main.rs`](https://github.com/casoon/barrierlab/blob/main/xtask/act/src/main.rs).
+
+The published reports are copies of `earl.json` and `earl-auditmysite.json` in
+`site/public/act/`. After a new run, copy both there and push: the W3C fetches an implementation's
+report from its address every day.
+
