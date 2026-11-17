@@ -39,8 +39,8 @@
 
 use a11y_dom::{
     Arena, ArenaBuilder, ArenaNode, Backdrop, BoxTransform, Color, ColorPairs, ComputedStyle,
-    Document, FocusCover, Layout, Node, NodeKind, PasteProbe, Rect, Rendering, Semantics,
-    SpacingClip, ancestors, elements,
+    Document, FocusCover, Layout, MediaPlayback, Node, NodeKind, PasteProbe, Rect, Rendering,
+    Semantics, SpacingClip, ancestors, elements,
 };
 use accname::IdIndex;
 use html5_parser::NodeKind as H;
@@ -557,6 +557,34 @@ impl Rendering for Host<'_> {
         self.measures("transform").then(|| BoxTransform {
             transform: Some(own(node, "transform").unwrap_or_else(|| "none".into())),
             rotate: Some(own(node, "rotate").unwrap_or_else(|| "none".into())),
+        })
+    }
+
+    /// Wiedergabe aus `--media-paused`, `--media-muted`, `--media-duration`
+    /// (Sekunden, `inf` für einen Strom) und `--media-audio` am Element;
+    /// ohne eine davon ungemessen.
+    fn media_playback<'n>(&'n self, node: Self::N<'n>) -> Option<MediaPlayback> {
+        let props = [
+            "--media-paused",
+            "--media-muted",
+            "--media-duration",
+            "--media-audio",
+        ];
+        if !self.measures("media") || props.iter().all(|p| own(node, p).is_none()) {
+            return None;
+        }
+        let flag = |p: &str| own(node, p).map(|v| v == "1" || v == "true");
+        Some(MediaPlayback {
+            paused: flag("--media-paused"),
+            muted: flag("--media-muted"),
+            duration_s: own(node, "--media-duration").and_then(|v| {
+                if v == "inf" {
+                    Some(f64::INFINITY)
+                } else {
+                    v.parse().ok()
+                }
+            }),
+            has_audio: flag("--media-audio"),
         })
     }
 

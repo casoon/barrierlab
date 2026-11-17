@@ -116,7 +116,7 @@ count as untested.
 | [Autocomplete attribute has valid value](https://act-rules.github.io/rules/73f2c2) | consistent | `forms/autocomplete-invalid` | 0 of 20 |
 | [Line height in style attributes is not !important](https://act-rules.github.io/rules/78fd32) | consistent | `text-spacing/line-height-important` | 0 of 21 |
 | [SVG element with explicit role has non-empty accessible name](https://act-rules.github.io/rules/7d6734) | consistent | `svg/name-missing` | 0 of 10 |
-| [Audio or video element avoids automatically playing audio](https://act-rules.github.io/rules/80f0bf) | not consistent | `media/audio-autoplay` | 0 of 8 |
+| [Audio or video element avoids automatically playing audio](https://act-rules.github.io/rules/80f0bf) | not consistent | `media/audio-autoplay`, `media/audio-autoplay-measured` | 0 of 8 |
 | [Object element rendering non-text content has non-empty accessible name](https://act-rules.github.io/rules/8fc3b6) | consistent | `objects/alt-missing` | 0 of 14 |
 | [Button has non-empty accessible name](https://act-rules.github.io/rules/97a4e1) | consistent | `buttons/name-missing` | 0 of 17 |
 | [Word spacing in style attributes is not !important](https://act-rules.github.io/rules/9e45ec) | consistent | `text-spacing/word-important` | 0 of 16 |

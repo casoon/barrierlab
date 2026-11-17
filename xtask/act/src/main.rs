@@ -126,7 +126,7 @@ const MAPPING: &[(&str, &[&str])] = &[
     ("bisz58", &["timing/meta-refresh-enhanced"]),
     ("b4f0c3", &["zoom/viewport-locked"]),
     ("b33eff", &["orientation/locked"]),
-    ("80f0bf", &["media/audio-autoplay"]),
+    ("80f0bf", &["media/audio-autoplay", "media/audio-autoplay-measured"]),
     (
         "afw4f7",
         &["contrast/text-insufficient", "contrast/text-undetermined"],
@@ -195,6 +195,16 @@ fn sheets(page: &Page, cache: &Path, url: &str) -> Vec<Sheet> {
         .collect()
 }
 
+/// Rules that decide from a host measurement what a markup rule in the same
+/// mapping otherwise leaves as a review. Without the measurement they do not
+/// run, and the markup rule still covers every element, so their absence does
+/// not make a case undecided.
+const MEASUREMENT_SUPPLEMENTS: &[&str] = &["media/audio-autoplay-measured"];
+
+fn must_run(id: &&&str) -> bool {
+    !MEASUREMENT_SUPPLEMENTS.contains(id)
+}
+
 fn outcome(report: &Report, ids: &[&str]) -> &'static str {
     let mine = |id: &str| ids.contains(&id);
     let findings: Vec<_> = report
@@ -208,7 +218,7 @@ fn outcome(report: &Report, ids: &[&str]) -> &'static str {
     if !findings.is_empty() {
         return "cantTell";
     }
-    let ran = ids.iter().all(|id| {
+    let ran = ids.iter().filter(must_run).all(|id| {
         report
             .rule_runs
             .iter()
@@ -246,7 +256,7 @@ fn outcome_auditmysite(page: &Value, ids: &[&str]) -> &'static str {
     if reported {
         return "cantTell";
     }
-    let ran = ids.iter().all(|id| {
+    let ran = ids.iter().filter(must_run).all(|id| {
         runs.into_iter()
             .flatten()
             .any(|r| r["rule_id"] == *id && r.get("not_run").is_none())

@@ -15,6 +15,7 @@ abweichen, steht je Schritt in
 ### Added
 
 - **Zeit:** `timing/meta-refresh-enhanced` meldet jede verzögerte Refresh-Anweisung als AAA-Verstoß (2.2.4, 3.2.5), auch über 20 Stunden, wo `timing/meta-refresh` die Ausnahme von 2.2.1 gelten lässt (ACT bisz58).
+- **Medien:** `media/audio-autoplay-measured` entscheidet selbststartenden Ton aus der Messung des Hosts (`Rendering::media_playback`): Spielt ein Medium nach dem Laden länger als drei Sekunden mit Ton und ohne eigene Bedienelemente, ist das ein Verstoß gegen 1.4.2. Für gemessene Medien entfällt der `REVIEW` von `media/audio-autoplay` (ACT 80f0bf).
 
 ## [0.30.8] - 2026-11-16
 

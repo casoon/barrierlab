@@ -372,7 +372,8 @@
     {
       "act": "80f0bf",
       "barrierlab": [
-        "media/audio-autoplay"
+        "media/audio-autoplay",
+        "media/audio-autoplay-measured"
       ],
       "cases": 8,
       "consistency": "not consistent",

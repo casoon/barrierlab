@@ -9,9 +9,9 @@ Repository `casoon/a11y-core`.
 
 ## [0.30.9] - 2026-11-17
 
-### Changed
+### Added
 
-- **Gleichschritt:** mit `a11y-rules` 0.30.9; keine eigene Änderung.
+- **Darstellung:** `Rendering::media_playback` und `MediaPlayback` (spielt, stumm, Dauer, Tonspur eines `<audio>`/`<video>` nach dem Laden), Vorgabe `None`.
 
 ## [0.30.8] - 2026-11-16
 

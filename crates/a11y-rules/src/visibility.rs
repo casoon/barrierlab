@@ -15,7 +15,7 @@ use std::collections::HashSet;
 
 use a11y_dom::{
     ComputedStyle, Document, Layout, NameSource, Node, NodeId, NodeKind, Rect, Rendering,
-    Semantics, TreeScope,
+    Semantics, TreeScope, elements,
 };
 
 /// Welche Knoten eine Regel betrachtet.
@@ -46,7 +46,16 @@ pub(crate) struct Hidden {
     /// Der Text darunter erscheint als Symbol, nicht als Wort (siehe
     /// [`GLYPHS_ARE_NOT_TEXT`]).
     not_rendered_or_glyph: HashSet<NodeId>,
+    /// `<audio>` und `<video>`, deren Wiedergabe der Host gemessen hat (siehe
+    /// [`DECIDED_BY_MEASUREMENT`]).
+    measured_media: HashSet<NodeId>,
 }
+
+/// Regeln über das Markup, die ein Medium abgeben, sobald der Host seine
+/// Wiedergabe gemessen hat: Dann entscheidet `media/audio-autoplay-measured`
+/// aus der Messung, und die Vermutung aus dem Markup (`REVIEW`) entfällt.
+/// Diese Regeln haben `Scope::Markup`; die Menge enthält nur die Medien.
+pub(crate) const DECIDED_BY_MEASUREMENT: &[&str] = &["media/audio-autoplay"];
 
 /// Regeln, für die Text in einer Ligatur-Symbolschrift kein sichtbarer Text
 /// ist. `<button aria-label="Find">search</button>` in `Material Icons` zeigt
@@ -73,7 +82,7 @@ fn ligature_icon_font(family: &str) -> bool {
 impl Hidden {
     /// Ohne berechnete Stile: versteckt ist, was das `hidden`-Attribut trägt.
     pub(crate) fn by_attribute<D: Document>(doc: &D) -> Self {
-        Self::determine(doc, |n| n.has_attr("hidden"), |_| false)
+        Self::determine(doc, |n| n.has_attr("hidden"), |_| false, |_| false)
     }
 
     /// Mit berechneten Stilen: `display: none` und `visibility: hidden`.
@@ -96,6 +105,7 @@ impl Hidden {
                     .and_then(|s| s.font_family)
                     .is_some_and(|f| ligature_icon_font(&f))
             },
+            |n| doc.media_playback(n).is_some(),
         )
     }
 
@@ -103,6 +113,7 @@ impl Hidden {
         doc: &'d D,
         hidden: impl Fn(D::N<'d>) -> bool,
         glyph: impl Fn(D::N<'d>) -> bool,
+        measured: impl Fn(D::N<'d>) -> bool,
     ) -> Self {
         let root = doc.root();
         let collect_where = |also: &dyn Fn(D::N<'d>) -> bool| {
@@ -141,10 +152,17 @@ impl Hidden {
             not_rendered: collect_where(&|_| false),
             skipped: collect_where(&|n| n.attr("aria-hidden") == Some("true")),
             not_rendered_or_glyph: collect_where(&glyph),
+            measured_media: elements(doc)
+                .filter(|n| (n.is_element("audio") || n.is_element("video")) && measured(*n))
+                .map(|n| n.id())
+                .collect(),
         }
     }
 
     fn for_rule(&self, scope: Scope, ids: &[&str]) -> Option<&HashSet<NodeId>> {
+        if scope == Scope::Markup && ids.iter().any(|id| DECIDED_BY_MEASUREMENT.contains(id)) {
+            return Some(&self.measured_media);
+        }
         if scope == Scope::Rendered && ids.iter().any(|id| GLYPHS_ARE_NOT_TEXT.contains(id)) {
             return Some(&self.not_rendered_or_glyph);
         }
@@ -366,6 +384,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
     fn paste_probe<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::PasteProbe> {
         let doc: &'n D = self.doc;
         doc.paste_probe(node.inner)
+    }
+
+    fn media_playback<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::MediaPlayback> {
+        let doc: &'n D = self.doc;
+        doc.media_playback(node.inner)
     }
 
     fn focus_cover<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::FocusCover> {

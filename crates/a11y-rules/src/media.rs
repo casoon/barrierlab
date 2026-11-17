@@ -269,7 +269,7 @@ fn plays_at_most_three_seconds<'a, N: Node<'a>>(n: N) -> bool {
 /// ohne `hidden` und ohne `aria-hidden="true"` am Element oder einem
 /// Vorfahren. Versteckte Bedienelemente sind kein Mechanismus (ACT 4c31df:
 /// sichtbar und zugänglich).
-fn usable_controls<'a, N: Node<'a>>(n: N) -> bool {
+pub(crate) fn usable_controls<'a, N: Node<'a>>(n: N) -> bool {
     n.has_attr("controls")
         && !std::iter::once(n)
             .chain(ancestors(n))

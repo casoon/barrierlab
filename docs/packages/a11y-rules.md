@@ -14,7 +14,7 @@ On [crates.io](https://crates.io/crates/a11y-rules), versioned in lockstep with 
 three a11y crates. Used by auditmysite (`wcag/shared.rs` calls `run_full_in`, without
 computed styles `run_with_semantics_in`, then `run_stylesheets_in`), astro-post-audit and Relief directly, by liveaudit through `a11y-wasm` and by barrierlab-cli
 through `a11y-static`. The identifiers are stable across all surfaces and declared in
-`Meta::ids`: 111 in tier 1 (structure), 35 in tier 2 (semantics), 21 in tier 3 (rendering),
+`Meta::ids`: 111 in tier 1 (structure), 35 in tier 2 (semantics), 22 in tier 3 (rendering),
 9 over stylesheets. The
 complete list is in the [rule reference](../a11y/reference/regeln.mdx).
 
@@ -75,6 +75,7 @@ host has nothing to filter). A page with nothing the rule targets counts as run.
 | `focus/obscured-enhanced` (2.4.12, AAA) | `Rendering::focus_cover` per tab-reachable control | `REVIEW` when `covered > 0`. Without any probe: `NotRun` (static geometry is not a probe). Which scroll a real Tab produces is not settled; the host records how it scrolled (auditmysite: `scrollIntoView({block:'nearest'})`) |
 | `auth/paste-blocked` | `Rendering::paste_probe` on visible, enabled, writable `input[type=password]` and fields with `autocomplete` `one-time-code` or `current-password` (frames and open shadow roots included, by the host) | `FAIL` (3.3.8) when `cancelled && !inserted`; a handler that cancels and inserts the text itself blocks nothing. The event is synthetic (`isTrusted` false): a handler reacting only to trusted events or key presses is not seen. `autocomplete="off"` is not a finding. Failure technique F109 is **not** cited: it concerns split-field entry, not paste handlers |
 | `orientation/root-rotated` | `Rendering::box_transform` of `html` and `body`: the computed matrix (`b = sin θ`, `c = -sin θ`, thresholds `abs(b) > 0.01` and `abs(b + c) < 0.01`; `matrix3d` entries 2 and 5) or a `rotate` angle off a multiple of 180° about the z axis | `REVIEW` (1.3.4) per rotated root. One viewport only, and a rotation present in both orientations locks nothing; the comparison of both orientations is `orientation/locked` |
+| `media/audio-autoplay-measured` | `Rendering::media_playback` of each `<audio autoplay>`/`<video autoplay>`: playing, muted, duration, audio track | `FAIL` (1.4.2) when it plays with sound for more than three seconds and has no `controls`; `REVIEW` when the audio track or duration is unknown. A measured medium leaves `media/audio-autoplay` (markup, `REVIEW`) |
 | `frames/cross-origin` | `Rendering::frame_reachable` per `<iframe>`/`<frame>` (not presentational, not hidden, larger than 1 px) | `UNTESTED` per unreadable frame, no WCAG criterion: a coverage note |
 
 ## Normative mapping

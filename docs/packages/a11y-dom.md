@@ -35,8 +35,9 @@ flowchart TB
 |---|---|
 | `Document` | the minimum: tree, elements, attributes |
 | `Semantics`, `Rendering` | tiers a host offers only if it really has the data |
-| `Rendering` host measurements | default methods, `None` = not measured: `layout`, `scroll_overflow_px`, `visually_hidden`, `sampled_backdrop`, `frame_reachable` (#132), `box_transform` (#134), `paste_probe` (#133), `focus_cover` (#135), `text_spacing_clip` (#136) |
+| `Rendering` host measurements | default methods, `None` = not measured: `layout`, `scroll_overflow_px`, `visually_hidden`, `sampled_backdrop`, `frame_reachable` (#132), `box_transform` (#134), `paste_probe` (#133), `focus_cover` (#135), `text_spacing_clip` (#136), `media_playback` |
 | `BoxTransform` | computed `transform` and `rotate` of an element as strings, via `Rendering::box_transform()` (default `None`); a method instead of two `ComputedStyle` fields because new fields on that non-`non_exhaustive` struct break hosts that build it as a literal |
+| `MediaPlayback` | an `<audio>`/`<video>` after load: `paused`, `muted`, `duration_s` (infinite for a stream) and `has_audio`, each optional; via `Rendering::media_playback()` (default `None`). The host allows autoplay with sound, or every medium would stand still |
 | `PasteProbe` | raw observations of a synthetic paste event at a password or code field (`cancelled`, `inserted`), via `Rendering::paste_probe()` (default `None`); the host runs it as an opt-in pass because it executes page handlers and writes `value` |
 | `FocusCover` | after the host focused and scrolled a control: sample `points`, how many are `covered` by a fixed or sticky foreign element painted above it, and the `blocker`; via `Rendering::focus_cover()` (default `None`); the host records how it scrolled |
 | `SpacingClip` | the model for text spacing: one fact per element, taken twice (`before`, `after` the host applied the 1.4.12 override): whether it clips its own text through hidden overflow; via `Rendering::text_spacing_clip()` (default `None`). The host injects the override, measures, removes it, and reports whether injection worked (`None` otherwise) |
