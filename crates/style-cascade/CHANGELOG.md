@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-17
+
 ### Added
 
 - **Kurzschreibweisen:** `animation` wird in `animation-name`, `-duration`, `-iteration-count` und `-play-state` zerlegt, `flex-flow` in `flex-direction` und `flex-wrap` (casoon/barrierlab#228).
