@@ -126,7 +126,7 @@ for f in &report.findings {
   <Facts
     items={[
       { value: '20', label: 'Rust crates, all on crates.io' },
-      { value: '168', label: 'accessibility rule IDs in a11y-rules' },
+      { value: '177', label: 'accessibility rule IDs in a11y-rules' },
       { value: '4,977', label: 'vnu fixtures html-conform is measured against' },
       { value: '1', label: 'finding model for every package' },
     ]}
@@ -202,6 +202,12 @@ for f in &report.findings {
           without headers; axe-core of missing captions. Twelve barriers neither reports: focus,
           tab order, dialogs, error messages, colour as the only signal, moving content. No tool
           on the bench found more than 10 of the 22.
+        </p>
+        <p>
+          Since a11y-static 0.5.2 the page source alone is enough to ask for review of three of
+          them: the reordered form fields, the <code>div</code> styled as a button and the ticker
+          that never stops. The figures above are from before that; barrierlab-cli has not been
+          measured again.
         </p>
     </div>
     <Diagram name="testbench" format="svg" />

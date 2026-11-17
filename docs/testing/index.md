@@ -94,7 +94,9 @@ and many test setups. BarrierLab does the same job, so the two are compared whet
 intends it or not. On the test bench of [barrierlab.eu](https://barrierlab.eu/tools/coverage/),
 a set of practice pages with 22 known barriers, barrierlab-cli reported 8 of them as failures,
 as axe-core did, and neither flagged anything on the corrected versions of those pages. No
-tool on that bench found more than 10.
+tool on that bench found more than 10. Since a11y-static 0.5.2 the page source alone also asks
+for review of the reordered form fields, the `div` styled as a button and the endless ticker;
+barrierlab-cli has not been measured again since.
 
 That is the more useful figure: an automated check, whichever engine runs it, finds about a
 third of what is wrong with a page. Running two independently written engines on the same page
@@ -103,14 +105,13 @@ catches mistakes in either one; barrierlab.eu runs axe-core beside auditmysite f
 The neutral yardstick is the set of [W3C ACT test cases](act.md). There BarrierLab implements
 36 ACT rules consistently and 5 partially, counted as the W3C counts, where the W3C lists
 axe-core with 35 and 9; of 611 test cases, 3 come out wrong. Inside a browser, run by
-auditmysite, the same rules reach 39 and 3, with 1 wrong case. The page has every rule and
+auditmysite, the same rules reach 41 and 2, with no wrong case. The page has every rule and
 every remaining wrong case.
 
 ## Where it falls short
 
 - **Young and small.** The rule set is checked against real pages and its own corpus, but it
-  has seen far fewer sites than engines that have been in use for years, and on the W3C ACT
-  test cases it still trails engines that run in a browser. Expect false positives that others
+  has seen far fewer sites than engines that have been in use for years. Expect false positives that others
   fixed long ago, and report them.
 - **barrierlab-cli is not released.** It is built from source with a Rust toolchain; there is
   no binary to download yet.
