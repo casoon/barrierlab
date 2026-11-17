@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.10] - 2026-11-17
+
+### Fixed
+
+- **Medien:** `media/audio-autoplay-measured` meldet `REVIEW` statt Verstoß, wenn die Seite eigene Knöpfe zum Anhalten oder Stummschalten anbietet (ACT 80f0bf, Passed Example 3); ob sie wirken, zeigt die Messung nicht.
+
 ## [0.30.9] - 2026-11-17
 
 ### Added

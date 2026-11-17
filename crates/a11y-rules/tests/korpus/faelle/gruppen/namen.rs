@@ -949,9 +949,27 @@ fn media() -> Vec<Fall> {
         negative(
             "media/audio-autoplay-measured",
             r#"<video autoplay style="--media-paused:1;--media-duration:16;--media-audio:1"><source src="video.mp4" type="video/mp4"></video>"#,
-            "ACT 80f0bf Passed 3: ein Skript hält das Video an",
+            "WCAG 1.4.2: ein Skript hat das Video angehalten",
         )
         .variant("angehalten"),
+        review(
+            "media/audio-autoplay-measured",
+            r#"<video id="video" autoplay style="--media-paused:0;--media-duration:16;--media-audio:1"><source src="video.mp4" type="video/mp4"></video><div id="video-controls"><button type="button" id="play-pause">Play</button><button type="button" id="mute">Mute</button></div>"#,
+            "ACT 80f0bf Passed 3: eigene Knöpfe mit Skript; ob sie wirken, steht nicht in der Messung → REVIEW",
+        )
+        .variant("eigene Knöpfe"),
+        review(
+            "media/audio-autoplay-measured",
+            r#"<audio src="a.mp3" autoplay style="--media-paused:0;--media-duration:12;--media-audio:1"></audio><div role="button" aria-label="Ton aus" tabindex="0"></div>"#,
+            "Eigener Knopf über role=button und aria-label (deutsch) → REVIEW",
+        )
+        .variant("eigener Knopf, Rolle"),
+        fail(
+            "media/audio-autoplay-measured",
+            r#"<audio src="a.mp3" autoplay style="--media-paused:0;--media-duration:12;--media-audio:1"></audio><button>Submit</button><button>Play</button>"#,
+            "Knöpfe ohne Anhalten oder Stummschalten zählen nicht („button“ ist kein „Ton“)",
+        )
+        .variant("fremde Knöpfe"),
         negative(
             "media/audio-autoplay-measured",
             r#"<video autoplay style="--media-paused:0;--media-duration:16;--media-audio:0"><source src="silent.mp4" type="video/mp4"></video>"#,

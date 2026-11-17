@@ -336,10 +336,10 @@ file = "src/probes.rs"
 kind = "swap-branch"
 test = "korpus"
 find = '''
-        let finding = if p.has_audio == Some(true) && p.duration_s.is_some() {
+            if p.has_audio == Some(true) && p.duration_s.is_some() {
 '''
 replace = '''
-        let finding = if p.duration_s.is_some() {
+            if p.duration_s.is_some() {
 '''
 expect = "killed"
 
@@ -366,5 +366,31 @@ find = '''
 '''
 replace = '''
         if false {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        let finding = if *custom_control.get_or_init(|| custom_media_control(doc)) {
+'''
+replace = '''
+        let finding = if false {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+                .any(|w| MEDIA_CONTROL_WORDS.contains(&w))
+'''
+replace = '''
+                .any(|w| w.contains("ton"))
 '''
 expect = "killed"
