@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.12] - 2026-11-17
+
 ### Fixed
 
 - **Tastatur:** `keyboard/hidden-focusable` zählt ein Modal ohne Box (0×0, etwa OneTrusts geschlossenes Einstellungsfenster) nicht mehr als offen; der versteckte Hintergrund bleibt dann ein Verstoß statt `REVIEW` (#252).
