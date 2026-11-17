@@ -49,7 +49,17 @@ pub(crate) struct Hidden {
     /// `<audio>` und `<video>`, deren Wiedergabe der Host gemessen hat (siehe
     /// [`DECIDED_BY_MEASUREMENT`]).
     measured_media: HashSet<NodeId>,
+    /// Wie `not_rendered`, zusätzlich ohne Modale, deren Box leer ist (siehe
+    /// [`MODAL_NEEDS_BOX`]).
+    without_empty_modals: HashSet<NodeId>,
 }
+
+/// Regeln, für die ein Modal nur zählt, wenn es eine Box hat. OneTrust hält
+/// sein geschlossenes Einstellungsfenster als `<div role="dialog"
+/// aria-modal="true">` mit 0×0 Box im Dokument; offen ist das nicht
+/// (casoon/barrierlab#252, basf.com). Ein solches Modal fehlt in der Sicht
+/// dieser Regeln samt Teilbaum.
+pub(crate) const MODAL_NEEDS_BOX: &[&str] = &["keyboard/hidden-focusable"];
 
 /// Regeln über das Markup, die ein Medium abgeben, sobald der Host seine
 /// Wiedergabe gemessen hat: Dann entscheidet `media/audio-autoplay-measured`
@@ -82,7 +92,13 @@ fn ligature_icon_font(family: &str) -> bool {
 impl Hidden {
     /// Ohne berechnete Stile: versteckt ist, was das `hidden`-Attribut trägt.
     pub(crate) fn by_attribute<D: Document>(doc: &D) -> Self {
-        Self::determine(doc, |n| n.has_attr("hidden"), |_| false, |_| false)
+        Self::determine(
+            doc,
+            |n| n.has_attr("hidden"),
+            |_| false,
+            |_| false,
+            |_| false,
+        )
     }
 
     /// Mit berechneten Stilen: `display: none` und `visibility: hidden`.
@@ -106,6 +122,12 @@ impl Hidden {
                     .is_some_and(|f| ligature_icon_font(&f))
             },
             |n| doc.media_playback(n).is_some(),
+            |n| {
+                ((n.is_element("dialog") && n.has_attr("open"))
+                    || n.attr("aria-modal")
+                        .is_some_and(|v| v.eq_ignore_ascii_case("true")))
+                    && doc.bounds(n).is_some_and(|b| b.is_empty())
+            },
         )
     }
 
@@ -114,6 +136,7 @@ impl Hidden {
         hidden: impl Fn(D::N<'d>) -> bool,
         glyph: impl Fn(D::N<'d>) -> bool,
         measured: impl Fn(D::N<'d>) -> bool,
+        empty_modal: impl Fn(D::N<'d>) -> bool,
     ) -> Self {
         let root = doc.root();
         let collect_where = |also: &dyn Fn(D::N<'d>) -> bool| {
@@ -152,6 +175,7 @@ impl Hidden {
             not_rendered: collect_where(&|_| false),
             skipped: collect_where(&|n| n.attr("aria-hidden") == Some("true")),
             not_rendered_or_glyph: collect_where(&glyph),
+            without_empty_modals: collect_where(&empty_modal),
             measured_media: elements(doc)
                 .filter(|n| (n.is_element("audio") || n.is_element("video")) && measured(*n))
                 .map(|n| n.id())
@@ -162,6 +186,9 @@ impl Hidden {
     fn for_rule(&self, scope: Scope, ids: &[&str]) -> Option<&HashSet<NodeId>> {
         if scope == Scope::Markup && ids.iter().any(|id| DECIDED_BY_MEASUREMENT.contains(id)) {
             return Some(&self.measured_media);
+        }
+        if scope == Scope::Rendered && ids.iter().any(|id| MODAL_NEEDS_BOX.contains(id)) {
+            return Some(&self.without_empty_modals);
         }
         if scope == Scope::Rendered && ids.iter().any(|id| GLYPHS_ARE_NOT_TEXT.contains(id)) {
             return Some(&self.not_rendered_or_glyph);

@@ -89,8 +89,13 @@ impl Rendering for WithStyle<'_> {
         })
     }
 
-    fn bounds<'n>(&'n self, _node: Self::N<'n>) -> Option<Rect> {
-        None
+    fn bounds<'n>(&'n self, node: Self::N<'n>) -> Option<Rect> {
+        node.has_attr("data-empty").then_some(Rect {
+            x: 0.0,
+            y: 0.0,
+            width: 0.0,
+            height: 0.0,
+        })
     }
 }
 
@@ -354,6 +359,46 @@ fn unrendered_focusable_under_aria_hidden_is_no_finding() {
         .close()
         .build();
     assert_eq!(count(&run(&arena), "keyboard/hidden-focusable"), 0);
+}
+
+/// casoon/barrierlab#252 (basf.com): OneTrusts geschlossenes Einstellungsfenster
+/// (`role="dialog" aria-modal="true"`, 0×0 Box) ist kein offenes Modal. Der
+/// versteckte Hintergrund bleibt ein Verstoß; mit Box bleibt es ein Review.
+#[test]
+fn empty_modal_is_not_an_open_modal_for_hidden_focusable() {
+    let run_with = |empty: bool| {
+        let mut b = page()
+            .open("div")
+            .attr("role", "dialog")
+            .attr("aria-modal", "true");
+        if empty {
+            b = b.attr("data-empty", "");
+        }
+        let arena = b
+            .attr("aria-label", "x")
+            .close()
+            .open("div")
+            .attr("aria-hidden", "true")
+            .open("a")
+            .attr("href", "/")
+            .text("Link")
+            .close()
+            .close()
+            .close()
+            .close()
+            .build();
+        run_full(&WithStyle(WithSemantics::new(&arena)))
+    };
+    let fails = |r: &Report| {
+        r.findings
+            .iter()
+            .filter(|f| {
+                f.rule_id == "keyboard/hidden-focusable" && f.outcome == a11y_report::Outcome::Fail
+            })
+            .count()
+    };
+    assert_eq!(fails(&run_with(true)), 1);
+    assert_eq!(fails(&run_with(false)), 0);
 }
 
 // --- Checkliste (liveaudit#7) ---------------------------------------------
