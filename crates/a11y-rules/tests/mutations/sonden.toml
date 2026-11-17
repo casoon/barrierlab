@@ -336,10 +336,10 @@ file = "src/probes.rs"
 kind = "swap-branch"
 test = "korpus"
 find = '''
-            if p.has_audio == Some(true) && p.duration_s.is_some() {
+        } else if p.has_audio == Some(true) && p.duration_s.is_some() {
 '''
 replace = '''
-            if p.duration_s.is_some() {
+        } else if p.duration_s.is_some() {
 '''
 expect = "killed"
 
