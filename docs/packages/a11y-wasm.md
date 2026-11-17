@@ -77,9 +77,9 @@ duplicate. Without the call every node is in the document. A mismatch (length,
 
 ## Probe columns (cargo feature `probes`, default)
 
-Five rules read measurements that only the page can supply: the
+Six rules read measurements that only the page can supply: the
 `Rendering` methods `frame_reachable`, `box_transform`, `paste_probe`,
-`focus_cover` and `text_spacing_clip` of `a11y-dom` (their doc comments define
+`focus_cover`, `text_spacing_clip` and `media_playback` of `a11y-dom` (their doc comments define
 what is measured). Each has its own method on `Scan`. **A column that is not
 supplied is "not measured" (`None`) and its rule is recorded as `NotRun` with a
 reason; a supplied column counts as measured.** All columns are sparse: `nodes`
@@ -94,20 +94,21 @@ together with `withRendering`, like `withLayout`.
 | `withPasteProbes(nodes: Uint32Array, flags: Uint8Array)` | `auth/paste-blocked` | `flags`: bit 0 event cancelled, bit 1 probe text inserted |
 | `withFocusCover(nodes: Uint32Array, points: Uint32Array, covered: Uint32Array, blocker: Int32Array)` | `focus/obscured`, `focus/obscured-enhanced` | sample points, covered points (at most `points`), node index of the topmost blocker or `-1` |
 | `withTextSpacing(nodes: Uint32Array, flags: Uint8Array)` | `text-spacing/clipped` | `flags`: bit 0 clipped before, bit 1 clipped after the text-spacing override |
+| `withMedia(nodes: Uint32Array, paused: Int8Array, muted: Int8Array, duration: Float64Array, has_audio: Int8Array)` | `media/audio-autoplay-measured` | per `<audio autoplay>`/`<video autoplay>`; `paused`, `muted`, `has_audio`: `1` yes, `0` no, `-1` not determined; `duration` in seconds, `Infinity` for a stream, `NaN` not determined |
 
 Calling a method again replaces its column. Validation throws an `Error`
 (`invalid <column> columns: …`) for unequal lengths, node indices that are not
 strictly ascending or outside the arena, flag bits outside the table,
-`covered > points` and a `blocker` outside the arena; it does not trap the module.
+`covered > points`, a media state outside `-1`…`1`, a negative `duration` and a `blocker` outside the arena; it does not trap the module.
 The TypeScript signatures come from the generated `.d.ts`.
 
 The feature is on by default; `--no-default-features` builds the lean variant
-without the methods. The columns pull the bodies of the five rules into the
+without the methods. The columns pull the bodies of the six rules into the
 artifact, about 9 KB gzip. Budget decision of 2026-11-09 (liveaudit#16): the gzip
 budget rises from 170 KB to 180 KB (earlier steps: 110, 130, 150, 170 KB) and the
 columns ship in the default build (measured 183,122 bytes gzip, 178.8 KiB). Since
 2026-11-14 the budget is 195 KB: the corrections from the W3C ACT test cases
-(barrierlab#225) brought the default build to 192.5 KB gzip.
+(barrierlab#225) brought the default build to 192.5 KB gzip. Since 2026-11-17 it is 200 KB: the media column and the rules of `a11y-rules` 0.30.x brought it to 195.0 KB.
 
 ## Limits
 

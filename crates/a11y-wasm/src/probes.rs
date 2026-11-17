@@ -1,8 +1,10 @@
 //! Messungen an der laufenden Seite, die der Collector je Knoten liefern kann:
-//! Rahmen, Drehung der Wurzel, Einfügen, Fokusabdeckung, Textabstand
+//! Rahmen, Drehung der Wurzel, Einfügen, Fokusabdeckung, Textabstand,
+//! Wiedergabe von Medien
 //! (casoon/barrierlab#130). Sie erreichen `a11y-dom` über die
 //! [`Rendering`](a11y_dom::Rendering)-Methoden `frame_reachable`,
-//! `box_transform`, `paste_probe`, `focus_cover` und `text_spacing_clip`.
+//! `box_transform`, `paste_probe`, `focus_cover`, `text_spacing_clip` und
+//! `media_playback`.
 //!
 //! **Fehlt eine Spalte, ist die Messung nicht gemacht** (`None`), und die Regel
 //! erscheint als nicht gelaufen. Ist sie da, gilt sie als gemessen — an den
@@ -11,7 +13,7 @@
 //! paralleles Array. Die Proben berühren nur wenige Knoten (Rahmen, Felder,
 //! Bedienelemente), eine Spalte je Knoten wäre überwiegend leer.
 
-use a11y_dom::{BoxTransform, FocusCover, NodeId, PasteProbe, SpacingClip};
+use a11y_dom::{BoxTransform, FocusCover, MediaPlayback, NodeId, PasteProbe, SpacingClip};
 
 /// Bit 0 der Einfüge-Spalte: das Ereignis wurde abgebrochen.
 pub const PASTE_CANCELLED: u8 = 1;
@@ -99,6 +101,7 @@ pub struct ProbeColumns {
     pub paste: Option<Sparse<PasteProbe>>,
     pub focus: Option<Sparse<FocusCover>>,
     pub spacing: Option<Sparse<SpacingClip>>,
+    pub media: Option<Sparse<MediaPlayback>>,
 }
 
 impl ProbeColumns {
@@ -237,6 +240,61 @@ impl ProbeColumns {
         Ok(())
     }
 
+    /// `media_playback` je `<audio autoplay>`/`<video autoplay>`: `paused`,
+    /// `muted` und `has_audio` sind 1 (ja), 0 (nein) oder -1 (nicht
+    /// bestimmt); `duration` in Sekunden, `Infinity` für einen Datenstrom,
+    /// `NaN` für nicht bestimmt.
+    pub fn set_media(
+        &mut self,
+        node_count: usize,
+        nodes: Vec<u32>,
+        paused: &[i8],
+        muted: &[i8],
+        duration: &[f64],
+        has_audio: &[i8],
+    ) -> Result<(), String> {
+        check(
+            "media",
+            node_count,
+            &nodes,
+            &[
+                ("paused", paused.len()),
+                ("muted", muted.len()),
+                ("duration", duration.len()),
+                ("has_audio", has_audio.len()),
+            ],
+        )?;
+        for (name, values) in [
+            ("paused", paused),
+            ("muted", muted),
+            ("has_audio", has_audio),
+        ] {
+            if let Some(i) = values.iter().position(|v| !(-1..=1).contains(v)) {
+                return Err(format!(
+                    "media: {name}[{i}] = {} must be -1, 0 or 1",
+                    values[i]
+                ));
+            }
+        }
+        if let Some(i) = duration.iter().position(|d| *d < 0.0) {
+            return Err(format!(
+                "media: duration[{i}] = {} must not be negative",
+                duration[i]
+            ));
+        }
+        let tri = |v: i8| (v >= 0).then_some(v == 1);
+        let values = (0..nodes.len())
+            .map(|i| MediaPlayback {
+                paused: tri(paused[i]),
+                muted: tri(muted[i]),
+                duration_s: (!duration[i].is_nan()).then_some(duration[i]),
+                has_audio: tri(has_audio[i]),
+            })
+            .collect();
+        self.media = Some(Sparse { nodes, values });
+        Ok(())
+    }
+
     pub(crate) fn frame(&self, node: NodeId) -> Option<bool> {
         self.frames.as_ref()?.get(node).copied()
     }
@@ -255,6 +313,10 @@ impl ProbeColumns {
 
     pub(crate) fn spacing_of(&self, node: NodeId) -> Option<SpacingClip> {
         self.spacing.as_ref()?.get(node).copied()
+    }
+
+    pub(crate) fn media_of(&self, node: NodeId) -> Option<MediaPlayback> {
+        self.media.as_ref()?.get(node).copied()
     }
 }
 
@@ -293,6 +355,50 @@ mod tests {
                 .contains("rotate has 0")
         );
         assert!(fehler(p.set_focus(3, vec![0], &[9], &[1], &[])).contains("blocker has 0 entries"));
+    }
+
+    #[test]
+    fn medienspalte_prueft_laengen_und_wertebereich() {
+        let mut p = ProbeColumns::default();
+        assert!(
+            fehler(p.set_media(3, vec![1], &[0, 0], &[0], &[1.0], &[0]))
+                .contains("paused has 2 entries")
+        );
+        assert!(
+            fehler(p.set_media(3, vec![1], &[2], &[0], &[1.0], &[0])).contains("paused[0] = 2")
+        );
+        assert!(
+            fehler(p.set_media(3, vec![1], &[0], &[0], &[-1.0], &[0]))
+                .contains("must not be negative")
+        );
+        assert!(p.media.is_none(), "eine abgelehnte Spalte bleibt ungesetzt");
+        p.set_media(
+            3,
+            vec![1, 2],
+            &[0, -1],
+            &[1, -1],
+            &[f64::INFINITY, f64::NAN],
+            &[-1, 1],
+        )
+        .unwrap();
+        assert_eq!(
+            p.media_of(NodeId(1)),
+            Some(MediaPlayback {
+                paused: Some(false),
+                muted: Some(true),
+                duration_s: Some(f64::INFINITY),
+                has_audio: None,
+            })
+        );
+        assert_eq!(
+            p.media_of(NodeId(2)),
+            Some(MediaPlayback {
+                paused: None,
+                muted: None,
+                duration_s: None,
+                has_audio: Some(true),
+            })
+        );
     }
 
     #[test]
