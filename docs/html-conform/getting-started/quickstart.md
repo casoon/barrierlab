@@ -62,4 +62,4 @@ the details.
 ## Next steps
 
 - [Findings and rule IDs](../../guides/rule-ids/) explains what each finding source reports.
-- The die Beispiele des Crates shows the findings for seven sample documents.
+- The [crate's examples](https://github.com/casoon/barrierlab/tree/main/crates/html-conform/examples/showcase) show the findings for seven sample documents.

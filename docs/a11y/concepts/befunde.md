@@ -1,7 +1,7 @@
 ---
-title: "Findings and Reports"
+title: "Findings and reports"
 description: "The finding model from a11y-report: two axes, four states, one record per rule ID and a lean JSON contract."
-order: 2
+order: 4
 ---
 
 ## Two axes, not three
@@ -70,7 +70,7 @@ else is omitted when not set:
 }
 ```
 
-The finding comes from `examples/teaser.semantik.json`. The optional fields:
+The finding comes from `examples/a11y/teaser.semantik.json`. The optional fields:
 
 | Field | Content |
 |---|---|

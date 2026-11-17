@@ -1,7 +1,7 @@
 ---
 title: "xml-adapters"
 description: "roxmltree adapters for relax-ng, xpath-eval and schematron-engine: validate an XML file in a few lines."
-order: 14
+order: 8
 ---
 
 `relax-ng`, `xpath-eval` and `schematron-engine` take documents through traits and parse none

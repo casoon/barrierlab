@@ -1,7 +1,7 @@
 ---
 title: "xpath-eval"
 description: "XPath 1.0 parser and evaluator with an opt-in XPath 2.0 mode, generic over the caller's document model."
-order: 13
+order: 1
 ---
 
 Parses and evaluates XPath expressions against a document the caller provides

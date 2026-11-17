@@ -10,7 +10,7 @@ includes depends on what it wants to do.
 ## Running rules
 
 ```sh
-cargo add a11y-rules@0.26.1 a11y-dom@0.26.0 a11y-report@0.26.0
+cargo add a11y-rules a11y-dom a11y-report
 ```
 
 `a11y-rules` provides the rules and the entry functions `run`, `run_with_semantics`,
@@ -20,17 +20,17 @@ for the report the rules return.
 ## Computing the accessible name
 
 ```sh
-cargo add accname@0.26.1 a11y-dom@0.26.0
+cargo add accname a11y-dom
 ```
 
 `accname` is generic over the document model from `a11y-dom` and can be used without the rules.
 A host that does not provide the role and name itself plugs it into its
-`Semantics` implementation, see [Quick start](../schnellstart/).
+`Semantics` implementation, see [Quickstart](../schnellstart/).
 
 ## Just the report model
 
 ```sh
-cargo add a11y-report@0.26.1
+cargo add a11y-report
 ```
 
 For tools that have their own checks but want to speak the same JSON contract.

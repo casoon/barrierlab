@@ -1,7 +1,7 @@
 ---
 title: "html-conform-wasm"
 description: "HTML5 conformance checking as WebAssembly."
-order: 8
+order: 16
 ---
 
 `html-conform` as WebAssembly: `check(html)` returns the findings in the shared model. The package

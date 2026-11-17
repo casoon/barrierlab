@@ -29,7 +29,7 @@ One call to `check()` combines six finding sources:
 
 ## How it is measured
 
-The repository vendors 4,655 fixtures from vnu's own test suite. A differential test runs
+The repository vendors 4,977 fixtures from vnu's own test suite. A differential test runs
 each of them through `check()` and compares the result with vnu's expectation. The current
 result is 0 false positives and 1 false negative; CI fails if either number rises. The
 [comparison with vnu](guides/vnu-comparison/) explains exactly what that measures and what it

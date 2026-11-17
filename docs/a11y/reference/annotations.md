@@ -1,7 +1,7 @@
 ---
 title: "Annotation file"
 description: "A file of external assessments of findings, keyed by finding id. Defined once; read by the audit tools, written by reviewers and agents."
-order: 3
+order: 9
 ---
 
 An annotation file carries **assessments of findings** that a person or an agent made

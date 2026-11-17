@@ -1,7 +1,7 @@
 ---
-title: "Capability Tiers"
+title: "Capability tiers"
 description: "Why the document model consists of several traits and what happens to a rule whose tier the host does not serve."
-order: 1
+order: 3
 ---
 
 The three surfaces differ not in how they present the same data, but in
@@ -12,7 +12,7 @@ rules silently not running depending on the host.
 |---|---|---|---|
 | `Document`: structure, tags, attributes, text, hierarchy | ✓ | ✓ | ✓ |
 | `Semantics`: role, accessible name | computed | native | computed |
-| `Rendering`: styles, geometry | – | ✓ | ✓ |
+| `Rendering`: styles, geometry | styles from the cascade, no geometry | ✓ | ✓ |
 | `Interaction`: focus, events | – | ✓ | ✓ |
 
 Every rule declares its `Tier`; every host implements the traits it can serve.
@@ -27,7 +27,7 @@ monomorphizes per host and allocates nothing per rule.
 ## Not run is not passed
 
 The entry functions run with what the host provides and record the rest. `run` on
-a structure-only host lists every tier 2 and tier 3 ID as a `RuleRun` with
+a structure-only host lists every tier 2 and tier 3 ID and every stylesheet rule as a `RuleRun` with
 `NotRun::CapabilityMissing` and a reason:
 
 ```json
@@ -39,7 +39,7 @@ a structure-only host lists every tier 2 and tier 3 ID as a `RuleRun` with
 }
 ```
 
-The excerpt comes from `examples/teaser.struktur.json`. Without this record, a
+The excerpt comes from `examples/a11y/teaser.struktur.json`. Without this record, a
 contrast check without rendering access would read like a passed check.
 
 ## The tree is DOM-shaped
@@ -57,5 +57,5 @@ ancestors. If the host cannot determine it, for example with a background image,
 `contrast/text-undetermined` with `untested`. A check against a guessed white would produce a
 `pass` that someone relies on.
 
-`Interaction` is defined as a trait, but the 0.26.1 rule set has no rule
+`Interaction` is defined as a trait, but the rule set has no rule
 on this tier yet.

@@ -1,7 +1,7 @@
 ---
 title: "a11y-perception"
 description: "Snapshot, reading order and the difference between two snapshots. Computes, does not collect."
-order: 5
+order: 13
 ---
 
 What of a page is **perceivable**: a snapshot, its reading order and

@@ -8,7 +8,7 @@ One home for all packages in this repository.
 
 | Section | Contents |
 |---|---|
-| [Packages](packages/index.mdx) | all 20 crates with their dependencies, one page per package |
+| [Packages](packages/index.mdx) | all 20 crates with their dependencies; a page for each, except four small parsers that docs.rs covers |
 | [Accessibility in detail](a11y/index.md) | the a11y packages: installation, quickstart, concepts (findings, tiers, accname), reference |
 | [Conformance in detail](html-conform/index.md) | html-conform: getting started, guides, reference |
 
@@ -18,7 +18,8 @@ appear on this site:
 [conventions](https://github.com/casoon/barrierlab/blob/main/docs/conventions.md),
 [consumers](https://github.com/casoon/barrierlab/blob/main/docs/consumers.md),
 [releases](https://github.com/casoon/barrierlab/blob/main/docs/releasing.md) and
-[project state](https://github.com/casoon/barrierlab/blob/main/docs/project-state.md).
+[project state](https://github.com/casoon/barrierlab/blob/main/docs/project-state.md), plus
+the [inventory of page-dependent rules](https://github.com/casoon/barrierlab/blob/main/docs/page-dependent-rules-inventory.md).
 These are written in German.
 
 Diagrams in the text are Mermaid blocks. GitHub renders them directly; this site turns them
@@ -26,5 +27,4 @@ into inline SVG at build time. The source is always the block, never the image. 
 is the diagrams on the start page and the package overview: chartlet specifications in
 `site/diagrams/`.
 
-Most pages of the accessibility section are still in German; the html-conform section is in
-English.
+All pages of this site are in English.

@@ -1,7 +1,7 @@
 ---
 title: "accname"
 description: "Accessible name computation per WAI-ARIA, checked differentially against Chrome."
-order: 3
+order: 9
 ---
 
 Accessible Name and Description Computation per WAI-ARIA (accname 1.2) and
@@ -51,8 +51,8 @@ for a listed case that now passes (`WPT_BLESS=1` regenerates the list).
 
 ## Dependencies
 
-Downward: `a11y-dom`. Upward: `a11y-rules`, hosts with document-based
-collection.
+Downward: `a11y-dom`. Upward: `a11y-static`, `a11y-wasm`, hosts with document-based
+collection; `a11y-rules` uses it in its tests.
 
 ## Limits
 

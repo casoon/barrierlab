@@ -1,7 +1,7 @@
 ---
 title: "web-checks"
 description: "The shared evaluation of two auditors: robots.txt, meta lengths, OpenGraph and Twitter Cards, structured data, hreflang."
-order: 8
+order: 14
 ---
 
 The shared evaluation of two auditors that check the same thing on the same page:

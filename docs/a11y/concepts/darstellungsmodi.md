@@ -1,7 +1,7 @@
 ---
-title: "Display Modes"
+title: "Display modes"
 description: "The convention for visualizations and display modes (draft v0): three layers per graphic, one page-wide mode, and the rules that check them."
-order: 4
+order: 6
 ---
 
 A page with charts, maps and 3D scenes should exclude no one, without giving up the

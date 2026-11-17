@@ -1,7 +1,7 @@
 ---
 title: "relax-ng"
 description: "RELAX NG in pure Rust: reads compact and XML schemas, simplifies them and validates instances with Brzozowski derivatives, from a tree or from events."
-order: 11
+order: 2
 ---
 
 Reads a RELAX NG schema (compact and XML syntax), simplifies it and validates instances with
