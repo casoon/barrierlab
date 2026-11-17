@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-17
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.30.12: `keyboard/hidden-focusable` zählt ein Modal ohne Box (0×0, etwa OneTrusts geschlossenes Einstellungsfenster) nicht mehr als offen.
+
 ## [0.17.0] - 2026-11-17
 
 ### Added
