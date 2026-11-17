@@ -1,13 +1,11 @@
 {
   "cases": {
-    "cantTell": 33,
-    "correct": 577,
-    "wrong": 1
+    "cantTell": 31,
+    "correct": 580
   },
   "consistency": {
-    "consistent": 39,
-    "not consistent": 1,
-    "partial": 3,
+    "consistent": 41,
+    "partial": 2,
     "untested": 45
   },
   "host": "auditmysite (BarrierLab rules in Chrome)",
@@ -366,10 +364,11 @@
     {
       "act": "80f0bf",
       "barrierlab": [
-        "media/audio-autoplay"
+        "media/audio-autoplay",
+        "media/audio-autoplay-measured"
       ],
       "cases": 8,
-      "consistency": "not consistent",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Audio or video element avoids automatically playing audio",
       "wrong": []
@@ -607,19 +606,13 @@
     {
       "act": "bisz58",
       "barrierlab": [
-        "timing/meta-refresh"
+        "timing/meta-refresh-enhanced"
       ],
       "cases": 14,
-      "consistency": "partial",
+      "consistency": "consistent",
       "deprecated": false,
       "name": "Meta element has no refresh delay (no exception)",
-      "wrong": [
-        {
-          "actual": "passed",
-          "expected": "failed",
-          "url": "https://act-rules.github.io/testcases/bisz58/4f9bb0a8ab7bd76505483c47da831440b864fe50.html"
-        }
-      ]
+      "wrong": []
     },
     {
       "act": "c249d5",
