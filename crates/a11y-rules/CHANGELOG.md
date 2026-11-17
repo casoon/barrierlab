@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.30.11] - 2026-11-17
+
+### Fixed
+
+- **Medien:** Der `REVIEW` von `media/audio-autoplay-measured` behauptet nicht mehr „mit Ton“, wenn sich Tonspur oder Dauer nicht messen ließen; er sagt, was offen blieb.
+
 ## [0.30.10] - 2026-11-17
 
 ### Fixed

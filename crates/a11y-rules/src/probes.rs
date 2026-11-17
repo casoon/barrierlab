@@ -310,19 +310,30 @@ fn audio_autoplay_measured<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<
                      eigene Knöpfe dafür. Prüfen, ob sie es anhalten oder stummschalten.",
                 ),
             )
+        } else if p.has_audio == Some(true) && p.duration_s.is_some() {
+            Finding::fail(
+                "media/audio-autoplay-measured",
+                pick!(
+                    locale,
+                    "This audio or video plays on its own for more than three seconds, with \
+                     sound, and offers no control to pause it or turn it down.",
+                    "Ton oder Video spielt von selbst länger als drei Sekunden mit Ton und \
+                     bietet kein Bedienelement, um es anzuhalten oder leiser zu stellen.",
+                ),
+            )
         } else {
-            let text = pick!(
-                locale,
-                "This audio or video plays on its own for more than three seconds, with sound, \
-                 and offers no control to pause it or turn it down.",
-                "Ton oder Video spielt von selbst länger als drei Sekunden mit Ton und bietet \
-                 kein Bedienelement, um es anzuhalten oder leiser zu stellen.",
-            );
-            if p.has_audio == Some(true) && p.duration_s.is_some() {
-                Finding::fail("media/audio-autoplay-measured", text)
-            } else {
-                Finding::review("media/audio-autoplay-measured", text)
-            }
+            Finding::review(
+                "media/audio-autoplay-measured",
+                pick!(
+                    locale,
+                    "This audio or video plays on its own and offers no control to pause it or \
+                     turn it down. Whether it is heard, or lasts more than three seconds, could \
+                     not be measured.",
+                    "Ton oder Video spielt von selbst und bietet kein Bedienelement, um es \
+                     anzuhalten oder leiser zu stellen. Ob es zu hören ist oder länger als drei \
+                     Sekunden läuft, ließ sich nicht messen.",
+                ),
+            )
         };
         out.push(
             finding
