@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-17
+
 ### Added
 
 - **Layout aus der Kaskade:** `Rendering::layout` liefert `order`, umgekehrte Flex-Richtung, `cursor: pointer` und endlose Animationen. Damit laufen `order/visual-mismatch`, `keyboard/pointer-only` und `motion/infinite-animation` auch ohne Browser und melden Prüfhinweise statt „nicht gemessen" (casoon/barrierlab#228).
