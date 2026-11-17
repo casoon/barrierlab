@@ -22,7 +22,7 @@ rule set serves three surfaces with identical rule IDs and identical JSON:
 | [`accname`](https://docs.rs/accname) | WAI-ARIA accessible name and role computation |
 | [`a11y-rules`](https://docs.rs/a11y-rules) | The rules, generic over the document model |
 
-All four are on crates.io at version 0.26.1 and are versioned in lockstep. Planned but not yet
+All four are on crates.io and are versioned in lockstep. Planned but not yet
 available is `a11y-conformance`: a shared fixture corpus that keeps the three surfaces from
 drifting apart.
 
@@ -39,5 +39,6 @@ bundled `Arena` from `a11y-dom` is the test vehicle and the form a WASM host nee
 - **Reference:** all rule IDs, an overview of the public API and the
   [annotation file](reference/annotations.md) (external assessments of findings, keyed by finding id).
   The detailed documentation of each type is on [docs.rs](https://docs.rs/a11y-rules).
-- **Planning:** [page-dependent rules inventory](page-dependent-rules-inventory.md), which
-  auditmysite rules need the live page and what data a host would have to supply (in German).
+- **Planning:** the [page-dependent rules inventory](https://github.com/casoon/barrierlab/blob/main/docs/page-dependent-rules-inventory.md)
+  in the repository, which auditmysite rules need the live page and what data a host would have
+  to supply (in German, not part of this site).

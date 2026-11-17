@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "type": "flow",
-  "title": "The core crates and their dependencies",
-  "description": "An arrow leads from a crate to the one that uses it. Dependencies only point down, from L0 to L3: html-conform builds on six parsers and engines, a11y-rules on a11y-dom, a11y-report and stylesheet-parse, and a11y-wasm bundles a11y-rules and accname for the browser. a11y-perception and web-checks stand alone.",
+  "title": "The 20 crates and their dependencies",
+  "description": "An arrow leads from a crate to the one that uses it; indirect dependencies are left out. Dependencies only point down, from L0 to L3, and form no cycle within a layer: html-conform builds on six parsers and engines, a11y-rules on a11y-dom, a11y-report, stylesheet-parse and style-cascade, a11y-static and a11y-wasm bring a11y-rules and accname to a page source and to the browser. a11y-perception and web-checks stand alone.",
   "source": "[dependencies] of the crate manifests in crates/*/Cargo.toml",
   "width": 1100,
   "height": 940,
@@ -12,6 +12,12 @@
         "id": "html5_parser",
         "label": "html5-parser",
         "sublabel": "HTML parser",
+        "lane": "l0"
+      },
+      {
+        "id": "css_tokenize",
+        "label": "css-tokenize",
+        "sublabel": "CSS tokens",
         "lane": "l0"
       },
       {
@@ -69,15 +75,33 @@
         "lane": "l1"
       },
       {
+        "id": "xml_adapters",
+        "label": "xml-adapters",
+        "sublabel": "roxmltree adapters",
+        "lane": "l1"
+      },
+      {
         "id": "accname",
         "label": "accname",
         "sublabel": "Accessible Name",
         "lane": "l2"
       },
       {
+        "id": "style_cascade",
+        "label": "style-cascade",
+        "sublabel": "CSS cascade",
+        "lane": "l2"
+      },
+      {
         "id": "a11y_rules",
         "label": "a11y-rules",
         "sublabel": "Rule set",
+        "lane": "l2"
+      },
+      {
+        "id": "a11y_static",
+        "label": "a11y-static",
+        "sublabel": "Static HTML audit",
         "lane": "l2"
       },
       {
@@ -97,47 +121,37 @@
         "label": "a11y-wasm",
         "sublabel": "WebAssembly, npm",
         "lane": "l3"
+      },
+      {
+        "id": "html_conform_wasm",
+        "label": "html-conform-wasm",
+        "sublabel": "WebAssembly, npm",
+        "lane": "l3"
       }
     ],
     "edges": [
       {
-        "from": "stylesheet_parse",
-        "to": "a11y_rules"
+        "from": "css_tokenize",
+        "to": "media_query_parse"
       },
       {
-        "from": "a11y_dom",
-        "to": "a11y_rules"
-      },
-      {
-        "from": "a11y_report",
-        "to": "a11y_rules"
-      },
-      {
-        "from": "a11y_dom",
-        "to": "a11y_wasm"
-      },
-      {
-        "from": "a11y_report",
-        "to": "a11y_wasm"
-      },
-      {
-        "from": "a11y_rules",
-        "to": "a11y_wasm"
-      },
-      {
-        "from": "accname",
-        "to": "a11y_wasm"
-      },
-      {
-        "from": "a11y_dom",
-        "to": "accname"
-      },
-      {
-        "from": "csp_parse",
-        "to": "html_conform"
+        "from": "xpath_eval",
+        "to": "schematron_engine"
       },
       {
         "from": "html5_parser",
+        "to": "a11y_dom"
+      },
+      {
+        "from": "css_tokenize",
+        "to": "stylesheet_parse"
+      },
+      {
+        "from": "html5_parser",
+        "to": "html_conform"
+      },
+      {
+        "from": "csp_parse",
         "to": "html_conform"
       },
       {
@@ -153,16 +167,60 @@
         "to": "html_conform"
       },
       {
-        "from": "xpath_eval",
+        "from": "a11y_report",
         "to": "html_conform"
       },
       {
         "from": "xpath_eval",
-        "to": "schematron_engine"
+        "to": "xml_adapters"
+      },
+      {
+        "from": "relax_ng",
+        "to": "xml_adapters"
+      },
+      {
+        "from": "a11y_dom",
+        "to": "accname"
       },
       {
         "from": "media_query_parse",
-        "to": "stylesheet_parse"
+        "to": "style_cascade"
+      },
+      {
+        "from": "a11y_dom",
+        "to": "style_cascade"
+      },
+      {
+        "from": "stylesheet_parse",
+        "to": "style_cascade"
+      },
+      {
+        "from": "a11y_report",
+        "to": "a11y_rules"
+      },
+      {
+        "from": "style_cascade",
+        "to": "a11y_rules"
+      },
+      {
+        "from": "accname",
+        "to": "a11y_static"
+      },
+      {
+        "from": "a11y_rules",
+        "to": "a11y_static"
+      },
+      {
+        "from": "accname",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "a11y_rules",
+        "to": "a11y_wasm"
+      },
+      {
+        "from": "html_conform",
+        "to": "html_conform_wasm"
       }
     ],
     "orientation": "landscape",

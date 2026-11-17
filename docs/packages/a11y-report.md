@@ -1,7 +1,7 @@
 ---
 title: "a11y-report"
 description: "The shared finding model: four outcome states, severity, WCAG mapping, JSON contract."
-order: 1
+order: 5
 ---
 
 The finding model all tools share: four outcome states, severity,

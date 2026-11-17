@@ -1,7 +1,7 @@
 ---
 title: "a11y-wasm"
 description: "The rule set as WebAssembly for the live page."
-order: 6
+order: 15
 ---
 
 The rule set as WebAssembly: the same rules that run at build time and in CI

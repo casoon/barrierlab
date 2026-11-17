@@ -123,7 +123,6 @@ every remaining wrong case.
   compared with a browser on a large corpus.
 - **No browser extension.** liveaudit runs inside your own page, behind a script tag; it is not
   an extension you point at someone else's site.
-- **Documentation is partly German.** The accessibility section of this site still is.
 - **In maintenance.** The libraries take fixes, not new features, until the tools above have
   taken up what is there. One maintainer, a small community.
 

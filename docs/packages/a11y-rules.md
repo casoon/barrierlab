@@ -1,7 +1,7 @@
 ---
 title: "a11y-rules"
 description: "The rule set, generic over the document model — one implementation for all surfaces."
-order: 4
+order: 11
 ---
 
 The rule set, generic over `a11y-dom`: one implementation for
@@ -187,12 +187,13 @@ text mode — is measured by auditmysite.
 
 ## Stylesheets
 
-Six rules read the page's stylesheets: `focus/outline-removed` (2.4.7),
+Nine rules read the page's stylesheets: `focus/outline-removed` (2.4.7),
 `motion/reduced-motion-ignored` (2.3.3), `orientation/content-hidden` and
-`orientation/locked` (1.3.4),
+`orientation/locked` (1.3.4), `text-spacing/letter-important`,
+`text-spacing/word-important` and `text-spacing/line-height-important` (1.4.12),
 `text/justified` and `text/line-height-tight` (1.4.8). The host passes the
 CSS text of each sheet to `stylesheet_parse::parse_stylesheet` and the report of a
-`run_*` to `run_stylesheets`; without this step the six appear in the report
+`run_*` to `run_stylesheets`; without this step the nine appear in the report
 with `NotRun::CapabilityMissing`. Where the text comes from is up to the
 host: from `document.styleSheets` in the browser or from the files of a build.
 
@@ -204,8 +205,8 @@ matching declaration on the paragraph counts, otherwise on the nearest ancestor.
 
 ## Dependencies
 
-Downward: `a11y-dom`, `a11y-report`, `accname`, `stylesheet-parse`. Upward: all hosts,
-in future `a11y-wasm`.
+Downward: `a11y-dom`, `a11y-report`, `stylesheet-parse`, `style-cascade` (`accname` only in
+the tests). Upward: `a11y-static`, `a11y-wasm` and the hosts.
 
 ## Scope
 

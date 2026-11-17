@@ -4,8 +4,8 @@ description: "The 20 crates in four layers, their dependencies and what each is 
 order: 0
 ---
 
-The crates sit in four layers. Dependencies only point down: a package never uses one from
-its own or a higher layer. None of them opens a page or speaks a browser protocol — the data
+The crates sit in four layers. Dependencies only point down: a package never uses one from a
+higher layer, and within a layer they form no cycle. None of them opens a page or speaks a browser protocol — the data
 comes from the tool that embeds the packages.
 
 <Diagram name="crates" />
@@ -17,7 +17,7 @@ comes from the tool that embeds the packages.
 | L0 | [`csp-parse`](https://docs.rs/csp-parse) | Content Security Policy grammar |
 | L0 | [`media-query-parse`](https://docs.rs/media-query-parse) | CSS Media Queries grammar |
 | L0 | [`xpath-eval`](xpath-eval.md) | XPath 1.0, generic over the document model |
-| L0 | [`relax-ng`](https://docs.rs/relax-ng) | read and validate RELAX NG schemas |
+| L0 | [`relax-ng`](relax-ng.md) | read and validate RELAX NG schemas |
 | L0 | [`schematron-engine`](schematron-engine.md) | ISO Schematron rules, XPath via `xpath-eval` |
 | L1 | [`a11y-dom`](a11y-dom.md) | document model as a trait plus capability tiers |
 | L1 | [`a11y-report`](a11y-report.md) | one finding and report model with stable JSON |

@@ -84,8 +84,8 @@ let report = run(&doc);
 assert!(report.findings.iter()
     .any(|f| f.rule_id == "images/alt-missing"));
 
-// Not judged: rules that need semantics or rendering.
-assert_eq!(report.summary.rules_not_run, 7);`}
+// Not judged: rules that need semantics, rendering or stylesheets.
+assert_eq!(report.summary.rules_not_run, 66);`}
       />
       <CodeBlock
         title="HTML conformance"
@@ -254,7 +254,7 @@ for f in &report.findings {
           <tr>
             <th scope="row">Nu Html Checker test files</th>
             <td>validator/validator</td>
-            <td>4,654 of 4,655 decided as vnu does (chart above)</td>
+            <td>4,976 of 4,977 decided as vnu does (chart above)</td>
           </tr>
           <tr>
             <th scope="row">ACT Rules test cases</th>
@@ -289,7 +289,7 @@ for f in &report.findings {
       </p>
       <p>
         Dependencies point down through four layers: parsers, models, computation, delivery. No
-        package imports one from its own or a higher layer, and each package names the
+        package imports one from a higher layer or forms a cycle, and each package names the
         specification it implements, from WHATWG HTML to XPath 1.0 to WCAG 2.2.
       </p>
     </div>
@@ -340,11 +340,11 @@ for f in &report.findings {
       },
       {
         q: 'What does it mean when a rule is marked “not run”?',
-        a: 'Some rules need data not every host can supply, such as focus or computed styles for static HTML. When the prerequisite is missing, the rule is listed in the report with the reason instead of counting as passed.',
+        a: 'Some rules need data not every host can supply, such as focus or box geometry for static HTML. When the prerequisite is missing, the rule is listed in the report with the reason instead of counting as passed.',
       },
       {
         q: 'Can I use a single parser without the audit code?',
-        a: 'Yes. The L0 crates (html5-parser, csp-parse, media-query-parse, xpath-eval, relax-ng, schematron-engine) are independent of the audit code. xpath-eval and schematron-engine are generic over the document model and also work outside HTML.',
+        a: 'Yes. The L0 crates (html5-parser, css-tokenize, csp-parse, media-query-parse, xpath-eval, relax-ng, schematron-engine) are independent of the audit code. xpath-eval and schematron-engine are generic over the document model and also work outside HTML.',
       },
       {
         q: 'Why is there no shared changelog?',

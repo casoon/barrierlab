@@ -1,5 +1,5 @@
 ---
-title: "Quick Start"
+title: "Quickstart"
 description: "Build a document, check it with and without semantics, and read the report."
 order: 2
 ---
@@ -27,9 +27,10 @@ let report = run(&doc);
 assert!(report.findings.iter().any(|f| f.rule_id == "images/alt-missing"));
 assert!(report.findings.iter().any(|f| f.rule_id == "document/lang-missing"));
 
-// Not assessed: the tier 2 and tier 3 rules. They are not missing from the report,
-// they appear in it with `NotRun::CapabilityMissing`.
-assert_eq!(report.summary.rules_not_run, 7);
+// Not assessed: the tier 2 and tier 3 rules and the stylesheet rules, because this
+// host supplies neither semantics nor rendering nor stylesheets. They are not missing
+// from the report, they appear in it with `NotRun::CapabilityMissing`.
+assert_eq!(report.summary.rules_not_run, 66);
 ```
 
 The example is the doctest from `a11y-rules` and runs with `cargo test`.
@@ -78,7 +79,7 @@ let report = run_with_semantics(&host);
 ```
 
 The same host is used in the rule test (`crates/a11y-rules/tests/rules.rs`) and in the generator of
-this page's examples (`examples/src/main.rs`).
+this page's examples (`examples/a11y/src/main.rs`).
 
 ## Which entry point
 
@@ -88,6 +89,7 @@ this page's examples (`examples/src/main.rs`).
 | + semantics | `run_with_semantics` |
 | + rendering | `run_with_rendering` |
 | both | `run_full` |
+| + stylesheets | then `run_stylesheets` on the report |
 
 ## Reading the report
 

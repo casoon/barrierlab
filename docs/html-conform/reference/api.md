@@ -1,7 +1,7 @@
 ---
 title: "API overview"
 description: "The public items of the crate at a glance. Item-level documentation lives on docs.rs."
-order: 1
+order: 7
 ---
 
 The full, versioned API documentation is on

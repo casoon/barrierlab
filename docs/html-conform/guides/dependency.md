@@ -1,7 +1,7 @@
 ---
 title: "Using html-conform as a dependency"
 description: "The public API, the one option, error handling, and patterns for tests, tools and services."
-order: 1
+order: 3
 ---
 
 The whole public API is two functions and a handful of types, all re-exported from the crate
@@ -122,4 +122,4 @@ sample in the showcase:
 ```
 
 This is the format of the `examples/showcase/*.json` files behind the
-die Beispiele des Crates, written by `examples/findings.rs`.
+[crate's examples](https://github.com/casoon/barrierlab/tree/main/crates/html-conform/examples/showcase), written by `examples/findings.rs`.

@@ -1,7 +1,7 @@
 ---
-title: "API Overview"
+title: "API overview"
 description: "The most important types and functions per crate. The detailed documentation of each item is on docs.rs."
-order: 2
+order: 8
 ---
 
 ## a11y-rules
@@ -10,11 +10,12 @@ order: 2
 |---|---|
 | `run`, `run_with_semantics`, `run_with_rendering`, `run_full` | check a document, depending on what the host provides |
 | `run_in`, `run_with_semantics_in`, `run_with_rendering_in`, `run_full_in` | the same, with finding texts in the chosen `Locale` (`En`, `De`) |
+| `run_stylesheets`, `run_stylesheets_in` | extend a report with the rules over the page's stylesheets (`stylesheet-parse`) |
 | `structure_rules`, `semantics_rules`, `rendering_rules` | the rules of a tier, bound to a host |
-| `structure_metas`, `semantics_metas`, `rendering_metas` | the declarations without a host, for listing and naming |
+| `structure_metas`, `semantics_metas`, `rendering_metas`, `stylesheet_metas` | the declarations without a host, for listing and naming |
 | `catalogue`, `meta_for` | all declarations in one stable list, and the lookup by finding ID (feature `serde`: serialisable) |
 | `Meta` | IDs, tier, WCAG criteria, default severity and hint of a rule |
-| `StructureRule`, `SemanticsRule`, `RenderingRule` | a rule as a function pointer plus `Meta` |
+| `StructureRule`, `SemanticsRule`, `RenderingRule`, `StylesheetRule` | a rule as a function pointer plus `Meta` |
 
 [docs.rs/a11y-rules](https://docs.rs/a11y-rules)
 

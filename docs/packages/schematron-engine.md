@@ -1,7 +1,7 @@
 ---
 title: "schematron-engine"
 description: "ISO Schematron engine, generic over the caller's document model, with SVRL output."
-order: 14
+order: 3
 ---
 
 Parses an ISO/IEC 19757-3 schema and evaluates it against a document the caller

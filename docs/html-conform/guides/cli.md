@@ -1,7 +1,7 @@
 ---
 title: "Command line"
 description: "The html-conform binary: files, directories and stdin in, text, JSON, SARIF or JUnit out."
-order: 4
+order: 6
 ---
 
 The library is the product; the command line is a thin front end to `check()` for tools

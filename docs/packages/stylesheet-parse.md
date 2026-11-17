@@ -1,7 +1,7 @@
 ---
 title: "stylesheet-parse"
 description: "Reading stylesheets per CSS Syntax Level 3 and CSS Nesting: rules, at-rules, declarations, flattened with their @media context."
-order: 9
+order: 6
 ---
 
 Reads raw CSS text into rules, at-rules and declarations and flattens them —

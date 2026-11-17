@@ -1,7 +1,7 @@
 ---
 title: "Comparison with vnu"
 description: "What the differential test against the Nu Html Checker measures, what html-conform covers, and where it differs."
-order: 3
+order: 5
 ---
 
 html-conform reuses the HTML schema of the [Nu Html Checker](https://validator.github.io/validator/)

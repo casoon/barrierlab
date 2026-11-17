@@ -1,7 +1,7 @@
 ---
 title: "a11y-dom"
 description: "The document abstraction with capability tiers that all rules run over."
-order: 2
+order: 4
 ---
 
 The abstraction over the document: a DOM-shaped tree as a trait, plus
@@ -55,7 +55,7 @@ parser's node ids follow allocation order. The feature is off by default.
 
 ## Dependencies
 
-Downward: nothing except `serde` (optional). Upward: `accname`,
+Downward: nothing except `html5-parser` (optional, feature `html5-parser`). Upward: `accname`,
 `a11y-rules`, host adapters.
 
 ## Limits

@@ -1,7 +1,7 @@
 ---
-title: "Accessible Name"
+title: "Accessible name"
 description: "What the accname crate computes, what it is written against and where it stops without rendering data."
-order: 3
+order: 5
 ---
 
 `accname` implements [Accessible Name and Description Computation 1.2](https://w3c.github.io/accname/)

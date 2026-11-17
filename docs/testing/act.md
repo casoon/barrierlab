@@ -47,7 +47,7 @@ The same rules run inside a browser when a host hands them the rendered page.
 [auditmysite](https://github.com/casoon/auditmysite) does that in Chrome: computed styles,
 layout, scroll extents, the colours text is drawn with, the playback of autoplaying media. Run
 of 17 November 2026 with auditmysite on `a11y-rules` 0.30.10 and `style-cascade` 0.3.2
-([casoon/auditmysite#1099](https://github.com/casoon/auditmysite/pull/1099)), all 601 mapped
+([casoon/auditmysite#1099](https://github.com/casoon/auditmysite/pull/1099)), all 611 mapped
 test cases, `--level aaa` so that the AAA rules run too:
 
 | | BarrierLab in auditmysite | page source only | axe-core 4.14.0 (W3C report) |

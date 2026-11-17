@@ -1,7 +1,7 @@
 ---
 title: "Findings and rule IDs"
 description: "Which layer reports what, under which rule ID and with which severity."
-order: 2
+order: 4
 ---
 
 Every finding carries a `rule_id` that names the layer, and for Schematron rules the
@@ -80,7 +80,7 @@ Lays each table out over its `colspan` and `rowspan` values and reports overlapp
 cells that span past the end of their row group, and columns in which no cell begins. This
 needs state carried across cells, so it is Rust code rather than a Schematron rule.
 
-The die Beispiele des Crates has one sample document per layer, with the findings
+The [crate's examples](https://github.com/casoon/barrierlab/tree/main/crates/html-conform/examples/showcase) have one sample document per layer, with the findings
 html-conform reports for it.
 
 ## `text.normalization`
