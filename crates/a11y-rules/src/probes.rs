@@ -9,7 +9,7 @@
 //! stilles Bestehen. Gibt es nichts, worauf die Regel zielt, lief sie und
 //! meldet nichts.
 
-use a11y_dom::{FocusCover, Node, NodeId, NodeKind, Rendering, Tier, elements};
+use a11y_dom::{FocusCover, Node, NodeId, NodeKind, Rendering, Tier, elements, subtree_text};
 use a11y_report::{Evidence, Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
@@ -235,7 +235,53 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
 /// eigenen Mechanismus zum Anhalten anbietet (ACT 4c31df), sieht die Regel nur
 /// über `controls`; ein Skript, das das Medium anhält, zeigt die Messung als
 /// `paused`.
+/// Wörter im Namen eines Knopfs, die ein eigenes Bedienelement für Medien
+/// verraten: anhalten, beenden, stummschalten, leiser stellen.
+const MEDIA_CONTROL_WORDS: &[&str] = &[
+    "pause",
+    "stop",
+    "mute",
+    "unmute",
+    "volume",
+    "sound",
+    "anhalten",
+    "stopp",
+    "stumm",
+    "ton",
+    "lautstärke",
+];
+
+/// Ob die Seite einen eigenen Knopf zum Anhalten oder Stummschalten anbietet
+/// (ACT 80f0bf, Passed Example 3: `<button>Mute</button>` mit Skript). Ob er
+/// wirkt, steht weder im Markup noch in der Messung.
+fn custom_media_control<D: Rendering>(doc: &D) -> bool {
+    elements(doc)
+        .filter(|n| {
+            n.is_element("button")
+                || n.attr("role")
+                    .is_some_and(|r| r.trim().eq_ignore_ascii_case("button"))
+                || (n.is_element("input")
+                    && n.attr("type").is_some_and(|t| {
+                        matches!(t.trim().to_ascii_lowercase().as_str(), "button" | "image")
+                    }))
+        })
+        .any(|n| {
+            let name = [
+                subtree_text(n),
+                n.attr("aria-label").unwrap_or_default().to_owned(),
+                n.attr("title").unwrap_or_default().to_owned(),
+                n.attr("value").unwrap_or_default().to_owned(),
+                n.attr("alt").unwrap_or_default().to_owned(),
+            ]
+            .join(" ")
+            .to_lowercase();
+            name.split(|c: char| !c.is_alphanumeric())
+                .any(|w| MEDIA_CONTROL_WORDS.contains(&w))
+        })
+}
+
 fn audio_autoplay_measured<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let custom_control = std::cell::OnceCell::<bool>::new();
     let mut targets = false;
     let mut measured = false;
     for n in elements(doc)
@@ -253,17 +299,30 @@ fn audio_autoplay_measured<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<
         if silent || crate::media::usable_controls(n) {
             continue;
         }
-        let text = pick!(
-            locale,
-            "This audio or video plays on its own for more than three seconds, with sound, and \
-             offers no control to pause it or turn it down.",
-            "Ton oder Video spielt von selbst länger als drei Sekunden mit Ton und bietet kein \
-             Bedienelement, um es anzuhalten oder leiser zu stellen.",
-        );
-        let finding = if p.has_audio == Some(true) && p.duration_s.is_some() {
-            Finding::fail("media/audio-autoplay-measured", text)
+        let finding = if *custom_control.get_or_init(|| custom_media_control(doc)) {
+            Finding::review(
+                "media/audio-autoplay-measured",
+                pick!(
+                    locale,
+                    "This audio or video plays on its own for more than three seconds; the page \
+                     has its own buttons for it. Check that they pause or mute it.",
+                    "Ton oder Video spielt von selbst länger als drei Sekunden; die Seite hat \
+                     eigene Knöpfe dafür. Prüfen, ob sie es anhalten oder stummschalten.",
+                ),
+            )
         } else {
-            Finding::review("media/audio-autoplay-measured", text)
+            let text = pick!(
+                locale,
+                "This audio or video plays on its own for more than three seconds, with sound, \
+                 and offers no control to pause it or turn it down.",
+                "Ton oder Video spielt von selbst länger als drei Sekunden mit Ton und bietet \
+                 kein Bedienelement, um es anzuhalten oder leiser zu stellen.",
+            );
+            if p.has_audio == Some(true) && p.duration_s.is_some() {
+                Finding::fail("media/audio-autoplay-measured", text)
+            } else {
+                Finding::review("media/audio-autoplay-measured", text)
+            }
         };
         out.push(
             finding
