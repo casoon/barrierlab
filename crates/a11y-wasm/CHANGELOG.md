@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-17
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.30.11 statt 0.29.0: die Korrekturen aus dem Abgleich mit den W3C-ACT-Testfällen (0.30.x), dazu die Regeln `orientation/locked`, `timing/meta-refresh-enhanced` und `media/audio-autoplay-measured`. Die Messspalte für selbststartende Medien liefert `a11y-wasm` noch nicht; `media/audio-autoplay-measured` steht ohne sie als `not_run` in `rule_runs`.
+
 ## [0.16.0] - 2026-11-09
 
 ### Added

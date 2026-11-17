@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.16.0"
+version = "0.16.1"
 dependencies = [
  "a11y-dom",
  "a11y-report",
