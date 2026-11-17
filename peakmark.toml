@@ -1,11 +1,12 @@
 # Size of the accessibility checker the package ships. `peakmark check` fails when it grows over the budget.
+# Brotli budget 162500 -> 167000 B on 2026-11-17 (user decision): measured 164.5 kB with the media column (`withMedia`).
 [[module]]
 name     = "a11y-wasm"
 artifact = "packages/a11y-wasm/pkg/a11y_wasm_bg.wasm"
 glue     = "packages/a11y-wasm/pkg/a11y_wasm.js"
 
 [module.budget]
-brotli         = "162500 B"
+brotli         = "167000 B"
 peak_memory    = "1.8 MiB"
 growth_per_run = "0"
 
