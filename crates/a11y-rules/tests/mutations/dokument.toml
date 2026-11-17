@@ -711,3 +711,37 @@ find = 'NodeKind::Element if !k.has_attr("lang") => {'
 replace = 'NodeKind::Element => {'
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "timing/meta-refresh-enhanced"
+file = "src/document.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+    if s == 0 {
+        return;
+    }
+'''
+replace = '''
+    if s <= 1 {
+        return;
+    }
+'''
+expect = "killed"
+
+[[mutation]]
+id = "timing/meta-refresh-enhanced"
+file = "src/document.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+    if s == 0 {
+        return;
+    }
+'''
+replace = '''
+    if s != 0 {
+        return;
+    }
+'''
+expect = "killed"

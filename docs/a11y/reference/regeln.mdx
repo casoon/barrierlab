@@ -14,11 +14,11 @@ may deviate from it. Each row has an anchor: the ID with `/` replaced by `-`
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.30.5 declares 175 IDs.
+a11y-rules 0.30.9 declares 177 IDs.
 
 ## Tier 1: Structure
 
-110 IDs, `Document`, runs on every host.
+111 IDs, `Document`, runs on every host.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -128,6 +128,7 @@ a11y-rules 0.30.5 declares 175 IDs.
 | `language/part-undetermined`<a id="language-part-undetermined"></a> | 3.1.2 | medium | A passage in another language than the page needs its own lang attribute. |
 | `language/abbreviation-unexpanded`<a id="language-abbreviation-unexpanded"></a> | 3.1.4 | low | Make the expansion of an abbreviation available, e.g. in the title of `<abbr>`. |
 | `timing/meta-refresh`<a id="timing-meta-refresh"></a> | 2.2.1 | high | Do not reload or redirect with a delayed `<meta http-equiv="refresh">`; redirect on the server or let users trigger it. |
+| `timing/meta-refresh-enhanced`<a id="timing-meta-refresh-enhanced"></a> | 2.2.4, 3.2.5 | medium | Do not reload or redirect with a delayed `<meta http-equiv="refresh">` at all, not even after more than 20 hours (AAA, no exception; ACT bisz58). |
 | `headings/section-without-heading`<a id="headings-section-without-heading"></a> | 2.4.10 | low | Give articles and named sections a heading so users can find their content. |
 | `aria/role-redundant`<a id="aria-role-redundant"></a> | – | low | Do not set a role the element already has implicitly. |
 | `names/title-only`<a id="names-title-only"></a> | 4.1.2 | medium | Do not rely on the title attribute as a control's only name. |
@@ -177,7 +178,7 @@ a11y-rules 0.30.5 declares 175 IDs.
 
 ## Tier 3: Rendering
 
-21 IDs, needs `Rendering`, i.e. computed styles and geometry.
+22 IDs, needs `Rendering`, i.e. computed styles and geometry.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -202,6 +203,7 @@ a11y-rules 0.30.5 declares 175 IDs.
 | `auth/paste-blocked`<a id="auth-paste-blocked"></a> | 3.3.8 | high | A password or one-time-code field must accept pasted text, so that a password manager can fill it: a handler that cancels the paste event without inserting the text itself blocks it. Seen: a synthetic, cancelable paste event the host dispatched; it is not trusted (isTrusted is false), so a handler that reacts only to trusted events or to key presses is not seen. autocomplete="off" on a password field is not a finding: browsers ignore it. |
 | `orientation/root-rotated`<a id="orientation-root-rotated"></a> | 1.3.4 | high | A page that rotates its root (html or body) by a quarter turn may force one display orientation (1.3.4); a person checks, orientation/locked compares both orientations from the style rules. Seen: the computed transform matrix and the rotate property of html and body, in the one viewport the host measured; a lock that applies only in the other orientation needs a second snapshot there (RuleRun::in\_viewport). That an orientation is essential is a human judgement. |
 | `frames/cross-origin`<a id="frames-cross-origin"></a> | – | low | A frame whose document the tool cannot read (cross-origin, or still navigating) was not tested. Not a conformance check and tied to no success criterion: a coverage note. Frames that are presentational, hidden or 1 px or smaller are skipped. |
+| `media/audio-autoplay-measured`<a id="media-audio-autoplay-measured"></a> | 1.4.2 | medium | Audio that plays automatically for more than three seconds needs a way to pause or turn it down (ACT 80f0bf). Seen: the host's measurement after load (playing, muted, duration, audio track) and the element's own controls. |
 
 ## Stylesheets
 

@@ -302,6 +302,21 @@ pub(crate) fn abbreviations<D: Document>(doc: &D, locale: Locale, out: &mut Vec<
 
 // --- timing/meta-refresh ----------------------------------------------------
 
+/// Die erste gültige Refresh-Anweisung mit ihrer Wartezeit. Nur sie wirkt:
+/// Danach ist das Dokument zum Neuladen vorgemerkt („will declaratively
+/// refresh"), und der Browser übergeht jede weitere (ACT bc659a, bisz58).
+fn first_refresh<'a, D: Document>(doc: &'a D) -> Option<(D::N<'a>, u64)> {
+    elements(doc).find_map(|n| {
+        let refresh = n.is_element("meta")
+            && n.attr("http-equiv")
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("refresh"));
+        refresh
+            .then(|| n.attr("content").and_then(wait_time))
+            .flatten()
+            .map(|s| (n, s))
+    })
+}
+
 /// Die Wartezeit einer Refresh-Anweisung in Sekunden nach HTML („shared
 /// declarative refresh steps"), `None`, wenn der Browser sie verwirft: Nach
 /// Leerraum kommen Ziffern oder ein Punkt, danach Ziffern und Punkte, danach
@@ -342,19 +357,7 @@ const TWENTY_HOURS: u64 = 20 * 60 * 60;
 /// ohne Ziffern führt der Browser nicht aus. Beleg: auditmysite-Korpus
 /// `meta_refresh_present` (`content="120"`).
 pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
-    // Nur die erste gültige Anweisung wirkt: Danach ist das Dokument zum
-    // Neuladen vorgemerkt („will declaratively refresh"), und der Browser
-    // übergeht jede weitere (ACT bc659a, bisz58).
-    let first = elements(doc).find_map(|n| {
-        let refresh = n.is_element("meta")
-            && n.attr("http-equiv")
-                .is_some_and(|v| v.trim().eq_ignore_ascii_case("refresh"));
-        refresh
-            .then(|| n.attr("content").and_then(wait_time))
-            .flatten()
-            .map(|s| (n, s))
-    });
-    if let Some((n, s)) = first {
+    if let Some((n, s)) = first_refresh(doc) {
         if s == 0 || s > TWENTY_HOURS {
             return;
         }
@@ -374,6 +377,34 @@ pub(crate) fn meta_refresh<D: Document>(doc: &D, locale: Locale, out: &mut Vec<F
             .at(at(n.id())),
         );
     }
+}
+
+/// 2.2.4 und 3.2.5 (AAA, ACT bisz58): Jede verzögerte Refresh-Anweisung, auch
+/// über 20 Stunden — die Ausnahme von 2.2.1 gilt hier nicht. Eine sofortige
+/// Weiterleitung (`0`) ist keine Unterbrechung und kein Wechsel ohne
+/// Anforderung über eine Frist.
+pub(crate) fn meta_refresh_enhanced<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let Some((n, s)) = first_refresh(doc) else {
+        return;
+    };
+    if s == 0 {
+        return;
+    }
+    out.push(
+        Finding::fail(
+            "timing/meta-refresh-enhanced",
+            tr!(
+                locale,
+                "The page reloads or redirects itself after {s} s via <meta \
+                 http-equiv=\"refresh\">, without a request from the user.",
+                "Die Seite lädt sich per <meta http-equiv=\"refresh\"> nach {s} s neu oder \
+                 leitet weiter, ohne dass jemand es angefordert hat."
+            ),
+        )
+        .with_severity(Severity::Medium)
+        .with_wcag(["2.2.4", "3.2.5"])
+        .at(at(n.id())),
+    );
 }
 
 // --- headings/section-without-heading -------------------------------------

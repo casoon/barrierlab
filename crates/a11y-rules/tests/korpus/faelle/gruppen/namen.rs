@@ -2,7 +2,7 @@
 //! Rahmen und Pflichtrollen, Linktexte, Live-Regionen, Label in Name
 //! (semantics.rs, names.rs) und Bild-/Medienregeln (media.rs).
 
-use super::super::{Fall, Mode, fail, na, negative, review};
+use super::super::{Fall, Mode, fail, na, negative, not_run, review};
 
 pub fn cases() -> Vec<Fall> {
     let mut v = Vec::new();
@@ -912,6 +912,77 @@ fn media() -> Vec<Fall> {
         ),
         na(
             "media/audio-autoplay",
+            r#"<audio src="a.mp3" controls></audio>"#,
+            "WCAG 1.4.2: ohne autoplay startet nichts von selbst",
+        ),
+        negative(
+            "media/audio-autoplay",
+            r#"<audio src="a.mp3" autoplay style="--media-paused:0;--media-duration:12;--media-audio:1"></audio>"#,
+            "Gemessen: die Messung entscheidet in media/audio-autoplay-measured, die Vermutung aus dem Markup entfällt",
+        )
+        .variant("gemessen"),
+        // --- media/audio-autoplay-measured ---
+        fail(
+            "media/audio-autoplay-measured",
+            r#"<audio src="moon-speech.mp3" autoplay style="--media-paused:0;--media-muted:0;--media-duration:12;--media-audio:1"></audio>"#,
+            "ACT 80f0bf Failed 1: spielt mit Ton länger als drei Sekunden, ohne Bedienelemente",
+        )
+        .count(1),
+        fail(
+            "media/audio-autoplay-measured",
+            r#"<video autoplay style="--media-paused:0;--media-duration:16;--media-audio:1"><source src="video.mp4" type="video/mp4"></video>"#,
+            "ACT 80f0bf Failed 2: Video mit Tonspur",
+        )
+        .variant("video"),
+        fail(
+            "media/audio-autoplay-measured",
+            r#"<audio src="radio" autoplay style="--media-paused:0;--media-duration:inf;--media-audio:1"></audio>"#,
+            "WCAG 1.4.2: ein Datenstrom endet nie",
+        )
+        .variant("Strom"),
+        negative(
+            "media/audio-autoplay-measured",
+            r#"<audio src="moon-speech.mp3" autoplay controls style="--media-paused:0;--media-duration:12;--media-audio:1"></audio>"#,
+            "ACT 80f0bf Passed 1 / 4c31df: controls zum Anhalten",
+        )
+        .variant("controls"),
+        negative(
+            "media/audio-autoplay-measured",
+            r#"<video autoplay style="--media-paused:1;--media-duration:16;--media-audio:1"><source src="video.mp4" type="video/mp4"></video>"#,
+            "ACT 80f0bf Passed 3: ein Skript hält das Video an",
+        )
+        .variant("angehalten"),
+        negative(
+            "media/audio-autoplay-measured",
+            r#"<video autoplay style="--media-paused:0;--media-duration:16;--media-audio:0"><source src="silent.mp4" type="video/mp4"></video>"#,
+            "ACT 80f0bf Inapplicable 2: keine Tonspur",
+        )
+        .variant("ohne Ton"),
+        negative(
+            "media/audio-autoplay-measured",
+            r#"<audio src="beep.mp3" autoplay style="--media-paused:0;--media-duration:3;--media-audio:1"></audio>"#,
+            "WCAG 1.4.2: höchstens drei Sekunden",
+        )
+        .variant("Grenze: 3 s"),
+        negative(
+            "media/audio-autoplay-measured",
+            r#"<audio src="a.mp3" autoplay style="--media-paused:0;--media-muted:1;--media-duration:12;--media-audio:1"></audio>"#,
+            "ACT 80f0bf: stumm",
+        )
+        .variant("stumm"),
+        review(
+            "media/audio-autoplay-measured",
+            r#"<audio src="a.mp3" autoplay style="--media-paused:0;--media-duration:12"></audio>"#,
+            "Tonspur nicht bestimmbar → REVIEW",
+        )
+        .variant("Tonspur unbekannt"),
+        not_run(
+            "media/audio-autoplay-measured",
+            r#"<audio src="a.mp3" autoplay></audio>"#,
+            "Host misst die Wiedergabe nicht → nicht gelaufen",
+        ),
+        na(
+            "media/audio-autoplay-measured",
             r#"<audio src="a.mp3" controls></audio>"#,
             "WCAG 1.4.2: ohne autoplay startet nichts von selbst",
         ),

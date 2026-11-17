@@ -305,6 +305,25 @@ pub struct BoxTransform {
     pub rotate: Option<String>,
 }
 
+/// Wiedergabezustand eines `<audio>` oder `<video>`, gemessen nach dem Laden
+/// der Seite, kein Urteil. Der Host lässt Autoplay mit Ton zu (in Chrome
+/// `--autoplay-policy=no-user-gesture-required`), sonst stünde jedes Medium
+/// still, das eine Besucherin hört.
+///
+/// Jedes Feld ist einzeln optional, `None` heißt „nicht bestimmbar". Ein
+/// Host baut den Wert mit `MediaPlayback { paused: …, ..Default::default() }`.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct MediaPlayback {
+    /// `paused` des Elements: `false` heißt, es spielt.
+    pub paused: Option<bool>,
+    /// `muted` des Elements (Attribut oder per Skript gesetzt).
+    pub muted: Option<bool>,
+    /// `duration` in Sekunden; `f64::INFINITY` für einen Datenstrom.
+    pub duration_s: Option<f64>,
+    /// Ob die Quelle eine Tonspur hat.
+    pub has_audio: Option<bool>,
+}
+
 /// Rohe Beobachtungen einer Einfüge-Probe an einem Passwort- oder
 /// Code-Feld, kein Urteil. Der Host schickt ein synthetisches, abbrechbares
 /// `paste`-Ereignis mit einem Probetext, stellt den Wert des Feldes danach
@@ -449,6 +468,12 @@ pub trait Rendering: Document {
     /// `html` und `body`. Ein Quarterdreh der Wurzel ist der Fehler, den
     /// `orientation/root-rotated` sieht. Vorgabe `None`: nicht gemessen.
     fn box_transform<'n>(&'n self, _node: Self::N<'n>) -> Option<BoxTransform> {
+        None
+    }
+
+    /// Wiedergabezustand eines `<audio>` oder `<video>` (siehe
+    /// [`MediaPlayback`]). Vorgabe `None`: nicht gemessen.
+    fn media_playback<'n>(&'n self, _node: Self::N<'n>) -> Option<MediaPlayback> {
         None
     }
 

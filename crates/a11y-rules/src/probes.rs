@@ -222,6 +222,76 @@ fn root_rotated<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     }
 }
 
+// --- media/audio-autoplay-measured -------------------------------------------
+
+/// 1.4.2 (ACT 80f0bf): Ein `<audio autoplay>` oder `<video autoplay>` spielt
+/// nach dem Laden, ist nicht stumm, hat eine Tonspur und dauert länger als
+/// drei Sekunden — und das Element bietet keine eigenen Bedienelemente, mit
+/// denen es sich anhalten ließe.
+///
+/// Gelesen wird die Messung des Hosts ([`a11y_dom::MediaPlayback`]). Ist sie
+/// da, gibt `media/audio-autoplay` das Element ab (`DECIDED_BY_MEASUREMENT`).
+/// `REVIEW`, wo Tonspur oder Dauer nicht bestimmbar waren. Ob die Seite einen
+/// eigenen Mechanismus zum Anhalten anbietet (ACT 4c31df), sieht die Regel nur
+/// über `controls`; ein Skript, das das Medium anhält, zeigt die Messung als
+/// `paused`.
+fn audio_autoplay_measured<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut targets = false;
+    let mut measured = false;
+    for n in elements(doc)
+        .filter(|n| (n.is_element("audio") || n.is_element("video")) && n.has_attr("autoplay"))
+    {
+        targets = true;
+        let Some(p) = doc.media_playback(n) else {
+            continue;
+        };
+        measured = true;
+        let silent = p.paused != Some(false)
+            || p.muted == Some(true)
+            || p.has_audio == Some(false)
+            || p.duration_s.is_some_and(|d| d <= 3.0);
+        if silent || crate::media::usable_controls(n) {
+            continue;
+        }
+        let text = pick!(
+            locale,
+            "This audio or video plays on its own for more than three seconds, with sound, and \
+             offers no control to pause it or turn it down.",
+            "Ton oder Video spielt von selbst länger als drei Sekunden mit Ton und bietet kein \
+             Bedienelement, um es anzuhalten oder leiser zu stellen.",
+        );
+        let finding = if p.has_audio == Some(true) && p.duration_s.is_some() {
+            Finding::fail("media/audio-autoplay-measured", text)
+        } else {
+            Finding::review("media/audio-autoplay-measured", text)
+        };
+        out.push(
+            finding
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.4.2"])
+                .with_evidence(
+                    [
+                        ("duration", p.duration_s.map(|d| format!("{d}"))),
+                        ("has_audio", p.has_audio.map(|a| a.to_string())),
+                    ]
+                    .into_iter()
+                    .filter_map(|(field, v)| v.map(|v| Evidence::computed(field, &v))),
+                )
+                .at(at(n.id())),
+        );
+    }
+    if targets && !measured {
+        out.push(not_run::note(
+            "media/audio-autoplay-measured",
+            pick!(
+                locale,
+                "host does not report the playback of audio and video",
+                "Host meldet die Wiedergabe von Ton und Video nicht",
+            ),
+        ));
+    }
+}
+
 // --- text-spacing/clipped -----------------------------------------------------
 
 /// 1.4.12: Der Host hat den Textabstand auf die Mindestwerte des Kriteriums
@@ -547,17 +617,35 @@ pub(crate) const METAS: &[Meta] = &[
               höchstens 1 px große Rahmen bleiben außen vor."
         ),
     },
+    Meta {
+        ids: &["media/audio-autoplay-measured"],
+        tier: Tier::Rendering,
+        // Ton spielt auch, wenn das Element versteckt ist.
+        scope: Scope::Markup,
+        wcag: &["1.4.2"],
+        severity: Severity::Medium,
+        help: "Audio that plays automatically for more than three seconds needs a way to pause \
+               or turn it down (ACT 80f0bf). Seen: the host's measurement after load (playing, \
+               muted, duration, audio track) and the element's own controls.",
+        help_de: de_text!(
+            "Ton, der von selbst länger als drei Sekunden spielt, braucht einen Weg, ihn \
+                  anzuhalten oder leiser zu stellen (ACT 80f0bf). Gesehen: die Messung des \
+                  Hosts nach dem Laden (spielt, stumm, Dauer, Tonspur) und die eigenen \
+                  Bedienelemente des Elements."
+        ),
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 5] {
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 6] {
     [
         text_spacing_clipped,
         focus_obscured_enhanced,
         paste_blocked,
         root_rotated,
         frames,
+        audio_autoplay_measured,
     ]
 }
 
-const _: () = assert!(METAS.len() == 5);
+const _: () = assert!(METAS.len() == 6);

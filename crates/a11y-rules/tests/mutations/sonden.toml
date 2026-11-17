@@ -290,3 +290,81 @@ replace = '''    if false && candidates && !measured {
             "text-spacing/clipped",'''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "threshold"
+test = "korpus"
+find = '''
+            || p.duration_s.is_some_and(|d| d <= 3.0);
+'''
+replace = '''
+            || p.duration_s.is_some_and(|d| d < 3.0);
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+            || p.has_audio == Some(false)
+'''
+replace = '''
+            || false
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if silent || crate::media::usable_controls(n) {
+'''
+replace = '''
+        if silent {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "swap-branch"
+test = "korpus"
+find = '''
+        let finding = if p.has_audio == Some(true) && p.duration_s.is_some() {
+'''
+replace = '''
+        let finding = if p.duration_s.is_some() {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay-measured"
+file = "src/probes.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        let silent = p.paused != Some(false)
+'''
+replace = '''
+        let silent = p.paused == Some(false)
+'''
+expect = "killed"
+
+[[mutation]]
+id = "media/audio-autoplay"
+file = "src/visibility.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if scope == Scope::Markup && ids.iter().any(|id| DECIDED_BY_MEASUREMENT.contains(id)) {
+'''
+replace = '''
+        if false {
+'''
+expect = "killed"
