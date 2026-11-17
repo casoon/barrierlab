@@ -161,6 +161,6 @@ What cannot be determined without layout stays undetermined, never guessed:
   the cascade does not, so `<code>` can come out 16 px where Chrome has 13 px.
 - **Presentational attributes** are read for `bgcolor`, `background`, `<font color>`, `<font size>`,
   `<body text>` and `<body link>`; other legacy attributes are ignored.
-- **Shorthands** are expanded only for `background`, `font`, `border*`, `text-decoration` and
-  `list-style`; `all` is ignored.
+- **Shorthands** are expanded only for `background`, `font`, `border*`, `text-decoration`,
+  `list-style`, `animation` and `flex-flow`; `all` is ignored.
 - **One document per cascade.** Caches are keyed by node ID. The `RuleSet` underneath is shareable.

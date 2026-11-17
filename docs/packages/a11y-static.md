@@ -118,7 +118,9 @@ Downward: `html5-parser`, `a11y-dom` (feature `html5-parser`), `a11y-report`, `a
 
 ## Limits
 
-- No layout: no box geometry, so rules that need it do not decide.
+- No layout: no box geometry, so rules that need it do not decide. `Rendering::layout` carries
+  only what the cascade knows — `order`, a reversed flex direction, `cursor: pointer` and endless
+  animations — on rendered elements, and nothing when a sheet is missing.
 - A sheet supplied for no `<link>` (and no import) is ignored; the host fetches what
   `stylesheet_refs` names.
 - Imports are not followed, only the ones the host hands over are applied (`Sheet::imports`, `Sheet::inert`).

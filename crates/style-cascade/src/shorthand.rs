@@ -29,7 +29,68 @@ const KURZSCHREIBWEISEN: &[&str] = &[
     "border-color",
     "text-decoration",
     "list-style",
+    "animation",
+    "flex-flow",
 ];
+
+const ZEITFUNKTIONEN: &[&str] = &[
+    "linear",
+    "ease",
+    "ease-in",
+    "ease-out",
+    "ease-in-out",
+    "step-start",
+    "step-end",
+];
+const ANIMATIONS_RICHTUNGEN: &[&str] = &["normal", "reverse", "alternate", "alternate-reverse"];
+const FLEX_RICHTUNGEN: &[&str] = &["row", "row-reverse", "column", "column-reverse"];
+const FLEX_UMBRUCH: &[&str] = &["nowrap", "wrap", "wrap-reverse"];
+
+fn ist_zeit(t: &str) -> bool {
+    let zahl = t
+        .strip_suffix("ms")
+        .or_else(|| t.strip_suffix('s'))
+        .unwrap_or("");
+    zahl.parse::<f32>().is_ok()
+}
+
+/// Eine Schicht von `animation`: (Name, Dauer, Wiederholungen, Zustand).
+/// Ein `none` gilt zuerst als `animation-fill-mode`, erst ein zweites als
+/// Name — wie in CSS Animations Level 1, 3.10.
+fn animations_schicht(schicht: &str) -> [String; 4] {
+    let (mut name, mut dauer, mut anzahl, mut zustand) = (None, None, None, None);
+    let mut fuellung = false;
+    for t in tokens(schicht) {
+        let l = t.to_ascii_lowercase();
+        // Zeitfunktion, Richtung und Füllung braucht hier niemand.
+        let unbenutzt = ZEITFUNKTIONEN.contains(&l.as_str())
+            || l.starts_with("cubic-bezier(")
+            || l.starts_with("steps(")
+            || l.starts_with("linear(")
+            || ANIMATIONS_RICHTUNGEN.contains(&l.as_str())
+            || matches!(l.as_str(), "forwards" | "backwards" | "both");
+        if unbenutzt {
+            continue;
+        }
+        if ist_zeit(&l) {
+            dauer.get_or_insert(l);
+        } else if l == "none" && !fuellung {
+            fuellung = true;
+        } else if l == "infinite" || l.parse::<f32>().is_ok() {
+            anzahl.get_or_insert(l);
+        } else if matches!(l.as_str(), "running" | "paused") {
+            zustand.get_or_insert(l);
+        } else {
+            name.get_or_insert_with(|| t.to_string());
+        }
+    }
+    [
+        name.unwrap_or_else(|| "none".into()),
+        dauer.unwrap_or_else(|| "0s".into()),
+        anzahl.unwrap_or_else(|| "1".into()),
+        zustand.unwrap_or_else(|| "running".into()),
+    ]
+}
 
 const RAHMEN_STILE: &[&str] = &[
     "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset",
@@ -263,6 +324,45 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, Expanded)> {
                 .unwrap_or("disc");
             vec![("list-style-type".into(), set(typ))]
         }
+        "animation" => {
+            let props = [
+                "animation-name",
+                "animation-duration",
+                "animation-iteration-count",
+                "animation-play-state",
+            ];
+            if hat_var {
+                return alle(&props, &Expanded::Unknown);
+            }
+            let schichten: Vec<[String; 4]> = teile_oberste_ebene(v, ',')
+                .iter()
+                .map(|s| animations_schicht(s))
+                .collect();
+            props
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let werte: Vec<&str> = schichten.iter().map(|s| s[i].as_str()).collect();
+                    ((*p).to_string(), set(werte.join(", ")))
+                })
+                .collect()
+        }
+        "flex-flow" => {
+            if hat_var {
+                return alle(&["flex-direction", "flex-wrap"], &Expanded::Unknown);
+            }
+            let t = tokens(v);
+            let finde = |liste: &[&str], vorgabe: &str| {
+                t.iter()
+                    .map(|t| t.to_ascii_lowercase())
+                    .find(|t| liste.contains(&t.as_str()))
+                    .unwrap_or_else(|| vorgabe.to_string())
+            };
+            vec![
+                ("flex-direction".into(), set(finde(FLEX_RICHTUNGEN, "row"))),
+                ("flex-wrap".into(), set(finde(FLEX_UMBRUCH, "nowrap"))),
+            ]
+        }
         _ => vec![(name.to_string(), set(v))],
     }
 }
@@ -340,6 +440,38 @@ mod tests {
             get(&expand("list-style", "square inside"), "list-style-type"),
             "square"
         );
+    }
+
+    #[test]
+    fn animation() {
+        let p = expand("animation", "tb-ticker 16s linear infinite");
+        assert_eq!(get(&p, "animation-name"), "tb-ticker");
+        assert_eq!(get(&p, "animation-duration"), "16s");
+        assert_eq!(get(&p, "animation-iteration-count"), "infinite");
+        assert_eq!(get(&p, "animation-play-state"), "running");
+        let p = expand(
+            "animation",
+            "fade .3s ease-out 1s both, spin 2s infinite paused",
+        );
+        assert_eq!(get(&p, "animation-name"), "fade, spin");
+        assert_eq!(get(&p, "animation-duration"), ".3s, 2s");
+        assert_eq!(get(&p, "animation-iteration-count"), "1, infinite");
+        assert_eq!(get(&p, "animation-play-state"), "running, paused");
+        let p = expand("animation", "none");
+        assert_eq!(get(&p, "animation-name"), "none");
+        let p = expand("animation", "none none 1s");
+        assert_eq!(get(&p, "animation-name"), "none");
+        let p = expand("animation", "var(--a)");
+        assert_eq!(get(&p, "animation-iteration-count"), "<pending>");
+    }
+
+    #[test]
+    fn flex_flow() {
+        let p = expand("flex-flow", "row-reverse wrap");
+        assert_eq!(get(&p, "flex-direction"), "row-reverse");
+        assert_eq!(get(&p, "flex-wrap"), "wrap");
+        let p = expand("flex-flow", "wrap");
+        assert_eq!(get(&p, "flex-direction"), "row");
     }
 
     #[test]

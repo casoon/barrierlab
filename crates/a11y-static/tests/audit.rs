@@ -448,3 +448,87 @@ fn inert_import_inside_a_linked_sheet() {
     assert!(r.inputs.is_empty(), "{:?}", r.inputs);
     assert!(failed(&r, "contrast/text-insufficient"));
 }
+
+fn reviewed(r: &Report, id: &str) -> bool {
+    r.findings
+        .iter()
+        .any(|f| f.rule_id == id && f.outcome == Outcome::Review)
+}
+
+fn untested(r: &Report, id: &str) -> bool {
+    r.rule_runs
+        .iter()
+        .any(|run| run.rule_id == id && run.not_run.is_some())
+}
+
+const LAYOUT_RULES: [&str; 3] = [
+    "order/visual-mismatch",
+    "keyboard/pointer-only",
+    "motion/infinite-animation",
+];
+
+/// The test bench of barrierlab.eu (form and media page): reordered fields,
+/// a `div` styled as a button whose handler a script attaches, a ticker that
+/// never stops. The cascade alone is enough to raise all three for review.
+#[test]
+fn layout_from_the_cascade() {
+    let css = ".row{display:flex}.order-1{order:1}.order-2{order:2}\
+               .btn{cursor:pointer}\
+               .ticker-run{animation:tb-ticker 16s linear infinite}";
+    let body = "<form class=row>\
+                <label class=order-2>Name <input></label>\
+                <label class=order-1>Mail <input></label></form>\
+                <div class=btn>Send</div>\
+                <div class=ticker><p class=ticker-run>News</p></div>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    for id in LAYOUT_RULES {
+        assert!(reviewed(&r, id), "{id}: {:?}", r.findings);
+        assert!(!untested(&r, id), "{id}");
+    }
+}
+
+#[test]
+fn layout_quiet_without_the_patterns() {
+    let css = ".row{display:flex;flex-flow:row wrap}\
+               .ticker-run{animation:tb-ticker 16s linear infinite paused}\
+               .gone{display:none;cursor:pointer}";
+    let body = "<form class=row><label>Name <input></label><label>Mail <input></label></form>\
+                <div class=gone>Send</div><p class=ticker-run>News</p>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    for id in LAYOUT_RULES {
+        assert!(!reviewed(&r, id), "{id}: {:?}", r.findings);
+        assert!(!untested(&r, id), "{id}");
+    }
+}
+
+#[test]
+fn flex_flow_reverse_is_reordering() {
+    let css = ".row{display:flex;flex-flow:row-reverse wrap}";
+    let body = "<div class=row><a href=/a>A</a><a href=/b>B</a></div>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    assert!(reviewed(&r, "order/visual-mismatch"), "{:?}", r.findings);
+}
+
+#[test]
+fn layout_unmeasured_with_missing_sheets() {
+    let body = "<div style=\"cursor:pointer\">Send</div>";
+    let r = audit(
+        &doc("<link rel=stylesheet href=a.css>", body),
+        &[],
+        Environment::default(),
+    );
+    assert!(untested(&r, "keyboard/pointer-only"), "{:?}", r.findings);
+    assert!(!reviewed(&r, "keyboard/pointer-only"));
+}
