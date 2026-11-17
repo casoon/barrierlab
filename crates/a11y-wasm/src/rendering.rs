@@ -13,7 +13,7 @@
 //! Messung so viel wie der ganze Collector.
 
 #[cfg(feature = "probes")]
-use a11y_dom::{BoxTransform, FocusCover, PasteProbe, SpacingClip};
+use a11y_dom::{BoxTransform, FocusCover, MediaPlayback, PasteProbe, SpacingClip};
 use a11y_dom::{
     Color, ComputedStyle, Document, Layout, NameSource, Node, Rect, Rendering, Semantics,
 };
@@ -242,6 +242,11 @@ impl Rendering for RenderArena<'_> {
     #[cfg(feature = "probes")]
     fn text_spacing_clip<'n>(&'n self, node: Self::N<'n>) -> Option<SpacingClip> {
         self.probes?.spacing_of(node.id())
+    }
+
+    #[cfg(feature = "probes")]
+    fn media_playback<'n>(&'n self, node: Self::N<'n>) -> Option<MediaPlayback> {
+        self.probes?.media_of(node.id())
     }
 }
 

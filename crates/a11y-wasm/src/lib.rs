@@ -246,6 +246,26 @@ impl Scan {
         let n = self.arena.len();
         (self.probes.set_spacing(n, nodes, &flags)).map_err(|m| invalid("spacing", m))
     }
+
+    /// Messung `media_playback` je `<audio autoplay>`/`<video autoplay>`.
+    /// `paused`, `muted` und `has_audio` sind 1 (ja), 0 (nein) oder -1 (nicht
+    /// bestimmt); `duration` in Sekunden, `Infinity` für einen Datenstrom,
+    /// `NaN` für nicht bestimmt.
+    #[wasm_bindgen(js_name = withMedia)]
+    pub fn with_media(
+        &mut self,
+        nodes: Vec<u32>,
+        paused: Vec<i8>,
+        muted: Vec<i8>,
+        duration: Vec<f64>,
+        has_audio: Vec<i8>,
+    ) -> Result<(), JsValue> {
+        let n = self.arena.len();
+        (self
+            .probes
+            .set_media(n, nodes, &paused, &muted, &duration, &has_audio))
+        .map_err(|m| invalid("media", m))
+    }
 }
 
 #[wasm_bindgen]

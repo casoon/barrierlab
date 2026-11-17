@@ -4,6 +4,16 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-17
+
+### Added
+
+- **Messspalten:** `Scan.withMedia(nodes, paused, muted, duration, has_audio)` liefert die Wiedergabe selbststartender `<audio>`- und `<video>`-Elemente; damit läuft `media/audio-autoplay-measured` statt als `not_run` zu erscheinen. `paused`, `muted` und `has_audio` sind `1`, `0` oder `-1` (nicht bestimmt), `duration` in Sekunden (`Infinity` für einen Datenstrom, `NaN` nicht bestimmt).
+
+### Changed
+
+- **Größe:** Größenbudget auf 200 KB gzip angehoben (Entscheidung vom 17.11.2026); das Modul lag mit den Regeln aus `a11y-rules` 0.30.x bei 195,0 KB.
+
 ## [0.16.1] - 2026-11-17
 
 ### Changed

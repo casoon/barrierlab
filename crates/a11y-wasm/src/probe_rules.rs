@@ -34,6 +34,10 @@ fn dokument() -> Arena {
             .attr("src", "https://fremd.example/")
             .attr("title", "Fremd")
             .close()
+            .open("audio")
+            .attr("src", "rede.mp3")
+            .attr("autoplay", "")
+            .close()
             .open("input")
             .attr("type", "password")
             .attr("aria-label", "Passwort")
@@ -211,6 +215,36 @@ fn textabstand_neu_abgeschnitten_ist_ein_review() {
     let report = scan.report();
     assert!(lief(&report, "text-spacing/clipped"));
     assert!(findings(&report, "text-spacing/clipped").is_empty());
+}
+
+#[test]
+fn spielt_mit_ton_ohne_bedienelement_ist_ein_befund() {
+    let mut scan = scan();
+    let audio = index(&scan, "audio");
+    // Ohne Spalte: nicht gelaufen, nicht bestanden.
+    let report = scan.report();
+    assert!(!lief(&report, "media/audio-autoplay-measured"));
+    scan.with_media(vec![audio], vec![0], vec![0], vec![30.0], vec![1])
+        .unwrap();
+    assert!(scan.probes.media.as_ref().is_some_and(|c| !c.is_empty()));
+    let report = scan.report();
+    let f = findings(&report, "media/audio-autoplay-measured");
+    assert_eq!(f.len(), 1);
+    assert_eq!(f[0].outcome, Outcome::Fail);
+    // Tonspur nicht bestimmt: nur Review.
+    scan.with_media(vec![audio], vec![0], vec![0], vec![30.0], vec![-1])
+        .unwrap();
+    let report = scan.report();
+    assert_eq!(
+        findings(&report, "media/audio-autoplay-measured")[0].outcome,
+        Outcome::Review
+    );
+    // Stumm: kein Befund.
+    scan.with_media(vec![audio], vec![0], vec![1], vec![30.0], vec![1])
+        .unwrap();
+    let report = scan.report();
+    assert!(lief(&report, "media/audio-autoplay-measured"));
+    assert!(findings(&report, "media/audio-autoplay-measured").is_empty());
 }
 
 #[test]
