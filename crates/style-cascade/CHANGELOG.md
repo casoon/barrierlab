@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **Farbpaare:** `color_pairs` und `compose_color_pairs` füllen `ColorPairs::opacity` mit der aufsummierten Deckkraft (casoon/barrierlab#261).
+
 ## [0.3.3] - 2026-11-17
 
 ### Added

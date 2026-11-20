@@ -646,6 +646,7 @@ impl Rendering for Host<'_> {
                 })
                 .collect(),
             halo: colors(own(node, "--halo")),
+            opacity: own(node, "--opacity").and_then(|v| v.trim().parse().ok()),
         })
     }
 }
