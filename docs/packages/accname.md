@@ -49,6 +49,18 @@ values set by script, shadow DOM built by script) are listed in
 `tests/wpt_known_failures.txt`; the test fails both for an unlisted failure and
 for a listed case that now passes (`WPT_BLESS=1` regenerates the list).
 
+## Mutations
+
+`tests/mutations/steps.toml` lists targeted mutations of the name computation (hidden
+nodes and the `aria-labelledby` exception, cycle guard, `aria-label`, native labels,
+embedded control values, content walk and separators, description, role lists and
+presentational-role conflict). Each entry names its killer in `killed_by`: the unit
+tests (`lib:`), `test:wpt`, `test:rendered` or `test:steps` (the step-by-step cases in
+`tests/steps.rs`); entries that change nothing observable are `equivalent` with a reason.
+`xtask/mutate.py crates/accname` runs them. Not part of CI; run it before changing the
+step sequence. `text-transform` and `::before`/`::after` are not modeled, so they have no
+mutation either.
+
 ## Dependencies
 
 Downward: `a11y-dom`. Upward: `a11y-static`, `a11y-wasm`, hosts with document-based

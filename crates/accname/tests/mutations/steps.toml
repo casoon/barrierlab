@@ -1,0 +1,1946 @@
+# Mutationen von accname — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/accname
+
+[[mutation]]
+id = "hidden/cycle-guard-removed"
+file = "src/name.rs"
+kind = "drop-guard"
+find = "if !ctx.besucht.insert(node.id()) {"
+replace = "if !ctx.besucht.insert(node.id()) && false {"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/text-node-contributes"
+file = "src/name.rs"
+kind = "drop-step"
+find = "return node.text().to_string();"
+replace = "return String::new();"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/skipped-in-walk"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if !via_verweis\n"
+replace = "    if false\n"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/honours-reference-flag"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "&& !ctx.verweis_versteckt"
+replace = "&& true"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/reference-flag-never-set"
+file = "src/name.rs"
+kind = "drop-step"
+find = "ctx.verweis_versteckt = true;"
+replace = "let _ = true;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/reference-flag-leaks-to-siblings"
+file = "src/name.rs"
+kind = "drop-step"
+find = "ctx.verweis_versteckt = vorher;"
+replace = "let _ = vorher;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/reference-flag-set-when-already-set"
+file = "src/name.rs"
+kind = "narrow"
+find = "&& !vorher"
+replace = "&& true"
+killed_by = "lib:"
+expect = "equivalent"
+note = "Setting the flag again while it is already true changes nothing; the restore puts back the same value."
+
+[[mutation]]
+id = "hidden/hidden-attr-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "node.attr(\"aria-hidden\") == Some(\"true\") || node.has_attr(\"hidden\")"
+replace = "node.attr(\"aria-hidden\") == Some(\"true\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/aria-hidden-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "node.attr(\"aria-hidden\") == Some(\"true\") || node.has_attr(\"hidden\")"
+replace = "node.has_attr(\"hidden\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/ancestors-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "ancestors(node).any(|a| a.attr(\"aria-hidden\") == Some(\"true\") || a.has_attr(\"hidden\"))"
+replace = "false"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/ancestor-hidden-attr-only"
+file = "src/name.rs"
+kind = "narrow"
+find = "ancestors(node).any(|a| a.attr(\"aria-hidden\") == Some(\"true\") || a.has_attr(\"hidden\"))"
+replace = "ancestors(node).any(|a| a.has_attr(\"hidden\"))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/ancestor-aria-hidden-only"
+file = "src/name.rs"
+kind = "narrow"
+find = "ancestors(node).any(|a| a.attr(\"aria-hidden\") == Some(\"true\") || a.has_attr(\"hidden\"))"
+replace = "ancestors(node).any(|a| a.attr(\"aria-hidden\") == Some(\"true\"))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-visibility-hidden-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "matches!(v, \"hidden\" | \"collapse\")"
+replace = "matches!(v, \"collapse\")"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-visibility-collapse-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "matches!(v, \"hidden\" | \"collapse\")"
+replace = "matches!(v, \"hidden\")"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-display-none-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "|| ohne_anzeige(eigen)"
+replace = "|| false"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-display-none-ancestors-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "(mit_vorfahren && ancestors"
+replace = "(false && ancestors"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-ancestors-checked-in-walk"
+file = "src/name.rs"
+kind = "widen"
+find = "(mit_vorfahren && ancestors"
+replace = "(true && ancestors"
+killed_by = "lib:"
+expect = "equivalent"
+note = "A hidden ancestor already ended the walk before the child is reached, so checking ancestors in the walk adds nothing (the reference case is a separate entry)."
+
+[[mutation]]
+id = "hidden/style-reference-root-checks-ancestors"
+file = "src/name.rs"
+kind = "widen"
+find = "per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        ctx.verweis_versteckt = true;"
+replace = "per_stil_versteckt(ctx.stil, node, true))\n    {\n        ctx.verweis_versteckt = true;"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/style-not-applied-to-reference-root"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        ctx.verweis_versteckt = true;"
+replace = "        && (ist_versteckt(node))\n    {\n        ctx.verweis_versteckt = true;"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/attr-not-applied-to-reference-root"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        ctx.verweis_versteckt = true;"
+replace = "        && (per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        ctx.verweis_versteckt = true;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/walk-ignores-style"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        return String::new();"
+replace = "        && (ist_versteckt(node))\n    {\n        return String::new();"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/walk-ignores-attr"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        return String::new();"
+replace = "        && (per_stil_versteckt(ctx.stil, node, !rekursion))\n    {\n        return String::new();"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "hidden/no-style-means-hidden"
+file = "src/name.rs"
+kind = "invert"
+find = "    let Some(stil) = stil else {\n        return false;\n    };\n    let eigen"
+replace = "    let Some(stil) = stil else {\n        return true;\n    };\n    let eigen"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/applies-in-reference-walk"
+file = "src/name.rs"
+kind = "widen"
+find = "if ctx.ziel == Ziel::Name && !via_verweis {"
+replace = "if ctx.ziel == Ziel::Name {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/applies-to-description"
+file = "src/name.rs"
+kind = "widen"
+find = "if ctx.ziel == Ziel::Name && !via_verweis {"
+replace = "if !via_verweis {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/empty-result-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "            let s = teile.join(\" \");\n            if !s.trim().is_empty() {"
+replace = "            let s = teile.join(\" \");\n            if true {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/parts-joined-without-space"
+file = "src/name.rs"
+kind = "narrow"
+find = "let s = teile.join(\" \");"
+replace = "let s = teile.join(\"\");"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/reference-not-contents-walk"
+file = "src/name.rs"
+kind = "drop-step"
+find = "teile.push(berechne(ctx, ziel, true, true));"
+replace = "teile.push(berechne(ctx, ziel, true, false));"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "labelledby/reference-not-recursion"
+file = "src/name.rs"
+kind = "drop-step"
+find = "teile.push(berechne(ctx, ziel, true, true));"
+replace = "teile.push(berechne(ctx, ziel, false, true));"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/prohibition-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "let verboten = rolle.is_some_and(name_is_prohibited);"
+replace = "let verboten = false;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/prohibition-skips-native"
+file = "src/name.rs"
+kind = "widen"
+find = "    if !verboten {\n        if let Some(s) = natives_label"
+replace = "    if true {\n        if let Some(s) = natives_label"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/prohibition-not-checked"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "if !verboten && ctx.ziel == Ziel::Name {"
+replace = "if ctx.ziel == Ziel::Name {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/applies-to-description"
+file = "src/name.rs"
+kind = "widen"
+find = "if !verboten && ctx.ziel == Ziel::Name {"
+replace = "if !verboten {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/blank-label-wins"
+file = "src/name.rs"
+kind = "drop-step"
+find = "let label = label.trim();"
+replace = "let label = label;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/empty-label-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "if !label.is_empty() && !(rekursion"
+replace = "if !(rekursion"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/embedded-control-uses-label"
+file = "src/name.rs"
+kind = "drop-branch"
+find = " && !(rekursion && ist_eingebettetes_steuerelement(rolle)) {"
+replace = " {"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/embedded-control-skips-label-at-root"
+file = "src/name.rs"
+kind = "widen"
+find = "!(rekursion && ist_eingebettetes_steuerelement(rolle))"
+replace = "!ist_eingebettetes_steuerelement(rolle)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "arialabel/label-not-trimmed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "return label.to_string();"
+replace = "return node.attr(\"aria-label\").unwrap().to_string();"
+killed_by = "test:steps"
+expect = "equivalent"
+note = "Only the edge whitespace of the label differs, and every caller flattens the result (internal separators are collapsed, trim_empty checks use trim)."
+
+[[mutation]]
+id = "native/empty-result-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        if let Some(s) = natives_label(node, ctx.ids, ctx.stil) {\n            if !s.trim().is_empty() {"
+replace = "        if let Some(s) = natives_label(node, ctx.ids, ctx.stil) {\n            if true {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/value-step-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "    if rekursion {\n        if let Some(wert)"
+replace = "    if false {\n        if let Some(wert)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/value-step-at-root"
+file = "src/name.rs"
+kind = "widen"
+find = "    if rekursion {\n        if let Some(wert)"
+replace = "    if true {\n        if let Some(wert)"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-textbox-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"textbox\"\n                | \"searchbox\"\n                | \"combobox\""
+replace = "\"searchbox\"\n                | \"combobox\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-searchbox-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"searchbox\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-combobox-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"combobox\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-listbox-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"listbox\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-slider-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"slider\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-spinbutton-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"spinbutton\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-progressbar-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"progressbar\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-scrollbar-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"scrollbar\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-checkbox-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"checkbox\""
+replace = ""
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-radio-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"radio\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/control-switch-not-embedded"
+file = "src/name.rs"
+kind = "narrow"
+find = "\n                | \"switch\""
+replace = ""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/textbox-value-attr-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "            .attr(\"value\")\n            .map(str::to_string)\n            .or_else(|| Some(subtree_plain(node))),"
+replace = "            .attr(\"x-none\")\n            .map(str::to_string)\n            .or_else(|| Some(subtree_plain(node))),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/textbox-text-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".or_else(|| Some(subtree_plain(node))),"
+replace = ".or_else(|| None),"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/combobox-selected-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".find(|d| d.has_attr(\"selected\"))"
+replace = ".find(|_| false)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/combobox-first-option-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".or_else(|| descendants(node).find(|d| d.is_element(\"option\")))?"
+replace = ".or_else(|| None)?"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/combobox-only"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"combobox\" | \"listbox\" => {"
+replace = "\"combobox\" => {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/listbox-only"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"combobox\" | \"listbox\" => {"
+replace = "\"listbox\" => {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-valuetext-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".attr(\"aria-valuetext\")"
+replace = ".attr(\"x-none\")"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-valuenow-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".or_else(|| node.attr(\"aria-valuenow\"))"
+replace = ".or_else(|| None)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-value-attr-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".or_else(|| node.attr(\"value\"))"
+replace = ".or_else(|| None)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-no-slider"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"slider\" | \"spinbutton\" | \"progressbar\" | \"scrollbar\" => node"
+replace = "\"spinbutton\" | \"progressbar\" | \"scrollbar\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-no-spinbutton"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"slider\" | \"spinbutton\" | \"progressbar\" | \"scrollbar\" => node"
+replace = "\"slider\" | \"progressbar\" | \"scrollbar\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-no-progressbar"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"slider\" | \"spinbutton\" | \"progressbar\" | \"scrollbar\" => node"
+replace = "\"slider\" | \"spinbutton\" | \"scrollbar\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/range-no-scrollbar"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"slider\" | \"spinbutton\" | \"progressbar\" | \"scrollbar\" => node"
+replace = "\"slider\" | \"spinbutton\" | \"progressbar\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "embedded/textbox-no-searchbox"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"textbox\" | \"searchbox\" => node"
+replace = "\"textbox\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "contents/role-rule-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "rolle.is_some_and(allows_name_from_content) || via_verweis || rekursion"
+replace = "via_verweis || rekursion"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "contents/reference-rule-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "rolle.is_some_and(allows_name_from_content) || via_verweis || rekursion"
+replace = "rolle.is_some_and(allows_name_from_content) || rekursion"
+killed_by = "test:steps"
+expect = "equivalent"
+note = "Both call sites that set via_verweis (aria-labelledby, aria-describedby) also pass rekursion = true, so the second flag adds nothing."
+
+[[mutation]]
+id = "contents/recursion-rule-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "rolle.is_some_and(allows_name_from_content) || via_verweis || rekursion"
+replace = "rolle.is_some_and(allows_name_from_content) || via_verweis"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "contents/children-not-recursive"
+file = "src/name.rs"
+kind = "drop-step"
+find = "let teil = berechne(ctx, kind, true, false);"
+replace = "let teil = berechne(ctx, kind, false, false);"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "contents/empty-result-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        if !s.trim().is_empty() {\n            return s;\n        }\n    }\n\n    // Schritt 2I"
+replace = "        if true {\n            return s;\n        }\n    }\n\n    // Schritt 2I"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "contents/br-separator-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "                s.push(' ');"
+replace = "                ();"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "title/fallback-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "return t.to_string();"
+replace = "return String::new();"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "title/blank-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if let Some(t) = node.attr(\"title\") {\n        if !t.trim().is_empty() {"
+replace = "    if let Some(t) = node.attr(\"title\") {\n        if true {"
+killed_by = "test:steps"
+expect = "equivalent"
+note = "A blank title returned as is flattens to nothing in every caller, so the result does not differ."
+
+[[mutation]]
+id = "separator/no-style-nothing-set-apart"
+file = "src/name.rs"
+kind = "narrow"
+find = "    let Some(stil) = stil else {\n        return true;\n    };\n    if kind.kind() == NodeKind::Text {"
+replace = "    let Some(stil) = stil else {\n        return false;\n    };\n    if kind.kind() == NodeKind::Text {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "separator/text-set-apart"
+file = "src/name.rs"
+kind = "invert"
+find = "    if kind.kind() == NodeKind::Text {\n        return false;"
+replace = "    if kind.kind() == NodeKind::Text {\n        return true;"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-elements-inline"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if ist_ersetztes_element(kind.local_name()) {"
+replace = "    if false {"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "separator/contents-set-apart"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"inline\" | \"contents\""
+replace = "\"inline\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/inline-set-apart"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"inline\" | \"contents\""
+replace = "\"contents\""
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "separator/unknown-display-inline"
+file = "src/name.rs"
+kind = "invert"
+find = "        None => true,\n    }\n}\n\n/// Ersetzte"
+replace = "        None => false,\n    }\n}\n\n/// Ersetzte"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "separator/set-apart-inverted"
+file = "src/name.rs"
+kind = "invert"
+find = "Some(display) => !matches!("
+replace = "Some(display) => matches!("
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-img"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-svg"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-canvas"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-video"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"canvas\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-audio"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"iframe\" | \"object\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-iframe"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"object\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-object"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"embed\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/replaced-no-embed"
+file = "src/name.rs"
+kind = "narrow"
+find = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\" | \"embed\""
+replace = "        \"img\" | \"svg\" | \"canvas\" | \"video\" | \"audio\" | \"iframe\" | \"object\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/empty-part-skipped"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if teil.is_empty() {\n        return;\n    }"
+replace = "    if false {\n        return;\n    }"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "separator/set-apart-always"
+file = "src/name.rs"
+kind = "widen"
+find = "    if abgesetzt {\n        ziel.push(' ');"
+replace = "    if true {\n        ziel.push(' ');"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "separator/never-set-apart"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if abgesetzt {\n        ziel.push(' ');"
+replace = "    if false {\n        ziel.push(' ');"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "separator/no-leading-space"
+file = "src/name.rs"
+kind = "drop-step"
+find = "        ziel.push(' ');\n        ziel.push_str(teil);\n        ziel.push(' ');"
+replace = "        ziel.push_str(teil);\n        ziel.push(' ');"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "separator/no-trailing-space"
+file = "src/name.rs"
+kind = "drop-step"
+find = "        ziel.push(' ');\n        ziel.push_str(teil);\n        ziel.push(' ');"
+replace = "        ziel.push(' ');\n        ziel.push_str(teil);"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/img-alt-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"img\" | \"area\" => node.attr(\"alt\").map(str::to_string),"
+replace = "\"img\" | \"area\" => None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/area-alt-ignored"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"img\" | \"area\" => node"
+replace = "\"img\" => node"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/input-type-not-trimmed"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".map(|t| t.trim().to_ascii_lowercase())"
+replace = ".map(|t| t.to_ascii_lowercase())"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/input-type-not-lowercased"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".map(|t| t.trim().to_ascii_lowercase())"
+replace = ".map(|t| t.trim().to_string())"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/input-default-type-not-text"
+file = "src/name.rs"
+kind = "narrow"
+find = ".unwrap_or_else(|| \"text\".into());"
+replace = ".unwrap_or_else(|| \"button\".into());"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/input-button-value-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"button\" => node.attr(\"value\").map(str::to_string),"
+replace = "\"button\" => None,"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/submit-default-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "unwrap_or(\"Submit\")"
+replace = "unwrap_or(\"\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/reset-default-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "unwrap_or(\"Reset\")"
+replace = "unwrap_or(\"\")"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/submit-value-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "Some(node.attr(\"value\").unwrap_or(\"Submit\").to_string())"
+replace = "Some(\"Submit\".to_string())"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/reset-value-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "Some(node.attr(\"value\").unwrap_or(\"Reset\").to_string())"
+replace = "Some(\"Reset\".to_string())"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/image-alt-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "                \"image\" => node\n                    .attr(\"alt\")"
+replace = "                \"image\" => node\n                    .attr(\"x-none\")"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/image-label-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "                    .or_else(|| label_elemente(node, ids, stil))\n                    .or_else(|| Some(\"Submit Query\""
+replace = "                    .or_else(|| None)\n                    .or_else(|| Some(\"Submit Query\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/image-default-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = ".or_else(|| Some(\"Submit Query\".to_string())),"
+replace = ".or_else(|| None),"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/image-default-text"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"Submit Query\""
+replace = "\"Submit\""
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/placeholder-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "node.attr(\"placeholder\").map(str::to_string)"
+replace = "None"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/input-text-label-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "_ => label_elemente(node, ids, stil).or_else(|| {"
+replace = "_ => None.or_else(|| {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/label-for-select-removed"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"select\" | \"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+replace = "\"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "native/label-for-textarea-removed"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"select\" | \"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+replace = "\"select\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/label-for-meter-removed"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"select\" | \"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+replace = "\"select\" | \"textarea\" | \"progress\" | \"output\" => label_elemente"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/label-for-progress-removed"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"select\" | \"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+replace = "\"select\" | \"textarea\" | \"meter\" | \"output\" => label_elemente"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/label-for-output-removed"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"select\" | \"textarea\" | \"meter\" | \"progress\" | \"output\" => label_elemente"
+replace = "\"select\" | \"textarea\" | \"meter\" | \"progress\" => label_elemente"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/fieldset-legend-tag"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"fieldset\" => erstes_kind_mit_tag(node, \"legend\")"
+replace = "\"fieldset\" => erstes_kind_mit_tag(node, \"caption\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/fieldset-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"fieldset\" => erstes_kind_mit_tag(node, \"legend\").map(beschriftung),"
+replace = "\"fieldset\" => None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/figcaption-tag"
+file = "src/name.rs"
+kind = "narrow"
+find = ".find(|d| d.is_element(\"figcaption\"))"
+replace = ".find(|d| d.is_element(\"caption\"))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/table-caption-tag"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"table\" => erstes_kind_mit_tag(node, \"caption\")"
+replace = "\"table\" => erstes_kind_mit_tag(node, \"legend\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/table-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"table\" => erstes_kind_mit_tag(node, \"caption\").map(beschriftung),"
+replace = "\"table\" => None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/svg-title-tag"
+file = "src/name.rs"
+kind = "narrow"
+find = "\"svg\" => erstes_kind_mit_tag(node, \"title\")"
+replace = "\"svg\" => erstes_kind_mit_tag(node, \"desc\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/svg-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"svg\" => erstes_kind_mit_tag(node, \"title\").map(subtree_plain),"
+replace = "\"svg\" => None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "native/iframe-title-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "\"iframe\" => node.attr(\"title\").map(str::to_string),"
+replace = "\"iframe\" => None,"
+killed_by = "test:steps"
+expect = "equivalent"
+note = "Step 2I returns the same title for an iframe without 2D; only the order against content differs, and an iframe has none."
+
+[[mutation]]
+id = "native/caption-ignores-style"
+file = "src/name.rs"
+kind = "drop-step"
+find = "        Some(_) => teilbaum_text(stil, n, None),"
+replace = "        Some(_) => subtree_plain(n),"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "native/caption-ignores-no-style"
+file = "src/name.rs"
+kind = "drop-step"
+find = "        None => subtree_plain(n),"
+replace = "        None => teilbaum_text(stil, n, None),"
+killed_by = "lib:"
+expect = "equivalent"
+note = "Without a style the separator rule sets every child apart and nothing is hidden; teilbaum_text and subtree_plain then both flatten to the same text."
+
+[[mutation]]
+id = "label/hidden-label-counts"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "if per_stil_versteckt(stil, l, true) {"
+replace = "if false {"
+killed_by = "test:rendered"
+expect = "killed"
+
+[[mutation]]
+id = "label/hidden-label-ancestors-ignored"
+file = "src/name.rs"
+kind = "narrow"
+find = "if per_stil_versteckt(stil, l, true) {"
+replace = "if per_stil_versteckt(stil, l, false) {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "label/for-label-blank-counts"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "\n        let t = teilbaum_text(stil, l, Some(node));\n        if !t.trim().is_empty() {"
+replace = "\n        let t = teilbaum_text(stil, l, Some(node));\n        if true {"
+killed_by = "lib:"
+expect = "equivalent"
+note = "A blank label joins to whitespace which flatten removes; with a second label the extra space is swallowed the same way."
+
+[[mutation]]
+id = "label/enclosing-ignored"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if teile.is_empty() {\n        if let Some(l)"
+replace = "    if false {\n        if let Some(l)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "label/enclosing-always"
+file = "src/name.rs"
+kind = "widen"
+find = "    if teile.is_empty() {\n        if let Some(l)"
+replace = "    if true {\n        if let Some(l)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "label/enclosing-tag"
+file = "src/name.rs"
+kind = "narrow"
+find = "a11y_dom::closest(node, \"label\")"
+replace = "a11y_dom::closest(node, \"div\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "label/labels-joined-without-space"
+file = "src/name.rs"
+kind = "narrow"
+find = "(!teile.is_empty()).then(|| teile.join(\" \"))"
+replace = "(!teile.is_empty()).then(|| teile.join(\"\"))"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "label/own-value-leaks"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "            if Some(kind) == aussparen {"
+replace = "            if false {"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "label/hidden-child-counts"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "_ if per_stil_versteckt(stil, kind, false) => continue,"
+replace = "_ if false => continue,"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "label/text-child-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "NodeKind::Text => kind.text().to_string(),"
+replace = "NodeKind::Text => String::new(),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "label/br-separator-removed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "                out.push(' ');"
+replace = "                ();"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "label/recursion-into-children"
+file = "src/name.rs"
+kind = "drop-step"
+find = "sammle(stil, kind, aussparen, &mut innen);"
+replace = "();"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "flatten/internal-whitespace-kept"
+file = "src/name.rs"
+kind = "drop-step"
+find = "s.split_whitespace().collect::<Vec<_>>().join(\" \")"
+replace = "s.trim().to_string()"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "flatten/no-trim"
+file = "src/name.rs"
+kind = "drop-step"
+find = "s.split_whitespace().collect::<Vec<_>>().join(\" \")"
+replace = "s.replace(\"\\n\", \" \")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "name/empty-is-some"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "(!s.is_empty()).then_some(s)"
+replace = "Some(s)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "name/rendered-ignores-style"
+file = "src/name.rs"
+kind = "drop-step"
+find = "name_mit_stil(node, ids, Some(&stil))"
+replace = "name_mit_stil(node, ids, None)"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "description/ziel-is-name"
+file = "src/name.rs"
+kind = "invert"
+find = "ziel: Ziel::Beschreibung,"
+replace = "ziel: Ziel::Name,"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/describedby-ignored"
+file = "src/name.rs"
+kind = "drop-step"
+find = "if let Some(v) = node.attr(\"aria-describedby\") {"
+replace = "if let Some(v) = node.attr(\"aria-describedby-x\") {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "description/self-not-marked-visited"
+file = "src/name.rs"
+kind = "drop-guard"
+find = "ctx.besucht.insert(node.id());"
+replace = "let _ = node.id();"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/references-joined-without-space"
+file = "src/name.rs"
+kind = "narrow"
+find = "let s = flatten(&teile.join(\" \"));"
+replace = "let s = flatten(&teile.join(\"\"));"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/reference-not-via-verweis"
+file = "src/name.rs"
+kind = "drop-step"
+find = "teile.push(berechne(&mut ctx, ziel, true, true));"
+replace = "teile.push(berechne(&mut ctx, ziel, true, false));"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/empty-reference-wins"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "        if !s.is_empty() {\n            return Some(s);"
+replace = "        if true {\n            return Some(s);"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/title-not-trimmed"
+file = "src/name.rs"
+kind = "drop-step"
+find = "let title = node.attr(\"title\")?.trim();"
+replace = "let title = node.attr(\"title\")?;"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/blank-title-counts"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "    if title.is_empty() {\n        return None;\n    }"
+replace = "    if false {\n        return None;\n    }"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/title-without-name-source"
+file = "src/name.rs"
+kind = "widen"
+find = "name_kommt_woanders_her.then(|| title.to_string())"
+replace = "Some(title.to_string())"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "description/title-never"
+file = "src/name.rs"
+kind = "drop-step"
+find = "name_kommt_woanders_her.then(|| title.to_string())"
+replace = "None"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "description/aria-label-is-name-source"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "node.has_attr(\"aria-label\")\n        ||"
+replace = "false\n        ||"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "description/aria-labelledby-is-name-source"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "node.has_attr(\"aria-labelledby\")\n        ||"
+replace = "false\n        ||"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "description/native-label-is-name-source"
+file = "src/name.rs"
+kind = "drop-branch"
+find = "|| natives_label(node, ids, None).is_some()"
+replace = "|| false"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-button"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"button\",\n    \"cell\",\n"
+replace = "    \"cell\",\n"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-cell"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"button\",\n    \"cell\",\n"
+replace = "    \"button\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-checkbox"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"button\",\n    \"cell\",\n    \"checkbox\",\n"
+replace = "    \"button\",\n    \"cell\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-columnheader"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"checkbox\",\n    \"columnheader\",\n"
+replace = "    \"checkbox\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-gridcell"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"columnheader\",\n    \"gridcell\",\n"
+replace = "    \"columnheader\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-heading"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"gridcell\",\n    \"heading\",\n"
+replace = "    \"gridcell\",\n"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-link"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"heading\",\n    \"link\",\n"
+replace = "    \"heading\",\n"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-menuitem"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"link\",\n    \"menuitem\",\n"
+replace = "    \"link\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-menuitemcheckbox"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"link\",\n    \"menuitem\",\n    \"menuitemcheckbox\",\n"
+replace = "    \"link\",\n    \"menuitem\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-menuitemradio"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"link\",\n    \"menuitem\",\n    \"menuitemcheckbox\",\n    \"menuitemradio\",\n"
+replace = "    \"link\",\n    \"menuitem\",\n    \"menuitemcheckbox\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-option"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"menuitemradio\",\n    \"option\",\n"
+replace = "    \"menuitemradio\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-radio"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"option\",\n    \"radio\",\n"
+replace = "    \"option\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-row"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"radio\",\n    \"row\",\n"
+replace = "    \"radio\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-rowheader"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"row\",\n    \"rowheader\",\n"
+replace = "    \"row\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-sectionhead"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"sectionhead\",\n"
+replace = ""
+killed_by = "lib:"
+expect = "equivalent"
+note = "Not in VALID and no element maps to it, so the entry is never reached."
+
+[[mutation]]
+id = "role/namefromcontent-switch"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"sectionhead\",\n    \"switch\",\n"
+replace = "    \"sectionhead\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-tab"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"sectionhead\",\n    \"switch\",\n    \"tab\",\n"
+replace = "    \"sectionhead\",\n    \"switch\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-tooltip"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"tab\",\n    \"tooltip\",\n"
+replace = "    \"tab\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/namefromcontent-treeitem"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"tooltip\",\n    \"treeitem\",\n"
+replace = "    \"tooltip\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-caption"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"caption\",\n    \"code\",\n"
+replace = "    \"code\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-code"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"caption\",\n    \"code\",\n"
+replace = "    \"caption\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-deletion"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"code\",\n    \"deletion\",\n"
+replace = "    \"code\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-emphasis"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"deletion\",\n    \"emphasis\",\n"
+replace = "    \"deletion\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-generic"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"emphasis\",\n    \"generic\",\n"
+replace = "    \"emphasis\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-insertion"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"generic\",\n    \"insertion\",\n"
+replace = "    \"generic\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-paragraph"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"insertion\",\n    \"paragraph\",\n"
+replace = "    \"insertion\",\n"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-presentation"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"insertion\",\n    \"paragraph\",\n    \"presentation\",\n"
+replace = "    \"insertion\",\n    \"paragraph\",\n"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-none"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"presentation\",\n    \"none\",\n"
+replace = "    \"presentation\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-strong"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"none\",\n    \"strong\",\n"
+replace = "    \"none\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-subscript"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"none\",\n    \"strong\",\n    \"subscript\",\n"
+replace = "    \"none\",\n    \"strong\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-superscript"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"none\",\n    \"strong\",\n    \"subscript\",\n    \"superscript\",\n"
+replace = "    \"none\",\n    \"strong\",\n    \"subscript\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-term"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"superscript\",\n    \"term\",\n"
+replace = "    \"superscript\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/nameprohibited-time"
+file = "src/role.rs"
+kind = "drop-step"
+find = "    \"term\",\n    \"time\",\n"
+replace = "    \"term\",\n"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/explicit-role-ignored"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "if let Some(explicit) = node.attr(\"role\") {"
+replace = "if let Some(explicit) = node.attr(\"role-x\") {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/first-valid-token-only"
+file = "src/role.rs"
+kind = "narrow"
+find = "        for token in explicit.split_whitespace() {"
+replace = "        for token in explicit.split_whitespace().take(1) {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/presentation-conflict-focusable"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "&& (focusable(node) || has_global_aria(node))"
+replace = "&& (has_global_aria(node))"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "role/presentation-conflict-global-aria"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "&& (focusable(node) || has_global_aria(node))"
+replace = "&& (focusable(node))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/presentation-none-not-covered"
+file = "src/role.rs"
+kind = "narrow"
+find = "matches!(*known, \"none\" | \"presentation\")"
+replace = "matches!(*known, \"presentation\")"
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "role/presentation-presentation-not-covered"
+file = "src/role.rs"
+kind = "narrow"
+find = "matches!(*known, \"none\" | \"presentation\")"
+replace = "matches!(*known, \"none\")"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/global-aria-needs-value"
+file = "src/role.rs"
+kind = "narrow"
+find = "PRESENTATION_CONFLICT.iter().any(|a| node.has_attr(a))"
+replace = "PRESENTATION_CONFLICT.iter().any(|a| node.attr(a).is_some_and(|v| !v.is_empty()))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/disabled-control-not-focusable"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "    if control\n        && (node.has_attr(\"disabled\")"
+replace = "    if false\n        && (node.has_attr(\"disabled\")"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/disabled-fieldset-ignored"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "            || ancestors(node).any(|a| a.is_element(\"fieldset\") && a.has_attr(\"disabled\")))"
+replace = "            || false)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/hidden-input-focusable"
+file = "src/role.rs"
+kind = "drop-branch"
+find = ".is_some_and(|t| t.trim().eq_ignore_ascii_case(\"hidden\")))"
+replace = ".is_some_and(|_| false))"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/link-needs-href"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "(matches!(node.local_name(), \"a\" | \"area\") && node.has_attr(\"href\"))"
+replace = "false"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/tabindex-focusable"
+file = "src/role.rs"
+kind = "drop-branch"
+find = ".is_some_and(|t| t.trim().parse::<i32>().is_ok())"
+replace = ".is_some_and(|_| false)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/contenteditable-focusable"
+file = "src/role.rs"
+kind = "drop-branch"
+find = ".is_some_and(|v| !v.trim().eq_ignore_ascii_case(\"false\"))"
+replace = ".is_some_and(|_| false)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/anchor-without-href-generic"
+file = "src/role.rs"
+kind = "invert"
+find = "            if node.has_attr(\"href\") {\n                \"link\""
+replace = "            if !node.has_attr(\"href\") {\n                \"link\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/img-empty-alt-presentation"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "            Some(\"\") => \"presentation\","
+replace = "            Some(\"\") => \"img\","
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/header-in-section-generic"
+file = "src/role.rs"
+kind = "invert"
+find = "            if in_sectioning_content(node) {\n                \"generic\"\n            } else {\n                \"banner\""
+replace = "            if !in_sectioning_content(node) {\n                \"generic\"\n            } else {\n                \"banner\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/footer-in-section-generic"
+file = "src/role.rs"
+kind = "invert"
+find = "            if in_sectioning_content(node) {\n                \"generic\"\n            } else {\n                \"contentinfo\""
+replace = "            if !in_sectioning_content(node) {\n                \"generic\"\n            } else {\n                \"contentinfo\""
+killed_by = "test:wpt"
+expect = "killed"
+
+[[mutation]]
+id = "role/section-always-region"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "if node.has_attr(\"aria-label\") || node.has_attr(\"aria-labelledby\") {"
+replace = "if true {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/section-labelledby-ignored"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "if node.has_attr(\"aria-label\") || node.has_attr(\"aria-labelledby\") {"
+replace = "if node.has_attr(\"aria-label\") {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/section-label-ignored"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "if node.has_attr(\"aria-label\") || node.has_attr(\"aria-labelledby\") {"
+replace = "if node.has_attr(\"aria-labelledby\") {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/select-multiple-listbox"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "            if node.has_attr(\"multiple\")\n                ||"
+replace = "            if false\n                ||"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/select-size-listbox"
+file = "src/role.rs"
+kind = "drop-branch"
+find = ".is_some_and(|s| s > 1)"
+replace = ".is_some_and(|_| false)"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/th-scope-row"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "Some(\"row\") | Some(\"rowgroup\") => \"rowheader\","
+replace = "Some(\"rowgroup\") => \"rowheader\","
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/th-scope-rowgroup"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "Some(\"row\") | Some(\"rowgroup\") => \"rowheader\","
+replace = "Some(\"row\") => \"rowheader\","
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/input-list-combobox"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "            // Mit Vorschlagsliste wird daraus eine Combobox.\n            if node.has_attr(\"list\") {"
+replace = "            // Mit Vorschlagsliste wird daraus eine Combobox.\n            if false {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/input-search-list-combobox"
+file = "src/role.rs"
+kind = "drop-branch"
+find = "        \"search\" => {\n            if node.has_attr(\"list\") {"
+replace = "        \"search\" => {\n            if false {"
+killed_by = "test:steps"
+expect = "killed"
+
+[[mutation]]
+id = "role/input-number-spinbutton"
+file = "src/role.rs"
+kind = "drop-step"
+find = "\"number\" => \"spinbutton\","
+replace = "\"number\" => \"textbox\","
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "role/input-range-slider"
+file = "src/role.rs"
+kind = "drop-step"
+find = "\"range\" => \"slider\","
+replace = "\"range\" => \"textbox\","
+killed_by = "lib:"
+expect = "killed"
