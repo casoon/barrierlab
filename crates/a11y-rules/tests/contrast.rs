@@ -6,7 +6,8 @@
 //! Text wird Hinweis, kein Verstoß).
 
 use a11y_dom::{
-    Arena, ArenaNode, Backdrop, Color, ComputedStyle, Document, Layout, Node, Rect, Rendering,
+    Arena, ArenaNode, Backdrop, Color, ColorPairs, ComputedStyle, Document, Layout, Node, Rect,
+    Rendering,
 };
 use a11y_report::{Outcome, Report};
 use a11y_rules::run_with_rendering;
@@ -86,6 +87,16 @@ impl Rendering for Host<'_> {
 
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<Backdrop> {
         node.attr("data-backdrop").map(sampling)
+    }
+
+    /// `data-pairs` als `rrggbb/rrggbb`, `data-opacity` die Deckkraft.
+    fn color_pairs<'n>(&'n self, node: Self::N<'n>) -> Option<ColorPairs> {
+        let (t, b) = node.attr("data-pairs")?.split_once('/')?;
+        Some(ColorPairs {
+            pairs: vec![(make_color(t), make_color(b))],
+            halo: Vec::new(),
+            opacity: node.attr("data-opacity").map(|o| o.parse().unwrap()),
+        })
     }
 }
 
@@ -392,4 +403,108 @@ fn without_background_behind_not_determinable() {
         [Outcome::Untested]
     );
     assert!(verdicts(&r, "contrast/control-insufficient").is_empty());
+}
+
+fn evidence<'r>(r: &'r Report, id: &str, field: &str) -> Option<&'r str> {
+    r.findings
+        .iter()
+        .find(|f| f.rule_id == id)?
+        .evidence
+        .iter()
+        .find(|e| e.field.as_deref() == Some(field))?
+        .value
+        .as_deref()
+}
+
+/// casoon/barrierlab#261: Unter Deckkraft bleibt es ein Verstoß, nennt aber die Ursache.
+#[test]
+fn opacity_stays_a_fail_and_names_the_cause() {
+    let arena = page(|b| {
+        b.open("p")
+            .attr("data-pairs", "8a8a8a/ffffff")
+            .attr("data-opacity", "0.55")
+            .text("Dimmed row")
+            .close()
+    });
+    let r = check(&arena, true);
+    assert_eq!(verdicts(&r, "contrast/text-insufficient"), [Outcome::Fail]);
+    let id = "contrast/text-insufficient";
+    assert_eq!(evidence(&r, id, "opacity"), Some("0.55"));
+    assert_eq!(evidence(&r, id, "effective_foreground"), Some("#8a8a8a"));
+    assert_eq!(evidence(&r, id, "state_dependent"), Some("true"));
+    let f = r.findings.iter().find(|f| f.rule_id == id).unwrap();
+    assert!(f.message.contains("opacity 0.55"), "{}", f.message);
+}
+
+/// Ohne Deckkraft keine Beweisfelder dazu.
+#[test]
+fn full_opacity_adds_no_opacity_evidence() {
+    let arena = page(|b| {
+        b.open("p")
+            .attr("data-pairs", "8a8a8a/ffffff")
+            .attr("data-opacity", "1")
+            .text("Plain")
+            .close()
+    });
+    let r = check(&arena, true);
+    assert_eq!(verdicts(&r, "contrast/text-insufficient"), [Outcome::Fail]);
+    assert_eq!(evidence(&r, "contrast/text-insufficient", "opacity"), None);
+}
+
+/// casoon/barrierlab#262: Text in einer aria-hidden-Illustration ist offen, kein Verstoß.
+#[test]
+fn text_in_aria_hidden_svg_is_a_review() {
+    let arena = page(|b| {
+        b.open("svg")
+            .attr("aria-hidden", "true")
+            .open("g")
+            .open("text")
+            .attr("data-fg", "999999")
+            .text("Mock label")
+            .close()
+            .close()
+            .close()
+    });
+    let r = check(&arena, true);
+    assert!(verdicts(&r, "contrast/text-insufficient").is_empty());
+    assert_eq!(
+        verdicts(&r, "contrast/text-undetermined"),
+        [Outcome::Review]
+    );
+}
+
+/// Auch wenn das Element in einem svg selbst `aria-hidden` trägt.
+#[test]
+fn text_element_with_own_aria_hidden_in_svg_is_a_review() {
+    let arena = page(|b| {
+        b.open("svg")
+            .open("text")
+            .attr("aria-hidden", "true")
+            .attr("data-fg", "999999")
+            .text("Mock label")
+            .close()
+            .close()
+    });
+    let r = check(&arena, true);
+    assert!(verdicts(&r, "contrast/text-insufficient").is_empty());
+    assert_eq!(
+        verdicts(&r, "contrast/text-undetermined"),
+        [Outcome::Review]
+    );
+}
+
+/// Ein aria-hidden-Element, das kein svg ist, bleibt ein Verstoß.
+#[test]
+fn text_in_aria_hidden_html_stays_a_fail() {
+    let arena = page(|b| {
+        b.open("div")
+            .attr("aria-hidden", "true")
+            .open("p")
+            .attr("data-fg", "999999")
+            .text("Hidden label")
+            .close()
+            .close()
+    });
+    let r = check(&arena, true);
+    assert_eq!(verdicts(&r, "contrast/text-insufficient"), [Outcome::Fail]);
 }

@@ -10,6 +10,14 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Kontrast:** `contrast/text-insufficient` und der `REVIEW` mit gemischten Farbpaaren nennen bei `opacity` unter 1 die Ursache: Evidenz `opacity`, `effective_foreground`, `state_dependent` und ein Satz im Text, dass mit dieser Deckkraft gemessen wurde (#261). Dafür trägt `ColorPairs` (`a11y-dom`) das neue Feld `opacity`; `style-cascade` füllt es.
+
+### Changed
+
+- **Kontrast:** Text, dessen nächster `aria-hidden="true"`-Vorfahr ein `<svg>` ist (oder der in einem solchen `<svg>` liegt), unter der Schwelle ist `REVIEW` (`contrast/text-undetermined`) statt Verstoß: reine Dekoration wäre ausgenommen, Information nicht (#262). Text in anderen `aria-hidden`-Elementen bleibt ein Verstoß.
+
 ## [0.30.12] - 2026-11-17
 
 ### Fixed

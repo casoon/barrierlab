@@ -7,6 +7,10 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Added
+
+- **`ColorPairs`:** neues Feld `opacity` (aufsummierte Deckkraft der Kette); wer die Struktur als Literal baut, setzt es mit (casoon/barrierlab#261).
+
 ## [0.30.12] - 2026-11-17
 
 ### Changed
