@@ -104,6 +104,7 @@ first in 0.26.0):
 | `aria/role-redundant`, `lists/role-redundant` | Best practice | The role is correct; 4.1.2 is met. ARIA in HTML merely discourages it. |
 | `patterns/tooltip-unreferenced` | Best practice | 1.4.13 governs appearing and disappearing on hover and focus, not the association. |
 | `lists/empty` | Best practice | An empty list withholds no information. |
+| `media/video-captions-missing` | `REVIEW` | 1.2.2 needs captions only for speech or meaningful sound; they may be burned in or offered by the player, none of which is visible from the markup. A muted video without `controls` is skipped. |
 | `tables/header-missing` | `REVIEW` | F91 applies only to data tables with visible headers; whether one is present is not visible from the markup. |
 | `keyboard/positive-tabindex` | `REVIEW` | F44 requires a judgment whether the resulting order breaks meaning and operation. axe `tabindex` is best practice. |
 | `ids/duplicate` | `REVIEW` | The browser resolves to the first element; whether that is intended is not visible from the markup. |
@@ -217,7 +218,7 @@ a view of the document in which the others are missing:
 |---|---|---|
 | `AccessibilityTree` | `aria-hidden="true"`, non-rendered content | the normal case |
 | `Rendered` | non-rendered content | `keyboard/positive-tabindex`, `keyboard/hidden-focusable`, `keyboard/click-handler-not-focusable`, contrast, the checklist `manual/*` |
-| `Markup` | nothing | document-wide rules, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `patterns/tooltip-unreferenced`, `media/audio-autoplay`, `viz/*` and `display/*` (`viz/*` skips figures under `hidden`) |
+| `Markup` | nothing | document-wide rules, `aria/reference-missing`, `ids/duplicate`, `popover/*`, `patterns/tooltip-unreferenced`, `media/audio-autoplay`, `media/video-captions-missing` (`<track>` is not in the accessibility tree), `viz/*` and `display/*` (`viz/*` skips figures under `hidden`) |
 
 "Not rendered" means, with tier 3, `display: none` or `visibility: hidden`,
 excluding the `hidden` attribute. Without styles, anything hidden via CSS stays in the view

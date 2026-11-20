@@ -921,6 +921,30 @@ fn media() -> Vec<Fall> {
             "Gemessen: die Messung entscheidet in media/audio-autoplay-measured, die Vermutung aus dem Markup entfällt",
         )
         .variant("gemessen"),
+        // --- media/video-captions-missing ---
+        review(
+            "media/video-captions-missing",
+            r#"<video controls src="t.mp4"></video><video controls src="r.mp4"><track kind="descriptions" src="r.vtt" srclang="en"></video>"#,
+            "WCAG 1.2.2; auditmysite-Korpus content_video_uncaptioned: ohne Untertitelspur REVIEW (eingebrannte Untertitel stehen nicht im Markup); eine Beschreibungsspur ersetzt sie nicht",
+        )
+        .count(2),
+        negative(
+            "media/video-captions-missing",
+            r#"<video controls src="t.mp4"><track kind="captions" src="t.vtt" srclang="en"></video><video controls src="w.mp4"><track kind="subtitles" src="w.vtt" srclang="de"></video>"#,
+            "WCAG 1.2.2; auditmysite-Korpus content_video_captioned: captions und subtitles bestehen",
+        )
+        .variant("captions und subtitles"),
+        negative(
+            "media/video-captions-missing",
+            r#"<video autoplay muted loop src="bg.mp4"></video>"#,
+            "WCAG 1.2.2: stumm und ohne controls, niemand schaltet den Ton ein",
+        )
+        .variant("muted ohne controls"),
+        na(
+            "media/video-captions-missing",
+            r#"<div hidden><video controls src="a.mp4"></video></div>"#,
+            "auditmysite-Korpus content_video_hidden: versteckt, nicht im Accessibility-Tree",
+        ),
         // --- media/audio-autoplay-measured ---
         fail(
             "media/audio-autoplay-measured",

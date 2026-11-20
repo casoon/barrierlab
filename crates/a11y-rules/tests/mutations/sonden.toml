@@ -394,3 +394,63 @@ replace = '''
                 .any(|w| w.contains("ton"))
 '''
 expect = "killed"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if n.has_attr("muted") && !n.has_attr("controls") {
+'''
+replace = '''
+        if false {
+'''
+expect = "killed"
+note = "stummes Video ohne controls braucht keine Untertitel"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "drop-condition"
+test = "korpus"
+find = '''
+        if std::iter::once(n)
+            .chain(ancestors(n))
+            .any(|a| a.has_attr("hidden") || a.attr("aria-hidden") == Some("true"))
+'''
+replace = '''
+        if std::iter::once(n)
+            .chain(ancestors(n))
+            .any(|_| false)
+'''
+expect = "killed"
+note = "versteckte Videos lässt die Regel aus"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "drop-exception"
+test = "korpus"
+find = '''
+                    k.trim().eq_ignore_ascii_case("captions")
+                        || k.trim().eq_ignore_ascii_case("subtitles")
+'''
+replace = '''
+                    k.trim().eq_ignore_ascii_case("captions")
+'''
+expect = "killed"
+note = "subtitles zählen wie captions"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "invert"
+test = "korpus"
+find = '''
+        if !captioned {
+'''
+replace = '''
+        if captioned {
+'''
+expect = "killed"

@@ -2370,6 +2370,16 @@ pub const METAS: &[Meta] = &[
         ),
     },
     Meta {
+        ids: &["media/video-captions-missing"],
+        tier: Tier::Structure,
+        // Die Spuren (`<track>`) stehen nicht im Accessibility-Tree.
+        scope: Scope::Markup,
+        wcag: &["1.2.2"],
+        severity: Severity::Medium,
+        help: "A video with speech needs captions.",
+        help_de: de_text!("Ein Video mit Sprache braucht Untertitel."),
+    },
+    Meta {
         ids: &["viz/text-missing"],
         tier: Tier::Structure,
         scope: Scope::Markup,
@@ -2604,7 +2614,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 61] {
+fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 62] {
     [
         lang,
         title,
@@ -2648,6 +2658,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 61] {
         crate::media::server_side_map,
         crate::media::object_alt,
         crate::media::audio_autoplay,
+        crate::media::video_captions,
         crate::viz::text,
         crate::viz::text_hidden,
         crate::viz::caption,
@@ -2670,7 +2681,7 @@ fn functions<D: Document>() -> [fn(&D, Locale, &mut Vec<Finding>); 61] {
     ]
 }
 
-const _: () = assert!(METAS.len() == 61);
+const _: () = assert!(METAS.len() == 62);
 
 /// Alle Tier-1-Regeln.
 pub fn rules<D: Document>() -> Vec<StructureRule<D>> {

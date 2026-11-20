@@ -320,6 +320,58 @@ pub(crate) fn audio_autoplay<D: Document>(doc: &D, locale: Locale, out: &mut Vec
     }
 }
 
+/// 1.2.2: Ein `<video>` ohne `<track kind="captions">` (oder `subtitles`).
+///
+/// `REVIEW`, kein Verstoß: Untertitel können eingebrannt sein, das Video
+/// kann keinen Ton haben, und ob die Spur erreichbar ist, steht nicht im
+/// Markup. Ein stummes Video, das niemand einschalten kann (`muted` ohne
+/// `controls`), hat keinen Ton, den ein Untertitel wiedergäbe.
+///
+/// Beleg: auditmysite-Korpus `content_video_uncaptioned` (`video-caption`,
+/// `needs_review`), `content_video_captioned` (`captions` und `subtitles`
+/// bestehen) und `content_video_hidden` (nicht anwendbar).
+pub(crate) fn video_captions<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc).filter(|n| n.is_element("video")) {
+        if n.has_attr("muted") && !n.has_attr("controls") {
+            continue;
+        }
+        // Scope `Markup`: `<track>` ist laut UA-Stylesheet `display: none` und
+        // fehlt im Accessibility-Tree. Versteckte Videos lässt die Regel selbst aus.
+        if std::iter::once(n)
+            .chain(ancestors(n))
+            .any(|a| a.has_attr("hidden") || a.attr("aria-hidden") == Some("true"))
+        {
+            continue;
+        }
+        let captioned = n.children().any(|c| {
+            c.is_element("track")
+                && c.attr("kind").is_some_and(|k| {
+                    k.trim().eq_ignore_ascii_case("captions")
+                        || k.trim().eq_ignore_ascii_case("subtitles")
+                })
+        });
+        if !captioned {
+            out.push(
+                Finding::review(
+                    "media/video-captions-missing",
+                    pick!(
+                        locale,
+                        "This video has no <track kind=\"captions\">. Check that it has \
+                         captions (burned in or offered by the player) or no speech or \
+                         sound that carries information.",
+                        "Dieses Video hat kein <track kind=\"captions\">. Prüfen, ob es \
+                         Untertitel hat (eingebrannt oder vom Player angeboten) oder keine \
+                         Sprache oder Töne, die Information tragen.",
+                    ),
+                )
+                .with_severity(Severity::Medium)
+                .with_wcag(["1.2.2"])
+                .at(at(n.id())),
+            );
+        }
+    }
+}
+
 // --- frames/name-missing ----------------------------------------------------
 
 /// Ob ein Rahmen nur Technik transportiert und nie zu sehen ist: Breite und

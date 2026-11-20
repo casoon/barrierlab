@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Medien:** `media/video-captions-missing` meldet ein `<video>` ohne `<track kind="captions">` oder `subtitles` als `REVIEW` (1.2.2); stumm ohne `controls` und versteckt bleibt ohne Befund (#228).
+
 ## [0.30.12] - 2026-11-17
 
 ### Fixed
