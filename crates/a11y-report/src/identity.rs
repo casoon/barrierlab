@@ -310,4 +310,78 @@ mod tests {
             format!("\"{}\"", FindingId::new("r", ["a"]))
         );
     }
+
+    #[test]
+    fn ids_sind_acht_hexziffern_und_unterscheiden_viele_eingaben() {
+        let mut seen = std::collections::HashSet::new();
+        for i in 0..3000 {
+            let id = FindingId::new(&format!("rule/{i}"), ["a.x"]);
+            let hex = id.as_str().strip_prefix("F-").unwrap();
+            // Führende Nullen bleiben erhalten: immer acht Ziffern.
+            assert_eq!(hex.len(), 8, "{id}");
+            assert!(hex.bytes().all(|b| b.is_ascii_hexdigit()), "{id}");
+            assert!(seen.insert(id), "Kollision bei {i}");
+        }
+        for i in 0..3000 {
+            let id = RootCauseId::new("r", &format!("a.x > b.{i}c"));
+            let hex = id.as_str().strip_prefix("RC-").unwrap();
+            assert_eq!(hex.len(), 8, "{id}");
+        }
+    }
+
+    #[test]
+    fn selektor_leerraum_jeder_art_wird_ein_leerzeichen() {
+        assert_eq!(normalize_selector("a\t\n b"), "a b");
+        assert_eq!(normalize_selector("a\u{a0}b"), "a b");
+        assert_eq!(normalize_selector("x  1 22 y"), "x # # y");
+    }
+
+    #[test]
+    fn position_schluessel_haelt_regel_datei_zeile_und_spalte_auseinander() {
+        let base = FindingId::at("r", Some("a.html"), 2, 3);
+        assert_eq!(base, FindingId::at("r", Some("a.html"), 2, 3));
+        assert_ne!(base, FindingId::at("s", Some("a.html"), 2, 3));
+        assert_ne!(base, FindingId::at("r", Some("b.html"), 2, 3));
+        assert_ne!(base, FindingId::at("r", None, 2, 3));
+        assert_ne!(base, FindingId::at("r", Some("a.html"), 3, 3));
+        assert_ne!(base, FindingId::at("r", Some("a.html"), 2, 4));
+        assert!(base.as_str().starts_with("F-") && base.as_str().len() == 10);
+    }
+
+    /// Wie `befund_id_ist_ueber_versionen_stabil`, für den Positionsschlüssel:
+    /// `Regel\n@Datei:Zeile:Spalte`, FNV-1a 64, obere 32 Bit.
+    #[test]
+    fn positions_id_ist_ueber_versionen_stabil() {
+        assert_eq!(
+            FindingId::at("html/x", Some("a.html"), 2, 5).as_str(),
+            "F-fc8ed082"
+        );
+    }
+
+    #[test]
+    fn ursache_normalisiert_den_selektor_und_haelt_die_regel() {
+        let base = RootCauseId::new("r", "NAV > a.item-12");
+        assert_eq!(base, RootCauseId::new("r", "nav  >  a.item-7"));
+        assert_ne!(base, RootCauseId::new("s", "nav > a.item-12"));
+        assert_ne!(base, RootCauseId::new("r", "nav > a.other"));
+        assert_eq!(RootCauseId::new("r", ""), RootCauseId::new("r", "document"));
+    }
+
+    #[test]
+    fn befund_id_haelt_selektorgrenzen_und_seitenplatzhalter_auseinander() {
+        // Dieselbe Menge nach der Normalisierung: eine ID.
+        assert_eq!(
+            FindingId::new("r", ["a.x", "a.x-1", "a.x-2"]),
+            FindingId::new("r", ["a.x", "a.x-#"])
+        );
+        // Die Grenze zwischen Selektoren zählt: "ab" + "c" ist nicht "a" + "bc".
+        assert_ne!(
+            FindingId::new("r", ["ab", "c"]),
+            FindingId::new("r", ["a", "bc"])
+        );
+        assert_ne!(
+            FindingId::new("r", ["x"]),
+            FindingId::new("r", ["__pagewide__", "x"])
+        );
+    }
 }

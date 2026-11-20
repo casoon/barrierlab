@@ -463,4 +463,256 @@ mod tests {
         let r: Report = serde_json::from_str(alt).unwrap();
         assert_eq!(r.schema, SCHEMA_VERSION);
     }
+
+    // --- Grenzfälle, die die Mutationen in tests/mutations/ erzwingen ----
+
+    #[test]
+    fn zaehler_trennen_jede_schwere_und_jeden_zustand() {
+        let mut r = Report::new();
+        for (sev, n) in [
+            (Severity::Critical, 1),
+            (Severity::High, 2),
+            (Severity::Medium, 3),
+            (Severity::Low, 4),
+        ] {
+            for _ in 0..n {
+                r.push(Finding::fail("a", "x").with_severity(sev));
+            }
+        }
+        r.push(Finding::review("b", "x").with_severity(Severity::High));
+        r.push(Finding::pass("c", "x"));
+        r.push(Finding::pass("c", "x"));
+        let s = r.finish().summary;
+        assert_eq!((s.critical, s.high, s.medium, s.low), (1, 3, 3, 4));
+        assert_eq!((s.fail, s.review, s.pass, s.untested), (10, 1, 2, 0));
+        // Pass gehört nicht zu den Problemen.
+        assert_eq!(s.problems(), 11);
+    }
+
+    #[test]
+    fn regelvermerk_haelt_grund_art_und_anzahl() {
+        let run = RuleRun::not_run("a/b", NotRun::Disabled).with_reason("abgeschaltet");
+        assert_eq!(run.not_run, Some(NotRun::Disabled));
+        assert_eq!(run.reason.as_deref(), Some("abgeschaltet"));
+        assert_eq!(RuleRun::ran("a/b", 5).findings, 5);
+        assert_eq!(RuleRun::not_run("a/b", NotRun::Errored).findings, 0);
+    }
+
+    #[test]
+    fn bericht_nimmt_befunde_vermerke_und_eingaben_auf() {
+        let mut r = Report::new();
+        r.extend([Finding::fail("a", "x"), Finding::pass("b", "x")]);
+        r.push(Finding::review("c", "x"));
+        r.record(RuleRun::ran("a", 1));
+        r.note_input(InputNote::new(InputKind::Other));
+        assert_eq!(r.findings.len(), 3);
+        assert_eq!((r.rule_runs.len(), r.inputs.len()), (1, 1));
+        assert_eq!(Report::default().schema, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn befund_id_aus_position_unterscheidet_zeile_spalte_und_datei() {
+        let at = |file: &str, line, col| {
+            Finding::fail("r/x", "m")
+                .at(Location::file(file).with_position(SourcePosition::new(line, col, 0)))
+                .id()
+        };
+        assert_ne!(at("a.html", 1, 5), at("a.html", 5, 1));
+        assert_ne!(at("a.html", 1, 5), at("a.html", 2, 5));
+        assert_ne!(at("a.html", 1, 5), at("b.html", 1, 5));
+        assert!(at("a.html", 1, 5).as_str().starts_with("F-"));
+        // Zeile vor Spalte, festgehalten wie die Selektor-ID.
+        assert_eq!(
+            at("a.html", 2, 5),
+            FindingId::at("r/x", Some("a.html"), 2, 5)
+        );
+        assert_ne!(
+            at("a.html", 2, 5),
+            FindingId::at("r/x", Some("a.html"), 5, 2)
+        );
+    }
+
+    #[test]
+    fn standardwerte_und_namen_der_klassifikation() {
+        assert_eq!(Outcome::default(), Outcome::Fail);
+        assert_eq!(Severity::default(), Severity::Medium);
+        assert_eq!(Basis::default(), Basis::Criterion);
+        assert!(Basis::Criterion.is_criterion() && !Basis::BestPractice.is_criterion());
+        for (o, n) in [
+            (Outcome::Fail, "fail"),
+            (Outcome::Review, "review"),
+            (Outcome::Pass, "pass"),
+            (Outcome::Untested, "untested"),
+        ] {
+            assert_eq!(o.as_str(), n);
+            assert_eq!(serde_json::to_string(&o).unwrap(), format!("\"{n}\""));
+        }
+        for (s, n) in [
+            (Severity::Low, "low"),
+            (Severity::Medium, "medium"),
+            (Severity::High, "high"),
+            (Severity::Critical, "critical"),
+        ] {
+            assert_eq!(s.as_str(), n);
+            assert_eq!(serde_json::to_string(&s).unwrap(), format!("\"{n}\""));
+        }
+        assert_eq!(Basis::Criterion.as_str(), "criterion");
+        assert_eq!(Basis::BestPractice.as_str(), "best_practice");
+        for (l, n) in [
+            (WcagLevel::A, "A"),
+            (WcagLevel::AA, "AA"),
+            (WcagLevel::AAA, "AAA"),
+        ] {
+            assert_eq!(l.as_str(), n);
+            assert_eq!(serde_json::to_string(&l).unwrap(), format!("\"{n}\""));
+        }
+    }
+
+    #[test]
+    fn stufen_und_schweregrade_sind_paarweise_geordnet() {
+        let sev = [
+            Severity::Low,
+            Severity::Medium,
+            Severity::High,
+            Severity::Critical,
+        ];
+        for (i, a) in sev.iter().enumerate() {
+            for (j, b) in sev.iter().enumerate() {
+                assert_eq!(a < b, i < j, "{a:?} {b:?}");
+            }
+        }
+        let lvl = [WcagLevel::A, WcagLevel::AA, WcagLevel::AAA];
+        for (i, a) in lvl.iter().enumerate() {
+            for (j, b) in lvl.iter().enumerate() {
+                assert_eq!(a.included_in(*b), i <= j, "{a:?} {b:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn sichtbarkeit_und_problemstatus_je_zustand() {
+        for (o, visible, problem) in [
+            (Outcome::Fail, true, true),
+            (Outcome::Review, true, true),
+            (Outcome::Pass, false, false),
+            (Outcome::Untested, true, false),
+        ] {
+            assert_eq!(o.is_visible_by_default(), visible, "{o:?}");
+            assert_eq!(o.is_problem(), problem, "{o:?}");
+        }
+        let mut r = Report::new();
+        r.push(Finding::fail("a", "x"));
+        r.push(Finding::pass("b", "x"));
+        assert_eq!(r.by_outcome(Outcome::Fail).count(), 1);
+        assert_eq!(r.by_outcome(Outcome::Untested).count(), 0);
+        assert_eq!(r.visible().next().map(|f| f.rule_id.as_str()), Some("a"));
+    }
+
+    #[test]
+    fn konstruktoren_setzen_zustand_und_vorgaben() {
+        let f = Finding::fail("a", "m");
+        assert_eq!(
+            (f.outcome, f.severity, f.basis),
+            (Outcome::Fail, Severity::Medium, Basis::Criterion)
+        );
+        assert_eq!(Finding::review("a", "m").outcome, Outcome::Review);
+        assert_eq!(Finding::pass("a", "m").outcome, Outcome::Pass);
+        assert_eq!(Finding::untested("a", "m").outcome, Outcome::Untested);
+        // Das Schlagwort kommt nur zur Empfehlung, und nur einmal.
+        assert_eq!(Finding::fail("a", "m").with_tags(["x"]).tags, ["x"]);
+        let b = Finding::best_practice("a", "m").with_tags(["x"]);
+        assert_eq!(b.tags, ["x", "best-practice"]);
+        let b = Finding::best_practice("a", "m").with_tags(["best-practice"]);
+        assert_eq!(b.tags, ["best-practice"]);
+    }
+
+    #[test]
+    fn jede_setzer_methode_wirkt_auf_ihr_feld() {
+        let f = Finding::fail("a", "m")
+            .with_severity(Severity::Low)
+            .with_rule_name("n")
+            .with_element(Some("r".into()), Some("nm".into()))
+            .with_wcag(["1.1.1"])
+            .with_wcag_level(WcagLevel::AA)
+            .with_help("h")
+            .with_help_url("u")
+            .with_suggestion("s")
+            .with_suggested_code("c")
+            .with_snippet("sn")
+            .with_evidence([Evidence::new("e1")])
+            .add_evidence(Evidence::new("e2"))
+            .with_extra(7u8)
+            .at(Location::default().with_node("1"));
+        assert_eq!(f.severity, Severity::Low);
+        assert_eq!(f.rule_name.as_deref(), Some("n"));
+        assert_eq!(
+            (f.role.as_deref(), f.name.as_deref()),
+            (Some("r"), Some("nm"))
+        );
+        assert_eq!(f.wcag, ["1.1.1"]);
+        assert_eq!(f.wcag_level, Some(WcagLevel::AA));
+        assert_eq!(f.help.as_deref(), Some("h"));
+        assert_eq!(f.help_url.as_deref(), Some("u"));
+        assert_eq!(f.suggestion.as_deref(), Some("s"));
+        assert_eq!(f.suggested_code.as_deref(), Some("c"));
+        assert_eq!(f.snippet.as_deref(), Some("sn"));
+        assert_eq!(
+            f.evidence
+                .iter()
+                .map(|e| e.source.as_str())
+                .collect::<Vec<_>>(),
+            ["e1", "e2"]
+        );
+        assert_eq!(f.extra.get::<u8>(), Some(&7));
+        assert_eq!(f.location.node.as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn jeder_ortsbaustein_setzt_sein_feld() {
+        let pos = SourcePosition::new(3, 7, 20);
+        assert_eq!((pos.line, pos.column, pos.byte_offset), (3, 7, 20));
+        let loc = Location::default()
+            .with_node("n")
+            .with_selector("s")
+            .with_url("u")
+            .with_source_hint("h")
+            .with_position(pos)
+            .with_end(SourcePosition::new(3, 9, 22));
+        assert_eq!(loc.node.as_deref(), Some("n"));
+        assert_eq!(loc.selector.as_deref(), Some("s"));
+        assert_eq!(loc.url.as_deref(), Some("u"));
+        assert_eq!(loc.source_hint.as_deref(), Some("h"));
+        assert_eq!(loc.position, Some(pos));
+        assert_eq!(loc.end.map(|e| e.column), Some(9));
+        assert_eq!(Location::file("f").file.as_deref(), Some("f"));
+        assert_eq!(Location::node("n").node.as_deref(), Some("n"));
+        assert!(Location::default().is_empty());
+        assert!(!Location::node("n").is_empty());
+    }
+
+    #[test]
+    fn belege_tragen_quelle_feld_und_wert() {
+        let e = Evidence::ax_tree("v");
+        assert_eq!(
+            (e.source.as_str(), e.value.as_deref()),
+            ("ax_tree", Some("v"))
+        );
+        let e = Evidence::dom_attribute("role", Some("button".into()));
+        assert_eq!(e.source, "dom_attribute");
+        assert_eq!(
+            (e.field.as_deref(), e.value.as_deref()),
+            (Some("role"), Some("button"))
+        );
+        let e = Evidence::computed("color", "red");
+        assert_eq!(e.source, "computed");
+        assert_eq!(
+            (e.field.as_deref(), e.value.as_deref()),
+            (Some("color"), Some("red"))
+        );
+        let e = Evidence::new("x").with_field("f").with_value("v");
+        assert_eq!(
+            (e.field.as_deref(), e.value.as_deref()),
+            (Some("f"), Some("v"))
+        );
+    }
 }
