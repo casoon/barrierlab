@@ -8,15 +8,23 @@ on:
 permissions:
   contents: read
 
+# Neuer Push auf einen PR bricht den alten Lauf ab. Auf main nie: dort gibt es
+# keinen Ersatz fuer einen abgebrochenen Lauf, und release-plz baut auf demselben
+# Push in einem eigenen Workflow mit eigener Gruppe.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   rust:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
 
       # Bis zum ersten Import (Phase 3) hat der Workspace keine Member; ein
       # virtuelles Manifest ohne Member laesst sich nicht bauen. Die Bedingung
@@ -75,28 +83,36 @@ jobs:
 
   licenses:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       # Jede Datei im Repository braucht Urheber- und Lizenzangabe (REUSE);
       # die vendorten Korpora haben eigene, abweichende — siehe REUSE.toml.
-      - uses: fsfe/reuse-action@v5
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
       # Keine Abhaengigkeit mit einer Lizenz, die deny.toml nicht erlaubt.
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2
         with:
           command: check licenses
+      # Keine ungenutzte Abhaengigkeit in einem Manifest (auch in den eigenen
+      # Workspaces unter examples/, fuzz/ und xtask/).
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2
+        with:
+          tool: cargo-machete@0.10.1
+      - run: cargo machete
 
   wasm:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       # Die CLI muss zur Crate-Version von wasm-bindgen passen, sonst bricht der
       # Schritt mit einem Schema-Fehler ab.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
@@ -154,8 +170,9 @@ jobs:
 
   node:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: npm-Pakete vorhanden?
         id: pkgs
         run: |
@@ -168,9 +185,9 @@ jobs:
       # Ohne version: Die Action nimmt packageManager aus der package.json.
       # Beides gesetzt bricht sie mit "Multiple versions of pnpm specified" ab.
       - if: steps.pkgs.outputs.present == 'true'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       - if: steps.pkgs.outputs.present == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
