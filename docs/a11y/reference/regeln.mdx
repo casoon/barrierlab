@@ -14,11 +14,11 @@ may deviate from it. Each row has an anchor: the ID with `/` replaced by `-`
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.30.12 declares 177 IDs.
+a11y-rules 0.30.12 declares 178 IDs.
 
 ## Tier 1: Structure
 
-111 IDs, `Document`, runs on every host.
+112 IDs, `Document`, runs on every host.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -112,6 +112,7 @@ a11y-rules 0.30.12 declares 177 IDs.
 | `images/server-side-map`<a id="images-server-side-map"></a> | 2.1.1 | medium | Do not use server-side image maps (ismap); use a client-side map or text links. |
 | `objects/alt-missing`<a id="objects-alt-missing"></a> | 1.1.1 | high | An `<object>` needs a text alternative: fallback content, aria-label or title. |
 | `media/audio-autoplay`<a id="media-audio-autoplay"></a> | 1.4.2 | medium | Audio that plays automatically must stop within three seconds or be pausable. |
+| `media/video-captions-missing`<a id="media-video-captions-missing"></a> | 1.2.2 | medium | A video with speech needs captions. |
 | `viz/text-missing`<a id="viz-text-missing"></a> | 1.1.1 | high | Every visualisation (figure[data-viz]) needs a non-empty text layer [data-viz-text] with its statement. |
 | `display/text-hidden`<a id="display-text-hidden"></a> | 1.1.1 | high | Never put hidden, aria-hidden="true" or inert on [data-viz-text] or its ancestors; hide it visually instead. |
 | `viz/caption-missing`<a id="viz-caption-missing"></a> | 1.1.1 | low | Every visualisation (figure[data-viz]) needs a `<figcaption>` that names it. |

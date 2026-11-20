@@ -1493,6 +1493,13 @@
       "findings": 0
     },
     {
+      "rule_id": "media/video-captions-missing",
+      "wcag": [
+        "1.2.2"
+      ],
+      "findings": 0
+    },
+    {
       "rule_id": "viz/text-missing",
       "wcag": [
         "1.1.1"
