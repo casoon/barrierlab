@@ -195,7 +195,12 @@ pub fn compose_color_pairs(
         }
         pairs.push((t, b));
     }
-    Some(ColorPairs { pairs, halo })
+    let opacity = schichten.iter().map(|s| s.opacity).product();
+    Some(ColorPairs {
+        pairs,
+        halo,
+        opacity: Some(opacity),
+    })
 }
 
 #[cfg(test)]

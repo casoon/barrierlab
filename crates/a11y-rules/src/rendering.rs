@@ -215,6 +215,7 @@ enum Measurement {
         pairs: Vec<(Color, Color)>,
         halo: Vec<Color>,
         large: bool,
+        opacity: Option<f64>,
     },
     /// Abgetasteter Hintergrund: Median und 40. Perzentil der Verhältnisse
     /// über die Stichprobe, und ob der Text groß ist.
@@ -308,6 +309,7 @@ fn measure<'d, D: Rendering>(
             pairs,
             halo: p.halo,
             large,
+            opacity: p.opacity,
         });
     }
     Some(match (style.color, style.background_color) {
@@ -346,6 +348,50 @@ fn evidences(value: f64, threshold: f64) -> [Evidence; 2] {
     ]
 }
 
+/// Unter `opacity` < 1 gemessen: die Deckkraft und die verrechnete Textfarbe
+/// des Paares mit dem höchsten Verhältnis (casoon/barrierlab#261).
+fn opacity_of(m: &Measurement) -> Option<(f64, Color)> {
+    let Measurement::Pairs {
+        pairs,
+        opacity: Some(o),
+        ..
+    } = m
+    else {
+        return None;
+    };
+    let best = pairs
+        .iter()
+        .max_by(|a, b| ratio(a.0, a.1).total_cmp(&ratio(b.0, b.1)))?;
+    (*o < 1.0).then_some((*o, best.0))
+}
+
+fn opacity_evidence(m: &Measurement) -> Vec<Evidence> {
+    opacity_of(m).map_or_else(Vec::new, |(o, c)| {
+        vec![
+            Evidence::computed("opacity", format!("{o:.2}")),
+            Evidence::computed(
+                "effective_foreground",
+                format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b),
+            ),
+            Evidence::computed("state_dependent", "true"),
+        ]
+    })
+}
+
+fn opacity_note(locale: Locale, m: &Measurement) -> String {
+    opacity_of(m).map_or_else(String::new, |(o, _)| {
+        let o = number(locale, o, 2);
+        tr!(
+            locale,
+            " The contrast was measured with the element at opacity {o}; if the opacity \
+             belongs to a transient state (inactive, fading), the ratio applies to that state.",
+            " Der Kontrast wurde mit dem Element bei Deckkraft {o} gemessen; gehört die \
+             Deckkraft zu einem vorübergehenden Zustand (inaktiv, einblendend), gilt das \
+             Verhältnis für diesen Zustand."
+        )
+    })
+}
+
 /// Eine Prüfung gegen eine Schwelle — für 1.4.3 und 1.4.6 dieselbe.
 enum Verdict {
     Passes,
@@ -376,6 +422,7 @@ fn verdicts(
             ref pairs,
             ref halo,
             large,
+            ..
         } => {
             let s = if large {
                 threshold_large
@@ -473,11 +520,11 @@ fn borderline(
 
 fn mixed(
     id: &str,
-    min: f64,
-    max: f64,
+    (min, max): (f64, f64),
     threshold: f64,
     wcag: &str,
     locale: Locale,
+    m: &Measurement,
     n: NodeId,
 ) -> Finding {
     let (min_s, max_s, threshold_s) = (
@@ -492,20 +539,25 @@ fn mixed(
             "The text lies over a gradient, under partial opacity or has a text shadow. \
              Against the colours behind it the contrast ranges from {min_s}:1 to {max_s}:1 \
              ({threshold_s}:1 required). Check by hand where the text lies and whether a \
-             shadow sets it off.",
+             shadow sets it off.{}",
             "Der Text liegt über einem Verlauf, unter teilweiser Deckkraft oder hat einen \
              Schatten. Gegen die Farben dahinter reicht der Kontrast von {min_s}:1 bis \
              {max_s}:1 (gefordert {threshold_s}:1). Von Hand prüfen, wo der Text liegt und \
-             ob ein Schatten ihn abhebt."
+             ob ein Schatten ihn abhebt.{}",
+            opacity_note(locale, m)
         ),
     )
     .with_severity(Severity::Medium)
     .with_wcag([wcag])
-    .with_evidence([
-        Evidence::computed("contrast_ratio_min", format!("{min:.2}")),
-        Evidence::computed("contrast_ratio", format!("{max:.2}")),
-        Evidence::computed("required_ratio", format!("{threshold:.1}")),
-    ])
+    .with_evidence(
+        [
+            Evidence::computed("contrast_ratio_min", format!("{min:.2}")),
+            Evidence::computed("contrast_ratio", format!("{max:.2}")),
+            Evidence::computed("required_ratio", format!("{threshold:.1}")),
+        ]
+        .into_iter()
+        .chain(opacity_evidence(m)),
+    )
     .at(at(n))
 }
 
@@ -528,6 +580,45 @@ fn symbols(id: &str, value: f64, threshold: f64, wcag: &str, locale: Locale, n: 
     .with_severity(Severity::Medium)
     .with_wcag([wcag])
     .with_evidence(evidences(value, threshold))
+    .at(at(n))
+}
+
+/// Der Text steht in einer Illustration: Das nächste Element mit
+/// `aria-hidden="true"` ist ein `<svg>` oder liegt in einem (casoon/barrierlab#262).
+/// Ob die Schrift dort reine Dekoration ist, zeigt der Baum nicht.
+fn in_hidden_svg<'a, N: Node<'a>>(n: N) -> bool {
+    std::iter::once(n)
+        .chain(ancestors(n))
+        .find(|a| a.attr("aria-hidden").is_some_and(|v| v.trim() == "true"))
+        .is_some_and(|h| {
+            std::iter::once(h)
+                .chain(ancestors(h))
+                .any(|a| a.local_name() == "svg")
+        })
+}
+
+fn illustration(value: f64, threshold: f64, locale: Locale, m: &Measurement, n: NodeId) -> Finding {
+    let (value_s, threshold_s) = (number(locale, value, 2), number(locale, threshold, 1));
+    Finding::review(
+        "contrast/text-undetermined",
+        tr!(
+            locale,
+            "The text lies inside an aria-hidden illustration (svg) and reaches {value_s}:1 \
+             ({threshold_s}:1 required). If it is purely decorative, it is exempt; if it \
+             carries information, it needs the contrast. Check by hand.{}",
+            "Der Text liegt in einer aria-hidden-Illustration (svg) und erreicht {value_s}:1 \
+             (gefordert {threshold_s}:1). Ist er reine Dekoration, ist er ausgenommen; trägt \
+             er Information, braucht er den Kontrast. Von Hand prüfen.{}",
+            opacity_note(locale, m)
+        ),
+    )
+    .with_severity(Severity::Medium)
+    .with_wcag(["1.4.3"])
+    .with_evidence(
+        evidences(value, threshold)
+            .into_iter()
+            .chain(opacity_evidence(m)),
+    )
     .at(at(n))
 }
 
@@ -580,23 +671,31 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
                 locale,
                 n.id(),
             )),
+            Verdict::Fails(value) if in_hidden_svg(n) => {
+                out.push(illustration(value, threshold, locale, &measurement, n.id()));
+            }
             Verdict::Fails(value) => out.push(
                 Finding::fail(
                     "contrast/text-insufficient",
                     tr!(
                         locale,
                         "The text reaches a contrast ratio of {}:1; \
-                         {}:1 is required for {}.",
+                         {}:1 is required for {}.{}",
                         "Der Text erreicht ein Kontrastverhältnis von {}:1, \
-                         gefordert sind {}:1 für {}.",
+                         gefordert sind {}:1 für {}.{}",
                         number(locale, value, 2),
                         number(locale, threshold, 1),
-                        text_kind(locale, large)
+                        text_kind(locale, large),
+                        opacity_note(locale, &measurement)
                     ),
                 )
                 .with_severity(Severity::High)
                 .with_wcag(["1.4.3"])
-                .with_evidence(evidences(value, threshold))
+                .with_evidence(
+                    evidences(value, threshold)
+                        .into_iter()
+                        .chain(opacity_evidence(&measurement)),
+                )
                 .at(at(n.id())),
             ),
             Verdict::Borderline { median, p40 } => out.push(borderline(
@@ -610,11 +709,11 @@ fn text_contrast<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) 
             )),
             Verdict::Mixed { min, max } => out.push(mixed(
                 "contrast/text-undetermined",
-                min,
-                max,
+                (min, max),
                 threshold,
                 "1.4.3",
                 locale,
+                &measurement,
                 n.id(),
             )),
         }
@@ -687,11 +786,11 @@ fn text_contrast_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
             )),
             Verdict::Mixed { min, max } => out.push(mixed(
                 "contrast/text-enhanced",
-                min,
-                max,
+                (min, max),
                 aaa,
                 "1.4.6",
                 locale,
+                &measurement,
                 n.id(),
             )),
         }

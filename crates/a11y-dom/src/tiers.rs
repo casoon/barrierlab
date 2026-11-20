@@ -200,6 +200,9 @@ pub struct ColorPairs {
     /// kann als Halo selbst der Hintergrund der Glyphen sein (Understanding
     /// 1.4.3); ob er dafür reicht, sieht nur ein Mensch.
     pub halo: Vec<Color>,
+    /// Die aufsummierte `opacity` über die Kette vom Text nach außen, 0 bis 1.
+    /// `None`, wenn der Host sie nicht angibt.
+    pub opacity: Option<f64>,
 }
 
 /// Die berechneten Stilwerte, die Accessibility-Regeln tatsächlich brauchen.
