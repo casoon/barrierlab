@@ -285,4 +285,165 @@ mod tests {
     fn linearize_returns_empty_for_empty_tree() {
         assert!(linearize(&AXTree::new()).is_empty());
     }
+
+    // --- Mutationskatalog tests/mutations/linearizer.toml (Refs #257) ---
+
+    #[test]
+    fn items_carry_seq_depth_description_value_and_tab_stop() {
+        let mut field = node("2", "textbox", Some("Name"), vec![]);
+        field.description = Some("Pflichtfeld".into());
+        field.value = Some("Ada".into());
+        field.properties = vec![property("focusable", AXValue::Bool(true))];
+        let tree = AXTree::from_nodes(vec![
+            node("1", "WebArea", None, vec!["2", "3"]),
+            field,
+            node("3", "paragraph", None, vec![]),
+        ]);
+
+        let items = linearize(&tree);
+
+        assert_eq!(items.len(), 3);
+        assert_eq!(
+            items.iter().map(|i| (i.seq, i.depth)).collect::<Vec<_>>(),
+            vec![(0, 0), (1, 1), (2, 1)]
+        );
+        assert_eq!(items[1].description.as_deref(), Some("Pflichtfeld"));
+        assert_eq!(items[1].value.as_deref(), Some("Ada"));
+        assert!(items[1].tab_stop && !items[2].tab_stop && !items[0].tab_stop);
+    }
+
+    #[test]
+    fn depth_grows_only_below_emitted_items() {
+        // item > ignored > layout > item: weder der ignorierte noch der
+        // Layout-Knoten verschiebt die Tiefe.
+        let mut hidden = node("2", "none", None, vec!["3"]);
+        hidden.ignored = true;
+        let tree = AXTree::from_nodes(vec![
+            node("1", "WebArea", None, vec!["2"]),
+            hidden,
+            node("3", "InlineTextBox", None, vec!["4"]),
+            node("4", "link", Some("Tief"), vec!["5"]),
+            node("5", "image", Some("Bild"), vec![]),
+        ]);
+
+        let result = linearize_with_ignored(&tree);
+
+        assert_eq!(
+            result
+                .items
+                .iter()
+                .map(|i| (i.node_id.as_str(), i.depth))
+                .collect::<Vec<_>>(),
+            vec![("1", 0), ("4", 1), ("5", 2)]
+        );
+        assert_eq!(result.ignored[0].depth, 1);
+    }
+
+    #[test]
+    fn an_ignored_layout_role_is_reported_as_ignored() {
+        let mut hidden = node("2", "InlineTextBox", Some("x"), vec![]);
+        hidden.ignored = true;
+        let tree = AXTree::from_nodes(vec![node("1", "WebArea", None, vec!["2"]), hidden]);
+        let result = linearize_with_ignored(&tree);
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.ignored.len(), 1);
+    }
+
+    #[test]
+    fn only_inline_text_boxes_are_layout_only() {
+        let tree = AXTree::from_nodes(vec![
+            node("1", "WebArea", None, vec!["2", "3"]),
+            node("2", "LineBreak", None, vec![]),
+            node("3", "StaticText", Some("Text"), vec![]),
+        ]);
+        let ids: Vec<_> = linearize(&tree).into_iter().map(|i| i.node_id).collect();
+        assert_eq!(ids, vec!["1", "2", "3"]);
+    }
+
+    #[test]
+    fn children_are_visited_in_child_id_order() {
+        let tree = AXTree::from_nodes(vec![
+            node("1", "WebArea", None, vec!["c", "a", "b"]),
+            node("a", "heading", Some("A"), vec![]),
+            node("b", "heading", Some("B"), vec![]),
+            node("c", "heading", Some("C"), vec![]),
+        ]);
+        let ids: Vec<_> = linearize(&tree).into_iter().map(|i| i.node_id).collect();
+        assert_eq!(ids, vec!["1", "c", "a", "b"]);
+    }
+
+    #[test]
+    fn a_shared_or_cyclic_child_is_visited_once() {
+        let tree = AXTree::from_nodes(vec![
+            node("1", "WebArea", None, vec!["2", "2"]),
+            node("2", "group", None, vec!["1"]),
+        ]);
+        assert_eq!(linearize(&tree).len(), 2);
+    }
+
+    #[test]
+    fn ignored_reasons_are_name_equals_value_or_bare_name() {
+        let mut hidden = node("2", "none", None, vec![]);
+        hidden.ignored = true;
+        hidden.ignored_reasons = vec![
+            property("notRendered", AXValue::Bool(true)),
+            property("ariaHiddenElement", AXValue::String("true".into())),
+            property("blank", AXValue::String("  ".into())),
+            property("empty", AXValue::String(String::new())),
+        ];
+        let tree = AXTree::from_nodes(vec![node("1", "WebArea", None, vec!["2"]), hidden]);
+        let result = linearize_with_ignored(&tree);
+        assert_eq!(
+            result.ignored[0].reasons,
+            vec!["notRendered", "ariaHiddenElement=true", "blank", "empty"]
+        );
+    }
+
+    #[test]
+    fn states_use_name_value_forms_in_node_order() {
+        let mut n = node("2", "checkbox", Some("AGB"), vec![]);
+        n.properties = vec![
+            property("required", AXValue::Bool(true)),
+            property("checked", AXValue::String("mixed".into())),
+            property("disabled", AXValue::Bool(false)),
+            property("level", AXValue::Int(3)),
+            property("invalid", AXValue::String(String::new())),
+            property("posinset", AXValue::Int(4)),
+            property("focusable", AXValue::Bool(true)),
+            property("haspopup", AXValue::String("menu".into())),
+        ];
+        let tree = AXTree::from_nodes(vec![node("1", "WebArea", None, vec!["2"]), n]);
+        assert_eq!(
+            linearize(&tree)[1].states,
+            vec![
+                "required",
+                "checked=mixed",
+                "disabled=false",
+                "level=3",
+                "haspopup=menu"
+            ]
+        );
+    }
+
+    #[test]
+    fn every_state_property_is_listed() {
+        let names = [
+            "expanded",
+            "checked",
+            "selected",
+            "required",
+            "invalid",
+            "disabled",
+            "pressed",
+            "level",
+            "autocomplete",
+            "haspopup",
+        ];
+        for name in names {
+            let mut n = node("2", "generic", None, vec![]);
+            n.properties = vec![property(name, AXValue::Bool(true))];
+            let tree = AXTree::from_nodes(vec![node("1", "WebArea", None, vec!["2"]), n]);
+            assert_eq!(linearize(&tree)[1].states, vec![name], "{name}");
+        }
+    }
 }

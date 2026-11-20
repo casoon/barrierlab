@@ -1,0 +1,476 @@
+# Mutationen von a11y-perception (announcement) — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/a11y-perception
+
+
+[[mutation]]
+id = "announcement/name-trimmed"
+file = "src/announcement.rs"
+kind = "drop-step"
+find = '''.map(str::trim)
+'''
+replace = '''
+'''
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/name-empty-is-none"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = ".filter(|name| !name.is_empty())"
+replace = ".filter(|_| true)"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-default-generic"
+file = "src/announcement.rs"
+kind = "constant"
+find = "unwrap_or(\"generic\")"
+replace = "unwrap_or(\"\")"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/heading-level-from-states"
+file = "src/announcement.rs"
+kind = "constant"
+find = "state_value(&item.states, \"level\")"
+replace = "state_value(&item.states, \"levels\")"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/heading-level-parse"
+file = "src/announcement.rs"
+kind = "drop-step"
+find = ".and_then(|level| level.parse().ok())"
+replace = ".and_then(|_| None)"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/state-value-name-match"
+file = "src/announcement.rs"
+kind = "invert"
+find = "(state_name == name).then_some(value)"
+replace = "(state_name != name).then_some(value)"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/expanded-false-is-collapsed"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"expanded\", Some(\"false\")) => Some(AnnouncedState::Collapsed),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/expanded-other-is-expanded"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"expanded\", _) => Some(AnnouncedState::Expanded),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/checked-false-is-unchecked"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"checked\", Some(\"false\")) => Some(AnnouncedState::Unchecked),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/checked-mixed"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"checked\", Some(\"mixed\")) => Some(AnnouncedState::Mixed),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/checked-other-is-checked"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"checked\", _) => Some(AnnouncedState::Checked),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/selected-false-is-not-selected"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"selected\", Some(\"false\")) => Some(AnnouncedState::NotSelected),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/selected-other-is-selected"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"selected\", _) => Some(AnnouncedState::Selected),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/required-false-is-silent"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"required\", Some(\"false\")) => None,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/required-other-is-required"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"required\", _) => Some(AnnouncedState::Required),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/invalid-false-is-silent"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"invalid\", Some(\"false\")) => None,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/invalid-other-is-invalid"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"invalid\", _) => Some(AnnouncedState::Invalid),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/disabled-false-is-silent"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"disabled\", Some(\"false\")) => None,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/disabled-other-is-disabled"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"disabled\", _) => Some(AnnouncedState::Disabled),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/pressed-false-is-not-pressed"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"pressed\", Some(\"false\")) => Some(AnnouncedState::NotPressed),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/pressed-other-is-pressed"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "(\"pressed\", _) => Some(AnnouncedState::Pressed),"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/focusable-needs-tab-stop"
+file = "src/announcement.rs"
+kind = "invert"
+find = "if item.tab_stop && !announces_its_own_focusability"
+replace = "if !item.tab_stop && !announces_its_own_focusability"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/focusable-skips-self-announcing-roles"
+file = "src/announcement.rs"
+kind = "invert"
+find = "if item.tab_stop && !announces_its_own_focusability"
+replace = "if item.tab_stop || !announces_its_own_focusability"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/split-state-without-value"
+file = "src/announcement.rs"
+kind = "constant"
+find = "None => (state, None),"
+replace = "None => (state, Some(\"\")),"
+killed_by = "lib:announcement::tests"
+expect = "equivalent"
+note = "Das Muster kennt nur die Werte false und mixed; eine leere Zeichenkette fällt wie None in den Auffangzweig, die Ansage ist dieselbe."
+
+[[mutation]]
+id = "announcement/role-button"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"button\" => AnnouncedRole::Button,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-link"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"link\" => AnnouncedRole::Link,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-checkbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"checkbox\" => AnnouncedRole::CheckBox,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-radio"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"radio\" => AnnouncedRole::Radio,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-combobox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"combobox\" => AnnouncedRole::ComboBox,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-listbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"listbox\" => AnnouncedRole::ListBox,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-slider"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"slider\" => AnnouncedRole::Slider,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-spinbutton"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"spinbutton\" => AnnouncedRole::SpinButton,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-tab"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"tab\" => AnnouncedRole::Tab,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-navigation"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"navigation\" => AnnouncedRole::Navigation,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-main"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"main\" => AnnouncedRole::Main,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-banner"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"banner\" => AnnouncedRole::Banner,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-contentinfo"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"contentinfo\" => AnnouncedRole::ContentInfo,"
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-textbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"textbox\" | \"searchbox\" => AnnouncedRole::TextBox,"
+replace = "\"searchbox\" => AnnouncedRole::TextBox,"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-searchbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = "\"textbox\" | \"searchbox\" => AnnouncedRole::TextBox,"
+replace = "\"textbox\" => AnnouncedRole::TextBox,"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/role-heading-first"
+file = "src/announcement.rs"
+kind = "order"
+find = "if role == \"heading\" {"
+replace = "if role == \"headings\" {"
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-button"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''"button"
+                | "link"'''
+replace = "\"link\""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-link"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "link"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-textbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "textbox"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-searchbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "searchbox"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-checkbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "checkbox"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-radio"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "radio"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-combobox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "combobox"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-listbox"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "listbox"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-slider"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "slider"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-spinbutton"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "spinbutton"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"
+
+[[mutation]]
+id = "announcement/self-announcing-tab"
+file = "src/announcement.rs"
+kind = "drop-branch"
+find = '''| "tab"
+'''
+replace = ""
+killed_by = "lib:announcement::tests"
+expect = "killed"

@@ -476,4 +476,314 @@ mod tests {
         let d = AXTreeDiff::between(&a, &b);
         assert!(d.url_changed.is_some());
     }
+
+    // --- Mutationskatalog tests/mutations/diff.toml (Refs #257) ---
+
+    fn without_backend(mut n: AXNode) -> AXNode {
+        n.backend_dom_node_id = None;
+        n
+    }
+
+    fn ignored(mut n: AXNode) -> AXNode {
+        n.ignored = true;
+        n
+    }
+
+    fn with_bool(mut n: AXNode, name: &str, value: bool) -> AXNode {
+        n.properties.push(super::super::tree::AXProperty {
+            name: name.to_string(),
+            value: super::super::tree::AXValue::Bool(value),
+        });
+        n
+    }
+
+    #[test]
+    fn changes_are_reported_as_before_then_after() {
+        let before = AXSnapshot {
+            focus: FocusSnapshot {
+                active_backend_node_id: Some(1),
+                ..Default::default()
+            },
+            ..snap("a", "Alt", "https://x/alt", None)
+        };
+        let after = AXSnapshot {
+            focus: FocusSnapshot {
+                active_backend_node_id: Some(2),
+                ..Default::default()
+            },
+            ..snap("b", "Neu", "https://x/neu", None)
+        };
+        let d = AXTreeDiff::between(&before, &after);
+        assert_eq!(
+            d.title_changed,
+            Some(("Alt".to_string(), "Neu".to_string()))
+        );
+        assert_eq!(
+            d.url_changed,
+            Some(("https://x/alt".to_string(), "https://x/neu".to_string()))
+        );
+        let moved = d.focus_moved.expect("Fokus bewegt");
+        assert_eq!((moved.before, moved.after), (Some(1), Some(2)));
+        assert!(AXTreeDiff::between(&before, &before).is_empty());
+    }
+
+    #[test]
+    fn nodes_without_backend_id_are_matched_by_their_ax_id() {
+        let before = snap_with(
+            "a",
+            vec![
+                without_backend(node("ax-1", 0, Some(("expanded", false)))),
+                without_backend(node("ax-2", 0, None)),
+            ],
+        );
+        let after = snap_with(
+            "b",
+            vec![without_backend(node("ax-1", 0, Some(("expanded", true))))],
+        );
+        let d = AXTreeDiff::between(&before, &after);
+        assert_eq!(d.removed, vec!["ax-2"]);
+        assert!(d.added.is_empty());
+        assert_eq!(d.property_changes.len(), 1);
+        assert_eq!(d.property_changes[0].node_id, "ax-1");
+        assert_eq!(d.property_changes[0].backend_node_id, None);
+    }
+
+    #[test]
+    fn ignored_nodes_never_count_as_added_or_removed() {
+        // Nie wahrnehmbar: neu und ignoriert, vorher ignoriert und jetzt weg,
+        // durchgehend ignoriert.
+        let before = snap_with(
+            "a",
+            vec![ignored(node("1", 1, None)), ignored(node("2", 2, None))],
+        );
+        let after = snap_with(
+            "b",
+            vec![ignored(node("2", 2, None)), ignored(node("3", 3, None))],
+        );
+        let d = AXTreeDiff::between(&before, &after);
+        assert!(d.added.is_empty(), "added: {:?}", d.added);
+        assert!(d.removed.is_empty(), "removed: {:?}", d.removed);
+        assert!(!d.has_additions() && !d.has_removals());
+    }
+
+    #[test]
+    fn a_node_that_stays_perceivable_is_neither_added_nor_removed() {
+        let before = snap_with("a", vec![node("1", 1, None)]);
+        let after = snap_with("b", vec![node("9", 1, None)]);
+        let d = AXTreeDiff::between(&before, &after);
+        assert!(d.added.is_empty() && d.removed.is_empty());
+    }
+
+    #[test]
+    fn added_and_removed_are_sorted_by_ax_id() {
+        let ids: Vec<String> = (0..20).map(|i| format!("n{i:02}")).collect();
+        let nodes = |offset: i64| -> Vec<AXNode> {
+            ids.iter()
+                .rev()
+                .enumerate()
+                .map(|(i, id)| node(id, offset + i as i64, None))
+                .collect()
+        };
+        let d = AXTreeDiff::between(&snap_with("a", vec![]), &snap_with("b", nodes(0)));
+        assert_eq!(d.added, ids);
+        let d = AXTreeDiff::between(&snap_with("a", nodes(0)), &snap_with("b", vec![]));
+        assert_eq!(d.removed, ids);
+    }
+
+    #[test]
+    fn every_tracked_property_produces_a_change_and_others_do_not() {
+        for prop in [
+            "pressed", "checked", "modal", "invalid", "selected", "hidden", "expanded",
+        ] {
+            let before = snap_with("a", vec![node_with_token("1", 7, prop, "false")]);
+            let after = snap_with("b", vec![node_with_token("1", 7, prop, "true")]);
+            let d = AXTreeDiff::between(&before, &after);
+            assert!(d.property_change_for(7, prop).is_some(), "{prop}");
+            assert_eq!(d.property_changes.len(), 1, "{prop}");
+        }
+        let before = snap_with("a", vec![node_with_token("1", 7, "focusable", "false")]);
+        let after = snap_with("b", vec![node_with_token("1", 7, "focusable", "true")]);
+        assert!(
+            AXTreeDiff::between(&before, &after)
+                .property_changes
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_property_change_names_the_later_ax_id_and_the_backend_id() {
+        let before = snap_with("a", vec![node("alt", 7, Some(("expanded", false)))]);
+        let after = snap_with("b", vec![node("neu", 7, Some(("expanded", true)))]);
+        let c = &AXTreeDiff::between(&before, &after).property_changes[0];
+        assert_eq!(c.node_id, "neu");
+        assert_eq!(c.backend_node_id, Some(7));
+        assert_eq!(c.property, "expanded");
+    }
+
+    #[test]
+    fn an_appearing_or_vanishing_property_diffs_against_the_empty_string() {
+        let before = snap_with("a", vec![node("1", 7, None)]);
+        let after = snap_with("b", vec![node("1", 7, Some(("expanded", true)))]);
+        let c = &AXTreeDiff::between(&before, &after).property_changes[0];
+        assert_eq!((c.before.as_str(), c.after.as_str()), ("", "true"));
+    }
+
+    #[test]
+    fn property_changes_are_sorted_by_backend_id_then_property() {
+        let before = snap_with(
+            "a",
+            vec![
+                with_bool(
+                    with_bool(node("a", 9, None), "expanded", false),
+                    "checked",
+                    false,
+                ),
+                with_bool(
+                    with_bool(node("b", 3, None), "expanded", false),
+                    "checked",
+                    false,
+                ),
+            ],
+        );
+        let after = snap_with(
+            "b",
+            vec![
+                with_bool(
+                    with_bool(node("a", 9, None), "expanded", true),
+                    "checked",
+                    true,
+                ),
+                with_bool(
+                    with_bool(node("b", 3, None), "expanded", true),
+                    "checked",
+                    true,
+                ),
+            ],
+        );
+        let d = AXTreeDiff::between(&before, &after);
+        let order: Vec<(Option<i64>, &str)> = d
+            .property_changes
+            .iter()
+            .map(|c| (c.backend_node_id, c.property.as_str()))
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                (Some(3), "checked"),
+                (Some(3), "expanded"),
+                (Some(9), "checked"),
+                (Some(9), "expanded"),
+            ]
+        );
+    }
+
+    #[test]
+    fn property_change_for_matches_node_and_property_together() {
+        let before = snap_with(
+            "a",
+            vec![
+                with_bool(
+                    with_bool(node("a", 3, None), "expanded", false),
+                    "checked",
+                    false,
+                ),
+                with_bool(node("b", 9, None), "expanded", false),
+            ],
+        );
+        let after = snap_with(
+            "b",
+            vec![
+                with_bool(
+                    with_bool(node("a", 3, None), "expanded", true),
+                    "checked",
+                    true,
+                ),
+                with_bool(node("b", 9, None), "expanded", true),
+            ],
+        );
+        let d = AXTreeDiff::between(&before, &after);
+        assert_eq!(
+            d.property_change_for(3, "checked").unwrap().property,
+            "checked"
+        );
+        assert_eq!(d.property_change_for(9, "expanded").unwrap().node_id, "b");
+        assert!(d.property_change_for(9, "checked").is_none());
+        assert!(d.property_change_for(4, "expanded").is_none());
+    }
+
+    #[test]
+    fn is_empty_looks_at_every_kind_of_change() {
+        use crate::diff::{FocusMove, PropertyChange};
+        let cases: Vec<(&str, AXTreeDiff)> = vec![
+            (
+                "added",
+                AXTreeDiff {
+                    added: vec!["1".into()],
+                    ..Default::default()
+                },
+            ),
+            (
+                "removed",
+                AXTreeDiff {
+                    removed: vec!["1".into()],
+                    ..Default::default()
+                },
+            ),
+            (
+                "property",
+                AXTreeDiff {
+                    property_changes: vec![PropertyChange {
+                        node_id: "1".into(),
+                        backend_node_id: None,
+                        property: "expanded".into(),
+                        before: "false".into(),
+                        after: "true".into(),
+                    }],
+                    ..Default::default()
+                },
+            ),
+            (
+                "focus",
+                AXTreeDiff {
+                    focus_moved: Some(FocusMove {
+                        before: None,
+                        after: Some(1),
+                    }),
+                    ..Default::default()
+                },
+            ),
+            (
+                "title",
+                AXTreeDiff {
+                    title_changed: Some(("a".into(), "b".into())),
+                    ..Default::default()
+                },
+            ),
+            (
+                "url",
+                AXTreeDiff {
+                    url_changed: Some(("a".into(), "b".into())),
+                    ..Default::default()
+                },
+            ),
+        ];
+        assert!(AXTreeDiff::default().is_empty());
+        for (what, diff) in cases {
+            assert!(!diff.is_empty(), "{what} allein macht den Diff nicht leer");
+        }
+    }
+
+    #[test]
+    fn has_additions_and_removals_follow_their_lists() {
+        let d = AXTreeDiff {
+            added: vec!["1".into()],
+            ..Default::default()
+        };
+        assert!(d.has_additions() && !d.has_removals());
+        let d = AXTreeDiff {
+            removed: vec!["1".into()],
+            ..Default::default()
+        };
+        assert!(!d.has_additions() && d.has_removals());
+    }
 }
