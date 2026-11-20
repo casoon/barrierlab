@@ -23,18 +23,18 @@ jobs:
       # `a11y-wasm-npm-v0.16.0` -> `a11y-wasm`
       PKG: ${{ startsWith(github.ref_name, 'html-conform-wasm-npm-v') && 'html-conform-wasm' || 'a11y-wasm' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Tag matches the package version
         run: test "${GITHUB_REF_NAME#"$PKG"-npm-v}" = "$(node -p "require('./packages/$PKG/package.json').version")"
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
 
       # The CLI must match the wasm-bindgen version in Cargo.lock (same pin as ci.yml).
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
 
@@ -52,7 +52,7 @@ jobs:
             tar -tzf "$RUNNER_TEMP/casoon-$PKG"-[0-9]*.tgz | grep -qx "$f" || { echo "missing: $f"; exit 1; }
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.PKG }}-tarball
           path: ${{ runner.temp }}/casoon-${{ env.PKG }}-[0-9]*.tgz
@@ -69,12 +69,12 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ env.PKG }}-tarball
           path: ${{ runner.temp }}/tarball
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org

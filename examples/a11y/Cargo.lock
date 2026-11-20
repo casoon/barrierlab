@@ -7,7 +7,6 @@ name = "a11y-core-examples"
 version = "0.0.0"
 dependencies = [
  "a11y-dom",
- "a11y-report",
  "a11y-rules",
  "a11y-static",
  "accname",
@@ -16,21 +15,21 @@ dependencies = [
 
 [[package]]
 name = "a11y-dom"
-version = "0.30.11"
+version = "0.30.12"
 dependencies = [
  "html5-parser",
 ]
 
 [[package]]
 name = "a11y-report"
-version = "0.30.11"
+version = "0.30.12"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "a11y-rules"
-version = "0.30.11"
+version = "0.30.12"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -40,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-static"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -53,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.30.11"
+version = "0.30.12"
 dependencies = [
  "a11y-dom",
 ]
@@ -148,7 +147,7 @@ dependencies = [
 
 [[package]]
 name = "style-cascade"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "a11y-dom",
  "media-query-parse",

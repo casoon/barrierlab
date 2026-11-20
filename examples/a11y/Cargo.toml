@@ -10,7 +10,6 @@ publish = false
 
 [dependencies]
 a11y-dom = { path = "../../crates/a11y-dom" }
-a11y-report = { path = "../../crates/a11y-report" }
 a11y-rules = { path = "../../crates/a11y-rules" }
 a11y-static = { path = "../../crates/a11y-static" }
 accname = { path = "../../crates/accname" }

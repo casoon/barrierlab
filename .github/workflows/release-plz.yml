@@ -28,11 +28,12 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
 
       # release-plz bricht ohne veroeffentlichbare Pakete ab ("no public
       # packages found").
@@ -48,7 +49,7 @@ jobs:
 
       - name: Veroeffentlichen
         if: steps.members.outputs.present == 'true' && inputs.dry_run != true
-        uses: release-plz/action@v0.5.139
+        uses: release-plz/action@b8d6b54b02889ff2ae2bb82e8b57c3a8fc1683a5 # v0.5.139
         with:
           command: release
           # Bleibt an: ohne -v sagt der Lauf nur "no token found", mit -v steht
