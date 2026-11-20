@@ -409,4 +409,148 @@ mod tests {
             vec![AnnouncedState::Collapsed, AnnouncedState::Focusable]
         );
     }
+
+    // --- Mutationskatalog tests/mutations/announcement.toml (Refs #257) ---
+
+    #[test]
+    fn every_named_role_has_its_own_announced_role() {
+        let cases = [
+            ("button", AnnouncedRole::Button),
+            ("link", AnnouncedRole::Link),
+            ("textbox", AnnouncedRole::TextBox),
+            ("searchbox", AnnouncedRole::TextBox),
+            ("checkbox", AnnouncedRole::CheckBox),
+            ("radio", AnnouncedRole::Radio),
+            ("combobox", AnnouncedRole::ComboBox),
+            ("listbox", AnnouncedRole::ListBox),
+            ("slider", AnnouncedRole::Slider),
+            ("spinbutton", AnnouncedRole::SpinButton),
+            ("tab", AnnouncedRole::Tab),
+            ("navigation", AnnouncedRole::Navigation),
+            ("main", AnnouncedRole::Main),
+            ("banner", AnnouncedRole::Banner),
+            ("contentinfo", AnnouncedRole::ContentInfo),
+        ];
+        for (role, expected) in cases {
+            assert_eq!(
+                announce(&item(Some(role), None, vec![])).role,
+                expected,
+                "{role}"
+            );
+        }
+        assert_eq!(
+            announce(&item(Some("menu"), None, vec![])).role,
+            AnnouncedRole::Other("menu".into())
+        );
+    }
+
+    #[test]
+    fn heading_level_is_read_from_the_level_state_only() {
+        let level = |states: Vec<&str>| announce(&item(Some("heading"), None, states)).role;
+        assert_eq!(
+            level(vec!["level=3"]),
+            AnnouncedRole::Heading { level: Some(3) }
+        );
+        assert_eq!(
+            level(vec!["expanded", "level=2"]),
+            AnnouncedRole::Heading { level: Some(2) }
+        );
+        assert_eq!(
+            level(vec!["level=x"]),
+            AnnouncedRole::Heading { level: None }
+        );
+        assert_eq!(
+            level(vec!["levels=4"]),
+            AnnouncedRole::Heading { level: None }
+        );
+        assert_eq!(level(vec![]), AnnouncedRole::Heading { level: None });
+    }
+
+    #[test]
+    fn a_bare_or_true_state_is_announced_in_its_positive_form() {
+        let cases = [
+            ("expanded", AnnouncedState::Expanded),
+            ("checked", AnnouncedState::Checked),
+            ("selected", AnnouncedState::Selected),
+            ("required", AnnouncedState::Required),
+            ("invalid", AnnouncedState::Invalid),
+            ("disabled", AnnouncedState::Disabled),
+            ("pressed", AnnouncedState::Pressed),
+        ];
+        for (name, expected) in cases {
+            for state in [name.to_string(), format!("{name}=true")] {
+                assert_eq!(
+                    announce(&item(Some("generic"), None, vec![&state])).states,
+                    vec![expected],
+                    "{state}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_false_state_is_announced_only_where_it_says_something() {
+        let cases = [
+            ("expanded=false", vec![AnnouncedState::Collapsed]),
+            ("checked=false", vec![AnnouncedState::Unchecked]),
+            ("selected=false", vec![AnnouncedState::NotSelected]),
+            ("pressed=false", vec![AnnouncedState::NotPressed]),
+            ("required=false", vec![]),
+            ("invalid=false", vec![]),
+            ("disabled=false", vec![]),
+        ];
+        for (state, expected) in cases {
+            assert_eq!(
+                announce(&item(Some("generic"), None, vec![state])).states,
+                expected,
+                "{state}"
+            );
+        }
+    }
+
+    #[test]
+    fn name_is_trimmed_and_blank_means_none() {
+        assert_eq!(
+            announce(&item(Some("button"), Some("  Los \n"), vec![]))
+                .name
+                .as_deref(),
+            Some("Los")
+        );
+        assert_eq!(
+            announce(&item(Some("button"), Some(" \t "), vec![])).name,
+            None
+        );
+        assert_eq!(announce(&item(Some("button"), Some(""), vec![])).name, None);
+    }
+
+    #[test]
+    fn focusable_is_announced_only_for_a_tab_stop_whose_role_is_silent_about_it() {
+        let self_announcing = [
+            "button",
+            "link",
+            "textbox",
+            "searchbox",
+            "checkbox",
+            "radio",
+            "combobox",
+            "listbox",
+            "slider",
+            "spinbutton",
+            "tab",
+        ];
+        for role in self_announcing {
+            let mut it = item(Some(role), None, vec![]);
+            it.tab_stop = true;
+            assert!(
+                announce(&it).states.is_empty(),
+                "{role} sagt es schon selbst"
+            );
+        }
+        let mut generic = item(Some("generic"), None, vec![]);
+        generic.tab_stop = true;
+        assert_eq!(announce(&generic).states, vec![AnnouncedState::Focusable]);
+        let mut menu = item(Some("menuitem"), None, vec![]);
+        menu.tab_stop = false;
+        assert!(announce(&menu).states.is_empty(), "ohne tab_stop nie");
+    }
 }

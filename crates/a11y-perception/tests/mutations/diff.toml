@@ -1,0 +1,378 @@
+# Mutationen von a11y-perception (diff) — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/a11y-perception
+
+
+[[mutation]]
+id = "diff/key-by-backend-id"
+file = "src/diff.rs"
+kind = "constant"
+find = "Some(id) => NodeKey::Backend(id),"
+replace = "Some(_) => NodeKey::Ax(node.node_id.clone()),"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/key-fallback-ax-id"
+file = "src/diff.rs"
+kind = "constant"
+find = "None => NodeKey::Ax(node.node_id.clone()),"
+replace = "None => NodeKey::Backend(0),"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/title-change-detected"
+file = "src/diff.rs"
+kind = "invert"
+find = "if before.document_title != after.document_title {"
+replace = "if before.document_title == after.document_title {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/title-change-order"
+file = "src/diff.rs"
+kind = "order"
+find = "Some((before.document_title.clone(), after.document_title.clone()))"
+replace = "Some((after.document_title.clone(), before.document_title.clone()))"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/url-change-detected"
+file = "src/diff.rs"
+kind = "invert"
+find = "if before.url != after.url {"
+replace = "if before.url == after.url {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/url-change-order"
+file = "src/diff.rs"
+kind = "order"
+find = "Some((before.url.clone(), after.url.clone()))"
+replace = "Some((after.url.clone(), before.url.clone()))"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/focus-move-detected"
+file = "src/diff.rs"
+kind = "invert"
+find = "if before.focus.active_backend_node_id != after.focus.active_backend_node_id {"
+replace = "if before.focus.active_backend_node_id == after.focus.active_backend_node_id {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/focus-move-order"
+file = "src/diff.rs"
+kind = "order"
+find = '''before: before.focus.active_backend_node_id,
+                after: after.focus.active_backend_node_id,'''
+replace = '''before: after.focus.active_backend_node_id,
+                after: before.focus.active_backend_node_id,'''
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/added-needs-perceivable-after"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "if !node.ignored && !was_perceivable {"
+replace = "if !was_perceivable {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/added-ignored-before-counts-as-absent"
+file = "src/diff.rs"
+kind = "boundary"
+find = "before_index.get(key).is_some_and(|n| !n.ignored)"
+replace = "before_index.get(key).is_some()"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/added-needs-not-perceivable-before"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "if !node.ignored && !was_perceivable {"
+replace = "if !node.ignored {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/removed-needs-perceivable-before"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "if !node.ignored && !is_perceivable {"
+replace = "if !is_perceivable {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/removed-ignored-after-counts-as-gone"
+file = "src/diff.rs"
+kind = "boundary"
+find = "after_index.get(key).is_some_and(|n| !n.ignored)"
+replace = "after_index.get(key).is_some()"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/removed-needs-gone-after"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "if !node.ignored && !is_perceivable {"
+replace = "if !node.ignored {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/added-sorted"
+file = "src/diff.rs"
+kind = "drop-step"
+find = "diff.added.sort();"
+replace = "diff.added.reverse();"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/removed-sorted"
+file = "src/diff.rs"
+kind = "drop-step"
+find = "diff.removed.sort();"
+replace = "diff.removed.reverse();"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-expanded"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"hidden", "selected", "invalid", "modal", "checked", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-hidden"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "selected", "invalid", "modal", "checked", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-selected"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "hidden", "invalid", "modal", "checked", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-invalid"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "hidden", "selected", "modal", "checked", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-modal"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "hidden", "selected", "invalid", "checked", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-checked"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "hidden", "selected", "invalid", "modal", "pressed",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/tracked-pressed"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '"expanded", "hidden", "selected", "invalid", "modal", "checked", "pressed",'
+replace = '"expanded", "hidden", "selected", "invalid", "modal", "checked",'
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-detected"
+file = "src/diff.rs"
+kind = "invert"
+find = "if before_val != after_val {"
+replace = "if before_val == after_val {"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-carries-after-node-id"
+file = "src/diff.rs"
+kind = "order"
+find = "node_id: after_node.node_id.clone(),"
+replace = "node_id: before_node.node_id.clone(),"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-carries-backend-id"
+file = "src/diff.rs"
+kind = "drop-step"
+find = "backend_node_id: after_node.backend_dom_node_id,"
+replace = "backend_node_id: None,"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-before-after"
+file = "src/diff.rs"
+kind = "order"
+find = '''before: before_val.unwrap_or_default(),
+                        after: after_val.unwrap_or_default(),'''
+replace = '''before: after_val.unwrap_or_default(),
+                        after: before_val.unwrap_or_default(),'''
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-changes-sorted-by-backend-id"
+file = "src/diff.rs"
+kind = "order"
+find = "(a.backend_node_id, &a.property).cmp(&(b.backend_node_id, &b.property))"
+replace = "(&a.property, a.backend_node_id).cmp(&(&b.property, b.backend_node_id))"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-changes-sorted-by-property"
+file = "src/diff.rs"
+kind = "drop-step"
+find = "(a.backend_node_id, &a.property).cmp(&(b.backend_node_id, &b.property))"
+replace = "a.backend_node_id.cmp(&b.backend_node_id)"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-changes-sort-direction"
+file = "src/diff.rs"
+kind = "order"
+find = "(a.backend_node_id, &a.property).cmp(&(b.backend_node_id, &b.property))"
+replace = "(b.backend_node_id, &b.property).cmp(&(a.backend_node_id, &a.property))"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-for-needs-node-or-property"
+file = "src/diff.rs"
+kind = "invert"
+find = "c.backend_node_id == Some(backend_node_id) && c.property == property"
+replace = "c.backend_node_id == Some(backend_node_id) || c.property == property"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-for-needs-property"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "c.backend_node_id == Some(backend_node_id) && c.property == property"
+replace = "c.backend_node_id == Some(backend_node_id)"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/property-change-for-needs-node"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "c.backend_node_id == Some(backend_node_id) && c.property == property"
+replace = "c.property == property"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/has-additions"
+file = "src/diff.rs"
+kind = "invert"
+find = "!self.added.is_empty()"
+replace = "self.added.is_empty()"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/has-removals"
+file = "src/diff.rs"
+kind = "invert"
+find = "!self.removed.is_empty()"
+replace = "self.removed.is_empty()"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-added"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = '''self.added.is_empty()
+            && self.removed'''
+replace = '''true
+            && self.removed'''
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-removed"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "&& self.removed.is_empty()"
+replace = "&& true"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-properties"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "&& self.property_changes.is_empty()"
+replace = "&& true"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-focus"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "&& self.focus_moved.is_none()"
+replace = "&& true"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-title"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "&& self.title_changed.is_none()"
+replace = "&& true"
+killed_by = "lib:diff::tests"
+expect = "killed"
+
+[[mutation]]
+id = "diff/is-empty-ignores-url"
+file = "src/diff.rs"
+kind = "drop-branch"
+find = "&& self.url_changed.is_none()"
+replace = "&& true"
+killed_by = "lib:diff::tests"
+expect = "killed"

@@ -59,6 +59,16 @@ flowchart LR
 Downward: only `serde`. Upward: auditmysite, Relief.
 Deliberately **not** `a11y-report`: this package produces no findings.
 
+## Mutations
+
+`tests/mutations/{tree,diff,linearizer,announcement}.toml` list targeted mutations of the
+tree queries and node predicates, the diff (identity key, perceivable added/removed,
+tracked properties, sort order, `is_empty`), the reading-order projection (depth, layout
+roles, state forms) and the announcement structure (role and state mapping, focusable
+rule); the crate's unit tests must kill each. There is no corpus, so entries name their
+test in `killed_by = "lib:<filter>"` and `xtask/mutate.py crates/a11y-perception` runs it.
+Not part of CI; run it before changing any of these boundaries.
+
 ## Limits
 
 Three things the measurement taught, which apply here as rules:

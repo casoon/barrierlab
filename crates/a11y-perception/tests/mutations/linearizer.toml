@@ -1,0 +1,322 @@
+# Mutationen von a11y-perception (linearization) — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/a11y-perception
+
+
+[[mutation]]
+id = "linearizer/start-depth"
+file = "src/linearizer.rs"
+kind = "constant"
+find = "visit_node(tree, root_id, 0, &mut visited, &mut order);"
+replace = "visit_node(tree, root_id, 1, &mut visited, &mut order);"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/ignored-depth-not-increased"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = '''order.ignored.push(ignored_node(node, depth));
+        depth
+'''
+replace = '''order.ignored.push(ignored_node(node, depth));
+        depth + 1
+'''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/layout-depth-not-increased"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = '''// Layout-only node: traversed for descendants, never emitted.
+        depth
+'''
+replace = '''// Layout-only node: traversed for descendants, never emitted.
+        depth + 1
+'''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/item-children-one-deeper"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = '''        depth + 1
+    };'''
+replace = '''        depth
+    };'''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/ignored-checked-before-layout"
+file = "src/linearizer.rs"
+kind = "order"
+find = "let child_depth = if node.ignored {"
+replace = "let child_depth = if is_layout_only_role(node.role.as_deref()) {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/seq-is-item-count"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = "reading_item(node, order.items.len(), depth)"
+replace = "reading_item(node, order.items.len() + 1, depth)"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/children-in-order"
+file = "src/linearizer.rs"
+kind = "order"
+find = "for child_id in &node.child_ids {"
+replace = "for child_id in node.child_ids.iter().rev() {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/layout-role-inline-text-box"
+file = "src/linearizer.rs"
+kind = "constant"
+find = "matches!(role, Some(\"InlineTextBox\"))"
+replace = "matches!(role, Some(\"LineBreak\"))"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/layout-role-static-text-kept"
+file = "src/linearizer.rs"
+kind = "constant"
+find = "matches!(role, Some(\"InlineTextBox\"))"
+replace = "matches!(role, Some(\"InlineTextBox\") | Some(\"StaticText\"))"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/item-tab-stop"
+file = "src/linearizer.rs"
+kind = "constant"
+find = "tab_stop: node.is_focusable(),"
+replace = "tab_stop: false,"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/item-copies-description"
+file = "src/linearizer.rs"
+kind = "drop-step"
+find = "description: node.description.clone(),"
+replace = "description: None,"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/item-copies-value"
+file = "src/linearizer.rs"
+kind = "drop-step"
+find = "value: node.value.clone(),"
+replace = "value: None,"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/ignored-reason-value-blank"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = "Some(value) if !value.trim().is_empty() => {"
+replace = "Some(value) if !value.is_empty() => {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/ignored-reason-format"
+file = "src/linearizer.rs"
+kind = "constant"
+find = '''format!("{}={}", property.name, value)
+                }
+                _ =>'''
+replace = '''format!("{}:{}", property.name, value)
+                }
+                _ =>'''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/ignored-reason-bare-name"
+file = "src/linearizer.rs"
+kind = "drop-step"
+find = "_ => property.name.clone(),"
+replace = "_ => String::new(),"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-bool-true-is-bare-name"
+file = "src/linearizer.rs"
+kind = "constant"
+find = '''Some(property.name.clone())
+                } else {'''
+replace = '''Some(format!("{}=true", property.name))
+                } else {'''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-bool-false-is-listed"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = "Some(format!(\"{}=false\", property.name))"
+replace = "None"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-string-empty-is-dropped"
+file = "src/linearizer.rs"
+kind = "boundary"
+find = "if is_state_property(&property.name) && !value.is_empty() =>"
+replace = "if is_state_property(&property.name) =>"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-int-arm"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = "AXValue::Int(value) if is_state_property(&property.name) => {"
+replace = "AXValue::Int(value) if false => {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-int-needs-state-name"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = "AXValue::Int(value) if is_state_property(&property.name) => {"
+replace = "AXValue::Int(value) => {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-bool-needs-state-name"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = "AXValue::Bool(value) if is_state_property(&property.name) => {"
+replace = "AXValue::Bool(value) => {"
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-order-is-node-order"
+file = "src/linearizer.rs"
+kind = "order"
+find = '''    node.properties
+        .iter()
+        .filter_map('''
+replace = '''    node.properties
+        .iter()
+        .rev()
+        .filter_map('''
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-expanded"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''"expanded"
+            | "checked"'''
+replace = "\"checked\""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-checked"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "checked"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-selected"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "selected"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-required"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "required"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-invalid"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "invalid"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-disabled"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "disabled"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-pressed"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "pressed"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-level"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "level"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-autocomplete"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "autocomplete"
+'''
+replace = ""
+killed_by = "lib:linearizer::tests"
+expect = "killed"
+
+[[mutation]]
+id = "linearizer/state-property-haspopup"
+file = "src/linearizer.rs"
+kind = "drop-branch"
+find = '''| "haspopup"
+    )'''
+replace = "    )"
+killed_by = "lib:linearizer::tests"
+expect = "killed"

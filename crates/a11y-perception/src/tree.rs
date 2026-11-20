@@ -823,4 +823,304 @@ mod tests {
         ]);
         assert_eq!(tree.iter().count(), 2);
     }
+
+    // --- Mutationskatalog tests/mutations/tree.toml (Refs #257) ---
+
+    fn with_prop(mut node: AXNode, name: &str, value: AXValue) -> AXNode {
+        node.properties.push(AXProperty {
+            name: name.to_string(),
+            value,
+        });
+        node
+    }
+
+    fn with_backend(mut node: AXNode, backend: i64, parent: Option<&str>) -> AXNode {
+        node.backend_dom_node_id = Some(backend);
+        node.parent_id = parent.map(String::from);
+        node
+    }
+
+    #[test]
+    fn unreachable_nodes_are_appended_in_ascending_id_order() {
+        let mut tree = AXTree::from_nodes(vec![create_test_node("root", "WebArea", None)]);
+        for id in ["c", "a", "b"] {
+            tree.nodes
+                .insert(id.to_string(), create_test_node(id, "heading", Some("x")));
+        }
+        tree.order.clear();
+        let seq: Vec<&str> = tree.iter_all().map(|n| n.node_id.as_str()).collect();
+        assert_eq!(seq, vec!["root", "a", "b", "c"]);
+    }
+
+    #[test]
+    fn a_duplicate_node_id_replaces_the_node_and_keeps_its_place() {
+        let tree = AXTree::from_nodes(vec![
+            create_test_node("1", "WebArea", None),
+            create_test_node("2", "heading", Some("alt")),
+            create_test_node("2", "heading", Some("neu")),
+        ]);
+        let names: Vec<_> = tree.iter_all().map(|n| n.name.clone()).collect();
+        assert_eq!(names, vec![None, Some("neu".to_string())]);
+        assert_eq!(tree.len(), 2);
+    }
+
+    #[test]
+    fn is_within_walks_the_whole_parent_chain() {
+        let tree = AXTree::from_nodes(vec![
+            with_backend(create_test_node("r", "WebArea", None), 1, None),
+            with_backend(create_test_node("a", "group", None), 2, Some("r")),
+            with_backend(create_test_node("b", "button", None), 3, Some("a")),
+        ]);
+        assert!(tree.is_within(3, 1), "Vorfahr am Ende der längsten Kette");
+        assert!(tree.is_within(3, 2));
+        assert!(tree.is_within(3, 3), "ein Knoten liegt in sich selbst");
+        assert!(!tree.is_within(1, 3), "nicht umgekehrt");
+        assert!(!tree.is_within(99, 1), "unbekannter Knoten");
+    }
+
+    #[test]
+    fn is_within_is_false_when_the_chain_breaks_or_loops() {
+        let broken = AXTree::from_nodes(vec![with_backend(
+            create_test_node("b", "button", None),
+            3,
+            Some("fehlt"),
+        )]);
+        assert!(!broken.is_within(3, 1));
+
+        let looped = AXTree::from_nodes(vec![
+            with_backend(create_test_node("a", "group", None), 2, Some("b")),
+            with_backend(create_test_node("b", "group", None), 3, Some("a")),
+        ]);
+        assert!(!looped.is_within(2, 1), "Kreis endet statt zu hängen");
+    }
+
+    #[test]
+    fn node_by_backend_id_finds_the_matching_node_even_when_generated_or_ignored() {
+        let mut ignored = with_backend(create_test_node("i", "none", None), 7, None);
+        ignored.ignored = true;
+        let tree = AXTree::from_nodes(vec![
+            with_backend(create_test_node("a", "button", None), 5, None),
+            with_backend(create_test_node("t", "StaticText", Some("x")), 6, None),
+            ignored,
+        ]);
+        assert_eq!(tree.node_by_backend_id(5).unwrap().node_id, "a");
+        assert_eq!(tree.node_by_backend_id(6).unwrap().node_id, "t");
+        assert_eq!(tree.node_by_backend_id(7).unwrap().node_id, "i");
+        assert!(tree.node_by_backend_id(8).is_none());
+    }
+
+    #[test]
+    fn iter_drops_every_browser_generated_role_but_iter_all_keeps_them() {
+        let generated = [
+            "StaticText",
+            "InlineTextBox",
+            "LineBreak",
+            "ListMarker",
+            "LayoutTable",
+            "LayoutTableRow",
+            "LayoutTableCell",
+        ];
+        for role in generated {
+            let tree = AXTree::from_nodes(vec![
+                with_children(create_test_node("r", "WebArea", None), &["g"]),
+                create_test_node("g", role, Some("x")),
+            ]);
+            let kept: Vec<&str> = tree.iter().map(|n| n.node_id.as_str()).collect();
+            assert_eq!(kept, vec!["r"], "{role} gehört nicht in iter()");
+            assert_eq!(tree.iter_all().count(), 2, "{role} bleibt in iter_all()");
+        }
+    }
+
+    #[test]
+    fn media_controls_are_hidden_below_any_depth() {
+        let tree = AXTree::from_nodes(vec![
+            with_children(create_test_node("r", "WebArea", None), &["v"]),
+            with_children(create_test_node("v", "Video", None), &["bar"]),
+            with_children(create_test_node("bar", "group", None), &["knopf"]),
+            create_test_node("knopf", "button", Some("Abspielen")),
+        ]);
+        let kept: Vec<&str> = tree.iter().map(|n| n.node_id.as_str()).collect();
+        assert_eq!(kept, vec!["r", "v"]);
+    }
+
+    #[test]
+    fn visible_text_len_counts_bytes_of_every_name() {
+        let tree = AXTree::from_nodes(vec![
+            create_test_node("a", "StaticText", Some("Grüße")),
+            create_test_node("b", "StaticText", Some("Welt")),
+        ]);
+        assert_eq!(tree.visible_text_len(), "Grüße".len() + "Welt".len());
+    }
+
+    #[test]
+    fn role_queries_return_exactly_their_roles() {
+        let tree = AXTree::from_nodes(vec![
+            create_test_node("1", "image", Some("a")),
+            create_test_node("2", "img", Some("b")),
+            create_test_node("3", "button", Some("c")),
+            create_test_node("4", "link", Some("d")),
+            create_test_node("5", "heading", Some("e")),
+        ]);
+        let ids =
+            |v: Vec<&AXNode>| -> Vec<String> { v.iter().map(|n| n.node_id.clone()).collect() };
+        assert_eq!(ids(tree.images()), vec!["1", "2"]);
+        assert_eq!(ids(tree.links()), vec!["4"]);
+        assert_eq!(ids(tree.headings()), vec!["5"]);
+        assert_eq!(ids(tree.nodes_with_role("button")), vec!["3"]);
+    }
+
+    #[test]
+    fn form_controls_are_the_eight_input_roles() {
+        let roles = [
+            "textbox",
+            "checkbox",
+            "radio",
+            "combobox",
+            "listbox",
+            "spinbutton",
+            "slider",
+            "searchbox",
+        ];
+        for role in roles {
+            let tree = AXTree::from_nodes(vec![create_test_node("1", role, Some("x"))]);
+            assert_eq!(tree.form_controls().len(), 1, "{role}");
+        }
+        let tree = AXTree::from_nodes(vec![create_test_node("1", "button", Some("x"))]);
+        assert!(tree.form_controls().is_empty());
+    }
+
+    #[test]
+    fn has_name_ignores_whitespace_only_names() {
+        assert!(create_test_node("1", "button", Some("Los")).has_name());
+        assert!(!create_test_node("1", "button", Some("  \t")).has_name());
+        assert!(!create_test_node("1", "button", Some("")).has_name());
+        assert!(!create_test_node("1", "button", None).has_name());
+    }
+
+    #[test]
+    fn interactive_is_role_or_focusable() {
+        for role in [
+            "button", "link", "textbox", "checkbox", "radio", "combobox", "menuitem", "tab",
+        ] {
+            assert!(create_test_node("1", role, None).is_interactive(), "{role}");
+        }
+        let plain = create_test_node("1", "generic", None);
+        assert!(!plain.is_focusable());
+        assert!(!plain.is_interactive());
+        let focusable = with_prop(plain, "focusable", AXValue::Bool(true));
+        assert!(focusable.is_focusable());
+        assert!(focusable.is_interactive());
+    }
+
+    #[test]
+    fn heading_level_is_clamped_to_one_through_six() {
+        let level = |l: i64| {
+            with_prop(
+                create_test_node("1", "heading", None),
+                "level",
+                AXValue::Int(l),
+            )
+            .heading_level()
+        };
+        assert_eq!(level(0), Some(1));
+        assert_eq!(level(-3), Some(1));
+        assert_eq!(level(1), Some(1));
+        assert_eq!(level(6), Some(6));
+        assert_eq!(level(7), Some(6));
+        assert_eq!(level(9), Some(6));
+        let not_a_heading = with_prop(
+            create_test_node("1", "button", None),
+            "level",
+            AXValue::Int(2),
+        );
+        assert_eq!(not_a_heading.heading_level(), None);
+        assert_eq!(create_test_node("1", "heading", None).heading_level(), None);
+    }
+
+    #[test]
+    fn numeric_values_convert_as_documented() {
+        assert_eq!(AXValue::Float(2.9).as_int(), Some(2));
+        assert_eq!(AXValue::Int(4).as_int(), Some(4));
+        assert_eq!(AXValue::Bool(true).as_int(), None);
+
+        let node = with_prop(
+            with_prop(
+                with_prop(create_test_node("1", "slider", None), "i", AXValue::Int(5)),
+                "f",
+                AXValue::Float(1.5),
+            ),
+            "b",
+            AXValue::Bool(true),
+        );
+        assert_eq!(node.property_value_str("i").as_deref(), Some("5"));
+        assert_eq!(node.property_value_str("f").as_deref(), Some("1.5"));
+        assert_eq!(node.property_value_str("b").as_deref(), Some("true"));
+        assert_eq!(node.property_value_str("fehlt"), None);
+    }
+
+    #[test]
+    fn idref_properties_read_strings_and_related_nodes() {
+        let related = |ids: &[&str]| AXValue::Node {
+            related_nodes: ids
+                .iter()
+                .map(|id| RelatedNode {
+                    backend_dom_node_id: None,
+                    idref: Some(id.to_string()),
+                    text: None,
+                })
+                .collect(),
+        };
+        let node = with_prop(
+            with_prop(
+                create_test_node("1", "combobox", None),
+                "controls",
+                related(&["erst", "zweit"]),
+            ),
+            "owns",
+            AXValue::String("a  b\tc".into()),
+        );
+        assert_eq!(node.get_property_idref("controls"), Some("erst"));
+        assert_eq!(node.get_property_idrefs("controls"), vec!["erst", "zweit"]);
+        assert_eq!(node.get_property_idrefs("owns"), vec!["a", "b", "c"]);
+        assert_eq!(node.get_property_idref("owns"), Some("a  b\tc"));
+        assert!(node.get_property_idrefs("fehlt").is_empty());
+    }
+
+    #[test]
+    fn is_text_needs_the_static_text_role_and_a_name() {
+        assert!(create_test_node("1", "StaticText", Some("x")).is_text());
+        assert!(!create_test_node("1", "StaticText", Some("")).is_text());
+        assert!(!create_test_node("1", "InlineTextBox", Some("x")).is_text());
+        assert!(!create_test_node("1", "heading", Some("x")).is_text());
+    }
+
+    #[test]
+    fn invalid_and_required_defaults_and_tokens() {
+        let invalid = |v: Option<&str>| {
+            let node = create_test_node("1", "textbox", None);
+            match v {
+                Some(v) => with_prop(node, "invalid", AXValue::String(v.into())),
+                None => node,
+            }
+            .is_invalid()
+        };
+        assert!(!invalid(None));
+        assert!(!invalid(Some("false")));
+        assert!(invalid(Some("true")));
+        assert!(invalid(Some("grammar")));
+        assert!(invalid(Some("spelling")));
+
+        let plain = create_test_node("1", "textbox", None);
+        assert!(!plain.is_required());
+        assert!(with_prop(plain, "required", AXValue::Bool(true)).is_required());
+    }
+
+    #[test]
+    fn an_empty_tree_is_empty_and_a_filled_one_is_not() {
+        assert!(AXTree::new().is_empty());
+        assert!(AXTree::default().is_empty());
+        let tree = AXTree::from_nodes(vec![create_test_node("1", "WebArea", None)]);
+        assert!(!tree.is_empty());
+        assert_eq!(tree.len(), 1);
+    }
 }

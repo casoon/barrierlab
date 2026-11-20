@@ -1,0 +1,465 @@
+# Mutationen von a11y-perception (tree) — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/a11y-perception
+
+
+[[mutation]]
+id = "tree/root-is-first-node"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "if tree.root_id.is_none() {"
+replace = "if true {"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/duplicate-id-not-reordered"
+file = "src/tree.rs"
+kind = "invert"
+find = '''.insert(node.node_id.clone(), node.clone())
+                .is_none()'''
+replace = '''.insert(node.node_id.clone(), node.clone())
+                .is_some()'''
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/order-used-when-complete"
+file = "src/tree.rs"
+kind = "invert"
+find = "self.order.len() == self.nodes.len()"
+replace = "self.order.len() != self.nodes.len()"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/reconstruct-first-child-first"
+file = "src/tree.rs"
+kind = "order"
+find = "for child in node.child_ids.iter().rev() {"
+replace = "for child in node.child_ids.iter() {"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/reconstruct-rest-sorted"
+file = "src/tree.rs"
+kind = "order"
+find = "rest.sort_by(|a, b| a.node_id.cmp(&b.node_id));"
+replace = "rest.sort_by(|a, b| b.node_id.cmp(&a.node_id));"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-within-chain-bound"
+file = "src/tree.rs"
+kind = "boundary"
+find = "for _ in 0..self.nodes.len() {"
+replace = "for _ in 0..self.nodes.len().saturating_sub(1) {"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-within-broken-chain-is-false"
+file = "src/tree.rs"
+kind = "invert"
+find = "None => return false,"
+replace = "None => return true,"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/node-by-backend-id-matches-equal"
+file = "src/tree.rs"
+kind = "invert"
+find = ".find(|n| n.backend_dom_node_id == Some(backend_id))"
+replace = ".find(|n| n.backend_dom_node_id != Some(backend_id))"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/node-by-backend-id-sees-everything"
+file = "src/tree.rs"
+kind = "scope"
+find = '''self.iter_all()
+            .find(|n| n.backend_dom_node_id == Some(backend_id))'''
+replace = '''self.iter()
+            .find(|n| n.backend_dom_node_id == Some(backend_id))'''
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/iter-hides-browser-generated"
+file = "src/tree.rs"
+kind = "invert"
+find = ".filter(move |n| !n.is_browser_generated() && !media_ui"
+replace = ".filter(move |n| n.is_browser_generated() && !media_ui"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/iter-hides-media-controls"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "!n.is_browser_generated() && !media_ui.contains(n.node_id.as_str())"
+replace = "!n.is_browser_generated()"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/iter-needs-both-filters"
+file = "src/tree.rs"
+kind = "invert"
+find = "!n.is_browser_generated() && !media_ui.contains(n.node_id.as_str())"
+replace = "!n.is_browser_generated() || !media_ui.contains(n.node_id.as_str())"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/media-controls-audio"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "Some(\"Video\") | Some(\"Audio\")"
+replace = "Some(\"Video\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/media-controls-video"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "Some(\"Video\") | Some(\"Audio\")"
+replace = "Some(\"Audio\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/media-controls-descendants"
+file = "src/tree.rs"
+kind = "drop-step"
+find = "stack.extend(node.child_ids.iter().map(String::as_str));"
+replace = "let _ = node;"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/text-nodes-filter"
+file = "src/tree.rs"
+kind = "invert"
+find = ".filter(|n| n.is_text())"
+replace = ".filter(|n| !n.is_text())"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/visible-text-len-bytes"
+file = "src/tree.rs"
+kind = "constant"
+find = ".map(|name| name.len())"
+replace = ".map(|name| name.chars().count())"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/visible-text-len-sums"
+file = "src/tree.rs"
+kind = "drop-step"
+find = '''.map(|name| name.len())
+            .sum()'''
+replace = '''.map(|name| name.len())
+            .max()
+            .unwrap_or(0)'''
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/images-img-role"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "Some(\"image\") | Some(\"img\")"
+replace = "Some(\"image\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/images-image-role"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "Some(\"image\") | Some(\"img\")"
+replace = "Some(\"img\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/links-role"
+file = "src/tree.rs"
+kind = "constant"
+find = "self.nodes_with_role(\"link\")"
+replace = "self.nodes_with_role(\"button\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/has-name-whitespace-only"
+file = "src/tree.rs"
+kind = "boundary"
+find = "!n.trim().is_empty()"
+replace = "!n.is_empty()"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-focusable-default"
+file = "src/tree.rs"
+kind = "constant"
+find = "self.get_property_bool(\"focusable\").unwrap_or(false)"
+replace = "self.get_property_bool(\"focusable\").unwrap_or(true)"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-interactive-focusable"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = ") || self.is_focusable()"
+replace = ")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/heading-level-only-headings"
+file = "src/tree.rs"
+kind = "invert"
+find = "if self.role.as_deref() != Some(\"heading\") {"
+replace = "if self.role.as_deref() == Some(\"heading\") {"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/heading-level-clamp-upper"
+file = "src/tree.rs"
+kind = "boundary"
+find = "l.clamp(1, 6)"
+replace = "l.clamp(1, 7)"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/heading-level-clamp-lower"
+file = "src/tree.rs"
+kind = "boundary"
+find = "l.clamp(1, 6)"
+replace = "l.clamp(0, 6)"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/as-int-float-truncates"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "AXValue::Float(f) => Some(*f as i64),"
+replace = "AXValue::Float(_) => None,"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/property-value-str-float"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "AXValue::Float(f) => Some(f.to_string()),"
+replace = "AXValue::Float(_) => None,"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/property-value-str-int"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "AXValue::Int(i) => Some(i.to_string()),"
+replace = "AXValue::Int(_) => None,"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/idref-first-related"
+file = "src/tree.rs"
+kind = "order"
+find = "related_nodes.first()?.idref.as_deref()"
+replace = "related_nodes.last()?.idref.as_deref()"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/idrefs-split-whitespace"
+file = "src/tree.rs"
+kind = "drop-step"
+find = "AXValue::String(s) => s.split_whitespace().collect(),"
+replace = "AXValue::String(s) => vec![s.as_str()],"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-text-needs-name"
+file = "src/tree.rs"
+kind = "boundary"
+find = "self.name.as_deref().is_some_and(|name| !name.is_empty())"
+replace = "self.name.as_deref().is_some_and(|_| true)"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-text-role"
+file = "src/tree.rs"
+kind = "constant"
+find = '''self.role.as_deref() == Some("StaticText")
+            && self'''
+replace = '''self.role.as_deref() == Some("InlineTextBox")
+            && self'''
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/invalid-grammar-counts"
+file = "src/tree.rs"
+kind = "boundary"
+find = ".map(|v| v != \"false\")"
+replace = ".map(|v| v == \"true\")"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/invalid-default"
+file = "src/tree.rs"
+kind = "constant"
+find = '''.map(|v| v != "false")
+            .unwrap_or(false)'''
+replace = '''.map(|v| v != "false")
+            .unwrap_or(true)'''
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/required-default"
+file = "src/tree.rs"
+kind = "constant"
+find = "self.get_property_bool(\"required\").unwrap_or(false)"
+replace = "self.get_property_bool(\"required\").unwrap_or(true)"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-empty-inverted"
+file = "src/tree.rs"
+kind = "invert"
+find = "self.nodes.is_empty()"
+replace = "!self.nodes.is_empty()"
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/form-controls-searchbox"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"searchbox\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/form-controls-slider"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"slider\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/form-controls-spinbutton"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"spinbutton\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/form-controls-listbox"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"listbox\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/form-controls-combobox"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = '''| Some("combobox")
+                        | Some("listbox")'''
+replace = '| Some("listbox")'
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-interactive-menuitem"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"menuitem\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/is-interactive-tab"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"tab\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/generated-ListMarker"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"ListMarker\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/generated-LineBreak"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"LineBreak\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/generated-LayoutTableCell"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"LayoutTableCell\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/generated-LayoutTableRow"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"LayoutTableRow\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
+
+[[mutation]]
+id = "tree/generated-LayoutTable"
+file = "src/tree.rs"
+kind = "drop-branch"
+find = "| Some(\"LayoutTable\")"
+replace = ""
+killed_by = "lib:tree::tests"
+expect = "killed"
