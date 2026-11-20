@@ -56,6 +56,15 @@ flowchart LR
 Downward: only `serde`. Upward: `a11y-rules`, `a11y-static`, `html-conform`, `a11y-wasm`,
 `html-conform-wasm`, all hosts.
 
+## Mutations
+
+`tests/mutations/model.toml` lists targeted mutations of the counters, severity and
+level order, defaults, wire names and the finding-id keys (including the pinned hash
+values); the crate's unit tests must kill each. There is no corpus here, so entries
+name their test filter in `killed_by = "lib:<filter>"` (or `"test:<file>"`) and
+`xtask/mutate.py crates/a11y-report` runs it. Not part of CI; run it before changing
+counting, ordering or id logic.
+
 ## Limits
 
 The model says nothing about how a finding was found and whether the

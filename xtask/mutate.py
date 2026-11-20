@@ -16,6 +16,18 @@ Ablauf:
    `invalid`), dann `korpus_faelle` mit `KORPUS_ID=<id>` laufen lassen,
    Datei wiederherstellen.
 
+Kataloge außerhalb von `a11y-rules` haben keinen Korpus. Dort nennt ein Eintrag
+statt `test`/`filter` ein Feld `killed_by` — den Testfilter, der die Mutation
+töten muss — und es gibt keinen `KORPUS_ID`-Lauf:
+
+- `killed_by = "lib:<filter>"`  — `cargo test -p <paket> --lib -- <filter>`
+  (Filter leer: alle Unit-Tests des Crates, z. B. `lib:identity::tests`)
+- `killed_by = "test:<datei>"`  — `cargo test -p <paket> --test <datei>`
+  (optional `test:<datei>::<filter>`)
+
+Der Ausgangslauf und der Bau laufen je verschiedenem `killed_by` einmal; ein
+Eintrag, dessen Filter schon unverändert rot ist, ergibt `invalid`.
+
 Ergebnis je Eintrag:
 
 - killed     — der Test wird rot (erwartet für `expect = "killed"`)
@@ -57,6 +69,23 @@ FILTER = "korpus_faelle"
 
 def filt(m):
     return m.get("filter", FILTER)
+
+
+def runner(m):
+    """(Schlüssel, Bau-Argumente, Lauf-Argumente, Umgebung) eines Eintrags."""
+    kb = m.get("killed_by")
+    if kb is None:
+        test = m.get("test", "korpus")
+        f = filt(m)
+        return ((test, f, m["id"]), ["--test", test], ["--test", test, "--", f],
+                {"KORPUS_ID": m["id"]})
+    kind, _, rest = kb.partition(":")
+    if kind == "lib":
+        return (kb, ["--lib"], ["--lib", "--", rest] if rest else ["--lib"], {})
+    if kind == "test":
+        name, _, f = rest.partition("::")
+        return (kb, ["--test", name], ["--test", name] + (["--", f] if f else []), {})
+    sys.exit(f"{m['id']}: killed_by muss lib:<filter> oder test:<datei> sein")
 
 
 @contextlib.contextmanager
@@ -159,28 +188,33 @@ def main():
 
     # 1. Ausgangslauf.
     rot = set()
-    for test in sorted({m.get("test", "korpus") for m in entries}):
+    runners = {}
+    for m in entries:
+        runners.setdefault(runner(m)[0], runner(m))
+    builds = {}
+    for key, build, _, _ in runners.values():
+        builds.setdefault(tuple(build), None)
+    for build in builds:
         platz()
-        rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--no-run"], a.lock, a.timeout)
+        rc, out = cargo(["test", "-q", "-p", pkg, *build, "--no-run"], a.lock, a.timeout)
         if rc != 0:
             print(out[-4000:])
-            sys.exit(f"--test {test} kompiliert unverändert nicht; Abbruch")
-        for id_, f in sorted({(m["id"], filt(m)) for m in entries
-                              if m.get("test", "korpus") == test}):
-            rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", f],
-                            a.lock, a.timeout, env={"KORPUS_ID": id_})
-            if rc != 0:
-                rot.add((test, f, id_))
-                print(f"!! Ausgangslauf rot: {id_}", flush=True)
+            sys.exit(f"{' '.join(build)} kompiliert unverändert nicht; Abbruch")
+    for key, _, run, env in sorted(runners.values(), key=lambda r: str(r[0])):
+        platz()
+        rc, out = cargo(["test", "-q", "-p", pkg, *run], a.lock, a.timeout, env=env)
+        if rc != 0:
+            rot.add(key)
+            print(f"!! Ausgangslauf rot: {key}", flush=True)
     print(f"Ausgangslauf: {len(rot)} Kennungen rot; {len(entries)} Mutationen", flush=True)
 
     # 2. Mutationen, nacheinander.
     results = []
     for i, m in enumerate(entries, 1):
-        test = m.get("test", "korpus")
+        key, build, run, env = runner(m)
         target = crate / m["file"]
         t0 = time.time()
-        if (test, filt(m), m["id"]) in rot:
+        if key in rot:
             status, detail = "invalid", "Ausgangslauf rot"
         else:
             original = target.read_text()
@@ -192,18 +226,22 @@ def main():
                 try:
                     target.write_text(original.replace(m["find"], m["replace"], 1))
                     touch(target)
-                    rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--no-run"],
+                    rc, out = cargo(["test", "-q", "-p", pkg, *build, "--no-run"],
                                     a.lock, a.timeout)
                     if rc != 0:
                         err = [l for l in out.splitlines() if l.startswith("error")]
                         status, detail = "invalid", (err[0] if err else "Build scheitert")
                     else:
-                        rc, out = cargo(["test", "-q", "-p", pkg, "--test", test, "--", filt(m)],
-                                        a.lock, a.timeout, env={"KORPUS_ID": m["id"]})
+                        rc, out = cargo(["test", "-q", "-p", pkg, *run], a.lock, a.timeout, env=env)
                         if rc != 0:
                             status = "killed"
                             lines = [l.strip() for l in out.splitlines()
                                      if l.strip().startswith(m["id"])]
+                            if not lines and "killed_by" in m:
+                                # Ohne Korpus: Name des ersten roten Tests aus der
+                                # Liste unter dem letzten `failures:`.
+                                tail = out.rsplit("failures:", 1)[-1].splitlines()
+                                lines = [l.strip() for l in tail if l.startswith("    ")]
                             detail = lines[0] if lines else f"rc={rc}"
                         elif m.get("expect") == "equivalent":
                             status, detail = "equivalent", m.get("note", "")

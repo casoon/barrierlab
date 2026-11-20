@@ -1,0 +1,1157 @@
+# Mutationen von a11y-report — siehe xtask/mutate.py (killed_by statt Korpus).
+# Aufruf: xtask/mutate.py crates/a11y-report
+
+
+# --- src/identity.rs ----------------------------------------
+
+[[mutation]]
+id = "identity/selector-document-is-pagewide"
+file = "src/identity.rs"
+kind = "drop-branch"
+find = "trimmed.is_empty() || trimmed == \"document\""
+replace = "trimmed.is_empty()"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-empty-is-pagewide"
+file = "src/identity.rs"
+kind = "drop-branch"
+find = "trimmed.is_empty() || trimmed == \"document\""
+replace = "trimmed == \"document\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-digits-become-hash"
+file = "src/identity.rs"
+kind = "invert"
+find = "ch.is_ascii_digit()"
+replace = "ch.is_ascii_alphabetic()"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-lowercases"
+file = "src/identity.rs"
+kind = "drop-step"
+find = "ch.to_ascii_lowercase()"
+replace = "ch"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-whitespace-folds"
+file = "src/identity.rs"
+kind = "narrow"
+find = "ch.is_whitespace()"
+replace = "ch == ' '"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-hash-runs-collapse"
+file = "src/identity.rs"
+kind = "narrow"
+find = "(mapped == '#' || mapped == ' ') && last == Some(mapped)"
+replace = "mapped == ' ' && last == Some(mapped)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-space-runs-collapse"
+file = "src/identity.rs"
+kind = "narrow"
+find = "(mapped == '#' || mapped == ' ') && last == Some(mapped)"
+replace = "mapped == '#' && last == Some(mapped)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/selector-trims"
+file = "src/identity.rs"
+kind = "drop-step"
+find = "let trimmed = selector.trim();"
+replace = "let trimmed = selector;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/fnv-offset-basis"
+file = "src/identity.rs"
+kind = "constant"
+find = "0xcbf2_9ce4_8422_2325"
+replace = "0xcbf2_9ce4_8422_2326"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/fnv-prime"
+file = "src/identity.rs"
+kind = "constant"
+find = "0x0000_0100_0000_01b3"
+replace = "0x0000_0100_0000_01b5"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/fnv-xor-before-multiply"
+file = "src/identity.rs"
+kind = "drop-step"
+find = "hash ^= u64::from(*byte);"
+replace = "hash ^= 0;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/hash-takes-high-bits"
+file = "src/identity.rs"
+kind = "constant"
+find = "fnv1a64(input.as_bytes()) >> 32"
+replace = "fnv1a64(input.as_bytes()) >> 33"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/hash-width-eight-hex"
+file = "src/identity.rs"
+kind = "constant"
+find = "format!(\"{:08x}\""
+replace = "format!(\"{:07x}\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-prefix"
+file = "src/identity.rs"
+kind = "constant"
+find = "FindingId(format!(\"F-{}\", short_hash(&key)))\n    }\n\n    /// Kennung für einen Befund ohne Selektor"
+replace = "FindingId(format!(\"G-{}\", short_hash(&key)))\n    }\n\n    /// Kennung für einen Befund ohne Selektor"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-at-prefix"
+file = "src/identity.rs"
+kind = "constant"
+find = "FindingId(format!(\"F-{}\", short_hash(&key)))\n    }\n\n    pub fn as_str"
+replace = "FindingId(format!(\"G-{}\", short_hash(&key)))\n    }\n\n    pub fn as_str"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-selectors-normalized"
+file = "src/identity.rs"
+kind = "drop-step"
+find = ".map(normalize_selector).collect();"
+replace = ".map(str::to_string).collect();"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-empty-is-pagewide"
+file = "src/identity.rs"
+kind = "drop-branch"
+find = "if patterns.is_empty() {"
+replace = "if false {"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-separator"
+file = "src/identity.rs"
+kind = "constant"
+find = "key.push('\\n');\n            key.push_str(pattern);"
+replace = "key.push_str(pattern);"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-at-drops-column"
+file = "src/identity.rs"
+kind = "drop-key"
+find = "@{}:{line}:{column}"
+replace = "@{}:{line}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-at-drops-line"
+file = "src/identity.rs"
+kind = "drop-key"
+find = "@{}:{line}:{column}"
+replace = "@{}:{column}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-at-drops-file"
+file = "src/identity.rs"
+kind = "drop-key"
+find = "file.unwrap_or(\"\")"
+replace = "\"\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/finding-id-at-drops-rule"
+file = "src/identity.rs"
+kind = "drop-key"
+find = "format!(\"{rule_id}\\n@{}"
+replace = "format!(\"\\n@{}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/root-cause-prefix"
+file = "src/identity.rs"
+kind = "constant"
+find = "RootCauseId(format!(\"RC-{}\""
+replace = "RootCauseId(format!(\"RX-{}\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/root-cause-normalizes-selector"
+file = "src/identity.rs"
+kind = "drop-step"
+find = "format!(\"{rule_id}\\n{}\", normalize_selector(selector))"
+replace = "format!(\"{rule_id}\\n{}\", selector)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/root-cause-keeps-rule"
+file = "src/identity.rs"
+kind = "drop-key"
+find = "format!(\"{rule_id}\\n{}\", normalize_selector(selector))"
+replace = "format!(\"\\n{}\", normalize_selector(selector))"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/criterion-not-checked-leaves-denominator"
+file = "src/identity.rs"
+kind = "narrow"
+find = "CriterionState::NotApplicable | CriterionState::NotChecked"
+replace = "CriterionState::NotApplicable"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/criterion-not-applicable-leaves-denominator"
+file = "src/identity.rs"
+kind = "narrow"
+find = "CriterionState::NotApplicable | CriterionState::NotChecked"
+replace = "CriterionState::NotChecked"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/criterion-counts-inverted"
+file = "src/identity.rs"
+kind = "invert"
+find = "        !matches!(\n            self,\n            CriterionState::NotApplicable"
+replace = "        matches!(\n            self,\n            CriterionState::NotApplicable"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "identity/criterion-only-not-met-deducts"
+file = "src/identity.rs"
+kind = "widen"
+find = "self == CriterionState::NotMet"
+replace = "self != CriterionState::Met"
+killed_by = "lib:"
+expect = "killed"
+
+
+# --- src/outcome.rs ----------------------------------------
+
+[[mutation]]
+id = "outcome/pass-hidden-by-default"
+file = "src/outcome.rs"
+kind = "invert"
+find = "!matches!(self, Outcome::Pass)"
+replace = "matches!(self, Outcome::Pass)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/untested-hidden-by-default"
+file = "src/outcome.rs"
+kind = "narrow"
+find = "!matches!(self, Outcome::Pass)"
+replace = "!matches!(self, Outcome::Pass | Outcome::Untested)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/review-is-problem"
+file = "src/outcome.rs"
+kind = "narrow"
+find = "matches!(self, Outcome::Fail | Outcome::Review)"
+replace = "matches!(self, Outcome::Fail)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/untested-is-problem"
+file = "src/outcome.rs"
+kind = "widen"
+find = "matches!(self, Outcome::Fail | Outcome::Review)"
+replace = "!matches!(self, Outcome::Pass)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/default-is-fail"
+file = "src/outcome.rs"
+kind = "constant"
+find = "#[default]\n    Fail,\n    /// Potenzielles Problem. Die Regel kann es nur heuristisch vermuten und\n    /// braucht menschliche Bestätigung — etwa ein vorhandener, aber womöglich\n    /// nichtssagender Alt-Text.\n    Review,"
+replace = "Fail,\n    /// Potenzielles Problem. Die Regel kann es nur heuristisch vermuten und\n    /// braucht menschliche Bestätigung — etwa ein vorhandener, aber womöglich\n    /// nichtssagender Alt-Text.\n    #[default]\n    Review,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/as-str-fail"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Outcome::Fail => \"fail\""
+replace = "Outcome::Fail => \"failed\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/as-str-review"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Outcome::Review => \"review\""
+replace = "Outcome::Review => \"reviewed\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/as-str-pass"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Outcome::Pass => \"pass\""
+replace = "Outcome::Pass => \"passed\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/as-str-untested"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Outcome::Untested => \"untested\""
+replace = "Outcome::Untested => \"skipped\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/basis-is-criterion"
+file = "src/outcome.rs"
+kind = "invert"
+find = "*self == Basis::Criterion"
+replace = "*self != Basis::Criterion"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/basis-as-str-criterion"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Basis::Criterion => \"criterion\""
+replace = "Basis::Criterion => \"criteria\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/basis-as-str-best-practice"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Basis::BestPractice => \"best_practice\""
+replace = "Basis::BestPractice => \"best-practice\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-default-is-medium"
+file = "src/outcome.rs"
+kind = "constant"
+find = "    Low,\n    /// Relevantes, aber nicht existenzielles Problem.\n    #[default]\n    Medium,"
+replace = "    #[default]\n    Low,\n    /// Relevantes, aber nicht existenzielles Problem.\n    Medium,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-order-high-critical"
+file = "src/outcome.rs"
+kind = "swap-order"
+find = "    High,\n    /// Schwerwiegend: hohe Auswirkung oder hohes rechtliches Risiko.\n    Critical,\n}"
+replace = "    Critical,\n    /// Schwerwiegend: hohe Auswirkung oder hohes rechtliches Risiko.\n    High,\n}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-order-low-medium"
+file = "src/outcome.rs"
+kind = "swap-order"
+find = "    Low,\n    /// Relevantes, aber nicht existenzielles Problem.\n    #[default]\n    Medium,"
+replace = "    #[default]\n    Medium,\n    /// Relevantes, aber nicht existenzielles Problem.\n    Low,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-as-str-low"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::Low => \"low\""
+replace = "Severity::Low => \"minor\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-as-str-medium"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::Medium => \"medium\""
+replace = "Severity::Medium => \"moderate\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-as-str-high"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::High => \"high\""
+replace = "Severity::High => \"serious\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/severity-as-str-critical"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::Critical => \"critical\",\n        }\n    }\n\n    /// axe-core"
+replace = "Severity::Critical => \"crit\",\n        }\n    }\n\n    /// axe-core"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/axe-impact-low"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::Low => \"minor\""
+replace = "Severity::Low => \"low\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/axe-impact-high"
+file = "src/outcome.rs"
+kind = "constant"
+find = "Severity::High => \"serious\""
+replace = "Severity::High => \"high\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-level-order"
+file = "src/outcome.rs"
+kind = "swap-order"
+find = "    A,\n    AA,\n    AAA,\n}\n\nimpl WcagLevel"
+replace = "    AA,\n    A,\n    AAA,\n}\n\nimpl WcagLevel"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-included-in-strict"
+file = "src/outcome.rs"
+kind = "boundary"
+find = "self <= target"
+replace = "self < target"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-included-in-reversed"
+file = "src/outcome.rs"
+kind = "invert"
+find = "self <= target"
+replace = "self >= target"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-as-str-aa"
+file = "src/outcome.rs"
+kind = "constant"
+find = "WcagLevel::AA => \"AA\""
+replace = "WcagLevel::AA => \"A\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-as-str-aaa"
+file = "src/outcome.rs"
+kind = "constant"
+find = "WcagLevel::AAA => \"AAA\""
+replace = "WcagLevel::AAA => \"AA\""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "outcome/wcag-as-str-a"
+file = "src/outcome.rs"
+kind = "constant"
+find = "WcagLevel::A => \"A\""
+replace = "WcagLevel::A => \"a\""
+killed_by = "lib:"
+expect = "killed"
+
+
+# --- src/report.rs ----------------------------------------
+
+[[mutation]]
+id = "report/summary-fail-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Outcome::Fail => s.fail += 1"
+replace = "Outcome::Fail => s.fail += 2"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/summary-review-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Outcome::Review => s.review += 1"
+replace = "Outcome::Review => s.fail += 1"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/summary-pass-counter"
+file = "src/report.rs"
+kind = "drop-finding"
+find = "Outcome::Pass => s.pass += 1"
+replace = "Outcome::Pass => {}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/summary-untested-counter"
+file = "src/report.rs"
+kind = "drop-finding"
+find = "Outcome::Untested => s.untested += 1"
+replace = "Outcome::Untested => {}"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/severity-only-over-problems"
+file = "src/report.rs"
+kind = "widen"
+find = "if f.outcome.is_problem() {\n                match"
+replace = "if true {\n                match"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/severity-critical-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Severity::Critical => s.critical += 1"
+replace = "Severity::Critical => s.high += 1"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/severity-high-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Severity::High => s.high += 1"
+replace = "Severity::High => s.critical += 1"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/severity-medium-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Severity::Medium => s.medium += 1"
+replace = "Severity::Medium => s.low += 1"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/severity-low-counter"
+file = "src/report.rs"
+kind = "constant"
+find = "Severity::Low => s.low += 1"
+replace = "Severity::Low => s.medium += 1"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rules-not-run-counter"
+file = "src/report.rs"
+kind = "invert"
+find = "filter(|r| !r.did_run())"
+replace = "filter(|r| r.did_run())"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/did-run-inverted"
+file = "src/report.rs"
+kind = "invert"
+find = "self.not_run.is_none()"
+replace = "self.not_run.is_some()"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/problems-sum"
+file = "src/report.rs"
+kind = "constant"
+find = "self.fail + self.review"
+replace = "self.fail"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/problems-counts-review"
+file = "src/report.rs"
+kind = "constant"
+find = "self.fail + self.review"
+replace = "self.fail + self.pass"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/schema-version"
+file = "src/report.rs"
+kind = "constant"
+find = "pub const SCHEMA_VERSION: u16 = 1;"
+replace = "pub const SCHEMA_VERSION: u16 = 2;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/default-schema"
+file = "src/report.rs"
+kind = "constant"
+find = "schema: SCHEMA_VERSION,\n            findings: Vec::new(),"
+replace = "schema: 0,\n            findings: Vec::new(),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/visible-hides-pass"
+file = "src/report.rs"
+kind = "invert"
+find = ".filter(|f| f.outcome.is_visible_by_default())"
+replace = ".filter(|f| !f.outcome.is_visible_by_default())"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/by-outcome-filter"
+file = "src/report.rs"
+kind = "invert"
+find = "filter(move |f| f.outcome == o)"
+replace = "filter(move |f| f.outcome != o)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rule-run-ran-keeps-count"
+file = "src/report.rs"
+kind = "constant"
+find = "            not_run: None,\n            findings,"
+replace = "            not_run: None,\n            findings: 0,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rule-run-not-run-reason"
+file = "src/report.rs"
+kind = "constant"
+find = "not_run: Some(why),"
+replace = "not_run: Some(NotRun::Errored),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rule-run-viewport"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.viewport = Some(v.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rule-run-reason"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.reason = Some(r.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/rule-run-wcag"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.wcag = criteria.into_iter().map(Into::into).collect();"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/push-appends"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.findings.push(f);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/extend-appends"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.findings.extend(fs);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/record-appends"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.rule_runs.push(r);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/note-input-appends"
+file = "src/report.rs"
+kind = "drop-step"
+find = "self.inputs.push(n);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "report/finish-stores-summary"
+file = "src/report.rs"
+kind = "drop-step"
+find = "        self.summary = s;\n"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+
+# --- src/finding.rs ----------------------------------------
+
+[[mutation]]
+id = "finding/id-selector-wins"
+file = "src/finding.rs"
+kind = "drop-branch"
+find = "(Some(selector), _) => FindingId::new(&self.rule_id, [selector.as_str()]),"
+replace = "(Some(_), _) => FindingId::new(&self.rule_id, []),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/id-position-when-no-selector"
+file = "src/finding.rs"
+kind = "drop-branch"
+find = "(None, Some(p)) => FindingId::at(&self.rule_id, loc.file.as_deref(), p.line, p.column),"
+replace = "(None, Some(_)) => FindingId::new(&self.rule_id, []),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/id-position-swaps-line-column"
+file = "src/finding.rs"
+kind = "swap-order"
+find = "loc.file.as_deref(), p.line, p.column)"
+replace = "loc.file.as_deref(), p.column, p.line)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/best-practice-is-review"
+file = "src/finding.rs"
+kind = "constant"
+find = "let mut f = Self::new(Outcome::Review, rule_id, message);\n        f.basis"
+replace = "let mut f = Self::new(Outcome::Fail, rule_id, message);\n        f.basis"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/best-practice-basis"
+file = "src/finding.rs"
+kind = "constant"
+find = "f.basis = Basis::BestPractice;"
+replace = "f.basis = Basis::Criterion;"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/best-practice-tag"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "        f.tags.push(\"best-practice\".into());\n        f\n"
+replace = "        f\n"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/is-best-practice"
+file = "src/finding.rs"
+kind = "invert"
+find = "self.basis == Basis::BestPractice\n    }"
+replace = "self.basis != Basis::BestPractice\n    }"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/fail-outcome"
+file = "src/finding.rs"
+kind = "constant"
+find = "Self::new(Outcome::Fail, rule_id, message)"
+replace = "Self::new(Outcome::Review, rule_id, message)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/review-outcome"
+file = "src/finding.rs"
+kind = "constant"
+find = "\n        Self::new(Outcome::Review, rule_id, message)"
+replace = "\n        Self::new(Outcome::Fail, rule_id, message)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/pass-outcome"
+file = "src/finding.rs"
+kind = "constant"
+find = "Self::new(Outcome::Pass, rule_id, message)"
+replace = "Self::new(Outcome::Untested, rule_id, message)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/untested-outcome"
+file = "src/finding.rs"
+kind = "constant"
+find = "Self::new(Outcome::Untested, rule_id, message)"
+replace = "Self::new(Outcome::Pass, rule_id, message)"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/default-severity-medium"
+file = "src/finding.rs"
+kind = "constant"
+find = "severity: Severity::default(),"
+replace = "severity: Severity::Low,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-tags-keeps-best-practice-tag"
+file = "src/finding.rs"
+kind = "invert"
+find = "!self.tags.iter().any(|t| t == \"best-practice\")"
+replace = "self.tags.iter().any(|t| t == \"best-practice\")"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-tags-only-for-best-practice"
+file = "src/finding.rs"
+kind = "widen"
+find = "if self.basis == Basis::BestPractice && !self"
+replace = "if !self"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-is-empty"
+file = "src/finding.rs"
+kind = "invert"
+find = "self == &Location::default()"
+replace = "self != &Location::default()"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-severity"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.severity = s;"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-rule-name"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.rule_name = Some(n.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-element-role"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.role = role;"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-element-name"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.name = name;"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/at-location"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.location = l;"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-wcag"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.wcag = criteria.into_iter().map(Into::into).collect();"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-wcag-level"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.wcag_level = Some(l);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-help"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.help = Some(help.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-help-url"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.help_url = Some(url.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-suggestion"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.suggestion = Some(s.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-suggested-code"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.suggested_code = Some(s.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-snippet"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.snippet = Some(s.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-evidence"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.evidence = e.into_iter().collect();"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/add-evidence"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.evidence.push(e);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/with-extra"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.extra = Extra::new(value);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/source-position-new-swaps"
+file = "src/finding.rs"
+kind = "swap-order"
+find = "SourcePosition {\n            line,\n            column,"
+replace = "SourcePosition {\n            line: column,\n            column: line,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-node"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.node = Some(id.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-selector"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.selector = Some(s.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-url"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.url = Some(u.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-source-hint"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.source_hint = Some(h.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-position"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.position = Some(position);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-with-end"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.end = Some(end);"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-file-sets-file"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "file: Some(path.into()),"
+replace = "file: None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/location-node-sets-node"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "node: Some(id.into()),"
+replace = "node: None,"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/evidence-ax-tree-source"
+file = "src/finding.rs"
+kind = "constant"
+find = "source: \"ax_tree\".into(),"
+replace = "source: \"axtree\".into(),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/evidence-dom-attribute-source"
+file = "src/finding.rs"
+kind = "constant"
+find = "source: \"dom_attribute\".into(),"
+replace = "source: \"dom\".into(),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/evidence-computed-source"
+file = "src/finding.rs"
+kind = "constant"
+find = "source: \"computed\".into(),"
+replace = "source: \"style\".into(),"
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/evidence-with-field"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.field = Some(f.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
+
+[[mutation]]
+id = "finding/evidence-with-value"
+file = "src/finding.rs"
+kind = "drop-step"
+find = "self.value = Some(v.into());"
+replace = ""
+killed_by = "lib:"
+expect = "killed"
