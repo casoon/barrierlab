@@ -13,8 +13,9 @@ use crate::index::IdIndex;
 use crate::role::{allows_name_from_content, name_is_prohibited, role};
 
 /// Was gerade berechnet wird. Der Unterschied ist klein, aber er betrifft
-/// Schritt 2B und 2C: Beim Namen gelten `aria-labelledby` und `aria-label`,
-/// bei der Beschreibung `aria-describedby` und `title`.
+/// Schritt 2B: Bei der Beschreibung wird jedes Verweisziel wie bei einem Namen
+/// berechnet, `aria-labelledby` aber nicht verfolgt — es steckt schon in einem
+/// laufenden Verweisdurchlauf (accname 1.2, 2B). `aria-label` gilt in beiden.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Ziel {
     Name,
@@ -98,7 +99,6 @@ pub fn description<'a, N: Node<'a>>(node: N, ids: &IdIndex<'a, N>) -> Option<Str
             ziel: Ziel::Beschreibung,
             verweis_versteckt: false,
         };
-        ctx.besucht.insert(node.id());
         let mut teile = Vec::new();
         for id in v.split_whitespace() {
             if let Some(ziel) = ids.get(node, id) {
@@ -135,10 +135,7 @@ fn berechne<'a, N: Node<'a>>(
     via_verweis: bool,
 ) -> String {
     let vorher = ctx.verweis_versteckt;
-    if via_verweis
-        && !vorher
-        && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, !rekursion))
-    {
+    if via_verweis && !vorher && (ist_versteckt(node) || per_stil_versteckt(ctx.stil, node, true)) {
         ctx.verweis_versteckt = true;
     }
     let s = berechne_knoten(ctx, node, rekursion, via_verweis);
@@ -197,7 +194,7 @@ fn berechne_knoten<'a, N: Node<'a>>(
     let verboten = rolle.is_some_and(name_is_prohibited);
 
     // Schritt 2C: aria-label.
-    if !verboten && ctx.ziel == Ziel::Name {
+    if !verboten {
         if let Some(label) = node.attr("aria-label") {
             let label = label.trim();
             // Bei einem eingebetteten Steuerelement innerhalb einer Rekursion

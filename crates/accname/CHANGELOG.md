@@ -7,6 +7,11 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Beschreibung:** `aria-label` auf dem Verweisziel und seinen Nachkommen zählt jetzt (accname 1.2, 4.2: Namensberechnung auf jedem Ziel); ein `aria-describedby` auf das Element selbst liefert dessen Inhalt statt nichts. `aria-labelledby` im Ziel wird weiterhin nicht verfolgt (2B). (#268)
+- **Name:** Ein `aria-labelledby`-Ziel unter einem Vorfahren mit `display: none` gilt als versteckt und bringt seinen ganzen Teilbaum mit (2A), wie schon beim Attribut `hidden`. (#268)
+
 ## [0.30.12] - 2026-11-17
 
 ### Changed

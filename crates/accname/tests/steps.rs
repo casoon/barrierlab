@@ -123,13 +123,13 @@ fn knoten_unter_verstecktem_vorfahren_hat_keinen_namen_ohne_stil() {
 }
 
 #[test]
-fn verweisziel_unter_verstecktem_vorfahren_ist_selbst_nicht_versteckt() {
-    // Der Vorfahr zählt nur an der Wurzel der Berechnung, nicht für ein
-    // Verweisziel: dessen eigener versteckter Teilbaum bleibt deshalb weg.
-    // Festgehaltenes Ist-Verhalten, kein Normtext.
+fn verweisziel_unter_verstecktem_vorfahren_ist_selbst_versteckt() {
+    // accname 1.2, 2A: Ein Verweisziel, das versteckt ist, bringt seinen ganzen
+    // Teilbaum mit. Als versteckt gilt es auch, wenn nur ein Vorfahr es ist —
+    // wie beim Attribut `hidden`, und gleich, ob das Ziel selbst versteckt ist.
     let html = r#"<div style="display:none"><span id="l">a<span style="display:none">b</span></span></div>
         <button id="t" aria-labelledby="l"></button>"#;
-    assert_eq!(nr(html).as_deref(), Some("a"));
+    assert_eq!(nr(html).as_deref(), Some("a b"));
 }
 
 // --- 2B/2C: Verweise und aria-label in der Beschreibung -----------------------
@@ -142,15 +142,17 @@ fn labelledby_gilt_nicht_im_verweisdurchlauf() {
 }
 
 #[test]
-fn beschreibung_folgt_weder_labelledby_noch_aria_label_im_ziel() {
-    // Festgehaltenes Ist-Verhalten (siehe `Ziel` in name.rs).
+fn beschreibung_folgt_labelledby_nicht_aber_aria_label_im_ziel() {
+    // accname 1.2, 4.2: Namensberechnung auf jedem Verweisziel. Ein
+    // `aria-labelledby` darin wird nicht verfolgt (2B: läuft schon ein
+    // Verweisdurchlauf), `aria-label` (2C) gilt.
     let html = r#"<span id="x">other</span>
         <div id="d"><span aria-labelledby="x">child</span></div>
         <button id="t" aria-describedby="d"></button>"#;
     assert_eq!(beschreibung(html).as_deref(), Some("child"));
     let html = r#"<div id="d"><button aria-label="L">child</button></div>
         <button id="t" aria-describedby="d"></button>"#;
-    assert_eq!(beschreibung(html).as_deref(), Some("child"));
+    assert_eq!(beschreibung(html).as_deref(), Some("L"));
 }
 
 #[test]
@@ -446,9 +448,11 @@ fn beschreibung_zieht_auch_versteckte_ziele_heran() {
 }
 
 #[test]
-fn beschreibung_auf_sich_selbst_ist_leer() {
+fn beschreibung_auf_sich_selbst_nimmt_den_eigenen_inhalt() {
+    // accname 1.2, 4.2: Namensberechnung auf jedem referenzierten Knoten — auch
+    // auf dem Element selbst.
     let html = r#"<button id="t" aria-describedby="t">Btn</button>"#;
-    assert_eq!(beschreibung(html), None);
+    assert_eq!(beschreibung(html).as_deref(), Some("Btn"));
 }
 
 #[test]
