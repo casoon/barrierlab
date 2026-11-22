@@ -1,7 +1,7 @@
 {
   "cases": {
-    "cantTell": 50,
-    "correct": 558,
+    "cantTell": 45,
+    "correct": 563,
     "wrong": 3
   },
   "consistency": {
