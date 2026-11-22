@@ -509,6 +509,43 @@ fn tables() -> Vec<Fall> {
             r#"<table><caption>Preise</caption><tr><td>A</td><td>1</td></tr></table>"#,
             "WCAG 1.3.1, F91; Normative Zuordnung (auditmysite#779): REVIEW",
         ),
+        fail(
+            HEAD,
+            r#"<table><tr><td><b>Day</b></td><td><b>From</b></td></tr><tr><td>Mon</td><td>9</td></tr></table>"#,
+            "WCAG F91; barrierlab.eu test bench (article page): a first row of bold <td> cells is a header in looks only",
+        )
+        .variant("fette td-Kopfzeile")
+        .count(1),
+        fail(
+            HEAD,
+            r#"<table><tbody><tr> <td> <strong>A</strong> </td><td><strong>B</strong></td></tr><tr><td>1</td><td>2</td></tr></tbody></table>"#,
+            "WCAG F91: strong, tbody and whitespace around the cells do not matter",
+        )
+        .variant("strong, tbody"),
+        review(
+            HEAD,
+            r#"<table><tr><td><b>Total</b></td><td>12</td></tr><tr><td>Net</td><td>10</td></tr></table>"#,
+            "F91: only some first-row cells bold, so not a header row; REVIEW",
+        )
+        .variant("nur eine Zelle fett"),
+        review(
+            HEAD,
+            r#"<table><tr><td><b>Only row</b></td></tr></table>"#,
+            "F91: one row alone is no data table with a header row; REVIEW",
+        )
+        .variant("eine Zeile"),
+        review(
+            HEAD,
+            r#"<table><tr><td><b>Day</b> (Mon)</td><td><b>From</b></td></tr><tr><td>Mon</td><td>9</td></tr></table>"#,
+            "F91: bold is not the whole cell, so not a header cell; REVIEW",
+        )
+        .variant("fett nur zum Teil"),
+        negative(
+            HEAD,
+            r#"<table><tr><td><b>Day</b></td><th>From</th></tr><tr><td>Mon</td><td>9</td></tr></table>"#,
+            "H51: a <th> anywhere is a header cell",
+        )
+        .variant("ein th"),
         review(
             HEAD,
             r#"<div role="grid" aria-label="G"><div role="row"><div role="gridcell">1</div></div></div>"#,

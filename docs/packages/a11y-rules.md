@@ -105,7 +105,8 @@ first in 0.26.0):
 | `patterns/tooltip-unreferenced` | Best practice | 1.4.13 governs appearing and disappearing on hover and focus, not the association. |
 | `lists/empty` | Best practice | An empty list withholds no information. |
 | `media/video-captions-missing` | `REVIEW` | 1.2.2 needs captions only for speech or meaningful sound; they may be burned in or offered by the player, none of which is visible from the markup. A muted video without `controls` is skipped. |
-| `tables/header-missing` | `REVIEW` | F91 applies only to data tables with visible headers; whether one is present is not visible from the markup. |
+| `focus/indicator-missing` | `REVIEW`, `FAIL` when the host reports the outline removed | 2.4.7 and F78: a host that runs the cascade for the focused state (`a11y-static`) can tell that the author removed the outline and nothing else changes on focus: `FAIL`, unless an `onfocus` handler may set an indicator by script. A host that only observed no visible change (a browser run) stays at `REVIEW`. |
+| `tables/header-missing` | `REVIEW`, `FAIL` for a bold `<td>` header row | F91 applies only to data tables with visible headers; whether one is present is not visible from the markup. When the first row consists only of `<td>` cells whose whole content is `<b>` or `<strong>`, more rows follow and no `<th>` exists, the headers are there in looks only: `FAIL`. Bold set by a stylesheet is not recognised. |
 | `keyboard/positive-tabindex` | `REVIEW` | F44 requires a judgment whether the resulting order breaks meaning and operation. axe `tabindex` is best practice. |
 | `ids/duplicate` | `REVIEW` | The browser resolves to the first element; whether that is intended is not visible from the markup. |
 | `keyboard/click-handler-not-focusable` | `REVIEW` if it contains an element reachable by Tab | The handler then usually only intercepts that element's click (card around its link). Without such an element it remains a violation of 2.1.1. |

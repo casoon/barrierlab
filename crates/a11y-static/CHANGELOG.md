@@ -7,6 +7,8 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ### Added
 
+- **Fokus:** `Rendering::layout` füllt `focus_visible` und `focus_outline_removed` für per Tab erreichbare Elemente aus der Kaskade im fokussierten Zustand. Damit meldet `focus/indicator-missing` einen entfernten Rahmen als Verstoß, auch wenn die Seite irgendwo ein `:focus-visible` setzt (casoon/barrierlab#228, A1).
+
 - **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
 
 ## [0.5.2] - 2026-11-17

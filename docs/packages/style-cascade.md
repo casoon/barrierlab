@@ -52,7 +52,8 @@ flowchart LR
 | `expand_imports(css, resolver)` | replaces every `@import` the resolver answers (`Resolution::Css`) by the wrapped rules, recursively; `Inert` drops it, `Failed` and `Unresolved` leave it; cycles and more than 16 levels stop |
 | `imports_in(css)`, `wrap_media(rules, media)` | the top-level `@import`s of a text, parsed; the `@media` wrapper for a `<link media>` that keeps `@import` at the top |
 | `Cascade::is_dark(node)` | the used colour scheme at an element (`Some(true)` dark) |
-| `selector::Selector`, `Specificity`, `Mode` | selector matching; `Resting` for the cascade, `Possible` for "could this rule apply?" |
+| `Cascade::focus_indicator(node)` | whether focusing the element shows an indicator: `Shown`, `Removed` (outline gone without a replacement, F78) or `Unknown`; runs the cascade again with `:focus`, `:focus-visible` and `:focus-within` for that element |
+| `selector::Selector`, `Specificity`, `Mode` | selector matching; `Resting` for the cascade, `Possible` for "could this rule apply?", `Focused(NodeId)` for one element holding focus |
 | `parse_color`, `over`, `luminance` | CSS colours (including `oklch()`, `lab()`, `color-mix()` in srgb and oklab) and compositing |
 | `Environment` | the assumed window: size, colour scheme, reduced motion; optional hover, pointer, contrast and forced-colors (`Unknown` when unset) |
 

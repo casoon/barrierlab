@@ -7,6 +7,9 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ### Added
 
+- **Fokus je Element:** `Cascade::focus_indicator` rechnet die Kaskade ein zweites Mal mit `:focus`, `:focus-visible` und `:focus-within` für ein Element und sagt als `FocusIndicator`, ob dabei ein Hinweis sichtbar wird (`Shown`), der Autor den Rahmen ohne Ersatz entfernt hat (`Removed`, F78) oder es nicht bestimmbar ist (`Unknown`: unbekannter Selektor, `@import`, ein Fokuszustand vor einem Kombinator). Dafür gibt es `Mode::Focused(NodeId)`; wer `Mode` erschöpfend abgleicht, muss die Variante ergänzen (casoon/barrierlab#228, A1).
+- **Kurzschreibweise:** `outline` wird in `outline-width`, `outline-style` und `outline-color` zerlegt.
+
 - **Farbpaare:** `color_pairs` und `compose_color_pairs` füllen `ColorPairs::opacity` mit der aufsummierten Deckkraft (casoon/barrierlab#261).
 
 ## [0.3.3] - 2026-11-17

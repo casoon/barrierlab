@@ -770,19 +770,43 @@ fn target_size_enhanced<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Fin
 }
 
 /// 2.4.7: beim Fokussieren ändert sich kein Stil, der als Indikator taugt.
+///
+/// `REVIEW`, solange der Host nur sagt, dass nichts sichtbar wurde. Hat er die
+/// Kaskade für den fokussierten Zustand gerechnet und festgestellt, dass der
+/// Autor den Rahmen entfernt hat, ohne Ersatz, ist es ein Verstoß (F78) — es
+/// sei denn, ein `onfocus`-Handler kann den Hinweis per Skript setzen.
 fn focus_visible<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     let mut targets = 0usize;
     let mut measured = 0usize;
+    let handlers = elements(doc).any(|n| n.has_attr("onfocus") || n.has_attr("onfocusin"));
     for n in elements(doc) {
         if !per_tab_reachable(n) {
             continue;
         }
         targets += 1;
-        let Some(visible) = doc.layout(n).and_then(|l| l.focus_visible) else {
+        let layout = doc.layout(n);
+        let Some(visible) = layout.as_ref().and_then(|l| l.focus_visible) else {
             continue;
         };
         measured += 1;
-        if !visible {
+        if !visible && !handlers && layout.is_some_and(|l| l.focus_outline_removed == Some(true)) {
+            out.push(
+                Finding::fail(
+                    "focus/indicator-missing",
+                    pick!(
+                        locale,
+                        "The author removed the focus outline and nothing else changes on \
+                         focus: keyboard users cannot see where focus is.",
+                        "Der Autor hat den Fokusrahmen entfernt, und beim Fokussieren ändert \
+                         sich sonst nichts: wer mit der Tastatur bedient, sieht nicht, wo der \
+                         Fokus steht.",
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["2.4.7"])
+                .at(at(n.id())),
+            );
+        } else if !visible {
             out.push(
                 Finding::review(
                     "focus/indicator-missing",

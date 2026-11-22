@@ -3,7 +3,8 @@
 
 use a11y_dom::{Arena, Color, Node, elements};
 use style_cascade::{
-    Cascade, Environment, Import, Resolution, RuleSet, Specified, expand_imports, imports_in,
+    Cascade, Environment, FocusIndicator, Import, Resolution, RuleSet, Specified, expand_imports,
+    imports_in,
 };
 use stylesheet_parse::{Rule, Stylesheet, parse_stylesheet};
 
@@ -958,4 +959,118 @@ fn formularfelder_folgen_dem_farbschema() {
         c.computed_style(finde(&d, "b")).own_background_color,
         Some(rgb(0x6b, 0x6b, 0x6b))
     );
+}
+
+// --- Fokus je Element (casoon/barrierlab#228, A1) -------------------------
+
+fn fokus(css: &str, html: &str, id: &str) -> FocusIndicator {
+    let d = seite(html);
+    kaskade(css).focus_indicator(finde(&d, id))
+}
+
+#[test]
+fn fokus_ohne_eigene_angabe_zeichnet_der_browser_den_rahmen() {
+    assert_eq!(
+        fokus("", r#"<a id="a" href="/">x</a>"#, "a"),
+        FocusIndicator::Shown
+    );
+}
+
+#[test]
+fn fokus_global_sichtbar_aber_im_bereich_entfernt_pruefstand() {
+    // Die Seite „Formular" des Prüfstands: :focus-visible gilt überall, ein
+    // Bereich nimmt den Rahmen wieder weg.
+    let css = ":focus-visible { outline: 2px solid #00f }
+               .no-focus :focus, .no-focus :focus-visible { outline: none }";
+    let html = r#"<div class="no-focus"><input id="a"></div><input id="b">"#;
+    assert_eq!(fokus(css, html, "a"), FocusIndicator::Removed);
+    assert_eq!(fokus(css, html, "b"), FocusIndicator::Shown);
+}
+
+#[test]
+fn fokus_ersatz_durch_schatten_oder_farbe_zaehlt() {
+    let html = r#"<a id="a" href="/">x</a>"#;
+    assert_eq!(
+        fokus(
+            "a:focus { outline: none; box-shadow: 0 0 0 2px red }",
+            html,
+            "a"
+        ),
+        FocusIndicator::Shown
+    );
+    assert_eq!(
+        fokus(
+            "a { outline: none } a:focus { background-color: #ff0 }",
+            html,
+            "a"
+        ),
+        FocusIndicator::Shown
+    );
+}
+
+#[test]
+fn fokus_rahmen_entfernt_ohne_ersatz() {
+    let html = r#"<button id="b">x</button>"#;
+    assert_eq!(
+        fokus("button { outline: 0 }", html, "b"),
+        FocusIndicator::Removed
+    );
+    assert_eq!(
+        fokus("button:focus { outline-style: none }", html, "b"),
+        FocusIndicator::Removed
+    );
+}
+
+#[test]
+fn fokus_spaeter_wiederhergestellt_nach_kurzschreibweise() {
+    let css =
+        "a:focus { outline: none } a:focus-visible { outline-style: solid; outline-width: 2px }";
+    assert_eq!(
+        fokus(css, r#"<a id="a" href="/">x</a>"#, "a"),
+        FocusIndicator::Shown
+    );
+}
+
+#[test]
+fn fokus_dauerhafter_rahmen_ist_kein_hinweis() {
+    assert_eq!(
+        fokus(
+            "a { outline: 2px solid red }",
+            r#"<a id="a" href="/">x</a>"#,
+            "a"
+        ),
+        FocusIndicator::Removed
+    );
+}
+
+#[test]
+fn fokus_auf_anderes_element_oder_unbekanntes_ist_unbestimmt() {
+    let html = r#"<input id="a"><label id="l">x</label>"#;
+    assert_eq!(
+        fokus(
+            "input { outline: none } input:focus + label { color: red }",
+            html,
+            "a"
+        ),
+        FocusIndicator::Unknown
+    );
+    assert_eq!(
+        fokus(
+            "input { outline: none } input:has(+ b):focus { color: red }",
+            html,
+            "a"
+        ),
+        FocusIndicator::Unknown
+    );
+}
+
+#[test]
+fn fokus_within_am_vorfahren_ist_unbestimmt_und_am_element_selbst_bestimmt() {
+    // Vor einem Kombinator wirkt der Fokus auch auf andere Elemente.
+    let css = ".f:focus-within input { outline: 2px solid red } input { outline: none }";
+    let html = r#"<div class="f"><input id="a"></div>"#;
+    assert_eq!(fokus(css, html, "a"), FocusIndicator::Unknown);
+    // Am Element selbst: bestimmt.
+    let css = "input:focus-within { outline: 2px solid red } input { outline: none }";
+    assert_eq!(fokus(css, html, "a"), FocusIndicator::Shown);
 }

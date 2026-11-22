@@ -289,6 +289,12 @@ pub struct Layout {
     /// Fokussieren ändert den Zustand der Seite und ist deshalb ein eigener,
     /// ausdrücklicher Durchgang.
     pub focus_visible: Option<bool>,
+    /// Der Autor hat den Fokusrahmen entfernt, und nichts, was als Hinweis
+    /// taugt, tritt an seine Stelle (F78). Nur ein Host setzt es, der die
+    /// Kaskade für den fokussierten Zustand rechnet; ein Host, der den Fokus
+    /// im Browser bewegt, lässt es `None`. Mit `focus_visible: Some(false)`
+    /// ist das ein Verstoß statt eines Prüfhinweises.
+    pub focus_outline_removed: Option<bool>,
     /// Berechnetes `pointer-events: none`: Ein Klick geht durch das Element
     /// hindurch, es ist kein Ziel.
     pub pointer_events_none: Option<bool>,

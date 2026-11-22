@@ -9,6 +9,8 @@ Repository `casoon/a11y-core`.
 
 ### Added
 
+- **`Layout::focus_outline_removed`:** der Autor hat den Fokusrahmen entfernt, ohne Ersatz (F78); nur ein Host setzt es, der die Kaskade für den fokussierten Zustand rechnet. Wer `Layout` als Literal ohne `..Default::default()` baut, setzt es mit (casoon/barrierlab#228, A1).
+
 - **`Semantics::accessible_description`:** liefert die Accessible Description (accname 1.2); Standard `None`, bestehende Hosts bleiben gültig (casoon/barrierlab#260).
 - **`ColorPairs`:** neues Feld `opacity` (aufsummierte Deckkraft der Kette); wer die Struktur als Literal baut, setzt es mit (casoon/barrierlab#261).
 

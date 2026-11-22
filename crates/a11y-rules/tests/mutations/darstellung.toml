@@ -247,8 +247,26 @@ expect = "killed"
 id = "focus/indicator-missing"
 file = "src/heuristics.rs"
 kind = "invert"
-find = '''        if !visible {'''
-replace = '''        if visible {'''
+find = '''        } else if !visible {'''
+replace = '''        } else if visible {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/indicator-missing"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''        if !visible && !handlers && layout'''
+replace = '''        if !visible && layout'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "focus/indicator-missing"
+file = "src/heuristics.rs"
+kind = "drop-condition"
+find = '''        if !visible && !handlers && layout.is_some_and(|l| l.focus_outline_removed == Some(true)) {'''
+replace = '''        if !visible && !handlers {'''
 test = "korpus"
 expect = "killed"
 

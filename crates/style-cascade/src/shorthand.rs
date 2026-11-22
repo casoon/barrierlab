@@ -27,6 +27,7 @@ const KURZSCHREIBWEISEN: &[&str] = &[
     "border-style",
     "border-width",
     "border-color",
+    "outline",
     "text-decoration",
     "list-style",
     "animation",
@@ -299,6 +300,30 @@ pub(crate) fn expand(name: &str, value: &str) -> Vec<(String, Expanded)> {
                 (format!("border-bottom-{art}"), unten),
             ]
         }
+        "outline" => {
+            let props = ["outline-width", "outline-style", "outline-color"];
+            if hat_var {
+                return alle(&props, &Expanded::Unknown);
+            }
+            let (mut breite, mut stil, mut farbe) = ("medium", "none", "currentcolor");
+            for t in tokens(v) {
+                let l = t.to_ascii_lowercase();
+                if l == "auto" || RAHMEN_STILE.contains(&l.as_str()) {
+                    stil = t;
+                } else if matches!(l.as_str(), "thin" | "medium" | "thick")
+                    || l.starts_with(|c: char| c.is_ascii_digit() || c == '.')
+                {
+                    breite = t;
+                } else {
+                    farbe = t;
+                }
+            }
+            vec![
+                ("outline-width".into(), set(breite)),
+                ("outline-style".into(), set(stil)),
+                ("outline-color".into(), set(farbe)),
+            ]
+        }
         "text-decoration" => {
             if hat_var {
                 return alle(&["text-decoration-line"], &Expanded::Unknown);
@@ -463,6 +488,21 @@ mod tests {
         assert_eq!(get(&p, "animation-name"), "none");
         let p = expand("animation", "var(--a)");
         assert_eq!(get(&p, "animation-iteration-count"), "<pending>");
+    }
+
+    #[test]
+    fn outline() {
+        let p = expand("outline", "none");
+        assert_eq!(get(&p, "outline-style"), "none");
+        let p = expand("outline", "2px solid #c00");
+        assert_eq!(get(&p, "outline-width"), "2px");
+        assert_eq!(get(&p, "outline-style"), "solid");
+        assert_eq!(get(&p, "outline-color"), "#c00");
+        let p = expand("outline", "0");
+        assert_eq!(get(&p, "outline-width"), "0");
+        assert_eq!(get(&p, "outline-style"), "none");
+        let p = expand("outline", "var(--o)");
+        assert_eq!(get(&p, "outline-style"), "<pending>");
     }
 
     #[test]

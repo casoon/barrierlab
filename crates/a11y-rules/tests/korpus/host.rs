@@ -492,6 +492,7 @@ impl Rendering for Host<'_> {
         let field = |name: &str, value: bool| self.measures(name).then_some(value);
         let focus_visible = match own(node, "--focus-visible").as_deref() {
             Some("unmeasured") => None,
+            Some("removed") => Some(false),
             Some(v) => Some(v == "1" || v == "true"),
             None => Some(true),
         };
@@ -525,6 +526,11 @@ impl Rendering for Host<'_> {
             } else {
                 None
             },
+            // Der Host rechnet die Kaskade für den fokussierten Zustand: ein
+            // entfernter Rahmen ist `--focus-visible: removed`.
+            focus_outline_removed: self
+                .measures("focus-visible")
+                .then(|| own(node, "--focus-visible").as_deref() == Some("removed")),
             pointer_events_none: field(
                 "pointer-events",
                 inherited(node, "pointer-events").is_some_and(|v| v == "none"),

@@ -532,3 +532,66 @@ fn layout_unmeasured_with_missing_sheets() {
     assert!(untested(&r, "keyboard/pointer-only"), "{:?}", r.findings);
     assert!(!reviewed(&r, "keyboard/pointer-only"));
 }
+
+fn failed_at(r: &Report, id: &str) -> usize {
+    r.findings
+        .iter()
+        .filter(|f| f.rule_id == id && f.outcome == Outcome::Fail)
+        .count()
+}
+
+/// The form page of the test bench: `:focus-visible` is styled everywhere, and
+/// a wrapper takes the outline away again. The sheet-wide rule stays quiet
+/// because a `:focus-visible` rule exists; the per-element cascade finds it.
+#[test]
+fn focus_outline_removed_for_one_element_among_styled_ones() {
+    let css = ":focus-visible{outline:2px solid #00f}\
+               .no-focus :focus,.no-focus :focus-visible{outline:none}";
+    let body = "<div class=no-focus><label>Name <input id=bad></label></div>\
+                <label>Mail <input id=ok></label>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    assert_eq!(
+        failed_at(&r, "focus/indicator-missing"),
+        1,
+        "{:?}",
+        r.findings
+    );
+    assert!(!untested(&r, "focus/indicator-missing"));
+}
+
+#[test]
+fn focus_quiet_with_the_browser_default_or_a_replacement() {
+    let css = "a:focus{outline:none;box-shadow:0 0 0 3px #00f}";
+    let body = "<a href=/a>A</a><button>B</button>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    assert_eq!(failed_at(&r, "focus/indicator-missing"), 0);
+    assert!(!reviewed(&r, "focus/indicator-missing"), "{:?}", r.findings);
+}
+
+/// F73 / G183: a link in running text that differs by colour only. The cascade
+/// gives the rule everything it needs, so the static host raises it too.
+#[test]
+fn link_in_running_text_by_colour_only() {
+    let css = "body{color:#333;background:#fff}a{color:#1a5fb4;text-decoration:none}";
+    let body = "<p>Read the <a href=/terms>terms of use</a> before you book.</p>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    assert!(
+        r.findings
+            .iter()
+            .any(|f| f.rule_id == "color/link-indistinct" && f.outcome != Outcome::Pass),
+        "{:?}",
+        r.findings
+    );
+}

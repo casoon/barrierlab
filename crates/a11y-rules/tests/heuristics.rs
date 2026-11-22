@@ -97,6 +97,7 @@ impl Rendering for Host<'_> {
             obscured: Some(node.has_attr("data-verdeckt")),
             hides_focus: Some(node.has_attr("data-leiste")),
             focus_visible: node.attr("data-fokus").map(|f| f == "sichtbar"),
+            focus_outline_removed: node.attr("data-fokus").map(|f| f == "entfernt"),
             pointer_events_none: Some(node.has_attr("data-no-pointer")),
             animating: Some(node.has_attr("data-waechst")),
         })
@@ -351,6 +352,44 @@ fn focus_without_indicator_and_unmeasured() {
     let r = run_full(&Host::new(&unmeasured));
     assert!(not_run_reason(&r, "focus/indicator-missing").is_some());
     assert!(findings(&r, "focus/indicator-missing").is_empty());
+}
+
+#[test]
+fn focus_outline_removed_by_the_author_is_a_failure_unless_a_handler_may_help() {
+    let removed = page()
+        .open("a")
+        .attr("href", "/")
+        .attr("data-fokus", "entfernt")
+        .text("A")
+        .close()
+        .open("a")
+        .attr("href", "/b")
+        .attr("data-fokus", "sichtbar")
+        .text("B")
+        .close()
+        .close()
+        .close()
+        .build();
+    let r = run_full(&Host::new(&removed));
+    let f = findings(&r, "focus/indicator-missing");
+    assert_eq!(f.len(), 1);
+    assert_eq!(f[0].outcome, Outcome::Fail);
+
+    // Ein Fokus-Handler kann den Hinweis per Skript setzen: offen, nicht verfehlt.
+    let handler = page()
+        .open("a")
+        .attr("href", "/")
+        .attr("data-fokus", "entfernt")
+        .attr("onfocus", "mark(this)")
+        .text("A")
+        .close()
+        .close()
+        .close()
+        .build();
+    assert_eq!(
+        only_review(&run_full(&Host::new(&handler)), "focus/indicator-missing"),
+        1
+    );
 }
 
 /// Ohne Layout laufen die Heuristiken nicht — und sagen das: je eine

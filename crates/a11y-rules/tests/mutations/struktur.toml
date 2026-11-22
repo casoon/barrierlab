@@ -177,8 +177,35 @@ note = "dd vor dem Begriff zählt wieder (HTML dl-Inhaltsmodell)"
 id = "tables/header-missing"
 file = "src/structure.rs"
 kind = "invert"
-find = '''        if !has_header_cell(n) {'''
-replace = '''        if has_header_cell(n) {'''
+find = '''        } else if !has_header_cell(n) {'''
+replace = '''        } else if has_header_cell(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''        if !has_header_cell(n) && bold_header_row(n) {'''
+replace = '''        if !has_header_cell(n) {'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-missing"
+file = "src/structure.rs"
+kind = "invert"
+find = '''            .all(|c| c.is_element("td") && bold_only_cell(*c))'''
+replace = '''            .any(|c| c.is_element("td") && bold_only_cell(*c))'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "tables/header-missing"
+file = "src/structure.rs"
+kind = "drop-condition"
+find = '''    let (Some(first), Some(_)) = (rows.next(), rows.next()) else {'''
+replace = '''    let (Some(first), _) = (rows.next(), rows.next()) else {'''
 test = "korpus"
 expect = "killed"
 

@@ -7,7 +7,7 @@ use a11y_dom::{
 };
 use accname::IdIndex;
 use html5_parser::Document as Html5Document;
-use style_cascade::{Cascade, Environment, Specified};
+use style_cascade::{Cascade, Environment, FocusIndicator, Specified};
 use stylesheet_parse::Stylesheet;
 
 type Html5Node<'a> = a11y_dom::Html5Node<'a>;
@@ -187,12 +187,46 @@ impl Rendering for Host<'_> {
         let cursor_pointer = self
             .value(node, "cursor")
             .map(|c| c.as_deref() == Some("pointer"));
+        // Nur wo die Tabtaste hinkommt: die Kaskade wird dafür je Element ein
+        // zweites Mal gerechnet.
+        let (focus_visible, focus_outline_removed) = if reachable_by_tab(node) {
+            match self.cascade.focus_indicator(node) {
+                FocusIndicator::Shown => (Some(true), Some(false)),
+                FocusIndicator::Removed => (Some(false), Some(true)),
+                FocusIndicator::Unknown => (None, None),
+            }
+        } else {
+            (None, None)
+        };
         Some(Layout {
             flex_reversed,
             order,
             cursor_pointer,
             infinite_animation: self.infinite_animation(node),
+            focus_visible,
+            focus_outline_removed,
             ..Layout::default()
         })
     }
+}
+
+/// Per Tab erreichbar, wie `a11y-rules` es für die Fokusregeln zählt: ein
+/// `tabindex` ab 0, sonst ein Link mit `href`, ein Feld, eine Schaltfläche,
+/// `summary` oder `iframe`.
+fn reachable_by_tab<'a, N: Node<'a>>(n: N) -> bool {
+    if let Some(t) = n
+        .attr("tabindex")
+        .and_then(|t| t.trim().parse::<i32>().ok())
+    {
+        return t >= 0;
+    }
+    (match n.local_name() {
+        "a" | "area" => n.has_attr("href"),
+        "input" => !n
+            .attr("type")
+            .is_some_and(|t| t.trim().eq_ignore_ascii_case("hidden")),
+        "button" | "select" | "textarea" | "summary" | "iframe" => true,
+        _ => false,
+    }) && !(n.has_attr("disabled")
+        && matches!(n.local_name(), "button" | "input" | "select" | "textarea"))
 }
