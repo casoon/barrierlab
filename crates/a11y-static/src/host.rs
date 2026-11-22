@@ -101,6 +101,10 @@ impl Semantics for Host<'_> {
         accname::name_rendered(self, node, &self.ids)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        accname::description(node, &self.ids)
+    }
+
     /// `aria-hidden="true"` or `inert` on the node or an ancestor. The
     /// `hidden` attribute is a rendering matter (UA `display: none` in the
     /// cascade) and reaches the rules through [`Rendering::is_rendered`].

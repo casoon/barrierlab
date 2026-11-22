@@ -150,6 +150,10 @@ impl Semantics for RenderArena<'_> {
         self.semantik.name_source(node)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        self.semantik.accessible_description(node)
+    }
+
     fn is_ignored<'n>(&'n self, node: Self::N<'n>) -> bool {
         self.semantik.is_ignored(node)
     }

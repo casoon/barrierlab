@@ -877,6 +877,17 @@ pub const METAS: &[Meta] = &[
         ),
     },
     Meta {
+        ids: &["names/description-duplicates-name"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["4.1.2"],
+        severity: Severity::Low,
+        help: "A description that only repeats the accessible name adds nothing; drop it or say more.",
+        help_de: de_text!(
+            "Eine Beschreibung, die nur den zugänglichen Namen wiederholt, bringt nichts; weglassen oder mehr sagen."
+        ),
+    },
+    Meta {
         ids: &["dialog/name-missing"],
         tier: Tier::Semantics,
         scope: Scope::AccessibilityTree,
@@ -1046,7 +1057,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
+fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 30] {
     [
         link_names,
         button_names,
@@ -1061,6 +1072,7 @@ fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
         crate::aria::required_context,
         crate::names::required_names,
         crate::names::symbol_names,
+        crate::names::description_duplicates_name,
         crate::names::dialog_names,
         crate::names::dialog_modal,
         crate::names::summary_names,
@@ -1080,7 +1092,7 @@ fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 29] {
     ]
 }
 
-const _: () = assert!(METAS.len() == 29);
+const _: () = assert!(METAS.len() == 30);
 
 /// Alle Tier-2-Regeln.
 pub fn rules<D: Semantics>() -> Vec<SemanticsRule<D>> {

@@ -132,6 +132,13 @@ pub trait Semantics: Document {
         None
     }
 
+    /// Die Accessible Description (accname 1.2: `aria-describedby`, `title`
+    /// als Rückfall). `None`, wenn es keine gibt oder der Host sie nicht
+    /// liefert.
+    fn accessible_description<'n>(&'n self, _node: Self::N<'n>) -> Option<String> {
+        None
+    }
+
     /// Ob der Accessibility-Tree diesen Knoten auslässt — etwa wegen
     /// `aria-hidden`, `display: none` oder weil er rein präsentational ist.
     fn is_ignored<'n>(&'n self, _node: Self::N<'n>) -> bool {

@@ -4,6 +4,10 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
+
 ## [0.17.1] - 2026-11-17
 
 ### Changed

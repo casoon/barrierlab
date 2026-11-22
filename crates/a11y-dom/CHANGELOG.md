@@ -9,6 +9,7 @@ Repository `casoon/a11y-core`.
 
 ### Added
 
+- **`Semantics::accessible_description`:** liefert die Accessible Description (accname 1.2); Standard `None`, bestehende Hosts bleiben gültig (casoon/barrierlab#260).
 - **`ColorPairs`:** neues Feld `opacity` (aufsummierte Deckkraft der Kette); wer die Struktur als Literal baut, setzt es mit (casoon/barrierlab#261).
 
 ## [0.30.12] - 2026-11-17

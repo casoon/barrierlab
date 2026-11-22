@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
+
 ## [0.5.2] - 2026-11-17
 
 ### Added

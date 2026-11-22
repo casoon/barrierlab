@@ -502,6 +502,24 @@ fn required_names() -> Vec<Fall> {
             r#"<p aria-label="×">Text</p>"#,
             "WAI-ARIA 1.2: keine interaktive Rolle",
         ),
+        // --- names/description-duplicates-name ---
+        review(
+            "names/description-duplicates-name",
+            r#"<button type="button" aria-label="Save" aria-describedby="d">x</button><span id="d">Save</span>"#,
+            "accname 1.2; auditmysite-Korpus aria_names_missing: Beschreibung gleich Name ist überflüssig, 4.1.2 verlangt keinen Unterschied, also REVIEW",
+        )
+        .count(1),
+        negative(
+            "names/description-duplicates-name",
+            r#"<button type="button" aria-label="Save" aria-describedby="d">x</button><span id="d">Saves the draft</span>"#,
+            "accname 1.2: die Beschreibung ergänzt den Namen",
+        )
+        .variant("ergänzt"),
+        na(
+            "names/description-duplicates-name",
+            r#"<article title="Story" aria-label="Story"><p>Text</p></article>"#,
+            "auditmysite-Korpus aria_na_plain_article: keine interaktive Rolle",
+        ),
     ]
 }
 

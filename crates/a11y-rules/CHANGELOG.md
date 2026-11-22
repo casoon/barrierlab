@@ -12,6 +12,7 @@ abweichen, steht je Schritt in
 
 ### Added
 
+- **Namen:** `names/description-duplicates-name` meldet ein interaktives Element, dessen Accessible Description den Namen nur wiederholt, als `REVIEW` (4.1.2, niedrig); kein Verstoß, da 4.1.2 verschiedene Texte nicht verlangt (casoon/barrierlab#260, Entscheidung zu casoon/auditmysite#919). Hosts ohne `accessible_description` melden nichts.
 - **Medien:** `media/video-captions-missing` meldet ein `<video>` ohne `<track kind="captions">` oder `subtitles` als `REVIEW` (1.2.2); stumm ohne `controls` und versteckt bleibt ohne Befund (#228).
 - **Kontrast:** `contrast/text-insufficient` und der `REVIEW` mit gemischten Farbpaaren nennen bei `opacity` unter 1 die Ursache: Evidenz `opacity`, `effective_foreground`, `state_dependent` und ein Satz im Text, dass mit dieser Deckkraft gemessen wurde (#261). Dafür trägt `ColorPairs` (`a11y-dom`) das neue Feld `opacity`; `style-cascade` füllt es.
 

@@ -80,6 +80,10 @@ impl Semantics for WithSemantics<'_> {
         accname::name(node, &self.ids)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        accname::description(node, &self.ids)
+    }
+
     fn name_source<'n>(&'n self, node: Self::N<'n>) -> Option<NameSource> {
         if !self.chrome {
             return None;
@@ -252,6 +256,34 @@ fn symbol_as_name_auditmysite_test_icon_only_name_flagged() {
     for r in both(src) {
         assert_eq!(findings_at(src, &r, "names/symbol-only"), ["x"]);
         assert_eq!(outcomes(&r, "names/symbol-only"), [Outcome::Review]);
+    }
+}
+
+// --- names/description-duplicates-name ---------------------------------------
+
+#[test]
+fn description_duplicates_name_auditmysite_corpus_aria_names_missing() {
+    let src = r#"<button id="dup" aria-label="Save" aria-describedby="d1">x</button>
+                 <a id="link" href="/a" aria-describedby="d1">save.</a>
+                 <button id="more" aria-label="Save" aria-describedby="d2">x</button>
+                 <span id="d1">Save</span><span id="d2">Saves the draft</span>"#;
+    for r in both(src) {
+        assert_eq!(
+            findings_at(src, &r, "names/description-duplicates-name"),
+            ["dup", "link"]
+        );
+        assert_eq!(
+            outcomes(&r, "names/description-duplicates-name"),
+            [Outcome::Review, Outcome::Review]
+        );
+    }
+}
+
+#[test]
+fn description_duplicates_name_auditmysite_corpus_aria_na_plain_article() {
+    let src = r#"<article id="a" title="Story" aria-label="Story"><p>Text</p></article>"#;
+    for r in both(src) {
+        assert_eq!(count(&r, "names/description-duplicates-name"), 0);
     }
 }
 

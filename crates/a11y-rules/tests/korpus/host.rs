@@ -193,6 +193,10 @@ impl Semantics for Host<'_> {
         accname::name_rendered(self, node, &self.ids)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        accname::description(node, &self.ids)
+    }
+
     fn is_ignored<'n>(&'n self, node: Self::N<'n>) -> bool {
         std::iter::once(node)
             .chain(ancestors(node))

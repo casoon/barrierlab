@@ -244,6 +244,50 @@ pub(crate) fn symbol_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<
     }
 }
 
+// --- names/description-duplicates-name ---------------------------------------
+
+/// Eine Beschreibung, die den Namen nur wiederholt, ist überflüssig; 4.1.2
+/// verlangt nicht, dass beide verschieden sind. Darum `REVIEW`, kein Verstoß
+/// (Entscheidung zu casoon/auditmysite#919). Verglichen wird ohne Groß- und
+/// Kleinschreibung, Satzzeichen und Leerraum.
+pub(crate) fn description_duplicates_name<D: Semantics>(
+    doc: &D,
+    locale: Locale,
+    out: &mut Vec<Finding>,
+) {
+    for n in elements(doc) {
+        if doc.is_ignored(n) {
+            continue;
+        }
+        let Some(role) = doc.role(n) else { continue };
+        if !INTERACTIVE.contains(&role.as_str()) {
+            continue;
+        }
+        let (Some(name), Some(description)) =
+            (doc.accessible_name(n), doc.accessible_description(n))
+        else {
+            continue;
+        };
+        let key = normalised(&name);
+        if key.is_empty() || key != normalised(&description) {
+            continue;
+        }
+        out.push(
+            Finding::review(
+                "names/description-duplicates-name",
+                tr!(
+                    locale,
+                    "The accessible description repeats the name \"{name}\".",
+                    "Die zugängliche Beschreibung wiederholt den Namen \"{name}\".",
+                ),
+            )
+            .with_severity(Severity::Low)
+            .with_wcag(["4.1.2"])
+            .at(at(n.id())),
+        );
+    }
+}
+
 // --- dialog/* ---------------------------------------------------------------
 
 /// Ein `<dialog>` ohne `open` ist geschlossen und nicht dargestellt (HTML,

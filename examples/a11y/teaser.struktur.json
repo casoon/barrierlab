@@ -1915,6 +1915,15 @@
       "reason": "host provides no role and no accessible name"
     },
     {
+      "rule_id": "names/description-duplicates-name",
+      "wcag": [
+        "4.1.2"
+      ],
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no role and no accessible name"
+    },
+    {
       "rule_id": "dialog/name-missing",
       "wcag": [
         "4.1.2"
@@ -2368,6 +2377,6 @@
     "high": 1,
     "medium": 4,
     "low": 1,
-    "rules_not_run": 66
+    "rules_not_run": 67
   }
 }
