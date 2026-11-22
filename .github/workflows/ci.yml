@@ -116,6 +116,8 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128,wasm-opt
       - run: node packages/a11y-wasm/build.mjs
+      # 205 KB seit 22.11.2026 (Entscheidung des Nutzers): gemessen 200,8 KB gzip
+      # mit der Fokusauswertung je Element, der Beschreibungsregel und F91.
       # 200 KB seit 17.11.2026 (Entscheidung des Nutzers): Messspalte fuer die
       # Wiedergabe selbststartender Medien (`withMedia`) und die Regeln aus
       # a11y-rules 0.30.x; das Modul lag vorher bei 195,0 KB gzip.
@@ -133,7 +135,7 @@ jobs:
       # angehoben (Entscheidung vom 01.10.2026): alle Regeln sollen auch in der
       # laufenden Seite (LiveAudit) greifen, die deutschen Texte bleiben drin.
       # Vorher 110 KB seit B1 (30.09.2026).
-      - name: Groessenbudget (200 KB gzip)
+      - name: Groessenbudget (205 KB gzip)
         run: |
           python3 - <<'EOF'
           import gzip, sys
@@ -141,8 +143,8 @@ jobs:
           raw = open(p, "rb").read()
           gz = len(gzip.compress(raw, 9)) / 1024
           print(f"{len(raw)/1024:.1f} KB roh, {gz:.1f} KB gzip")
-          if gz > 200:
-              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 200 KB")
+          if gz > 205:
+              sys.exit(f"Budget ueberschritten: {gz:.1f} KB gzip > 205 KB")
           EOF
       # Groesse und Speicher des Moduls gegen die eingecheckte Baseline
       # (peakmark.toml, peakmark.baseline.json). Das Binary kommt aus dem

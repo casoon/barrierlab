@@ -108,7 +108,7 @@ artifact, about 9 KB gzip. Budget decision of 2026-11-09 (liveaudit#16): the gzi
 budget rises from 170 KB to 180 KB (earlier steps: 110, 130, 150, 170 KB) and the
 columns ship in the default build (measured 183,122 bytes gzip, 178.8 KiB). Since
 2026-11-14 the budget is 195 KB: the corrections from the W3C ACT test cases
-(barrierlab#225) brought the default build to 192.5 KB gzip. Since 2026-11-17 it is 200 KB: the media column and the rules of `a11y-rules` 0.30.x brought it to 195.0 KB.
+(barrierlab#225) brought the default build to 192.5 KB gzip. Since 2026-11-17 it is 200 KB: the media column and the rules of `a11y-rules` 0.30.x brought it to 195.0 KB. Since 2026-11-22 it is 205 KB: the per-element focus evaluation, the description rule and the F91 header rule brought it to 200.8 KB.
 
 ## Limits
 
