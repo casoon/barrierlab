@@ -1772,6 +1772,15 @@
       "reason": "host provides no role and no accessible name"
     },
     {
+      "rule_id": "images/role-img-name-missing",
+      "wcag": [
+        "1.1.1"
+      ],
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no role and no accessible name"
+    },
+    {
       "rule_id": "names/symbol-only",
       "wcag": [
         "4.1.2"
@@ -2243,6 +2252,6 @@
     "high": 0,
     "medium": 0,
     "low": 1,
-    "rules_not_run": 67
+    "rules_not_run": 68
   }
 }

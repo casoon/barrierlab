@@ -8,9 +8,11 @@
 //!
 //! Kennungen: Elementfamilien mit eigener Namensregel heißen
 //! `<familie>/name-missing` wie schon `links/`, `buttons/`, `svg/` und
-//! `tables/`; hier kommen `dialog/` und `summary/` dazu. Alle übrigen Rollen,
-//! für die ARIA einen Namen verlangt, laufen unter `names/required-missing` —
-//! die Rolle steht in der Meldung, nicht in der Kennung.
+//! `tables/`; hier kommen `dialog/` und `summary/` dazu. Ein Element mit
+//! `role="img"` meldet `images/role-img-name-missing` (1.1.1) neben den
+//! übrigen Bildregeln. Alle übrigen Rollen, für die ARIA einen Namen
+//! verlangt, laufen unter `names/required-missing` — die Rolle steht in der
+//! Meldung, nicht in der Kennung.
 
 use a11y_dom::{
     NameSource, Node, NodeId, NodeKind, ScopedId, Semantics, ancestors, descendants, elements,
@@ -36,8 +38,8 @@ fn at(id: NodeId) -> Location {
 /// Namen. auditmysite meldete den leeren Tab (`aria-label`); ohne ihn ginge
 /// der Fall verloren.
 ///
-/// Dazu `img` für Elemente, die erst durch `role="img"` zum Bild werden
-/// (ACT 23a2a8); `<img>` meldet `images/alt-missing`, SVG `svg/name-missing`.
+/// Ohne `img`: Elemente, die erst durch `role="img"` zum Bild werden, meldet
+/// `images/role-img-name-missing` unter 1.1.1 (ACT 23a2a8).
 ///
 /// Nicht übernommen: `menu` — ein Container, kein Bedienelement; ARIA 1.2
 /// verlangt keinen Namen. Die weiteren Pflichtrollen der Spezifikation
@@ -47,7 +49,6 @@ const NAME_REQUIRED: &[&str] = &[
     "checkbox",
     "combobox",
     "grid",
-    "img",
     "link",
     "listbox",
     "menuitem",
@@ -105,11 +106,6 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if n.is_element("option") {
             continue;
         }
-        // Bilder mit eigener Regel: `<img>` (`images/alt-missing`) und SVG
-        // (`svg/name-missing`).
-        if role == "img" && (n.is_element("img") || crate::semantics::in_svg(n)) {
-            continue;
-        }
         if matches!(n.local_name(), "input" | "select" | "textarea") && !label_claims(n, &label_for)
         {
             continue;
@@ -119,7 +115,7 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         }
         // auditmysite ordnet `meter` und `progressbar` 1.1.1 zu (axe), die
         // übrigen 4.1.2.
-        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar" | "img") {
+        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar") {
             &["1.1.1"]
         } else {
             &["4.1.2"]
@@ -156,6 +152,47 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
             )
             .with_severity(severity)
             .with_wcag(wcag.iter().copied())
+            .at(at(n.id())),
+        );
+    }
+}
+
+// --- images/role-img-name-missing -----------------------------------------
+
+/// 1.1.1: Ein Element, das erst durch `role="img"` zum Bild wird (`<div>`,
+/// `<span>`, `<canvas>`, …), ohne zugänglichen Namen. WAI-ARIA 1.2 verlangt
+/// für `img` einen Namen, und ACT 23a2a8 ordnet den Fall allein 1.1.1 zu —
+/// darum eine eigene Kennung statt `names/required-missing` (4.1.2).
+///
+/// `<img>` meldet `images/alt-missing`, SVG `svg/name-missing`. `image` ist
+/// die Rolle, unter der Chrome ein Bild ausstellt (WAI-ARIA 1.3 führt sie als
+/// Synonym von `img`); ein Host mit Chrome-Rollen meldet sie so.
+pub(crate) fn role_img_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if doc.is_ignored(n) {
+            continue;
+        }
+        let Some(role) = doc.role(n) else { continue };
+        if !matches!(role.as_str(), "img" | "image") {
+            continue;
+        }
+        if n.is_element("img") || crate::semantics::in_svg(n) {
+            continue;
+        }
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "images/role-img-name-missing",
+                tr!(
+                    locale,
+                    "The element with role \"{role}\" has no accessible name.",
+                    "Das Element mit der Rolle \"{role}\" hat keinen zugänglichen Namen.",
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.1.1"])
             .at(at(n.id())),
         );
     }

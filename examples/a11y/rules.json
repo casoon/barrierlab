@@ -1862,6 +1862,15 @@
     ]
   },
   {
+    "help": "An element with role=\"img\" needs an accessible name, usually via aria-label or aria-labelledby.",
+    "id": "images/role-img-name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
     "help": "An accessible name should be words, not a single symbol.",
     "id": "names/symbol-only",
     "severity": "medium",

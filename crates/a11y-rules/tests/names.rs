@@ -73,6 +73,16 @@ impl Semantics for WithSemantics<'_> {
         if self.chrome && node.is_element("summary") {
             return Some("DisclosureTriangle".into());
         }
+        // Chrome stellt Bilder unter `image` aus und kennt `role="image"`
+        // (WAI-ARIA 1.3, Synonym von `img`); `accname` folgt ARIA 1.2.
+        if self.chrome
+            && (accname::role(node) == Some("img")
+                || node
+                    .attr("role")
+                    .is_some_and(|r| r.split_whitespace().next() == Some("image")))
+        {
+            return Some("image".into());
+        }
         accname::role(node).map(str::to_string)
     }
 
@@ -243,6 +253,47 @@ fn native_options_and_hidden_roles_stay_silent() {
     for r in both(src) {
         assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
     }
+}
+
+// --- images/role-img-name-missing -------------------------------------------
+
+/// ACT 23a2a8: ein Element, das erst durch `role="img"` zum Bild wird, meldet
+/// ohne Namen eine eigene Kennung unter 1.1.1 — nicht `names/required-missing`
+/// (4.1.2), und kein Element beide.
+#[test]
+fn role_img_without_name_reports_own_id_under_1_1_1() {
+    let src = r#"<div role="img" id="div"></div>
+                 <canvas role="img" id="canvas"></canvas>
+                 <span role="img" aria-label="Sonne" id="benannt"></span>
+                 <img src="a.png" role="img" id="bild"><svg role="img" id="svg"></svg>"#;
+    for r in both(src) {
+        assert_eq!(
+            findings_at(src, &r, "images/role-img-name-missing"),
+            ["canvas", "div"]
+        );
+        assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
+        for f in r
+            .findings
+            .iter()
+            .filter(|f| f.rule_id == "images/role-img-name-missing")
+        {
+            assert_eq!(f.outcome, Outcome::Fail);
+            assert_eq!(f.wcag, ["1.1.1"]);
+            assert_eq!(f.severity, a11y_report::Severity::High);
+        }
+    }
+}
+
+/// Chrome meldet die Rolle `image`, auch für `role="image"` (WAI-ARIA 1.3).
+#[test]
+fn role_image_from_chrome_reports_own_id() {
+    let src = r#"<div role="image" id="synonym"></div><div role="img" id="img"></div>"#;
+    let [_, chrome] = both(src);
+    assert_eq!(
+        findings_at(src, &chrome, "images/role-img-name-missing"),
+        ["img", "synonym"]
+    );
+    assert_eq!(count(&chrome, "names/required-missing"), 0);
 }
 
 // --- names/symbol-only ------------------------------------------------------

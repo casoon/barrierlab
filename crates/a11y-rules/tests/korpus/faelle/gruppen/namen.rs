@@ -11,6 +11,7 @@ pub fn cases() -> Vec<Fall> {
     v.extend(svg_name());
     v.extend(link_texts());
     v.extend(required_names());
+    v.extend(role_img_names());
     v.extend(dialogs());
     v.extend(summary_and_live());
     v.extend(label_in_name());
@@ -409,24 +410,12 @@ fn required_names() -> Vec<Fall> {
             "ACT e086e5: behauptete Beschriftung, die leer ausgeht",
         )
         .variant("natives Feld, leere Beschriftung"),
-        fail(
-            ID,
-            r#"<span role="img" class="hero"></span>"#,
-            "ACT 23a2a8, WAI-ARIA 1.2 img: Accessible Name Required (1.1.1)",
-        )
-        .variant("role=img"),
-        negative(
-            ID,
-            r#"<span role="img" aria-label="Sunset over the bay"></span>"#,
-            "WCAG ARIA6: role=img mit aria-label",
-        )
-        .variant("role=img mit Namen"),
         na(
             ID,
-            r#"<img src="a.png" role="img"><svg role="img"></svg>"#,
-            "Regeldoku: img und SVG melden images/alt-missing bzw. svg/name-missing",
+            r#"<span role="img" class="hero"></span><canvas role="img"></canvas>"#,
+            "ACT 23a2a8 ordnet role=img allein 1.1.1 zu: images/role-img-name-missing meldet den Fall, nicht diese Regel",
         )
-        .variant("img und svg mit eigener Regel"),
+        .variant("role=img mit eigener Regel"),
         negative(
             ID,
             r#"<div role="checkbox" aria-checked="false" tabindex="0" aria-label="Accept terms"></div>"#,
@@ -519,6 +508,70 @@ fn required_names() -> Vec<Fall> {
             "names/description-duplicates-name",
             r#"<article title="Story" aria-label="Story"><p>Text</p></article>"#,
             "auditmysite-Korpus aria_na_plain_article: keine interaktive Rolle",
+        ),
+    ]
+}
+
+fn role_img_names() -> Vec<Fall> {
+    const ID: &str = "images/role-img-name-missing";
+    vec![
+        fail(
+            ID,
+            r#"<span role="img" class="hero"></span>"#,
+            "ACT 23a2a8, WAI-ARIA 1.2 img: Accessible Name Required; WCAG 1.1.1",
+        )
+        .count(1),
+        fail(
+            ID,
+            r#"<canvas role="img" width="300" height="150"></canvas>"#,
+            "ACT 23a2a8: jedes Element mit der Rolle img, auch canvas",
+        )
+        .variant("canvas"),
+        fail(
+            ID,
+            r#"<div role="img">Sunset over the bay</div>"#,
+            "WAI-ARIA 1.2 img: Name nur vom Autor, nicht aus dem Inhalt",
+        )
+        .variant("Text als Inhalt"),
+        fail(
+            ID,
+            r#"<div role="img" aria-labelledby="fehlt"></div>"#,
+            "accname 1.2 Schritt 2B: Verweis ohne gültiges Ziel ergibt keinen Namen",
+        )
+        .variant("aria-labelledby ins Leere"),
+        negative(
+            ID,
+            r#"<span role="img" aria-label="Sunset over the bay"></span>"#,
+            "WCAG ARIA6: role=img mit aria-label",
+        ),
+        negative(
+            ID,
+            r#"<span id="t">Sunset over the bay</span><div role="img" aria-labelledby="t"></div>"#,
+            "WCAG ARIA10/ARIA16: aria-labelledby",
+        )
+        .variant("aria-labelledby"),
+        negative(
+            ID,
+            r#"<div role="img" title="Sunset over the bay"></div>"#,
+            "accname 1.2 Schritt 2I: title stiftet den Namen (ACT 23a2a8 Passed)",
+        )
+        .variant("title"),
+        na(
+            ID,
+            r#"<img src="a.png" role="img"><svg role="img"></svg>"#,
+            "Regeldoku: img und SVG melden images/alt-missing bzw. svg/name-missing",
+        )
+        .variant("img und svg mit eigener Regel"),
+        na(
+            ID,
+            r#"<div role="img" aria-hidden="true"></div><div hidden><span role="img"></span></div>"#,
+            "ACT 23a2a8: nur Elemente im Accessibility-Tree",
+        )
+        .variant("versteckt"),
+        na(
+            ID,
+            r#"<div>Text</div>"#,
+            "ACT 23a2a8: kein Element mit der Rolle img",
         ),
     ]
 }
@@ -952,6 +1005,32 @@ fn media() -> Vec<Fall> {
             "WCAG 1.2.2; auditmysite-Korpus content_video_captioned: captions und subtitles bestehen",
         )
         .variant("captions und subtitles"),
+        negative(
+            "media/video-captions-missing",
+            r#"<video controls src="t.mp4"><track src="t.vtt" srclang="en"></video>"#,
+            "HTML, track kind: missing value default ist der Zustand subtitles",
+        )
+        .variant("track ohne kind"),
+        negative(
+            "media/video-captions-missing",
+            r#"<video controls src="t.mp4"><track kind="CAPTIONS" src="t.vtt" srclang="en"></video>"#,
+            "HTML: Aufzählungswerte gelten ohne Groß- und Kleinschreibung",
+        )
+        .variant("kind in Großbuchstaben"),
+        review(
+            "media/video-captions-missing",
+            r#"<video controls src="a.mp4"><track kind="caption" src="a.vtt"></video><video controls src="b.mp4"><track kind="" src="b.vtt"></video><video controls src="c.mp4"><track kind=" captions" src="c.vtt"></video>"#,
+            "HTML, track kind: invalid value default ist der Zustand metadata, keine Untertitelspur",
+        )
+        .variant("ungültiges kind")
+        .count(3),
+        review(
+            "media/video-captions-missing",
+            r#"<video controls src="a.mp4"><track kind="descriptions" src="a.vtt"></video><video controls src="b.mp4"><track kind="chapters" src="b.vtt"></video><video controls src="c.mp4"><track kind="metadata" src="c.vtt"></video>"#,
+            "HTML, track kind: descriptions, chapters und metadata sind keine Untertitel",
+        )
+        .variant("andere Spurarten")
+        .count(3),
         negative(
             "media/video-captions-missing",
             r#"<video autoplay muted loop src="bg.mp4"></video>"#,

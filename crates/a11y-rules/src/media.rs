@@ -322,6 +322,12 @@ pub(crate) fn audio_autoplay<D: Document>(doc: &D, locale: Locale, out: &mut Vec
 
 /// 1.2.2: Ein `<video>` ohne `<track kind="captions">` (oder `subtitles`).
 ///
+/// `kind` ist nach HTML ein Aufzählungsattribut: Fehlt es, gilt der Zustand
+/// `subtitles` (missing value default) — ein `<track>` ohne `kind` zählt also.
+/// Ein unbekannter Wert (auch der leere) gilt als `metadata` (invalid value
+/// default) und zählt nicht, ebenso `descriptions` und `chapters`. Verglichen
+/// wird ASCII ohne Groß- und Kleinschreibung und ohne Leerraum zu kürzen.
+///
 /// `REVIEW`, kein Verstoß: Untertitel können eingebrannt sein, das Video
 /// kann keinen Ton haben, und ob die Spur erreichbar ist, steht nicht im
 /// Markup. Ein stummes Video, das niemand einschalten kann (`muted` ohne
@@ -345,9 +351,8 @@ pub(crate) fn video_captions<D: Document>(doc: &D, locale: Locale, out: &mut Vec
         }
         let captioned = n.children().any(|c| {
             c.is_element("track")
-                && c.attr("kind").is_some_and(|k| {
-                    k.trim().eq_ignore_ascii_case("captions")
-                        || k.trim().eq_ignore_ascii_case("subtitles")
+                && c.attr("kind").is_none_or(|k| {
+                    k.eq_ignore_ascii_case("captions") || k.eq_ignore_ascii_case("subtitles")
                 })
         });
         if !captioned {

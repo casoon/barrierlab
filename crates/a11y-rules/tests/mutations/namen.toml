@@ -532,17 +532,55 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
-id = "names/required-missing"
+id = "images/role-img-name-missing"
 file = "src/names.rs"
 kind = "revert-fix"
 find = '''
-        if role == "img" && (n.is_element("img") || crate::semantics::in_svg(n)) {
+        if n.is_element("img") || crate::semantics::in_svg(n) {
 '''
 replace = '''
-        if role == "img" {
+        if false {
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "images/role-img-name-missing"
+file = "src/names.rs"
+kind = "invert"
+find = '''
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "images/role-img-name-missing",
+'''
+replace = '''
+        if !named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "images/role-img-name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/role-img-name-missing"
+file = "src/names.rs"
+kind = "drop-condition"
+test = "names"
+filter = "role_image_from_chrome_"
+find = '''
+        if !matches!(role.as_str(), "img" | "image") {
+'''
+replace = '''
+        if !matches!(role.as_str(), "img") {
+'''
+expect = "killed"
+note = "Chrome stellt Bilder mit der Rolle image aus; der Korpus-Host kennt nur accname"
 
 [[mutation]]
 id = "label-in-name/mismatch"

@@ -433,14 +433,45 @@ file = "src/media.rs"
 kind = "drop-exception"
 test = "korpus"
 find = '''
-                    k.trim().eq_ignore_ascii_case("captions")
-                        || k.trim().eq_ignore_ascii_case("subtitles")
+                    k.eq_ignore_ascii_case("captions") || k.eq_ignore_ascii_case("subtitles")
 '''
 replace = '''
-                    k.trim().eq_ignore_ascii_case("captions")
+                    k.eq_ignore_ascii_case("captions")
 '''
 expect = "killed"
 note = "subtitles zählen wie captions"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "revert-fix"
+test = "korpus"
+find = '''
+                && c.attr("kind").is_none_or(|k| {
+'''
+replace = '''
+                && c.attr("kind").is_some_and(|k| {
+'''
+expect = "killed"
+note = "HTML: ein track ohne kind ist im Zustand subtitles"
+
+[[mutation]]
+id = "media/video-captions-missing"
+file = "src/media.rs"
+kind = "widen-exemption"
+test = "korpus"
+find = '''
+                    k.eq_ignore_ascii_case("captions") || k.eq_ignore_ascii_case("subtitles")
+                })
+        });
+'''
+replace = '''
+                    k.trim().eq_ignore_ascii_case("captions") || k.trim().eq_ignore_ascii_case("subtitles")
+                })
+        });
+'''
+expect = "killed"
+note = "HTML: Aufzählungswerte werden nicht gekürzt; ein kind mit Leerraum ist ungültig und damit metadata"
 
 [[mutation]]
 id = "media/video-captions-missing"
