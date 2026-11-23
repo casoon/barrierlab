@@ -5,11 +5,17 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-23
+
+### Breaking
+
+- **Abhängigkeit:** baut auf `a11y-dom` 0.31.0 (dessen Typen stehen in der öffentlichen Fläche).
+- **`selector::Mode`:** neue Variante `Mode::Focused(NodeId)`; wer `Mode` erschöpfend abgleicht, muss sie ergänzen (casoon/barrierlab#228, A1).
+
 ### Added
 
-- **Fokus je Element:** `Cascade::focus_indicator` rechnet die Kaskade ein zweites Mal mit `:focus`, `:focus-visible` und `:focus-within` für ein Element und sagt als `FocusIndicator`, ob dabei ein Hinweis sichtbar wird (`Shown`), der Autor den Rahmen ohne Ersatz entfernt hat (`Removed`, F78) oder es nicht bestimmbar ist (`Unknown`: unbekannter Selektor, `@import`, ein Fokuszustand vor einem Kombinator). Dafür gibt es `Mode::Focused(NodeId)`; wer `Mode` erschöpfend abgleicht, muss die Variante ergänzen (casoon/barrierlab#228, A1).
+- **Fokus je Element:** `Cascade::focus_indicator` rechnet die Kaskade ein zweites Mal mit `:focus`, `:focus-visible` und `:focus-within` für ein Element und sagt als `FocusIndicator`, ob dabei ein Hinweis sichtbar wird (`Shown`), der Autor den Rahmen ohne Ersatz entfernt hat (`Removed`, F78) oder es nicht bestimmbar ist (`Unknown`: unbekannter Selektor, `@import`, ein Fokuszustand vor einem Kombinator) (casoon/barrierlab#228, A1).
 - **Kurzschreibweise:** `outline` wird in `outline-width`, `outline-style` und `outline-color` zerlegt.
-
 - **Farbpaare:** `color_pairs` und `compose_color_pairs` füllen `ColorPairs::opacity` mit der aufsummierten Deckkraft (casoon/barrierlab#261).
 
 ## [0.3.3] - 2026-11-17

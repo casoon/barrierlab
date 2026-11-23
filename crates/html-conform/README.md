@@ -47,7 +47,7 @@ Add `html-conform` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-html-conform = "0.8"
+html-conform = "0.9"
 ```
 
 ### Basic Check

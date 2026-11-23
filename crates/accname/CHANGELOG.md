@@ -7,6 +7,12 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-23
+
+### Changed
+
+- **Gleichschritt:** mit `a11y-dom` 0.31.0 (neue Pflichtfelder in `Layout` und `ColorPairs`).
+
 ### Fixed
 
 - **Beschreibung:** `aria-label` auf dem Verweisziel und seinen Nachkommen zählt jetzt (accname 1.2, 4.2: Namensberechnung auf jedem Ziel); ein `aria-describedby` auf das Element selbst liefert dessen Inhalt statt nichts. `aria-labelledby` im Ziel wird weiterhin nicht verfolgt (2B). (#268)

@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-23
+
+### Breaking
+
+- **Dependency:** builds on `a11y-report` 0.31.0; `CheckReport::to_report` and
+  `RangedReport::to_report` return its `Report`. No change of its own.
+
 ## [0.8.0] - 2026-11-11
 
 ### Added

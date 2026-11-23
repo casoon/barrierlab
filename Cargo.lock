@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a11y-dom"
-version = "0.30.12"
+version = "0.31.0"
 dependencies = [
  "html5-parser",
 ]
@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-report"
-version = "0.30.12"
+version = "0.31.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-rules"
-version = "0.30.12"
+version = "0.31.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-static"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "a11y-wasm"
-version = "0.17.1"
+version = "0.17.2"
 dependencies = [
  "a11y-dom",
  "a11y-report",
@@ -66,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "accname"
-version = "0.30.12"
+version = "0.31.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",
@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "html-conform"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "a11y-report",
  "criterion",
@@ -796,7 +796,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "style-cascade"
-version = "0.3.3"
+version = "0.4.0"
 dependencies = [
  "a11y-dom",
  "html5-parser",

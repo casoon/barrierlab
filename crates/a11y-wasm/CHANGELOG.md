@@ -4,13 +4,18 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
-
-- **Layout:** `Layout::focus_outline_removed` bleibt `None`; der Browser bewegt den Fokus, die Kaskade für den fokussierten Zustand rechnet dieses Paket nicht (casoon/barrierlab#228).
+## [0.17.2] - 2026-11-23
 
 ### Added
 
 - **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
+- **Regeln:** mit `a11y-rules` 0.31.0: `focus/indicator-missing` (F78), `tables/header-missing` (F91), `media/video-captions-missing`, Kontrast unter `opacity` und Text in `aria-hidden`-`<svg>` als `REVIEW`.
+
+### Changed
+
+- **Abhängigkeiten:** baut auf `a11y-dom`, `a11y-report`, `a11y-rules` und `accname` 0.31.0 statt 0.30.12; die JS-Schnittstelle bleibt unverändert.
+- **Layout:** `Layout::focus_outline_removed` bleibt `None`; der Browser bewegt den Fokus, die Kaskade für den fokussierten Zustand rechnet dieses Paket nicht (casoon/barrierlab#228).
+- **Größe:** Größenbudget auf 205 KB gzip angehoben; gemessen 200,8 KB mit den neuen Regeln.
 
 ## [0.17.1] - 2026-11-17
 

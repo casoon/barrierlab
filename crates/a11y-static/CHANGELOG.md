@@ -5,10 +5,15 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-23
+
+### Breaking
+
+- **Abhängigkeiten:** baut auf `a11y-dom`, `a11y-report`, `a11y-rules` und `accname` 0.31.0 und `style-cascade` 0.4.0; die öffentlichen Berichtstypen stammen aus `a11y-report` 0.31.
+
 ### Added
 
 - **Fokus:** `Rendering::layout` füllt `focus_visible` und `focus_outline_removed` für per Tab erreichbare Elemente aus der Kaskade im fokussierten Zustand. Damit meldet `focus/indicator-missing` einen entfernten Rahmen als Verstoß, auch wenn die Seite irgendwo ein `:focus-visible` setzt (casoon/barrierlab#228, A1).
-
 - **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
 
 ## [0.5.2] - 2026-11-17

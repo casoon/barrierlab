@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-23
+
+### Breaking
+
+- **Gleichschritt:** baut auf `a11y-dom` 0.31.0 (neue Pflichtfelder `Layout::focus_outline_removed` und `ColorPairs::opacity`) und `style-cascade` 0.4.0.
+
 ### Added
 
 - **Fokus:** `focus/indicator-missing` ist ein Verstoß (2.4.7, F78) statt `REVIEW`, wenn der Host `Layout::focus_outline_removed` meldet: der Autor hat den Rahmen entfernt, und beim Fokussieren ändert sich sonst nichts. Ein `onfocus`-Handler auf der Seite lässt es `REVIEW` bleiben, ein Host ohne das Feld (Browser-Messung) ebenfalls. Der seitenweite `focus/outline-removed` bleibt unverändert (casoon/barrierlab#228, A1).
