@@ -10,6 +10,8 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-11-24
+
 ### Changed
 
 - **Bilder:** Ein Element mit `role="img"` (`<div>`, `<span>`, `<canvas>`, …) ohne zugänglichen Namen meldet die neue Kennung `images/role-img-name-missing` (1.1.1, hoch, `FAIL`; ACT 23a2a8) statt `names/required-missing`; kein Element meldet beide. Auch die Chrome-Rolle `image` zählt.

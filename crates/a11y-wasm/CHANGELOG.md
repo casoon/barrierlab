@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-11-24
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.31.1: `role="img"` ohne Namen meldet `images/role-img-name-missing`, `meter`/`progressbar` ohne Namen `names/indicator-name-missing` (beide 1.1.1), und `media/video-captions-missing` zählt ein `<track>` ohne `kind` als Untertitelspur.
+
 ## [0.17.2] - 2026-11-23
 
 ### Added
