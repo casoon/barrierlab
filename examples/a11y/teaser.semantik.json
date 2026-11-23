@@ -2017,6 +2017,13 @@
       "findings": 0
     },
     {
+      "rule_id": "names/description-duplicates-name",
+      "wcag": [
+        "4.1.2"
+      ],
+      "findings": 0
+    },
+    {
       "rule_id": "dialog/name-missing",
       "wcag": [
         "4.1.2"

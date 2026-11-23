@@ -22,7 +22,7 @@ W3C counts:
 | ACT rules implemented consistently | 36 | 35 (30 WCAG rules, 5 proposed) |
 | implemented partially consistently | 5 | 9 |
 
-Of the 611 test cases of the rules BarrierLab maps, 558 come out right, 50 undecided and 3
+Of the 611 test cases of the rules BarrierLab maps, 563 come out right, 45 undecided and 3
 wrong. All three need a script to run before the content exists (a shadow root built by
 script), which a check of the page source never sees.
 
@@ -54,7 +54,7 @@ test cases, `--level aaa` so that the AAA rules run too:
 |---|---|---|---|
 | ACT rules implemented consistently | 41 | 36 | 35 |
 | implemented partially consistently | 2 | 5 | 9 |
-| test cases right / undecided / wrong | 580 / 31 / 0 | 558 / 50 / 3 | — |
+| test cases right / undecided / wrong | 580 / 31 / 0 | 563 / 45 / 3 | — |
 
 The browser decides what the page source cannot: contrast over gradients, under `opacity` and
 behind a text shadow, scrollable regions, the AAA contrast cases, whether an autoplaying medium

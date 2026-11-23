@@ -1856,6 +1856,45 @@ fn has_header_cell<'a, N: Node<'a>>(n: N) -> bool {
     })
 }
 
+/// Ob die Zelle nur aus einem `<b>` oder `<strong>` mit Text besteht — eine
+/// Kopfzelle, die nur fett gesetzt ist.
+fn bold_only_cell<'a, N: Node<'a>>(cell: N) -> bool {
+    let mut bold = None;
+    for c in cell.children() {
+        match c.kind() {
+            a11y_dom::NodeKind::Text if c.text().trim().is_empty() => {}
+            a11y_dom::NodeKind::Element
+                if bold.is_none() && (c.is_element("b") || c.is_element("strong")) =>
+            {
+                bold = Some(c);
+            }
+            _ => return false,
+        }
+    }
+    bold.is_some_and(|b| {
+        a11y_dom::descendants(b)
+            .any(|t| t.kind() == a11y_dom::NodeKind::Text && !t.text().trim().is_empty())
+    })
+}
+
+/// F91: Die erste Zeile einer Tabelle besteht nur aus `<td>`-Zellen mit fettem
+/// Text, es gibt weitere Zeilen und nirgends ein `<th>`: Köpfe, die nur so
+/// aussehen. Das Markup zeigt es — kein Raten, ob es Köpfe gibt.
+fn bold_header_row<'a, N: Node<'a>>(table: N) -> bool {
+    let mut rows = a11y_dom::descendants(table).filter(|d| d.is_element("tr"));
+    let (Some(first), Some(_)) = (rows.next(), rows.next()) else {
+        return false;
+    };
+    let cells: Vec<N> = first
+        .children()
+        .filter(|c| c.is_element("td") || c.is_element("th"))
+        .collect();
+    !cells.is_empty()
+        && cells
+            .iter()
+            .all(|c| c.is_element("td") && bold_only_cell(*c))
+}
+
 fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
     for n in elements(doc)
         .filter(|n| n.is_element("table") || matches!(n.attr("role"), Some("table") | Some("grid")))
@@ -1908,7 +1947,23 @@ fn table_headers<D: Document>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
         // sichtbaren Köpfen (F91); eine Layouttabelle oder eine Tabelle ohne
         // Köpfe ist zulässig. Was davon vorliegt, zeigt das Markup nicht —
         // `REVIEW` (auditmysite#779).
-        if !has_header_cell(n) {
+        if !has_header_cell(n) && bold_header_row(n) {
+            out.push(
+                Finding::fail(
+                    "tables/header-missing",
+                    pick!(
+                        locale,
+                        "The first row only looks like a header: its cells are <td> elements with \
+                         bold text, and the table has no <th> header cells.",
+                        "Die erste Zeile sieht nur wie eine Kopfzeile aus: ihre Zellen sind \
+                         <td> mit fettem Text, und die Tabelle hat keine <th>-Kopfzellen.",
+                    ),
+                )
+                .with_severity(Severity::High)
+                .with_wcag(["1.3.1"])
+                .at(at(n.id())),
+            );
+        } else if !has_header_cell(n) {
             out.push(
                 Finding::review(
                     "tables/header-missing",

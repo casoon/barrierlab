@@ -112,6 +112,7 @@ WAI-ARIA 1.2 ("Accessible Name Required"), accname 1.2, HTML-AAM and WCAG
 |---|---|---|
 | `names/required-missing` | high | `aria-command-name` (without `button` and `a[href]`), `aria-input-field-name`, `aria-meter-name`, `aria-progressbar-name`, `aria-toggle-field-name`, `aria-treeitem-name` (`aria_naming_rules`); `aria-label` "no name" (`accessible_name`) |
 | `names/symbol-only` | medium | `aria-label` "Icon Only" (`accessible_name`) |
+| `names/description-duplicates-name` | low | `description-duplicates-name` (`accessible_name`) |
 | `dialog/name-missing` | high | `aria-dialog-name` (`aria_naming_rules`), `dialog-name` (`dialog_rules`) |
 | `dialog/modal-unmarked` | medium | `dialog-name` "Dialog Modal" (`dialog_rules`) |
 | `summary/name-missing` | high | `summary-name` (`summary_name`) |
@@ -160,10 +161,11 @@ field with no label at all is reported by `forms/label-missing`;
 
 From `accessible_name`: empty `aria-labelledby` and `aria-describedby` on an
 element that has a name — the other name sources take effect, it does no harm
-(as already with `aria/reference-missing`). Also not yet ported:
-`description-duplicates-name` (auditmysite#713). That would require
-`a11y_dom::Semantics` to provide the accessible description, which it does not
-do so far.
+(as already with `aria/reference-missing`). `description-duplicates-name` (auditmysite#713) is ported as
+`names/description-duplicates-name` (casoon/barrierlab#260): `REVIEW`, not a
+violation, because 4.1.2 does not require name and description to differ
+(decision on auditmysite#919). Hosts supply the description through
+`Semantics::accessible_description`; without it the rule reports nothing.
 
 ## 0.16.0: Forms (B3)
 

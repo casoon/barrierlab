@@ -4,6 +4,14 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Layout:** `Layout::focus_outline_removed` bleibt `None`; der Browser bewegt den Fokus, die Kaskade für den fokussierten Zustand rechnet dieses Paket nicht (casoon/barrierlab#228).
+
+### Added
+
+- **Beschreibung:** `Semantics::accessible_description` über `accname::description`; damit läuft `names/description-duplicates-name` (casoon/barrierlab#260).
+
 ## [0.17.1] - 2026-11-17
 
 ### Changed

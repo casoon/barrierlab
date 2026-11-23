@@ -1871,6 +1871,15 @@
     ]
   },
   {
+    "help": "A description that only repeats the accessible name adds nothing; drop it or say more.",
+    "id": "names/description-duplicates-name",
+    "severity": "low",
+    "tier": "semantics",
+    "wcag": [
+      "4.1.2"
+    ]
+  },
+  {
     "help": "Every dialog needs a name, usually via aria-labelledby on its heading.",
     "id": "dialog/name-missing",
     "severity": "high",

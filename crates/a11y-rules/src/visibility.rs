@@ -346,6 +346,11 @@ impl<D: Semantics> Semantics for Visibility<'_, D> {
         doc.accessible_name(node.inner)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        let doc: &'n D = self.doc;
+        doc.accessible_description(node.inner)
+    }
+
     fn name_source<'n>(&'n self, node: Self::N<'n>) -> Option<NameSource> {
         let doc: &'n D = self.doc;
         doc.name_source(node.inner)

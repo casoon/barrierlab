@@ -166,6 +166,19 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
+id = "names/description-duplicates-name"
+file = "src/names.rs"
+kind = "drop-condition"
+find = '''
+        if key.is_empty() || key != normalised(&description) {
+'''
+replace = '''
+        if key.is_empty() {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
 id = "dialog/name-missing"
 file = "src/names.rs"
 kind = "drop-variant"

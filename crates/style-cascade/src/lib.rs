@@ -21,7 +21,7 @@ mod layers;
 mod shorthand;
 mod ua;
 mod value;
-pub use cascade::{Cascade, RuleSet, Specified};
+pub use cascade::{Cascade, FocusIndicator, RuleSet, Specified};
 pub use imports::{
     ExpandedImports, Import, ImportLayer, Resolution, expand_imports, imports_in, wrap_media,
 };

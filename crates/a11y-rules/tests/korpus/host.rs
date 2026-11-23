@@ -193,6 +193,10 @@ impl Semantics for Host<'_> {
         accname::name_rendered(self, node, &self.ids)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        accname::description(node, &self.ids)
+    }
+
     fn is_ignored<'n>(&'n self, node: Self::N<'n>) -> bool {
         std::iter::once(node)
             .chain(ancestors(node))
@@ -488,6 +492,7 @@ impl Rendering for Host<'_> {
         let field = |name: &str, value: bool| self.measures(name).then_some(value);
         let focus_visible = match own(node, "--focus-visible").as_deref() {
             Some("unmeasured") => None,
+            Some("removed") => Some(false),
             Some(v) => Some(v == "1" || v == "true"),
             None => Some(true),
         };
@@ -521,6 +526,11 @@ impl Rendering for Host<'_> {
             } else {
                 None
             },
+            // Der Host rechnet die Kaskade für den fokussierten Zustand: ein
+            // entfernter Rahmen ist `--focus-visible: removed`.
+            focus_outline_removed: self
+                .measures("focus-visible")
+                .then(|| own(node, "--focus-visible").as_deref() == Some("removed")),
             pointer_events_none: field(
                 "pointer-events",
                 inherited(node, "pointer-events").is_some_and(|v| v == "none"),

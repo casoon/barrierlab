@@ -461,6 +461,12 @@ fn focus() -> Vec<Fall> {
     vec![
         review(im, r#"<button style="--focus-visible:0">Save</button><button>Cancel</button>"#, q).count(1),
         review(im, r#"<div role="button" tabindex="0" style="--focus-visible:0">Save</div>"#, q).variant("ARIA-Rolle mit tabindex"),
+        fail(im, r#"<a href="/statements" style="--focus-visible:removed">Statement</a><button>Cancel</button>"#,
+            "WCAG F78; auditmysite corpus interaction_outline_removed: the author removed the outline and nothing replaces it on focus")
+            .count(1),
+        review(im, r#"<a href="/x" style="--focus-visible:removed" onfocus="mark(this)">x</a>"#,
+            "ACT oj04fd: a focus handler may set the indicator by script, which no stylesheet shows: open, not failed")
+            .variant("Fokus-Handler"),
         negative(im, r#"<button>Save</button><a href="/x">Link</a>"#, "2.4.7: focus change is visible"),
         negative(im, r#"<div tabindex="-1" style="--focus-visible:0">Panel</div><button disabled style="--focus-visible:0">Off</button>"#,
             "2.4.7 applies to keyboard-operable components in the focus order")

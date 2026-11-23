@@ -119,8 +119,12 @@ Downward: `html5-parser`, `a11y-dom` (feature `html5-parser`), `a11y-report`, `a
 ## Limits
 
 - No layout: no box geometry, so rules that need it do not decide. `Rendering::layout` carries
-  only what the cascade knows — `order`, a reversed flex direction, `cursor: pointer` and endless
-  animations — on rendered elements, and nothing when a sheet is missing.
+  only what the cascade knows — `order`, a reversed flex direction, `cursor: pointer`, endless
+  animations and, for elements the Tab key reaches, whether focus shows an indicator — on
+  rendered elements, and nothing when a sheet is missing. The focus answer comes from running
+  the cascade a second time with `:focus` for that element (`Cascade::focus_indicator`); an
+  author who removes the outline without a replacement gets a failure (F78), anything the
+  cascade cannot settle stays unmeasured.
 - A sheet supplied for no `<link>` (and no import) is ignored; the host fetches what
   `stylesheet_refs` names.
 - Imports are not followed, only the ones the host hands over are applied (`Sheet::imports`, `Sheet::inert`).

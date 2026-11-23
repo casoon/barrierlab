@@ -146,6 +146,9 @@ pub struct RuleSet {
     by_type: HashMap<String, Vec<usize>>,
     universal: Vec<usize>,
     imports: Vec<String>,
+    /// Ein Selektor nennt einen Fokuszustand nicht im letzten Teil: Der Fokus
+    /// auf einem Element ändert dann auch andere (`input:focus + label`).
+    focus_remote: bool,
 }
 
 /// Die Kaskade über die Stylesheets einer Seite. Gehört zu **einem**
@@ -159,6 +162,86 @@ pub struct Cascade {
     pub(crate) sizes: RefCell<HashMap<NodeId, Option<f32>>>,
     pub(crate) weights: RefCell<HashMap<NodeId, Option<u16>>>,
     depth: Cell<u32>,
+    /// Das Element, das in dieser Kaskade den Fokus hat (siehe
+    /// [`Cascade::focus_indicator`]); sonst ruhen alle.
+    focus: Option<NodeId>,
+}
+
+/// Was beim Fokussieren eines Elements sichtbar wird.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FocusIndicator {
+    /// Ein Rahmen (der Standard des Browsers oder ein eigener) oder ein
+    /// anderer Stil ändert sich.
+    Shown,
+    /// Der Autor hat den Rahmen entfernt, und nichts, was als Hinweis taugt,
+    /// ändert sich (F78).
+    Removed,
+    /// Nicht bestimmbar: unbekannte Selektoren, `@import`, ein Zustand an
+    /// anderer Stelle des Selektors.
+    Unknown,
+}
+
+/// Eigenschaften, deren Änderung beim Fokussieren als Hinweis gilt, neben dem
+/// Rahmen (`outline`).
+const FOKUS_HINWEISE: &[&str] = &[
+    "box-shadow",
+    "border",
+    "border-width",
+    "border-style",
+    "border-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "border-bottom-width",
+    "border-bottom-style",
+    "border-bottom-color",
+    "border-left",
+    "border-right",
+    "background-color",
+    "background-image",
+    "color",
+    "text-decoration-line",
+    "transform",
+    "filter",
+    "opacity",
+    "font-weight",
+];
+
+const FOKUS_RAHMEN: &[&str] = &[
+    "outline-style",
+    "outline-width",
+    "outline-color",
+    "outline-offset",
+];
+
+/// Ob ein Fokuszustand (`:focus`, `:focus-visible`, `:focus-within`) vor
+/// einem Kombinator der obersten Ebene steht.
+fn fokus_nicht_im_letzten_teil(selector: &str) -> bool {
+    let s = selector.to_ascii_lowercase();
+    let mut tiefe = 0i32;
+    let mut letzter = None;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' | '[' => tiefe += 1,
+            ')' | ']' => tiefe -= 1,
+            ' ' | '>' | '+' | '~'
+                if tiefe == 0 && !s[i..].trim_start_matches([' ', '>', '+', '~']).is_empty() =>
+            {
+                letzter = Some(i);
+            }
+            _ => {}
+        }
+    }
+    letzter.is_some_and(|i| s[..i].contains(":focus"))
+}
+
+fn rahmen_ist_weg(stil: &Specified, breite: &Specified) -> bool {
+    let weg_stil = matches!(stil, Specified::Set(s) if matches!(s.trim().to_ascii_lowercase().as_str(), "none" | "hidden"));
+    let weg_breite = matches!(breite, Specified::Set(b) if {
+        let b = b.trim();
+        b.trim_end_matches(|c: char| c.is_ascii_alphabetic() || c == '%').parse::<f32>().is_ok_and(|v| v == 0.0)
+    });
+    weg_stil || weg_breite
 }
 
 /// Eine Rekursionstiefe, ab der `var()`-Zyklen und absurde Ketten abbrechen.
@@ -176,6 +259,7 @@ impl RuleSet {
             by_type: HashMap::new(),
             universal: Vec::new(),
             imports: Vec::new(),
+            focus_remote: false,
         };
         rs.lade(sheets);
         rs
@@ -247,6 +331,9 @@ impl RuleSet {
                     continue;
                 }
                 for sel in &scoped.selectors {
+                    if fokus_nicht_im_letzten_teil(sel) {
+                        self.focus_remote = true;
+                    }
                     let selector = Selector::parse(sel);
                     let idx = self.rules.len();
                     match selector.key() {
@@ -307,6 +394,50 @@ impl Cascade {
             sizes: RefCell::default(),
             weights: RefCell::default(),
             depth: Cell::new(0),
+            focus: None,
+        }
+    }
+
+    /// Ob beim Fokussieren von `n` ein Hinweis sichtbar wird: ein Rahmen
+    /// (ohne Angabe des Autors zeichnet ihn der Browser) oder eine
+    /// Änderung von Schatten, Rahmen, Farbe, Hintergrund oder Textlinie
+    /// gegenüber dem Ruhezustand. Rechnet die Kaskade ein zweites Mal mit
+    /// `:focus`, `:focus-visible` und `:focus-within` für `n`.
+    pub fn focus_indicator<'a, N: Node<'a>>(&self, n: N) -> FocusIndicator {
+        if self.focus.is_some() || self.rs.focus_remote || !self.rs.imports.is_empty() {
+            return FocusIndicator::Unknown;
+        }
+        let mut fokus = Cascade::with_rules(Arc::clone(&self.rs));
+        fokus.focus = Some(n.id());
+        let ruhe = |p: &str| self.specified(n, p);
+        let fokussiert = |p: &str| fokus.specified(n, p);
+        let [stil, breite] = ["outline-style", "outline-width"].map(fokussiert);
+        if stil == Specified::Unknown || breite == Specified::Unknown {
+            return FocusIndicator::Unknown;
+        }
+        if !rahmen_ist_weg(&stil, &breite) {
+            let beide_leer = FOKUS_RAHMEN
+                .iter()
+                .all(|p| fokussiert(p) == Specified::Unset);
+            let anders = FOKUS_RAHMEN.iter().any(|p| fokussiert(p) != ruhe(p));
+            // Ohne eigenen Rahmen zeichnet der Browser seinen; ein eigener, der
+            // schon in Ruhe da ist und sich nicht ändert, ist kein Hinweis.
+            if beide_leer || anders {
+                return FocusIndicator::Shown;
+            }
+        }
+        let mut unbekannt = false;
+        for p in FOKUS_HINWEISE {
+            match (ruhe(p), fokussiert(p)) {
+                (Specified::Unknown, _) | (_, Specified::Unknown) => unbekannt = true,
+                (a, b) if a != b => return FocusIndicator::Shown,
+                _ => {}
+            }
+        }
+        if unbekannt {
+            FocusIndicator::Unknown
+        } else {
+            FocusIndicator::Removed
         }
     }
 
@@ -350,7 +481,8 @@ impl Cascade {
             .into_iter()
             .filter_map(|i| {
                 let r = &self.rs.rules[i];
-                let m = r.selector.matches(n, Mode::Resting).und(r.cond);
+                let mode = self.focus.map_or(Mode::Resting, Mode::Focused);
+                let m = r.selector.matches(n, mode).und(r.cond);
                 (m != Match::No).then_some((i, m))
             })
             .collect();

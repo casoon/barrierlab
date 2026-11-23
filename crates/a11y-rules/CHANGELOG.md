@@ -12,6 +12,9 @@ abweichen, steht je Schritt in
 
 ### Added
 
+- **Fokus:** `focus/indicator-missing` ist ein Verstoß (2.4.7, F78) statt `REVIEW`, wenn der Host `Layout::focus_outline_removed` meldet: der Autor hat den Rahmen entfernt, und beim Fokussieren ändert sich sonst nichts. Ein `onfocus`-Handler auf der Seite lässt es `REVIEW` bleiben, ein Host ohne das Feld (Browser-Messung) ebenfalls. Der seitenweite `focus/outline-removed` bleibt unverändert (casoon/barrierlab#228, A1).
+- **Tabellen:** `tables/header-missing` ist ein Verstoß (1.3.1, F91) statt `REVIEW`, wenn die erste Zeile nur aus `<td>` mit ganz fettem Text (`<b>`, `<strong>`) besteht, weitere Zeilen folgen und nirgends ein `<th>` steht. Fett per Stylesheet erkennt die Regel nicht (casoon/barrierlab#228, C).
+- **Namen:** `names/description-duplicates-name` meldet ein interaktives Element, dessen Accessible Description den Namen nur wiederholt, als `REVIEW` (4.1.2, niedrig); kein Verstoß, da 4.1.2 verschiedene Texte nicht verlangt (casoon/barrierlab#260, Entscheidung zu casoon/auditmysite#919). Hosts ohne `accessible_description` melden nichts.
 - **Medien:** `media/video-captions-missing` meldet ein `<video>` ohne `<track kind="captions">` oder `subtitles` als `REVIEW` (1.2.2); stumm ohne `controls` und versteckt bleibt ohne Befund (#228).
 - **Kontrast:** `contrast/text-insufficient` und der `REVIEW` mit gemischten Farbpaaren nennen bei `opacity` unter 1 die Ursache: Evidenz `opacity`, `effective_foreground`, `state_dependent` und ein Satz im Text, dass mit dieser Deckkraft gemessen wurde (#261). Dafür trägt `ColorPairs` (`a11y-dom`) das neue Feld `opacity`; `style-cascade` füllt es.
 

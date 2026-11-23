@@ -150,6 +150,10 @@ impl Semantics for RenderArena<'_> {
         self.semantik.name_source(node)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        self.semantik.accessible_description(node)
+    }
+
     fn is_ignored<'n>(&'n self, node: Self::N<'n>) -> bool {
         self.semantik.is_ignored(node)
     }
@@ -213,6 +217,9 @@ impl Rendering for RenderArena<'_> {
             hides_focus: Some(f & LAYOUT_VERSTECKT_FOKUS != 0),
             focus_visible: (f & LAYOUT_FOKUS_GEMESSEN != 0)
                 .then_some(f & LAYOUT_FOKUS_SICHTBAR != 0),
+            // Der Browser bewegt den Fokus; die Kaskade für den fokussierten
+            // Zustand rechnet dieses Paket nicht.
+            focus_outline_removed: None,
             // Misst dieses Paket noch nicht.
             pointer_events_none: None,
             animating: None,

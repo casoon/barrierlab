@@ -54,6 +54,10 @@ impl Semantics for SemanticArena<'_> {
         accname::name(node, &self.ids)
     }
 
+    fn accessible_description<'n>(&'n self, node: Self::N<'n>) -> Option<String> {
+        accname::description(node, &self.ids)
+    }
+
     /// Ohne nativen Accessibility-Tree ist nicht bekannt, *woher* ein Name
     /// stammt. `None` ist hier die ehrliche Antwort, nicht eine Lücke.
     fn name_source<'n>(&'n self, _node: Self::N<'n>) -> Option<NameSource> {

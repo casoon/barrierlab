@@ -17,7 +17,7 @@
 //! gelten als erfüllt: `.card:hover` trifft, wo `.card` steht. So rechnete
 //! auch auditmysite.
 
-use a11y_dom::{Document, Node, NodeKind};
+use a11y_dom::{Document, Node, NodeId, NodeKind, self_and_descendants};
 
 /// Ergebnis eines Abgleichs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,6 +36,10 @@ pub enum Mode {
     /// Das Element im Ruhezustand, wie die Kaskade es braucht: Bedienzustände
     /// und Pseudo-Elemente treffen nicht.
     Resting,
+    /// Das Element mit dieser Kennung hat den Fokus: `:focus` und
+    /// `:focus-visible` treffen genau dieses Element, `:focus-within` dieses
+    /// und seine Vorfahren. Alle anderen Bedienzustände treffen nicht.
+    Focused(NodeId),
 }
 
 impl Match {
@@ -860,6 +864,25 @@ fn erforderlich<'a, N: Node<'a>>(n: N) -> (Match, bool) {
 fn zustand<'a, N: Node<'a>>(n: N, z: &str, m: Mode) -> Match {
     if m == Mode::Possible {
         return Match::Yes;
+    }
+    if let Mode::Focused(ziel) = m {
+        match z {
+            "focus" | "focus-visible" => {
+                return if n.id() == ziel {
+                    Match::Yes
+                } else {
+                    Match::No
+                };
+            }
+            "focus-within" => {
+                return if self_and_descendants(n).any(|d| d.id() == ziel) {
+                    Match::Yes
+                } else {
+                    Match::No
+                };
+            }
+            _ => {}
+        }
     }
     if INTERAKTIV.contains(&z) {
         return Match::No;
