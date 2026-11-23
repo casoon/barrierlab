@@ -10,6 +10,15 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Changed
+
+- **Bilder:** Ein Element mit `role="img"` (`<div>`, `<span>`, `<canvas>`, …) ohne zugänglichen Namen meldet die neue Kennung `images/role-img-name-missing` (1.1.1, hoch, `FAIL`; ACT 23a2a8) statt `names/required-missing`; kein Element meldet beide. Auch die Chrome-Rolle `image` zählt.
+- **Namen:** `meter` und `progressbar` (nativ und per ARIA) ohne zugänglichen Namen melden die neue Kennung `names/indicator-name-missing` (1.1.1, hoch, `FAIL`) statt `names/required-missing`: Anzeigen sind Nicht-Text-Inhalt, keine Bedienelemente (axe `aria-meter-name`, `aria-progressbar-name`; keine ACT-Regel). `names/required-missing` trägt nur noch 4.1.2.
+
+### Fixed
+
+- **Medien:** `media/video-captions-missing` zählt ein `<track>` ohne `kind` als Untertitelspur: Nach HTML ist der fehlende Wert der Zustand `subtitles`. Ein ungültiger Wert (auch leer oder mit Leerraum) ist `metadata` und zählt weiterhin nicht, ebenso `descriptions` und `chapters`.
+
 ## [0.31.0] - 2026-11-23
 
 ### Breaking

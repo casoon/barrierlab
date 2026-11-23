@@ -102,7 +102,10 @@ const MAPPING: &[(&str, &[&str])] = &[
     ("e086e5", &["forms/label-missing", "names/required-missing"]),
     ("m6b1q3", &["names/required-missing"]),
     ("c487ae", &["links/name-missing", "images/area-alt-missing"]),
-    ("23a2a8", &["images/alt-missing", "names/required-missing"]),
+    (
+        "23a2a8",
+        &["images/alt-missing", "images/role-img-name-missing"],
+    ),
     ("59796f", &["images/input-alt-missing"]),
     ("8fc3b6", &["objects/alt-missing"]),
     ("7d6734", &["svg/name-missing"]),

@@ -104,7 +104,7 @@ first in 0.26.0):
 | `aria/role-redundant`, `lists/role-redundant` | Best practice | The role is correct; 4.1.2 is met. ARIA in HTML merely discourages it. |
 | `patterns/tooltip-unreferenced` | Best practice | 1.4.13 governs appearing and disappearing on hover and focus, not the association. |
 | `lists/empty` | Best practice | An empty list withholds no information. |
-| `media/video-captions-missing` | `REVIEW` | 1.2.2 needs captions only for speech or meaningful sound; they may be burned in or offered by the player, none of which is visible from the markup. A muted video without `controls` is skipped. |
+| `media/video-captions-missing` | `REVIEW` | 1.2.2 needs captions only for speech or meaningful sound; they may be burned in or offered by the player, none of which is visible from the markup. A muted video without `controls` is skipped. A `<track>` without `kind` counts as subtitles (the HTML missing value default); an invalid `kind` is `metadata` and does not. |
 | `focus/indicator-missing` | `REVIEW`, `FAIL` when the host reports the outline removed | 2.4.7 and F78: a host that runs the cascade for the focused state (`a11y-static`) can tell that the author removed the outline and nothing else changes on focus: `FAIL`, unless an `onfocus` handler may set an indicator by script. A host that only observed no visible change (a browser run) stays at `REVIEW`. |
 | `tables/header-missing` | `REVIEW`, `FAIL` for a bold `<td>` header row | F91 applies only to data tables with visible headers; whether one is present is not visible from the markup. When the first row consists only of `<td>` cells whose whole content is `<b>` or `<strong>`, more rows follow and no `<th>` exists, the headers are there in looks only: `FAIL`. Bold set by a stylesheet is not recognised. |
 | `keyboard/positive-tabindex` | `REVIEW` | F44 requires a judgment whether the resulting order breaks meaning and operation. axe `tabindex` is best practice. |
@@ -122,7 +122,8 @@ first in 0.26.0):
 
 Unchanged `FAIL` with criterion, because an ACT rule or failure technique supports
 the finding: `images/alt-missing`, `images/area-alt-missing`,
-`images/input-alt-missing`, `objects/alt-missing` (1.1.1);
+`images/input-alt-missing`, `images/role-img-name-missing` (ACT 23a2a8),
+`objects/alt-missing`, `names/indicator-name-missing` (1.1.1);
 `links/name-missing`, `buttons/name-missing`, `summary/name-missing`,
 `dialog/name-missing`, `names/required-missing` (4.1.2, ARIA "Name
 Required"); `document/lang-missing`, `document/lang-invalid`,
@@ -160,7 +161,14 @@ flattens it (auditmysite#715). Native tables and lists without `role` are checke
 ## Names
 
 Besides `links/`, `buttons/`, `svg/` and `tables/name-missing`, the rules `dialog/name-missing`, `summary/name-missing` and `names/required-missing`
-check the roles for which WAI-ARIA 1.2 requires a name. `label-in-name/mismatch`
+check the roles for which WAI-ARIA 1.2 requires a name. An element that is an image only through
+`role="img"` (`<div>`, `<span>`, `<canvas>`) reports `images/role-img-name-missing` under 1.1.1
+instead (ACT 23a2a8); `<img>` and SVG keep `images/alt-missing` and `svg/name-missing`.
+`meter` and `progressbar` (native or ARIA) report `names/indicator-name-missing` under 1.1.1:
+WAI-ARIA 1.2 requires a name for both, but they are not operable, so they are non-text content
+rather than user interface components in the sense of 4.1.2 (axe files `aria-meter-name` and
+`aria-progressbar-name` under 1.1.1 as well; there is no ACT rule). `names/required-missing`
+carries 4.1.2 only. `label-in-name/mismatch`
 compares the name with the visible text per WCAG 2.5.3, and
 `status/live-overridden` compares the `aria-live` value of live regions with the
 default of their role.

@@ -858,11 +858,33 @@ pub const METAS: &[Meta] = &[
         ids: &["names/required-missing"],
         tier: Tier::Semantics,
         scope: Scope::AccessibilityTree,
-        wcag: &["1.1.1", "4.1.2"],
+        wcag: &["4.1.2"],
         severity: Severity::High,
-        help: "Elements whose role requires a name (fields, toggles, menu items, meters, …) need one.",
+        help: "Elements whose role requires a name (fields, toggles, menu items, tabs, …) need one.",
         help_de: de_text!(
-            "Elemente, deren Rolle einen Namen verlangt (Felder, Schalter, Menüpunkte, Messanzeigen, …), brauchen einen."
+            "Elemente, deren Rolle einen Namen verlangt (Felder, Schalter, Menüpunkte, Tabs, …), brauchen einen."
+        ),
+    },
+    Meta {
+        ids: &["names/indicator-name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "A meter or progress bar needs an accessible name saying what it measures.",
+        help_de: de_text!(
+            "Eine Messanzeige oder ein Fortschrittsbalken braucht einen zugänglichen Namen, der sagt, was gemessen wird."
+        ),
+    },
+    Meta {
+        ids: &["images/role-img-name-missing"],
+        tier: Tier::Semantics,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::High,
+        help: "An element with role=\"img\" needs an accessible name, usually via aria-label or aria-labelledby.",
+        help_de: de_text!(
+            "Ein Element mit role=\"img\" braucht einen zugänglichen Namen, meist per aria-label oder aria-labelledby."
         ),
     },
     Meta {
@@ -1057,7 +1079,7 @@ pub const METAS: &[Meta] = &[
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 30] {
+fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 32] {
     [
         link_names,
         button_names,
@@ -1071,6 +1093,8 @@ fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 30] {
         crate::aria::attributes_allowed,
         crate::aria::required_context,
         crate::names::required_names,
+        crate::names::indicator_names,
+        crate::names::role_img_names,
         crate::names::symbol_names,
         crate::names::description_duplicates_name,
         crate::names::dialog_names,
@@ -1092,7 +1116,7 @@ fn functions<D: Semantics>() -> [fn(&D, Locale, &mut Vec<Finding>); 30] {
     ]
 }
 
-const _: () = assert!(METAS.len() == 30);
+const _: () = assert!(METAS.len() == 32);
 
 /// Alle Tier-2-Regeln.
 pub fn rules<D: Semantics>() -> Vec<SemanticsRule<D>> {

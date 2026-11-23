@@ -102,7 +102,7 @@ count as untested.
 |---|---|---|---|
 | [Text has enhanced contrast](https://act-rules.github.io/rules/09o5cg) | partial | `contrast/text-enhanced`, `contrast/text-undetermined` | 1 of 29 |
 | [Scrollable element is keyboard accessible](https://act-rules.github.io/rules/0ssw9k) | not consistent | `keyboard/scrollable-region-not-focusable` | 0 of 10 |
-| [Image has non-empty accessible name](https://act-rules.github.io/rules/23a2a8) | consistent | `images/alt-missing`, `names/required-missing` | 0 of 18 |
+| [Image has non-empty accessible name](https://act-rules.github.io/rules/23a2a8) | consistent | `images/alt-missing`, `images/role-img-name-missing` | 0 of 18 |
 | [Letter spacing in style attributes is not !important](https://act-rules.github.io/rules/24afc2) | consistent | `text-spacing/letter-important` | 0 of 16 |
 | [HTML page has non-empty title](https://act-rules.github.io/rules/2779a5) | consistent | `document/title-missing`, `document/title-empty` | 0 of 11 |
 | [Visible label is part of accessible name](https://act-rules.github.io/rules/2ee8b8) | consistent | `label-in-name/mismatch` | 0 of 13 |

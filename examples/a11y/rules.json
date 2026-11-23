@@ -1852,13 +1852,30 @@
     ]
   },
   {
-    "help": "Elements whose role requires a name (fields, toggles, menu items, meters, …) need one.",
+    "help": "Elements whose role requires a name (fields, toggles, menu items, tabs, …) need one.",
     "id": "names/required-missing",
     "severity": "high",
     "tier": "semantics",
     "wcag": [
-      "1.1.1",
       "4.1.2"
+    ]
+  },
+  {
+    "help": "A meter or progress bar needs an accessible name saying what it measures.",
+    "id": "names/indicator-name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
+    "help": "An element with role=\"img\" needs an accessible name, usually via aria-label or aria-labelledby.",
+    "id": "images/role-img-name-missing",
+    "severity": "high",
+    "tier": "semantics",
+    "wcag": [
+      "1.1.1"
     ]
   },
   {

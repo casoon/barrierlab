@@ -143,12 +143,12 @@ find = '''
         if named(doc, n) {
             continue;
         }
-        // auditmysite ordnet '''
+        // Ein Formularfeld ohne Namen '''
 replace = '''
         if !named(doc, n) {
             continue;
         }
-        // auditmysite ordnet '''
+        // Ein Formularfeld ohne Namen '''
 test = "korpus"
 expect = "killed"
 
@@ -532,17 +532,91 @@ test = "korpus"
 expect = "killed"
 
 [[mutation]]
-id = "names/required-missing"
+id = "names/indicator-name-missing"
 file = "src/names.rs"
-kind = "revert-fix"
+kind = "invert"
 find = '''
-        if role == "img" && (n.is_element("img") || crate::semantics::in_svg(n)) {
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "names/indicator-name-missing",
 '''
 replace = '''
-        if role == "img" {
+        if !named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "names/indicator-name-missing",
 '''
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "names/indicator-name-missing"
+file = "src/names.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        if !matches!(role.as_str(), "meter" | "progressbar") {
+'''
+replace = '''
+        if !matches!(role.as_str(), "meter") {
+'''
+expect = "killed"
+
+[[mutation]]
+id = "images/role-img-name-missing"
+file = "src/names.rs"
+kind = "revert-fix"
+find = '''
+        if n.is_element("img") || crate::semantics::in_svg(n) {
+'''
+replace = '''
+        if false {
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/role-img-name-missing"
+file = "src/names.rs"
+kind = "invert"
+find = '''
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "images/role-img-name-missing",
+'''
+replace = '''
+        if !named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "images/role-img-name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/role-img-name-missing"
+file = "src/names.rs"
+kind = "drop-condition"
+test = "names"
+filter = "role_image_from_chrome_"
+find = '''
+        if !matches!(role.as_str(), "img" | "image") {
+'''
+replace = '''
+        if !matches!(role.as_str(), "img") {
+'''
+expect = "killed"
+note = "Chrome stellt Bilder mit der Rolle image aus; der Korpus-Host kennt nur accname"
 
 [[mutation]]
 id = "label-in-name/mismatch"

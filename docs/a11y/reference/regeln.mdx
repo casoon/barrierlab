@@ -14,7 +14,7 @@ may deviate from it. Each row has an anchor: the ID with `/` replaced by `-`
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.31.0 declares 179 IDs.
+a11y-rules 0.31.0 declares 181 IDs.
 
 ## Tier 1: Structure
 
@@ -137,7 +137,7 @@ a11y-rules 0.31.0 declares 179 IDs.
 
 ## Tier 2: Semantics
 
-36 IDs, needs `Semantics`, i.e. role and accessible name.
+38 IDs, needs `Semantics`, i.e. role and accessible name.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -154,7 +154,9 @@ a11y-rules 0.31.0 declares 179 IDs.
 | `aria/attribute-prohibited`<a id="aria-attribute-prohibited"></a> | 4.1.2 | high | Use only ARIA attributes the element's role supports. |
 | `aria/required-parent-missing`<a id="aria-required-parent-missing"></a> | 1.3.1, 4.1.2 | high | Roles that belong together must be nested as WAI-ARIA requires. |
 | `aria/required-children-missing`<a id="aria-required-children-missing"></a> | 1.3.1, 4.1.2 | high | Roles that belong together must be nested as WAI-ARIA requires. |
-| `names/required-missing`<a id="names-required-missing"></a> | 1.1.1, 4.1.2 | high | Elements whose role requires a name (fields, toggles, menu items, meters, …) need one. |
+| `names/required-missing`<a id="names-required-missing"></a> | 4.1.2 | high | Elements whose role requires a name (fields, toggles, menu items, tabs, …) need one. |
+| `names/indicator-name-missing`<a id="names-indicator-name-missing"></a> | 1.1.1 | high | A meter or progress bar needs an accessible name saying what it measures. |
+| `images/role-img-name-missing`<a id="images-role-img-name-missing"></a> | 1.1.1 | high | An element with role="img" needs an accessible name, usually via aria-label or aria-labelledby. |
 | `names/symbol-only`<a id="names-symbol-only"></a> | 4.1.2 | medium | An accessible name should be words, not a single symbol. |
 | `names/description-duplicates-name`<a id="names-description-duplicates-name"></a> | 4.1.2 | low | A description that only repeats the accessible name adds nothing; drop it or say more. |
 | `dialog/name-missing`<a id="dialog-name-missing"></a> | 4.1.2 | high | Every dialog needs a name, usually via aria-labelledby on its heading. |
