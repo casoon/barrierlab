@@ -181,25 +181,29 @@ fn unnamed_roles_corpus_aria_naming_roles() {
         assert_eq!(
             findings_at(ARIA_NAMING_ROLES, &r, "names/required-missing"),
             [
-                "menuitem",
-                "meter",
-                "progressbar",
-                "slider",
-                "switch",
+                "menuitem", "slider", "switch",
                 // WAI-ARIA 1.2: tree verlangt einen Namen (auditmysite#783).
-                "tree",
-                "treeitem"
+                "tree", "treeitem"
             ]
         );
         assert_eq!(
             findings_at(ARIA_NAMING_ROLES, &r, "dialog/name-missing"),
             ["dialog"]
         );
-        let meter = r
-            .findings
-            .iter()
-            .find(|f| f.rule_id == "names/required-missing" && f.wcag == ["1.1.1"]);
-        assert!(meter.is_some(), "meter/progressbar unter 1.1.1");
+        // meter und progressbar melden ihre eigene Kennung unter 1.1.1;
+        // names/required-missing trägt nur noch 4.1.2.
+        assert_eq!(
+            findings_at(ARIA_NAMING_ROLES, &r, "names/indicator-name-missing"),
+            ["meter", "progressbar"]
+        );
+        assert!(
+            r.findings
+                .iter()
+                .filter(|f| f.rule_id == "names/required-missing")
+                .all(|f| f.wcag == ["4.1.2"]),
+            "{:?}",
+            r.findings
+        );
     }
 }
 
@@ -214,6 +218,7 @@ fn named_roles_stay_silent_auditmysite_all_named_elements_pass() {
         <div role="dialog" aria-label="Einstellungen" aria-modal="true"></div>"#;
     for r in both(src) {
         assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
+        assert_eq!(count(&r, "names/indicator-name-missing"), 0);
         assert_eq!(count(&r, "dialog/name-missing"), 0);
     }
 }
@@ -252,6 +257,42 @@ fn native_options_and_hidden_roles_stay_silent() {
                  <div role="tab">ohne Pflicht</div><div role="menu"></div>"#;
     for r in both(src) {
         assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
+    }
+}
+
+// --- names/indicator-name-missing -------------------------------------------
+
+/// `meter` und `progressbar`, nativ und per ARIA: ohne Namen ein Verstoß gegen
+/// 1.1.1 unter eigener Kennung, nie zusätzlich `names/required-missing`.
+#[test]
+fn indicators_without_name_report_own_id_under_1_1_1() {
+    let src = r#"<meter id="nativ-meter" value="0.5"></meter>
+                 <progress id="nativ-progress" value="5" max="10"></progress>
+                 <div role="meter" aria-valuenow="5" id="aria-meter"></div>
+                 <div role="progressbar" aria-valuenow="5" id="aria-progress"></div>
+                 <label>Speicher <meter id="label" value="0.5"></meter></label>
+                 <div role="progressbar" aria-label="Upload" aria-valuenow="5" id="benannt"></div>
+                 <div hidden><progress id="versteckt" value="1"></progress></div>"#;
+    for r in both(src) {
+        assert_eq!(
+            findings_at(src, &r, "names/indicator-name-missing"),
+            [
+                "aria-meter",
+                "aria-progress",
+                "nativ-meter",
+                "nativ-progress"
+            ]
+        );
+        assert_eq!(count(&r, "names/required-missing"), 0, "{:?}", r.findings);
+        for f in r
+            .findings
+            .iter()
+            .filter(|f| f.rule_id == "names/indicator-name-missing")
+        {
+            assert_eq!(f.outcome, Outcome::Fail);
+            assert_eq!(f.wcag, ["1.1.1"]);
+            assert_eq!(f.severity, a11y_report::Severity::High);
+        }
     }
 }
 

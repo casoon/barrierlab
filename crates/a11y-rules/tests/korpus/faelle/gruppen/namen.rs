@@ -11,6 +11,7 @@ pub fn cases() -> Vec<Fall> {
     v.extend(svg_name());
     v.extend(link_texts());
     v.extend(required_names());
+    v.extend(indicator_names());
     v.extend(role_img_names());
     v.extend(dialogs());
     v.extend(summary_and_live());
@@ -416,6 +417,12 @@ fn required_names() -> Vec<Fall> {
             "ACT 23a2a8 ordnet role=img allein 1.1.1 zu: images/role-img-name-missing meldet den Fall, nicht diese Regel",
         )
         .variant("role=img mit eigener Regel"),
+        na(
+            ID,
+            r#"<div role="meter" aria-valuenow="5"></div><progress value="5" max="10"></progress>"#,
+            "meter und progressbar sind Anzeigen (1.1.1): names/indicator-name-missing meldet sie, nicht diese Regel",
+        )
+        .variant("meter und progressbar mit eigener Regel"),
         negative(
             ID,
             r#"<div role="checkbox" aria-checked="false" tabindex="0" aria-label="Accept terms"></div>"#,
@@ -509,6 +516,76 @@ fn required_names() -> Vec<Fall> {
             r#"<article title="Story" aria-label="Story"><p>Text</p></article>"#,
             "auditmysite-Korpus aria_na_plain_article: keine interaktive Rolle",
         ),
+    ]
+}
+
+fn indicator_names() -> Vec<Fall> {
+    const ID: &str = "names/indicator-name-missing";
+    vec![
+        fail(
+            ID,
+            r#"<div role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>"#,
+            "WAI-ARIA 1.2 progressbar: Accessible Name Required; WCAG 1.1.1 (axe aria-progressbar-name)",
+        )
+        .count(1),
+        fail(
+            ID,
+            r#"<div role="meter" aria-valuenow="5" aria-valuemin="0" aria-valuemax="10"></div>"#,
+            "WAI-ARIA 1.2 meter: Accessible Name Required; WCAG 1.1.1 (axe aria-meter-name)",
+        )
+        .variant("ARIA meter"),
+        fail(
+            ID,
+            r#"<progress value="5" max="10"></progress>"#,
+            "HTML-AAM progress: Rolle progressbar, Name nur aus label, aria-label, title",
+        )
+        .variant("natives progress"),
+        fail(
+            ID,
+            r#"<meter value="0.5"></meter>"#,
+            "HTML-AAM meter: Rolle meter, Name nur aus label, aria-label, title",
+        )
+        .variant("natives meter"),
+        fail(
+            ID,
+            r#"<div role="progressbar" aria-valuenow="5">50 %</div>"#,
+            "WAI-ARIA 1.2 progressbar: Name nur vom Autor, nicht aus dem Inhalt",
+        )
+        .variant("Text als Inhalt"),
+        negative(
+            ID,
+            r#"<div role="progressbar" aria-label="Upload" aria-valuenow="5"></div>"#,
+            "WCAG ARIA6/ARIA14: aria-label",
+        ),
+        negative(
+            ID,
+            r#"<span id="l">Disk usage</span><div role="meter" aria-labelledby="l" aria-valuenow="5"></div>"#,
+            "WCAG ARIA16: aria-labelledby",
+        )
+        .variant("aria-labelledby"),
+        negative(
+            ID,
+            r#"<label for="m">Disk usage</label><meter id="m" value="0.5"></meter>"#,
+            "HTML-AAM meter: Name aus dem zugeordneten label",
+        )
+        .variant("natives meter mit label"),
+        negative(
+            ID,
+            r#"<progress title="Upload" value="5" max="10"></progress>"#,
+            "accname 1.2 Schritt 2I: title stiftet den Namen",
+        )
+        .variant("title"),
+        na(
+            ID,
+            r#"<div role="slider" aria-valuenow="5" tabindex="0" aria-label="Volume"></div><p>50 %</p>"#,
+            "WAI-ARIA 1.2: weder meter noch progressbar",
+        ),
+        na(
+            ID,
+            r#"<div hidden><progress value="1"></progress></div><div role="meter" aria-hidden="true"></div>"#,
+            "WAI-ARIA 1.2: nur Elemente im Accessibility-Tree",
+        )
+        .variant("versteckt"),
     ]
 }
 

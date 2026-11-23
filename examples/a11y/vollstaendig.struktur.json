@@ -1764,8 +1764,16 @@
     {
       "rule_id": "names/required-missing",
       "wcag": [
-        "1.1.1",
         "4.1.2"
+      ],
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no role and no accessible name"
+    },
+    {
+      "rule_id": "names/indicator-name-missing",
+      "wcag": [
+        "1.1.1"
       ],
       "not_run": "capability_missing",
       "findings": 0,
@@ -2252,6 +2260,6 @@
     "high": 0,
     "medium": 0,
     "low": 1,
-    "rules_not_run": 68
+    "rules_not_run": 69
   }
 }

@@ -143,12 +143,12 @@ find = '''
         if named(doc, n) {
             continue;
         }
-        // auditmysite ordnet '''
+        // Ein Formularfeld ohne Namen '''
 replace = '''
         if !named(doc, n) {
             continue;
         }
-        // auditmysite ordnet '''
+        // Ein Formularfeld ohne Namen '''
 test = "korpus"
 expect = "killed"
 
@@ -529,6 +529,42 @@ replace = '''
         let part = false && graphic_role(n) && in_svg(n);
 '''
 test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/indicator-name-missing"
+file = "src/names.rs"
+kind = "invert"
+find = '''
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "names/indicator-name-missing",
+'''
+replace = '''
+        if !named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "names/indicator-name-missing",
+'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "names/indicator-name-missing"
+file = "src/names.rs"
+kind = "drop-requirement"
+test = "korpus"
+find = '''
+        if !matches!(role.as_str(), "meter" | "progressbar") {
+'''
+replace = '''
+        if !matches!(role.as_str(), "meter") {
+'''
 expect = "killed"
 
 [[mutation]]

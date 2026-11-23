@@ -10,9 +10,10 @@
 //! `<familie>/name-missing` wie schon `links/`, `buttons/`, `svg/` und
 //! `tables/`; hier kommen `dialog/` und `summary/` dazu. Ein Element mit
 //! `role="img"` meldet `images/role-img-name-missing` (1.1.1) neben den
-//! übrigen Bildregeln. Alle übrigen Rollen, für die ARIA einen Namen
-//! verlangt, laufen unter `names/required-missing` — die Rolle steht in der
-//! Meldung, nicht in der Kennung.
+//! übrigen Bildregeln, `meter` und `progressbar` melden
+//! `names/indicator-name-missing` (1.1.1). Alle übrigen Rollen, für die ARIA
+//! einen Namen verlangt, laufen unter `names/required-missing` (4.1.2) — die
+//! Rolle steht in der Meldung, nicht in der Kennung.
 
 use a11y_dom::{
     NameSource, Node, NodeId, NodeKind, ScopedId, Semantics, ancestors, descendants, elements,
@@ -39,7 +40,9 @@ fn at(id: NodeId) -> Location {
 /// der Fall verloren.
 ///
 /// Ohne `img`: Elemente, die erst durch `role="img"` zum Bild werden, meldet
-/// `images/role-img-name-missing` unter 1.1.1 (ACT 23a2a8).
+/// `images/role-img-name-missing` unter 1.1.1 (ACT 23a2a8). Ohne `meter` und
+/// `progressbar`: Anzeigen, keine Bedienelemente; sie meldet
+/// `names/indicator-name-missing` unter 1.1.1.
 ///
 /// Nicht übernommen: `menu` — ein Container, kein Bedienelement; ARIA 1.2
 /// verlangt keinen Namen. Die weiteren Pflichtrollen der Spezifikation
@@ -54,9 +57,7 @@ const NAME_REQUIRED: &[&str] = &[
     "menuitem",
     "menuitemcheckbox",
     "menuitemradio",
-    "meter",
     "option",
-    "progressbar",
     "radio",
     "radiogroup",
     "searchbox",
@@ -113,13 +114,6 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if named(doc, n) {
             continue;
         }
-        // auditmysite ordnet `meter` und `progressbar` 1.1.1 zu (axe), die
-        // übrigen 4.1.2.
-        let wcag: &[&str] = if matches!(role.as_str(), "meter" | "progressbar") {
-            &["1.1.1"]
-        } else {
-            &["4.1.2"]
-        };
         // Ein Formularfeld ohne Namen wiegt wie das native Feld ohne Label
         // (`forms/label-missing`, Critical) — die ARIA-Rolle macht es nicht
         // leichter. auditmysite meldete beide Fälle als Critical (3.3.2);
@@ -151,7 +145,46 @@ pub(crate) fn required_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
                 ),
             )
             .with_severity(severity)
-            .with_wcag(wcag.iter().copied())
+            .with_wcag(["4.1.2"])
+            .at(at(n.id())),
+        );
+    }
+}
+
+// --- names/indicator-name-missing -----------------------------------------
+
+/// 1.1.1: Eine Anzeige mit der Rolle `meter` oder `progressbar` (nativ
+/// `<meter>`, `<progress>` oder per ARIA) ohne zugänglichen Namen.
+///
+/// WAI-ARIA 1.2 verlangt für beide Rollen einen Namen („Accessible Name
+/// Required"). Bedienbar sind sie nicht, also keine Bedienelemente im Sinn
+/// von 4.1.2, sondern grafische Darstellung eines Werts: Nicht-Text-Inhalt
+/// (1.1.1), dessen Textalternative sagen muss, was gemessen wird. axe ordnet
+/// `aria-meter-name` und `aria-progressbar-name` ebenso 1.1.1 zu. Eine
+/// ACT-Regel gibt es dafür nicht.
+pub(crate) fn indicator_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    for n in elements(doc) {
+        if doc.is_ignored(n) {
+            continue;
+        }
+        let Some(role) = doc.role(n) else { continue };
+        if !matches!(role.as_str(), "meter" | "progressbar") {
+            continue;
+        }
+        if named(doc, n) {
+            continue;
+        }
+        out.push(
+            Finding::fail(
+                "names/indicator-name-missing",
+                tr!(
+                    locale,
+                    "The element with role \"{role}\" has no accessible name.",
+                    "Das Element mit der Rolle \"{role}\" hat keinen zugänglichen Namen.",
+                ),
+            )
+            .with_severity(Severity::High)
+            .with_wcag(["1.1.1"])
             .at(at(n.id())),
         );
     }

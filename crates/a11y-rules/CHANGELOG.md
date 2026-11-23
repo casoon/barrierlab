@@ -12,7 +12,8 @@ abweichen, steht je Schritt in
 
 ### Changed
 
-- **Bilder:** Ein Element mit `role="img"` (`<div>`, `<span>`, `<canvas>`, …) ohne zugänglichen Namen meldet die neue Kennung `images/role-img-name-missing` (1.1.1, hoch, `FAIL`; ACT 23a2a8) statt `names/required-missing`; kein Element meldet beide. Auch die Chrome-Rolle `image` zählt. Für `meter` und `progressbar` bleibt `names/required-missing` bei 1.1.1.
+- **Bilder:** Ein Element mit `role="img"` (`<div>`, `<span>`, `<canvas>`, …) ohne zugänglichen Namen meldet die neue Kennung `images/role-img-name-missing` (1.1.1, hoch, `FAIL`; ACT 23a2a8) statt `names/required-missing`; kein Element meldet beide. Auch die Chrome-Rolle `image` zählt.
+- **Namen:** `meter` und `progressbar` (nativ und per ARIA) ohne zugänglichen Namen melden die neue Kennung `names/indicator-name-missing` (1.1.1, hoch, `FAIL`) statt `names/required-missing`: Anzeigen sind Nicht-Text-Inhalt, keine Bedienelemente (axe `aria-meter-name`, `aria-progressbar-name`; keine ACT-Regel). `names/required-missing` trägt nur noch 4.1.2.
 
 ### Fixed
 
