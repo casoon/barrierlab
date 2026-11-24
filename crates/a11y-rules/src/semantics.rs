@@ -12,7 +12,7 @@
 //!
 //! [`Semantics`]: a11y_dom::Semantics
 
-use a11y_dom::{Node, NodeId, Semantics, Tier, descendants, elements};
+use a11y_dom::{Node, NodeId, Semantics, Tier, descendants, elements, in_svg};
 use a11y_report::{Finding, Location, Severity};
 
 use crate::locale::{Locale, de_text, pick, tr};
@@ -80,15 +80,6 @@ fn button_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
             );
         }
     }
-}
-
-/// Ob das Element SVG-Inhalt ist: ein `<svg>` oder ein Nachfahre davon, nicht
-/// über ein `<foreignObject>` hinweg (dahinter beginnt wieder HTML).
-pub(crate) fn in_svg<'a, N: Node<'a>>(n: N) -> bool {
-    std::iter::once(n)
-        .chain(a11y_dom::ancestors(n))
-        .find(|a| a.is_element("svg") || a.local_name().eq_ignore_ascii_case("foreignobject"))
-        .is_some_and(|a| a.is_element("svg"))
 }
 
 /// Die Bildrollen, für die ACT 7d6734 einen Namen verlangt.

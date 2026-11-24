@@ -70,7 +70,7 @@ pub use tiers::{
 };
 pub use tree::{
     Document, Node, NodeId, NodeKind, ScopedId, TreeScope, ancestors, closest, descendants,
-    elements, has_text, scoped_id, self_and_descendants, subtree_text,
+    elements, has_text, in_svg, scoped_id, self_and_descendants, subtree_text,
 };
 
 #[cfg(test)]
@@ -103,6 +103,30 @@ mod tests {
             .close()
             .close()
             .build()
+    }
+
+    #[test]
+    fn in_svg_endet_am_foreign_object() {
+        let d = Arena::builder()
+            .open("body")
+            .open("div")
+            .close()
+            .open("svg")
+            .open("g")
+            .open("path")
+            .close()
+            .close()
+            .open("foreignObject")
+            .open("p")
+            .close()
+            .close()
+            .close()
+            .close()
+            .build();
+        let hit = |name: &str| in_svg(elements(&d).find(|n| n.local_name() == name).unwrap());
+        assert!(!hit("div"));
+        assert!(hit("svg") && hit("g") && hit("path"));
+        assert!(!hit("p"));
     }
 
     #[test]
