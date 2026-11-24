@@ -4,7 +4,7 @@ description: "Was im Repository liegt und wo die offenen Aufgaben stehen."
 order: 5
 ---
 
-**Stand: 2026-11-17**
+**Stand: 2026-11-24**
 
 ## Was ist das
 
@@ -46,6 +46,10 @@ Abhängigkeitsupdates, Doku. **Keine neuen Features und keine Umbauten**, bis di
 Werkzeuge (auditmysite, astro-post-audit, liveaudit, barrierlab-cli) die Pakete von hier
 übernommen haben. Wünsche und Ideen werden als Issues gesammelt, nicht umgesetzt. Ausnahme
 nur auf ausdrückliche Entscheidung des Maintainers.
+
+Ausgesetzt am 2026-11-22 für #228 (Fokusindikator je Element, F91, F73) und #260 (Beschreibung
+wiederholt den Namen); beide sind umgesetzt und veröffentlicht (a11y-* 0.31.x). Danach gilt der
+Pflegemodus weiter, bis #256 abgeschlossen ist.
 
 ## Wo die Aufgaben stehen
 
