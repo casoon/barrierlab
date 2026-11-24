@@ -405,6 +405,27 @@ pub struct SpacingClip {
     pub after: bool,
 }
 
+/// Woher ein Bild kommt, das nicht im Markup steht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GeneratedImageSource {
+    /// `content: url(…)` auf `::before`.
+    Before,
+    /// `content: url(…)` auf `::after`.
+    After,
+    /// `background-image: url(…)` am Element selbst.
+    Background,
+}
+
+/// Ein Bild, das das Stylesheet einfügt (`content: url(…)`,
+/// `background-image: url(…)`). Es hat keinen Textersatz-Mechanismus; trägt es
+/// Information, scheitert es an 1.1.1 (F3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GeneratedImage {
+    pub source: GeneratedImageSource,
+    /// Die Adresse, wie im Stylesheet geschrieben.
+    pub url: String,
+}
+
 /// **Tier 3** — berechnete Stile und Geometrie.
 ///
 /// Statische HTML-Analyse kann das nicht; Kontrast-, Target-Size- und
@@ -463,6 +484,14 @@ pub trait Rendering: Document {
     /// [`ComputedStyle::background_color`]. Vorgabe `None`: keine solchen
     /// Paare, es gelten die berechneten Farben.
     fn color_pairs<'n>(&'n self, _node: Self::N<'n>) -> Option<ColorPairs> {
+        None
+    }
+
+    /// Die Bilder, die das Stylesheet an diesem Element einfügt: `content: url(…)`
+    /// auf `::before` und `::after`, `background-image: url(…)` am Element.
+    /// Eine leere Liste heißt: gemessen, keine. Vorgabe `None`: Der Host kennt
+    /// die Stylesheets nicht — dann bleibt die Prüfung ungelaufen.
+    fn generated_images<'n>(&'n self, _node: Self::N<'n>) -> Option<Vec<GeneratedImage>> {
         None
     }
 

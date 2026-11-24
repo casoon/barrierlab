@@ -553,6 +553,33 @@ impl Rendering for Host<'_> {
         })
     }
 
+    /// `--css-images: before a.svg, after b.png, background c.jpg` stands for
+    /// the images the stylesheet inserts at the element.
+    fn generated_images<'n>(&'n self, node: Self::N<'n>) -> Option<Vec<a11y_dom::GeneratedImage>> {
+        use a11y_dom::{GeneratedImage, GeneratedImageSource as S};
+        self.measures("css-images").then(|| {
+            own(node, "--css-images")
+                .map(|v| {
+                    v.split(',')
+                        .filter_map(|e| {
+                            let (wo, url) = e.trim().split_once(' ')?;
+                            let source = match wo {
+                                "before" => S::Before,
+                                "after" => S::After,
+                                "background" => S::Background,
+                                _ => return None,
+                            };
+                            Some(GeneratedImage {
+                                source,
+                                url: url.trim().to_string(),
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
+    }
+
     fn visually_hidden<'n>(&'n self, node: Self::N<'n>) -> Option<bool> {
         self.measures("visually-hidden")
             .then(|| switch(node, "--visually-hidden"))

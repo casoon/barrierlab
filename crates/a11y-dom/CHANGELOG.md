@@ -10,6 +10,7 @@ Repository `casoon/a11y-core`.
 ### Added
 
 - **`in_svg`:** ob ein Knoten SVG-Inhalt ist (`<svg>` oder Nachfahre, nicht über `<foreignObject>` hinweg); bisher nur in `a11y-rules`, jetzt öffentlich, damit Hosts die Entscheidung nicht nachbauen (casoon/barrierlab#271).
+- **`Rendering::generated_images`:** die Bilder, die das Stylesheet an einem Element einfügt (`GeneratedImage`, `GeneratedImageSource`); Vorgabe `None`, Hosts ohne Stylesheets bleiben wie sie sind (casoon/barrierlab#273).
 
 ## [0.31.1] - 2026-11-24
 

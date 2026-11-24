@@ -15,8 +15,8 @@
 //! Bestanden.
 
 use a11y_dom::{
-    ComputedStyle, Node, NodeId, NodeKind, Rendering, Tier, ancestors, descendants, elements,
-    subtree_text,
+    ComputedStyle, GeneratedImageSource, Node, NodeId, NodeKind, Rendering, Tier, ancestors,
+    descendants, elements, subtree_text,
 };
 use a11y_report::{Finding, Location, Severity};
 
@@ -474,9 +474,87 @@ pub(crate) fn scroll_area<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<F
     }
 }
 
+/// Elemente, die einen Textersatz für ein Bild darin selbst mitbringen.
+const BILD_ODER_BEDIENELEMENT: [&str; 11] = [
+    "img", "svg", "picture", "video", "canvas", "object", "embed", "iframe", "input", "button",
+    "select",
+];
+
+/// Ob am Element schon ein Name oder Text hängt, der ein Stylesheet-Bild
+/// begleitet: ein Label, ein `title`, Text oder ein Bild oder Bedienelement
+/// darin.
+fn hat_namen_oder_inhalt<'a, N: Node<'a>>(n: N) -> bool {
+    ["aria-label", "aria-labelledby", "title"]
+        .iter()
+        .any(|a| n.attr(a).is_some_and(|v| !v.trim().is_empty()))
+        || !subtree_text(n).trim().is_empty()
+        || descendants(n).any(|d| BILD_ODER_BEDIENELEMENT.iter().any(|t| d.is_element(t)))
+}
+
+/// 1.1.1 (F3): Ein Bild, das das Stylesheet einfügt (`content: url(…)`,
+/// `background-image: url(…)`), hat keinen Textersatz-Mechanismus. Ob es
+/// Information trägt, entscheidet nur ein Mensch — deshalb nie `Fail`, immer
+/// Prüfen. Gemeldet wird nur, wo das Element sonst ohne Namen und ohne Inhalt
+/// ist: Mit Text, Label oder `title` am Element begleitet etwas das Bild, wie
+/// bei einem Symbol vor einer Beschriftung. `role="presentation"` erklärt es
+/// zum Schmuck; `aria-hidden` filtert schon die Sicht auf das Dokument.
+pub(crate) fn css_image<D: Rendering>(doc: &D, locale: Locale, out: &mut Vec<Finding>) {
+    let mut measured = false;
+    for n in elements(doc) {
+        let Some(images) = doc.generated_images(n) else {
+            continue;
+        };
+        measured = true;
+        if images.is_empty()
+            || hat_namen_oder_inhalt(n)
+            || n.attr("role")
+                .is_some_and(|r| matches!(r.trim(), "presentation" | "none"))
+        {
+            continue;
+        }
+        for image in images {
+            let url = image.url;
+            let wo = match image.source {
+                GeneratedImageSource::Before => pick!(locale, "with ::before", "mit ::before"),
+                GeneratedImageSource::After => pick!(locale, "with ::after", "mit ::after"),
+                GeneratedImageSource::Background => {
+                    pick!(locale, "as background-image", "als background-image")
+                }
+            };
+            out.push(
+                Finding::review(
+                    "images/css-image-text-alternative",
+                    tr!(
+                        locale,
+                        "The stylesheet inserts the image {url} {wo}; an image from CSS has no \
+                         text alternative. If it carries information, give the element a name \
+                         or text; a decorative image needs nothing.",
+                        "Das Stylesheet fügt das Bild {url} {wo} ein; ein Bild aus CSS hat keinen \
+                         Textersatz. Trägt es Information, braucht das Element einen Namen oder \
+                         Text; ein Schmuckbild braucht nichts."
+                    ),
+                )
+                .with_severity(Severity::Low)
+                .with_wcag(["1.1.1"])
+                .at(at(n.id())),
+            );
+        }
+    }
+    if !measured {
+        out.push(not_run::note(
+            "images/css-image-text-alternative",
+            pick!(
+                locale,
+                "The host does not know the stylesheets; images inserted by CSS were not checked.",
+                "Der Host kennt die Stylesheets nicht; Bilder aus CSS wurden nicht geprüft.",
+            ),
+        ));
+    }
+}
+
 // --- Registrierung ------------------------------------------------------------
 
-pub(crate) const METAS: [Meta; 3] = [
+pub(crate) const METAS: [Meta; 4] = [
     Meta {
         ids: &["lists/role-redundant"],
         tier: Tier::Rendering,
@@ -515,9 +593,22 @@ pub(crate) const METAS: [Meta; 3] = [
                   ein fokussierbares Element darin."
         ),
     },
+    Meta {
+        ids: &["images/css-image-text-alternative"],
+        tier: Tier::Rendering,
+        scope: Scope::AccessibilityTree,
+        wcag: &["1.1.1"],
+        severity: Severity::Low,
+        help: "An image inserted by CSS has no text alternative: if it carries information, \
+               the element needs a name or text.",
+        help_de: de_text!(
+            "Ein Bild aus CSS hat keinen Textersatz: Trägt es Information, braucht das Element \
+             einen Namen oder Text."
+        ),
+    },
 ];
 
 /// Die Auswertungsfunktionen, in derselben Reihenfolge wie [`METAS`].
-pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 3] {
-    [list_role, link_color_only, scroll_area]
+pub(crate) fn functions<D: Rendering>() -> [fn(&D, Locale, &mut Vec<Finding>); 4] {
+    [list_role, link_color_only, scroll_area, css_image]
 }

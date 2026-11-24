@@ -943,6 +943,7 @@ pub(crate) const METAS: &[Meta] = &[
     presentation::METAS[0],
     presentation::METAS[1],
     presentation::METAS[2],
+    presentation::METAS[3],
     probes::METAS[0],
     probes::METAS[1],
     probes::METAS[2],

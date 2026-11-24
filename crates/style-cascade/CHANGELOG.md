@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `style-cascade` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **`Cascade::generated_images`:** `content: url(…)` auf `::before` und `::after` und `background-image: url(…)` je Element; ein `content` mit Textersatz (`url(x) / "Name"`) zählt nicht, bei unaufgelöstem `@import` gibt es `None` (casoon/barrierlab#273).
+
 ## [0.4.0] - 2026-11-23
 
 ### Breaking

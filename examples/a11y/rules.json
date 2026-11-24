@@ -2214,6 +2214,15 @@
     ]
   },
   {
+    "help": "An image inserted by CSS has no text alternative: if it carries information, the element needs a name or text.",
+    "id": "images/css-image-text-alternative",
+    "severity": "low",
+    "tier": "rendering",
+    "wcag": [
+      "1.1.1"
+    ]
+  },
+  {
     "help": "No content or function may be lost when line height is at least 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size. Seen: text that hidden overflow newly cuts off after the host applied that override (Rendering::text_spacing_clip, a before/after pair; already clipped boxes are not findings). Overlapping text and content that disappears in other ways are not detected, so the result is a review. If the host could not apply the override (for example blocked by a CSP style-src), the rule does not run.",
     "id": "text-spacing/clipped",
     "severity": "medium",

@@ -485,6 +485,7 @@ mod tests {
             "keyboard/pointer-only",
             "focus/obscured",
             "keyboard/scrollable-region-not-focusable",
+            "images/css-image-text-alternative",
         ];
         let offen = report
             .rule_runs

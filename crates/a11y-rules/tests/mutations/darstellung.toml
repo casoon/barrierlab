@@ -429,3 +429,23 @@ find = '("line-height", "text-spacing/line-height-important", 1.5),'
 replace = '("line-height", "text-spacing/line-height-important", 1.51),'
 test = "korpus"
 expect = "killed"
+
+[[mutation]]
+id = "images/css-image-text-alternative"
+file = "src/presentation.rs"
+kind = "drop-condition"
+find = '''        || !subtree_text(n).trim().is_empty()
+        || descendants(n)'''
+replace = '''        || false
+        || descendants(n)'''
+test = "korpus"
+expect = "killed"
+
+[[mutation]]
+id = "images/css-image-text-alternative"
+file = "src/presentation.rs"
+kind = "drop-condition"
+find = '''                .is_some_and(|r| matches!(r.trim(), "presentation" | "none"))'''
+replace = '''                .is_some_and(|_| false)'''
+test = "korpus"
+expect = "killed"
