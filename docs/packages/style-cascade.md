@@ -49,6 +49,7 @@ flowchart LR
 | `Cascade::effective_background` | the colour behind the text, `None` if it cannot be known |
 | `Cascade::backdrop_luminances` | luminance samples where a gradient lies behind the text |
 | `Import::parse`, `Import::wrap` | reads an `@import` prelude; turns the sheet the host supplies into the rules that replace the import (layer, `@supports`, `@media`) |
+| `Cascade::generated_images(node)` | the images the sheets insert at a node: `content: url(…)` on `::before`/`::after`, `background-image: url(…)`; `None` while an `@import` is unresolved |
 | `expand_imports(css, resolver)` | replaces every `@import` the resolver answers (`Resolution::Css`) by the wrapped rules, recursively; `Inert` drops it, `Failed` and `Unresolved` leave it; cycles and more than 16 levels stop |
 | `imports_in(css)`, `wrap_media(rules, media)` | the top-level `@import`s of a text, parsed; the `@media` wrapper for a `<link media>` that keeps `@import` at the top |
 | `Cascade::is_dark(node)` | the used colour scheme at an element (`Some(true)` dark) |

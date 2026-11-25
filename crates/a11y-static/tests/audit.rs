@@ -595,3 +595,27 @@ fn link_in_running_text_by_colour_only() {
         r.findings
     );
 }
+
+/// Images from the stylesheet: a `::before` icon on an empty link and a
+/// background image on an empty block are a review; the same icon next to a
+/// text, or with a text alternative in `content`, is not.
+#[test]
+fn css_images_are_a_review_where_the_element_has_no_name() {
+    let css = ".home::before{content:url(home.svg)}\
+               .hero{background-image:url('chart.png')}\
+               .ok::before{content:url(ok.svg) / \"OK\"}";
+    let body = "<a class=home href=/></a><div class=hero></div>\
+                <a class=home href=/b>Home</a><span class=ok></span>";
+    let r = audit(
+        &doc(&format!("<style>{css}</style>"), body),
+        &[],
+        Environment::default(),
+    );
+    let hits: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule_id == "images/css-image-text-alternative")
+        .collect();
+    assert_eq!(hits.len(), 2, "{hits:?}");
+    assert!(hits.iter().all(|f| f.outcome == Outcome::Review));
+}

@@ -38,6 +38,7 @@ pub fn cases() -> Vec<Fall> {
     v.extend(lists());
     v.extend(links());
     v.extend(scroll_area());
+    v.extend(css_image());
     v
 }
 
@@ -588,6 +589,75 @@ fn scroll_area() -> Vec<Fall> {
             id,
             r#"<!DOCTYPE html><html lang="en" style="--unmeasured: scroll"><head><title>T</title></head><body><p>Text</p></body></html>"#,
             "docs/conventions.md: scroll extents not measured is not passed",
+        ),
+    ]
+}
+
+fn css_image() -> Vec<Fall> {
+    let id = "images/css-image-text-alternative";
+    let q = "WCAG 2.2 SC 1.1.1, technique F3: an image inserted with CSS has no text alternative; auditmysite#1181 recorded the gap";
+    vec![
+        review(
+            id,
+            r#"<span style="--css-images: before logo.svg"></span>"#,
+            q,
+        )
+        .count(1)
+        .variant("::before"),
+        review(
+            id,
+            r#"<span style="--css-images: after status.png"></span>"#,
+            q,
+        )
+        .count(1)
+        .variant("::after"),
+        review(
+            id,
+            r#"<div style="--css-images: background chart.png"></div>"#,
+            "F3: a content image set with background-image on an empty element",
+        )
+        .count(1)
+        .variant("background-image"),
+        review(
+            id,
+            r#"<div style="--css-images: before a.svg, background b.png"></div>"#,
+            q,
+        )
+        .count(2)
+        .variant("zwei Bilder, zwei Befunde"),
+        negative(
+            id,
+            r#"<a href="/" style="--css-images: before home.svg">Home</a>"#,
+            "F3: the element's text accompanies the image, as with an icon before a label",
+        )
+        .variant("Text am Element"),
+        negative(
+            id,
+            r#"<a href="/" aria-label="Home" style="--css-images: before home.svg"></a>"#,
+            "WCAG 1.1.1: the element has a name of its own",
+        )
+        .variant("aria-label"),
+        negative(
+            id,
+            r#"<span aria-hidden="true" style="--css-images: before star.svg"></span>"#,
+            "WCAG 1.1.1: decoration is hidden from assistive technology",
+        )
+        .variant("aria-hidden"),
+        negative(
+            id,
+            r#"<div role="presentation" style="--css-images: background wave.svg"></div>"#,
+            "WCAG 1.1.1: an element marked as presentation is decoration",
+        )
+        .variant("role=presentation"),
+        na(
+            id,
+            r#"<p>Text only</p>"#,
+            "WCAG 1.1.1: the stylesheet inserts no image",
+        ),
+        not_run(
+            id,
+            r#"<!DOCTYPE html><html lang="en" style="--unmeasured: css-images"><head><title>T</title></head><body><p>Text</p></body></html>"#,
+            "docs/conventions.md: stylesheets not known is not passed",
         ),
     ]
 }

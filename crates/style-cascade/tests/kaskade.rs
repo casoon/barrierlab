@@ -1074,3 +1074,65 @@ fn fokus_within_am_vorfahren_ist_unbestimmt_und_am_element_selbst_bestimmt() {
     let css = "input:focus-within { outline: 2px solid red } input { outline: none }";
     assert_eq!(fokus(css, html, "a"), FocusIndicator::Shown);
 }
+
+// --- Bilder aus dem Stylesheet (casoon/barrierlab#273) ---------------------
+
+fn bilder(
+    css: &str,
+    html: &str,
+    id: &str,
+) -> Option<Vec<(a11y_dom::GeneratedImageSource, String)>> {
+    let d = seite(html);
+    kaskade(css)
+        .generated_images(finde(&d, id))
+        .map(|v| v.into_iter().map(|g| (g.source, g.url)).collect())
+}
+
+#[test]
+fn bild_auf_pseudo_element_und_hintergrund() {
+    use a11y_dom::GeneratedImageSource::*;
+    let css = ".i::before { content: url(a.svg) } .i::after { content: url('b.png') }
+               .h { background-image: url(c.jpg), linear-gradient(red, blue) }";
+    assert_eq!(
+        bilder(css, r#"<span id="x" class="i"></span>"#, "x"),
+        Some(vec![(Before, "a.svg".into()), (After, "b.png".into())])
+    );
+    assert_eq!(
+        bilder(css, r#"<div id="x" class="h"></div>"#, "x"),
+        Some(vec![(Background, "c.jpg".into())])
+    );
+}
+
+#[test]
+fn bild_spaetere_regel_mit_text_gewinnt() {
+    let css = ".i::before { content: url(a.svg) } .i.t::before { content: \"x\" }";
+    assert_eq!(
+        bilder(css, r#"<i id="x" class="i t"></i>"#, "x"),
+        Some(vec![])
+    );
+}
+
+#[test]
+fn bild_mit_textersatz_im_content_zaehlt_nicht() {
+    let css = ".i::before { content: url(a.svg) / \"Start\" }";
+    assert_eq!(
+        bilder(css, r#"<i id="x" class="i"></i>"#, "x"),
+        Some(vec![])
+    );
+}
+
+#[test]
+fn bild_ohne_treffendes_element_und_mit_unaufgeloestem_import() {
+    assert_eq!(
+        bilder(
+            ".i::before { content: url(a.svg) }",
+            r#"<i id="x"></i>"#,
+            "x"
+        ),
+        Some(vec![])
+    );
+    assert_eq!(
+        bilder("@import url(x.css);", r#"<i id="x"></i>"#, "x"),
+        None
+    );
+}

@@ -393,6 +393,11 @@ impl<D: Rendering> Rendering for Visibility<'_, D> {
         doc.visually_hidden(node.inner)
     }
 
+    fn generated_images<'n>(&'n self, node: Self::N<'n>) -> Option<Vec<a11y_dom::GeneratedImage>> {
+        let doc: &'n D = self.doc;
+        doc.generated_images(node.inner)
+    }
+
     fn sampled_backdrop<'n>(&'n self, node: Self::N<'n>) -> Option<a11y_dom::Backdrop> {
         let doc: &'n D = self.doc;
         doc.sampled_backdrop(node.inner)
@@ -487,6 +492,13 @@ mod tests {
             Some(true)
         }
 
+        fn generated_images<'n>(&'n self, _: Self::N<'n>) -> Option<Vec<a11y_dom::GeneratedImage>> {
+            Some(vec![a11y_dom::GeneratedImage {
+                source: a11y_dom::GeneratedImageSource::After,
+                url: "x.svg".into(),
+            }])
+        }
+
         fn sampled_backdrop<'n>(&'n self, _: Self::N<'n>) -> Option<a11y_dom::Backdrop> {
             Some(a11y_dom::Backdrop {
                 luminance: vec![0.5],
@@ -537,6 +549,7 @@ mod tests {
         assert!(visibility.layout(n).is_some());
         assert_eq!(visibility.scroll_overflow_px(n), Some(7.0));
         assert_eq!(visibility.visually_hidden(n), Some(true));
+        assert_eq!(visibility.generated_images(n).map(|g| g.len()), Some(1));
         assert!(visibility.sampled_backdrop(n).is_some());
         assert_eq!(visibility.frame_reachable(n), Some(false));
         assert!(visibility.box_transform(n).is_some());

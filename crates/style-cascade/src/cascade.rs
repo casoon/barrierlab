@@ -5,9 +5,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use a11y_dom::{Node, NodeId, NodeKind};
+use a11y_dom::{GeneratedImage, GeneratedImageSource, Node, NodeId, NodeKind};
 use stylesheet_parse::{Context, Rule as CssRule, Stylesheet, parse_stylesheet};
 
+use crate::generated::{hat_textersatz, urls_in};
 use crate::layers::{LayerTree, gruppe};
 use crate::media::{Environment, eval};
 use crate::selector::{Key, Match, Mode, Selector, Specificity};
@@ -37,6 +38,19 @@ struct Decl {
 
 /// Die Regeln, die ein Element treffen oder treffen könnten, nach Index.
 type Matches = Rc<Vec<(usize, Match)>>;
+
+/// Eine Regel auf `::before` oder `::after`, nur ihre `content`-Angaben. Der
+/// Selektor ist der ohne das Pseudo-Element.
+struct PseudoRegel {
+    quelle: GeneratedImageSource,
+    selector: Selector,
+    spec: Specificity,
+    layer: Option<u32>,
+    layer_unsure: bool,
+    cond: Match,
+    /// Wert, Wichtigkeit, Reihenfolge.
+    content: Vec<(Expanded, bool, u32)>,
+}
 
 struct Rule {
     selector: Selector,
@@ -149,6 +163,11 @@ pub struct RuleSet {
     /// Ein Selektor nennt einen Fokuszustand nicht im letzten Teil: Der Fokus
     /// auf einem Element ändert dann auch andere (`input:focus + label`).
     focus_remote: bool,
+    /// Regeln auf `::before`/`::after` mit `content`.
+    pseudo: Vec<PseudoRegel>,
+    /// Nennt irgendeine davon eine Adresse (`url(…)`)? Sonst gibt es nichts zu
+    /// suchen.
+    pseudo_bild: bool,
 }
 
 /// Die Kaskade über die Stylesheets einer Seite. Gehört zu **einem**
@@ -260,6 +279,8 @@ impl RuleSet {
             universal: Vec::new(),
             imports: Vec::new(),
             focus_remote: false,
+            pseudo: Vec::new(),
+            pseudo_bild: false,
         };
         rs.lade(sheets);
         rs
@@ -296,6 +317,7 @@ impl RuleSet {
         // Ebenenbaum über alle Blätter, in Dokumentreihenfolge (Cascade 5 §6.4).
         let baum = LayerTree::build(sheets, &self.env);
         let mut knoten: Vec<Option<usize>> = Vec::new();
+        let mut pknoten: Vec<Option<usize>> = Vec::new();
         let mut order = 0u32;
         for s in sheets {
             for scoped in s.style_rules() {
@@ -331,6 +353,40 @@ impl RuleSet {
                     continue;
                 }
                 for sel in &scoped.selectors {
+                    if let Some((quelle, basis)) = pseudo_ende(sel) {
+                        let content: Vec<(Expanded, bool, u32)> = decls
+                            .iter()
+                            .filter(|d| d.prop == "content")
+                            .map(|d| (d.value.clone(), d.important, d.order))
+                            .collect();
+                        if !content.is_empty() {
+                            let selector = Selector::parse(&basis);
+                            let cond = if selector.is_valid() {
+                                cond
+                            } else {
+                                Match::Unknown
+                            };
+                            if content.iter().any(|(v, ..)| match v {
+                                Expanded::Set(s) => !urls_in(s).is_empty(),
+                                _ => false,
+                            }) {
+                                self.pseudo_bild = true;
+                            }
+                            // Ein Element mehr in der Spezifität: das Pseudo-Element.
+                            let mut spec = selector.specificity();
+                            spec.2 += 1;
+                            self.pseudo.push(PseudoRegel {
+                                quelle,
+                                selector,
+                                spec,
+                                layer: None,
+                                layer_unsure,
+                                cond,
+                                content,
+                            });
+                            pknoten.push(node);
+                        }
+                    }
                     if fokus_nicht_im_letzten_teil(sel) {
                         self.focus_remote = true;
                     }
@@ -365,6 +421,12 @@ impl RuleSet {
         let mut schluessel: Vec<Vec<u32>> = knoten.iter().flatten().map(|&n| baum.key(n)).collect();
         schluessel.sort();
         schluessel.dedup();
+        for (r, n) in self.pseudo.iter_mut().zip(&pknoten) {
+            r.layer = n.map(|n| {
+                let k = baum.key(n);
+                schluessel.binary_search(&k).unwrap_or_default() as u32
+            });
+        }
         for (r, n) in self.rules.iter_mut().zip(&knoten) {
             r.layer = n.map(|n| {
                 let k = baum.key(n);
@@ -396,6 +458,53 @@ impl Cascade {
             depth: Cell::new(0),
             focus: None,
         }
+    }
+
+    /// Die Bilder, die das Stylesheet an `n` einfügt: `content: url(…)` auf
+    /// `::before` und `::after`, `background-image: url(…)` am Element. Ein
+    /// `content` mit Textersatz (`url(x) / "Logo"`) zählt nicht. `None`, solange
+    /// ein `@import` nicht aufgelöst ist: dann kann jede Regel fehlen.
+    /// Regeln mit unlesbarem Selektor oder unbekannter Bedingung bleiben außen
+    /// vor.
+    pub fn generated_images<'a, N: Node<'a>>(&self, n: N) -> Option<Vec<GeneratedImage>> {
+        if !self.rs.imports.is_empty() {
+            return None;
+        }
+        let mut out = Vec::new();
+        if self.rs.pseudo_bild {
+            for quelle in [GeneratedImageSource::Before, GeneratedImageSource::After] {
+                let mut best: Option<(Weight, &Expanded)> = None;
+                for r in self.rs.pseudo.iter().filter(|r| r.quelle == quelle) {
+                    if r.cond != Match::Yes || r.selector.matches(n, Mode::Resting) != Match::Yes {
+                        continue;
+                    }
+                    for (v, important, order) in &r.content {
+                        let mut w = weight(*important, true, r.layer, false, r.spec, *order);
+                        if r.layer_unsure {
+                            w.layer = if *important { u32::MAX } else { u32::MAX - 1 };
+                        }
+                        if best.is_none_or(|(b, _)| w > b) {
+                            best = Some((w, v));
+                        }
+                    }
+                }
+                if let Some((_, Expanded::Set(v))) = best
+                    && !hat_textersatz(v)
+                {
+                    out.extend(urls_in(v).into_iter().map(|url| GeneratedImage {
+                        source: quelle,
+                        url,
+                    }));
+                }
+            }
+        }
+        if let Specified::Set(v) = self.specified(n, "background-image") {
+            out.extend(urls_in(&v).into_iter().map(|url| GeneratedImage {
+                source: GeneratedImageSource::Background,
+                url,
+            }));
+        }
+        Some(out)
     }
 
     /// Ob beim Fokussieren von `n` ein Hinweis sichtbar wird: ein Rahmen
@@ -772,4 +881,28 @@ fn kontext(ctx: &Context<'_>, env: &Environment) -> Match {
         }
     }
     cond
+}
+
+/// Endet der Selektor auf `::before` oder `::after` (auch mit einem
+/// Doppelpunkt)? Dann das Pseudo-Element und der Rest davor.
+fn pseudo_ende(sel: &str) -> Option<(GeneratedImageSource, String)> {
+    let t = sel.trim();
+    let klein = t.to_ascii_lowercase();
+    for (suffix, quelle) in [
+        ("::before", GeneratedImageSource::Before),
+        (":before", GeneratedImageSource::Before),
+        ("::after", GeneratedImageSource::After),
+        (":after", GeneratedImageSource::After),
+    ] {
+        if klein.ends_with(suffix) {
+            let basis = t[..t.len() - suffix.len()].trim_end();
+            let basis = if basis.is_empty() || basis.ends_with(['>', '+', '~']) {
+                format!("{basis}*")
+            } else {
+                basis.to_string()
+            };
+            return Some((quelle, basis));
+        }
+    }
+    None
 }

@@ -373,6 +373,7 @@ mod tests {
                     "keyboard/pointer-only",
                     "focus/obscured",
                     "keyboard/scrollable-region-not-focusable",
+                    "images/css-image-text-alternative",
                 ]
                 .contains(&r.rule_id.as_str())
             })

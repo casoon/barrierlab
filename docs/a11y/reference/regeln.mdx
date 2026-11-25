@@ -14,7 +14,7 @@ may deviate from it. Each row has an anchor: the ID with `/` replaced by `-`
     from the rule set. Do not edit by hand. */}
 
 {/* generiert:anfang */}
-a11y-rules 0.31.1 declares 181 IDs.
+a11y-rules 0.31.1 declares 182 IDs.
 
 ## Tier 1: Structure
 
@@ -182,7 +182,7 @@ a11y-rules 0.31.1 declares 181 IDs.
 
 ## Tier 3: Rendering
 
-22 IDs, needs `Rendering`, i.e. computed styles and geometry.
+23 IDs, needs `Rendering`, i.e. computed styles and geometry.
 
 | ID | WCAG | Severity | Rule hint |
 |---|---|---|---|
@@ -202,6 +202,7 @@ a11y-rules 0.31.1 declares 181 IDs.
 | `lists/role-redundant`<a id="lists-role-redundant"></a> | – | low | role="list" on a `<ul>` or `<ol>` is only needed when list-style-type is none. |
 | `color/link-indistinct`<a id="color-link-indistinct"></a> | 1.4.1 | medium | A link in running text needs more than colour to stand out: an underline, or a different weight, style, border or background. |
 | `keyboard/scrollable-region-not-focusable`<a id="keyboard-scrollable-region-not-focusable"></a> | 2.1.1 | high | A scrollable region needs keyboard access: tabindex="0" on the region or a focusable element inside it. |
+| `images/css-image-text-alternative`<a id="images-css-image-text-alternative"></a> | 1.1.1 | low | An image inserted by CSS has no text alternative: if it carries information, the element needs a name or text. |
 | `text-spacing/clipped`<a id="text-spacing-clipped"></a> | 1.4.12 | medium | No content or function may be lost when line height is at least 1.5, paragraph spacing 2, letter spacing 0.12 and word spacing 0.16 times the font size. Seen: text that hidden overflow newly cuts off after the host applied that override (Rendering::text\_spacing\_clip, a before/after pair; already clipped boxes are not findings). Overlapping text and content that disappears in other ways are not detected, so the result is a review. If the host could not apply the override (for example blocked by a CSP style-src), the rule does not run. |
 | `focus/obscured-enhanced`<a id="focus-obscured-enhanced"></a> | 2.4.12 | low | Enhanced (AAA): no part of a focused control may be hidden by fixed or sticky content. Seen: Rendering::focus\_cover, sample points under such an element after the host focused and scrolled the control; any covered point is reported. Sampling approximates "any part", so the result is a review. Without a focus pass the rule does not run: static geometry is not a probe. |
 | `auth/paste-blocked`<a id="auth-paste-blocked"></a> | 3.3.8 | high | A password or one-time-code field must accept pasted text, so that a password manager can fill it: a handler that cancels the paste event without inserting the text itself blocks it. Seen: a synthetic, cancelable paste event the host dispatched; it is not trusted (isTrusted is false), so a handler that reacts only to trusted events or to key presses is not seen. autocomplete="off" on a password field is not a finding: browsers ignore it. |

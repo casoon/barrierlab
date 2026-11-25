@@ -10,6 +10,10 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+### Added
+
+- **Bilder:** `images/css-image-text-alternative` (1.1.1, F3, niedrig, `REVIEW`) meldet ein Bild, das das Stylesheet einfügt (`content: url(…)`, `background-image: url(…)`), an einem Element ohne Namen und ohne Inhalt. Braucht `Rendering::generated_images`; ohne läuft sie nicht (casoon/barrierlab#273).
+
 ## [0.31.1] - 2026-11-24
 
 ### Changed

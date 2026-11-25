@@ -2,8 +2,8 @@
 //! `a11y-dom`), semantics from `accname`, rendering from `style-cascade`.
 
 use a11y_dom::{
-    ColorPairs, ComputedStyle, Document, Layout, Node, NodeKind, Rect, Rendering, Semantics,
-    ancestors,
+    ColorPairs, ComputedStyle, Document, GeneratedImage, Layout, Node, NodeKind, Rect, Rendering,
+    Semantics, ancestors,
 };
 use accname::IdIndex;
 use html5_parser::Document as Html5Document;
@@ -145,6 +145,16 @@ impl Rendering for Host<'_> {
             return None;
         }
         self.cascade.color_pairs(node)
+    }
+
+    /// Images the stylesheets insert: `content: url(…)` on `::before` and
+    /// `::after`, `background-image: url(…)`. `None` without complete
+    /// stylesheets or with an unresolved `@import`.
+    fn generated_images<'n>(&'n self, node: Self::N<'n>) -> Option<Vec<GeneratedImage>> {
+        if self.incomplete {
+            return None;
+        }
+        self.cascade.generated_images(node)
     }
 
     /// Neither the node nor an ancestor has `display: none` (which includes

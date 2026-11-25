@@ -5,6 +5,10 @@ Alle nennenswerten Änderungen an `a11y-static` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+### Added
+
+- **Bilder aus CSS:** `generated_images` aus der Kaskade; die neue Regel `images/css-image-text-alternative` läuft damit auch hier (casoon/barrierlab#273).
+
 ## [0.6.0] - 2026-11-23
 
 ### Breaking

@@ -2119,6 +2119,15 @@
       "reason": "host provides no computed styles and no geometry"
     },
     {
+      "rule_id": "images/css-image-text-alternative",
+      "wcag": [
+        "1.1.1"
+      ],
+      "not_run": "capability_missing",
+      "findings": 0,
+      "reason": "host provides no computed styles and no geometry"
+    },
+    {
       "rule_id": "text-spacing/clipped",
       "wcag": [
         "1.4.12"
@@ -2260,6 +2269,6 @@
     "high": 0,
     "medium": 0,
     "low": 1,
-    "rules_not_run": 69
+    "rules_not_run": 70
   }
 }

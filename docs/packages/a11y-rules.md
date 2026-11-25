@@ -53,7 +53,8 @@ the **heuristics** in tier 3 (`REVIEW`, from `Rendering::layout` and
 rules whose field the host does not provide: `order/visual-mismatch`,
 `motion/infinite-animation`, `reflow/min-width`, `keyboard/pointer-only`,
 `focus/obscured`, `focus/indicator-missing`, `lists/role-redundant`,
-`color/link-indistinct`, `keyboard/scrollable-region-not-focusable`). `UNTESTED`
+`color/link-indistinct`, `keyboard/scrollable-region-not-focusable`,
+`images/css-image-text-alternative`). `UNTESTED`
 findings remain only where a result concerns one element or the page:
 `contrast/text-undetermined`, `contrast/control-undetermined`,
 `tables/data-undetermined`, `targets/size` (target still animating),
