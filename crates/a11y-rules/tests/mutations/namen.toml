@@ -572,7 +572,7 @@ id = "images/role-img-name-missing"
 file = "src/names.rs"
 kind = "revert-fix"
 find = '''
-        if n.is_element("img") || crate::semantics::in_svg(n) {
+        if n.is_element("img") || a11y_dom::in_svg(n) {
 '''
 replace = '''
         if false {

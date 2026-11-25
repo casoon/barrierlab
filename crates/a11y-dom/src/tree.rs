@@ -151,6 +151,15 @@ pub fn ancestors<'a, N: Node<'a>>(node: N) -> impl Iterator<Item = N> + 'a {
     })
 }
 
+/// Ob das Element SVG-Inhalt ist: ein `<svg>` oder ein Nachfahre davon, nicht
+/// über ein `<foreignObject>` hinweg (dahinter beginnt wieder HTML).
+pub fn in_svg<'a, N: Node<'a>>(n: N) -> bool {
+    std::iter::once(n)
+        .chain(ancestors(n))
+        .find(|a| a.is_element("svg") || a.local_name().eq_ignore_ascii_case("foreignobject"))
+        .is_some_and(|a| a.is_element("svg"))
+}
+
 /// Der nächste Vorfahre mit diesem Tagnamen, den Knoten selbst eingeschlossen.
 pub fn closest<'a, N: Node<'a>>(node: N, local_name: &str) -> Option<N> {
     std::iter::once(node)

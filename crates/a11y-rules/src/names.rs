@@ -209,7 +209,7 @@ pub(crate) fn role_img_names<D: Semantics>(doc: &D, locale: Locale, out: &mut Ve
         if !matches!(role.as_str(), "img" | "image") {
             continue;
         }
-        if n.is_element("img") || crate::semantics::in_svg(n) {
+        if n.is_element("img") || a11y_dom::in_svg(n) {
             continue;
         }
         if named(doc, n) {
