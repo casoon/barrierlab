@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.31.2] - 2026-11-26
+
 ### Added
 
 - **`in_svg`:** ob ein Knoten SVG-Inhalt ist (`<svg>` oder Nachfahre, nicht über `<foreignObject>` hinweg); bisher nur in `a11y-rules`, jetzt öffentlich, damit Hosts die Entscheidung nicht nachbauen (casoon/barrierlab#271).
