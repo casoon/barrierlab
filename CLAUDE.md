@@ -12,22 +12,13 @@ Stand und offene Punkte: GitHub-Issues (kein lokales `plan/`), Überblick in
 keine Umbauten, bis die abhängigen Werkzeuge die Pakete übernommen haben; Ideen als Issues
 sammeln.
 
-## Schichten
-
-```
-L0  html5-parser · csp-parse · media-query-parse · xpath-eval · relax-ng · schematron-engine
-L1  a11y-dom · a11y-report · html-conform · stylesheet-parse · xml-adapters
-L2  accname · style-cascade · a11y-rules · a11y-perception · web-checks
-L3  a11y-wasm (Crate + npm)
-──  Repo-Grenze: Hosts binden nur über die Registries ein
-```
-
 ## Feste Regeln
 
-- **Abhängigkeiten nur nach unten.** Kein Paket importiert ein Paket einer höheren
-  Schicht. Innerhalb einer Schicht sind Abhängigkeiten erlaubt, solange der
-  Graph azyklisch ist; in L2 steht `a11y-rules` oben (hängt von `accname` und
-  `style-cascade` ab). Kein Host in diesem Repository.
+- **Abhängigkeiten nur nach unten** (Schichten L0–L3: [`docs/architecture.md`](docs/architecture.md)).
+  Kein Paket importiert ein Paket einer höheren Schicht. Innerhalb einer Schicht sind
+  Abhängigkeiten erlaubt, solange der Graph azyklisch ist; in L2 baut `a11y-rules` auf
+  `accname` und `style-cascade` auf, `a11y-static` steht darüber. Kein Host in diesem
+  Repository; Hosts binden nur über die Registries ein.
 - **Browserfrei bis L3.** Kein `chromiumoxide`, keine CDP-Typen in einer
   öffentlichen API. Ein Paket nimmt Daten entgegen, es beschafft sie nicht.
 - **Kein Host-Format im Kern.** Instanzdokumente kommen über ein generisches
@@ -41,9 +32,9 @@ L3  a11y-wasm (Crate + npm)
 - **Lizenz MIT** überall. `reuse lint` und `cargo deny check licenses` müssen
   durchlaufen (Konfiguration im Wurzelverzeichnis).
 - **Vendorter Fremdcode wird nicht von Hand geändert**, nur über die
-  `xtask/vendor-*.sh`-Skripte: `crates/html-conform/{schema,tests/corpus}`,
-  `crates/relax-ng/tests/corpus/relaxng`. Herkunft steht in
-  `THIRD-PARTY-NOTICES.md` bzw. `UPSTREAM.md`.
+  `crates/<paket>/xtask/vendor-*.sh`-Skripte (z. B. `crates/html-conform/{schema,tests/corpus}`,
+  `crates/relax-ng/tests/corpus/relaxng`, die WPT-Korpora). Herkunft steht in
+  `THIRD-PARTY-NOTICES.md` bzw. `UPSTREAM.md` des jeweiligen Pakets.
 - **`dholroyd/relaxng-rust`** steht seit 21.10.2026 unter MIT OR Apache-2.0
   (vorher unlizenziert). Code daraus nur unter MIT und mit Herkunft in
   `THIRD-PARTY-NOTICES.md`; `relax-ng` selbst ist bisher eigenständig.
