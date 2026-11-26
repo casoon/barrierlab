@@ -4,6 +4,12 @@ Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unreleased]
 
+## [0.17.4] - 2026-11-26
+
+### Changed
+
+- **Regeln:** baut gegen `a11y-rules` 0.31.2: neue Kennung `images/css-image-text-alternative` (1.1.1, F3, `REVIEW`); sie läuft hier nicht, weil die Seite die Bilder aus CSS nicht meldet, und steht als nicht gelaufen im Bericht.
+
 ## [0.17.3] - 2026-11-24
 
 ### Changed
