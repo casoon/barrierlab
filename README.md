@@ -81,6 +81,10 @@ until the tools above have taken it up. Issues are welcome and collected.
 Part of the wider BarrierLab project, an independent European laboratory for digital
 accessibility. Articles, tools and background: **<https://barrierlab.eu>**.
 
+## Author
+
+Built and maintained by [Jörn Seidel](https://www.casoon.de/joern-seidel/) ([CASOON](https://www.casoon.de/)). Background and design decisions are described in an article on Insights (in German): [Das barrierlab-Ökosystem: Accessibility-Prüfung vom Build bis zur laufenden Seite](https://insights.casoon.de/artikel/barrierlab-oekosystem-accessibility-werkzeuge/).
+
 ## License
 
 MIT
