@@ -10,6 +10,12 @@ abweichen, steht je Schritt in
 
 ## [Unreleased]
 
+## [0.31.3] - 2026-11-26
+
+### Changed
+
+- **Gleichschritt:** mit `a11y-report` 0.31.3; keine eigene Änderung.
+
 ## [0.31.2] - 2026-11-26
 
 ### Added

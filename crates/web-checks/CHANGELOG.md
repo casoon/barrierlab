@@ -5,6 +5,8 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-26
+
 ### Added
 
 - **render_blocking:** `is_blocking_script(type, async, defer)` und `is_blocking_stylesheet_media(media)`: das Urteil, ob ein `<script src>` oder `<link rel=stylesheet>` im `<head>` den Aufbau aufhält; der Host sammelt die Elemente (casoon/barrierlab#279).
