@@ -22,6 +22,9 @@
 //! [`hreflang`] — Sprachcodes nach BCP 47, `x-default` und der Verweis auf
 //! die eigene Seite.
 //!
+//! [`render_blocking`] — synchrone Skripte und Stylesheets im `<head>`: ob ein
+//! Element den Aufbau aufhält, nach seinen Attributen.
+//!
 //! [`meta`] — Länge von Titel und Meta-Beschreibung, in Zeichen.
 //!
 //! [`social`] — OpenGraph und Twitter Cards: Tag-Listen, Anwesenheit,
@@ -44,6 +47,7 @@
 
 pub mod hreflang;
 pub mod meta;
+pub mod render_blocking;
 pub mod robots;
 pub mod social;
 pub mod structured_data;

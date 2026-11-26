@@ -67,6 +67,12 @@ pub fn parse_blocks<S: AsRef<str>>(scripts: &[S]) -> Vec<Block> {
 ///
 /// Eine Wurzel-Liste wird in ihre Einträge aufgelöst, `@graph` in seine
 /// Knoten; ein `@context` gilt für die Einträge seines `@graph`. Als
+/// Ein `@graph`-Behälter ohne `@type` an der Wurzel ist gültig: Gelesen werden
+/// seine Knoten, der Behälter selbst braucht keinen Typ (siehe
+/// `graph_nodes_are_normalized_once_without_container`). Ungültig ist nur, was
+/// kein JSON ist (`json_error`).
+///
+/// Als
 /// schema.org-Kontext zählt nur `http(s)://schema.org` (Schrägstrich am Ende
 /// gleichgültig), auch als Eintrag einer Liste oder als `@vocab`.
 pub fn parse_block(text: &str) -> Block {

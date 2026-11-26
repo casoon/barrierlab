@@ -96,6 +96,29 @@ pub use report::{InputKind, InputNote, NotRun, Report, RuleRun, SCHEMA_VERSION, 
 mod tests {
     use super::*;
 
+    /// WCAG 2.2 hat 86 Erfolgskriterien: 31 A, 24 AA, 31 AAA (4.1.1 ist entfallen).
+    #[test]
+    fn stufe_je_erfolgskriterium() {
+        let mut zaehler = [0usize; 3];
+        for a in 1..=4u32 {
+            for b in 1..=5u32 {
+                for c in 1..=13u32 {
+                    match WcagLevel::of_criterion(&format!("{a}.{b}.{c}")) {
+                        Some(WcagLevel::A) => zaehler[0] += 1,
+                        Some(WcagLevel::AA) => zaehler[1] += 1,
+                        Some(WcagLevel::AAA) => zaehler[2] += 1,
+                        None => {}
+                    }
+                }
+            }
+        }
+        assert_eq!(zaehler, [31, 24, 31]);
+        assert_eq!(WcagLevel::of_criterion("1.4.3"), Some(WcagLevel::AA));
+        assert_eq!(WcagLevel::of_criterion("2.4.11"), Some(WcagLevel::AA));
+        assert_eq!(WcagLevel::of_criterion("4.1.1"), None);
+        assert_eq!(WcagLevel::of_criterion("9.9.9"), None);
+    }
+
     #[test]
     fn end_round_trips_and_is_omitted_when_absent() {
         let loc = Location::default()

@@ -152,6 +152,38 @@ impl WcagLevel {
         }
     }
 
+    /// Die Stufe eines Erfolgskriteriums von WCAG 2.2, etwa `"1.4.3"` →
+    /// `AA`. `None` für Unbekanntes und für das in 2.2 entfernte 4.1.1.
+    pub fn of_criterion(criterion: &str) -> Option<WcagLevel> {
+        const A: &[&str] = &[
+            "1.1.1", "1.2.1", "1.2.2", "1.2.3", "1.3.1", "1.3.2", "1.3.3", "1.4.1", "1.4.2",
+            "2.1.1", "2.1.2", "2.1.4", "2.2.1", "2.2.2", "2.3.1", "2.4.1", "2.4.2", "2.4.3",
+            "2.4.4", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "3.1.1", "3.2.1", "3.2.2", "3.2.6",
+            "3.3.1", "3.3.2", "3.3.7", "4.1.2",
+        ];
+        const AA: &[&str] = &[
+            "1.2.4", "1.2.5", "1.3.4", "1.3.5", "1.4.3", "1.4.4", "1.4.5", "1.4.10", "1.4.11",
+            "1.4.12", "1.4.13", "2.4.5", "2.4.6", "2.4.7", "2.4.11", "2.5.7", "2.5.8", "3.1.2",
+            "3.2.3", "3.2.4", "3.3.3", "3.3.4", "3.3.8", "4.1.3",
+        ];
+        const AAA: &[&str] = &[
+            "1.2.6", "1.2.7", "1.2.8", "1.2.9", "1.3.6", "1.4.6", "1.4.7", "1.4.8", "1.4.9",
+            "2.1.3", "2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.3.2", "2.3.3", "2.4.8", "2.4.9",
+            "2.4.10", "2.4.12", "2.4.13", "2.5.5", "2.5.6", "3.1.3", "3.1.4", "3.1.5", "3.1.6",
+            "3.2.5", "3.3.5", "3.3.6", "3.3.9",
+        ];
+        let c = criterion.trim();
+        if A.contains(&c) {
+            Some(WcagLevel::A)
+        } else if AA.contains(&c) {
+            Some(WcagLevel::AA)
+        } else if AAA.contains(&c) {
+            Some(WcagLevel::AAA)
+        } else {
+            None
+        }
+    }
+
     /// Ist diese Stufe in einer Prüfung auf `target` enthalten?
     /// AA schließt A ein, AAA schließt beide ein.
     pub fn included_in(self, target: WcagLevel) -> bool {
