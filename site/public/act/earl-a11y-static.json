@@ -407,7 +407,7 @@
           "@type": "Assertion",
           "result": {
             "@type": "TestResult",
-            "outcome": "earl:cantTell"
+            "outcome": "earl:passed"
           },
           "subject": {
             "@type": [
@@ -10151,7 +10151,7 @@
           "@type": "Assertion",
           "result": {
             "@type": "TestResult",
-            "outcome": "earl:cantTell"
+            "outcome": "earl:passed"
           },
           "subject": {
             "@type": [
@@ -10172,7 +10172,7 @@
           "@type": "Assertion",
           "result": {
             "@type": "TestResult",
-            "outcome": "earl:cantTell"
+            "outcome": "earl:passed"
           },
           "subject": {
             "@type": [
@@ -10277,7 +10277,7 @@
           "@type": "Assertion",
           "result": {
             "@type": "TestResult",
-            "outcome": "earl:cantTell"
+            "outcome": "earl:passed"
           },
           "subject": {
             "@type": [
@@ -10319,7 +10319,7 @@
           "@type": "Assertion",
           "result": {
             "@type": "TestResult",
-            "outcome": "earl:cantTell"
+            "outcome": "earl:passed"
           },
           "subject": {
             "@type": [
@@ -12839,7 +12839,7 @@
       "name": "BarrierLab a11y-static",
       "release": {
         "@type": "Version",
-        "revision": "0.30.10"
+        "revision": "0.31.2"
       }
     }
   ]

@@ -13,8 +13,8 @@ the ACT Rules Community Group, not by the tool's maker.
 
 ## Result
 
-Run of 16 November 2026 against all 1,134 test cases, with `a11y-static` 0.5.1 and
-`a11y-rules` 0.30.3 (the BarrierLab rules on the page source, no browser), counted the way the
+Run of 26 November 2026 against all 1,134 test cases, with `a11y-static` 0.6.1 and
+`a11y-rules` 0.31.2 (the BarrierLab rules on the page source, no browser), counted the way the
 W3C counts:
 
 | | BarrierLab (own run) | axe-core 4.14.0 (W3C report of 31 October 2026) |
