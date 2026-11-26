@@ -7,6 +7,8 @@ Repository `casoon/a11y-core`.
 
 ## [Unreleased]
 
+## [0.31.3] - 2026-11-26
+
 ### Added
 
 - **`WcagLevel::of_criterion`:** die Stufe (A, AA, AAA) eines Erfolgskriteriums von WCAG 2.2, als öffentliche Tatsache statt je Host eine eigene Tabelle (casoon/barrierlab#278).
