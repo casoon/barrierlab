@@ -106,6 +106,8 @@ status texts stay with the host.
 Comparison with visible content (needs the rendered page), consistency across
 all pages of a build, Microdata and RDFa stay out.
 
+Confirmed as intended (casoon/barrierlab#280): `parse_block` is the validity check for JSON-LD, including `@graph` containers without a top-level `@type`; only text that is not JSON is invalid.
+
 ### `hreflang` (0.5.0)
 
 Both tools check `x-default` and the reference to the page itself, only
@@ -126,6 +128,12 @@ to itself. Versions that differ only in the query
 considered `de-de` and `zh-Hant` invalid. The 23 codes on nine of the 48
 real pages examined are valid under both the old and the new check.
 
+Confirmed as intended (casoon/barrierlab#280): `has_self_reference` ignores `x-default`, so a page that names itself only as `x-default` has no reference to itself.
+
+### `render_blocking`
+
+`is_blocking_script(type, async, defer)`: a classic script (no `type` or a JavaScript MIME type, any capitalization) without `async` and `defer`. `type="module"` is deferred like `defer` and never blocks, data blocks (`application/ld+json`, `importmap`, …) are not executed. `is_blocking_stylesheet_media(media)`: blocking for no, empty, `all` and `screen` media. The host collects the elements; wording and severity stay with the host.
+
 ## Public surface
 
 | Entry | Purpose |
@@ -139,6 +147,7 @@ real pages examined are valid under both the old and the new check.
 | `social::is_present`, `is_complete`, `completeness` | presence (empty = missing) and completeness via `*_REQUIRED` / `*_FIELDS` |
 | `social::is_valid_twitter_card`, `is_absolute_url` | value checks |
 | `structured_data::parse_blocks`, `parse_block` → `Block { nodes, issues, json_error }` | script text → normalized nodes and `StructuralIssue` |
+| `render_blocking::is_blocking_script`, `is_blocking_stylesheet_media` | does a head script or stylesheet hold back rendering, from its attributes |
 | `structured_data::has_schema_org_context`, `extract_types`, `normalize_schema_type` | the building blocks of normalization |
 | `structured_data::assess_node`, `SchemaRuleAssessment`, `ProductRuleContext` | assessment per node and type: missing required and recommended paths, feature, availability, source |
 | `structured_data::inventory_fields` | fields per type for an inventory |
