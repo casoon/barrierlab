@@ -533,10 +533,7 @@ pub enum VocabIssue {
         expected_domain: String,
     },
     /// Wert einer Property passt nicht zur erwarteten Range (z. B. `geo` als Text oder `address` als Zahl).
-    InvalidRange {
-        property: String,
-        expected: String,
-    },
+    InvalidRange { property: String, expected: String },
 }
 
 /// Zusammenfassung eines Entitäts-Knotens für seitenübergreifende Konsistenzprüfungen.
@@ -697,13 +694,11 @@ pub fn validate_vocabulary(schema_type: &str, content: &Value) -> Vec<VocabIssue
                     });
                 }
             }
-            "openingHoursSpecification" => {
-                if !(val.is_object() || val.is_array()) {
-                    issues.push(VocabIssue::InvalidRange {
-                        property: key.clone(),
-                        expected: "OpeningHoursSpecification (object or array)".to_string(),
-                    });
-                }
+            "openingHoursSpecification" if !(val.is_object() || val.is_array()) => {
+                issues.push(VocabIssue::InvalidRange {
+                    property: key.clone(),
+                    expected: "OpeningHoursSpecification (object or array)".to_string(),
+                });
             }
             _ => {}
         }
@@ -848,7 +843,10 @@ mod tests {
             "geo": {"latitude": 54.0887, "longitude": 12.1405}
         }));
         assert_eq!(summary.id.as_deref(), Some("https://example.com/#org"));
-        assert_eq!(summary.address.as_deref(), Some("Hauptstr. 1, 18055, Rostock"));
+        assert_eq!(
+            summary.address.as_deref(),
+            Some("Hauptstr. 1, 18055, Rostock")
+        );
         assert_eq!(summary.geo, Some((54.0887, 12.1405)));
     }
 }

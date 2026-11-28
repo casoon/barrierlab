@@ -5,6 +5,23 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-28
+
+### Breaking
+
+- **robots:** `BotClass` hat die neuen Varianten `UserFetch` (vom Nutzer ausgelöster Live-Abruf) und `Archive` (Web-Archive); ein erschöpfendes `match` muss sie behandeln. Nutzer-Abrufer wie `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `DuckAssistBot` und `MistralAI-User` gelten nicht mehr als `AiCitation`, sondern als `UserFetch`; `ia_archiver` und `archive.org_bot` als `Archive` (casoon/barrierlab#286).
+
+### Added
+
+- **robots:** `block_scope()` / `Group::block_scope()` liefern den Sperrumfang einer Gruppe als `BlockScope` (`None`, `Partial`, `Full`) unter Berücksichtigung von `Allow`-Ausnahmen (RFC 9309) (casoon/barrierlab#286).
+- **robots:** `RobotsTxt::effective_group(user_agent)` ermittelt die für einen Bot tatsächlich geltende Gruppe: spezifischster Treffer, gleiche Agenten zusammengeführt, sonst `*` (casoon/barrierlab#286).
+- **structured_data:** Gebündeltes schema.org-Vokabular (`SCHEMA_ORG_VERSION`) mit `is_known_type`, `parent_types`, `is_subtype_of`, `suggest_type`, `suggest_property` und `validate_vocabulary` (`VocabIssue`: unbekannter Typ oder Property, falsche Domain, falsche Range) (casoon/barrierlab#287).
+- **structured_data:** `extract_entity_summary()` fasst einen Knoten als `EntitySummary` (`id`, `name`, `url`, `address`, `geo`) für seitenübergreifende Prüfungen zusammen (casoon/barrierlab#287).
+
+### Changed
+
+- **structured_data:** `assess_node` bewertet Untertypen von `LocalBusiness`, `WebPage`, `Organization` und `Article` nach der Regel des Obertyps, etwa `Restaurant` wie `LocalBusiness`; `schema_type` im Ergebnis bleibt der konkrete Typ (casoon/barrierlab#287).
+
 ## [0.9.0] - 2026-11-28
 
 ### Breaking

@@ -340,15 +340,23 @@ pub fn assess_node(
             content,
             PERSON_SOURCE,
         )],
-        other if super::vocab::is_subtype_of(other, "LocalBusiness") => {
-            assess_as_parent(node_index, schema_type, "LocalBusiness", content, product_context)
-        }
+        other if super::vocab::is_subtype_of(other, "LocalBusiness") => assess_as_parent(
+            node_index,
+            schema_type,
+            "LocalBusiness",
+            content,
+            product_context,
+        ),
         other if super::vocab::is_subtype_of(other, "WebPage") => {
             assess_as_parent(node_index, schema_type, "WebPage", content, product_context)
         }
-        other if super::vocab::is_subtype_of(other, "Organization") => {
-            assess_as_parent(node_index, schema_type, "Organization", content, product_context)
-        }
+        other if super::vocab::is_subtype_of(other, "Organization") => assess_as_parent(
+            node_index,
+            schema_type,
+            "Organization",
+            content,
+            product_context,
+        ),
         other if super::vocab::is_subtype_of(other, "Article") => {
             assess_as_parent(node_index, schema_type, "Article", content, product_context)
         }

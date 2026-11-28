@@ -57,9 +57,18 @@ What counts is what the vendors themselves write: OpenAI separates `GPTBot`
 registries and are now included.
 
 Since 0.9.0 the registry follows the current operator documentation:
-`ClaudeBot` counts as training, `ChatGPT-User` as citation, `Google-Extended`
-as mixed, `Applebot` and `GoogleOther` as search engines. `Content-Signal:`
-lines are kept in `RobotsTxt::content_signals`.
+`ClaudeBot` counts as training, `Google-Extended` as mixed, `Applebot` and
+`GoogleOther` as search engines. `Content-Signal:` lines are kept in
+`RobotsTxt::content_signals`.
+
+Since 0.10.0 `BotClass` separates a fetch triggered by a user's request
+(`UserFetch`: `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `DuckAssistBot`,
+`MistralAI-User`) from AI search indexing (`AiCitation`), and web archives
+(`ia_archiver`, `archive.org_bot`) get their own class `Archive`. Blocking a
+bot is not all-or-nothing either: `block_scope` returns `None`, `Partial(paths)`
+or `Full` for a group, with `Allow` exceptions resolved by RFC 9309 specificity,
+and `RobotsTxt::effective_group(user_agent)` picks the group that actually applies
+to a bot (most specific match, groups of the same agent merged, else `*`).
 
 That is the yield of this slice: not fewer lines, but **one** answer
 instead of two contradictory ones. For astro-post-audit the findings change
@@ -102,6 +111,17 @@ feature and carries the table's version. The decisions in detail:
 | BreadcrumbList | `name` also via `item.name` | ≥ 2 entries, `item` except for the last, `name` directly | ≥ 2 entries, `item` except for the last, `name` also via `item.name` |
 | Duplicate `@type` across blocks | yes | no | `duplicate_types`, the host switches it |
 | Event, Recipe, VideoObject, JobPosting, SoftwareApplication, ProfilePage, CollectionPage, ItemList, Merchant Listing | — | yes | yes |
+
+Since 0.10.0 the package carries an offline snapshot of the schema.org vocabulary
+(`SCHEMA_ORG_VERSION`, currently 29.0): the type hierarchy (`is_known_type`,
+`parent_types`, `is_subtype_of`), typo suggestions (`suggest_type`,
+`suggest_property`) and `validate_vocabulary`, which reports unknown types and
+properties, properties outside the domain of the type and values outside the range
+as `VocabIssue`. `assess_node` uses the hierarchy: a subtype of `LocalBusiness`,
+`WebPage`, `Organization` or `Article` is assessed with the rule of its parent
+(a `Restaurant` like a `LocalBusiness`), the result keeps the concrete type.
+`extract_entity_summary` condenses a node to `id`, `name`, `url`, `address` and `geo`
+for checks across pages. Whether a finding results from this stays with the host.
 
 Two things that used to be sentences became data in the move: the hints
 for manual review (`ManualReview` instead of English sentences) and the structural problems
@@ -146,6 +166,7 @@ Confirmed as intended (casoon/barrierlab#280): `has_self_reference` ignores `x-d
 | `robots::parse` | text → `RobotsTxt` with groups and sitemaps |
 | `RobotsTxt::wildcard_disallows_all`, `blocks`, `crawl_delays` | the questions both hosts ask |
 | `Group::disallows_path` | does a block apply to this path |
+| `RobotsTxt::effective_group`, `block_scope`, `Group::block_scope`, `BlockScope` | the group that applies to a bot and how far it blocks (none, partial, full) |
 | `classify_bot`, `BotClass` | classification as data, without judgment |
 | `path_is_disallowed` | longest-rule evaluation with `*` and `$` |
 | `meta::length`, `LengthRange::classify`, `meta::TITLE`, `meta::DESCRIPTION` | length in characters, classification too short / ok / too long |
@@ -158,6 +179,9 @@ Confirmed as intended (casoon/barrierlab#280): `has_self_reference` ignores `x-d
 | `structured_data::inventory_fields` | fields per type for an inventory |
 | `structured_data::duplicate_types` | `@type` in more than one block |
 | `structured_data::RULESET_VERSION` | version of the rule table |
+| `structured_data::is_known_type`, `parent_types`, `is_subtype_of`, `SCHEMA_ORG_VERSION` | bundled schema.org vocabulary: type exists, direct parents, ancestry |
+| `structured_data::validate_vocabulary` → `VocabIssue`, `suggest_type`, `suggest_property` | unknown type or property, wrong domain, wrong range, with a suggestion |
+| `structured_data::extract_entity_summary` → `EntitySummary` | `id`, `name`, `url`, `address`, `geo` of a node for checks across pages |
 | `hreflang::Alternate` | a `link rel=alternate hreflang` with an `href` resolved by the host |
 | `hreflang::is_valid_code`, `invalid_codes`, `is_x_default`, `has_x_default` | language code and `x-default` |
 | `hreflang::has_self_reference`, `same_page` | reference to the page itself, URL comparison |

@@ -78,10 +78,7 @@ pub fn block_scope(group: &Group) -> BlockScope {
     let root_blocked = path_is_disallowed(&active_disallows, &group.allows, "/");
     if root_blocked {
         // Gibt es spezifische Allow-Ausnahmen unterhalb von `/`?
-        let has_subpath_allow = group
-            .allows
-            .iter()
-            .any(|a| !a.is_empty() && a != "/");
+        let has_subpath_allow = group.allows.iter().any(|a| !a.is_empty() && a != "/");
         if has_subpath_allow {
             return BlockScope::Partial(active_disallows);
         }
@@ -89,10 +86,7 @@ pub fn block_scope(group: &Group) -> BlockScope {
     }
 
     // Root selbst ist nicht gesperrt (entweder nur Teilpfade oder `Allow: /` hebt `Disallow: /` auf).
-    let non_root: Vec<String> = active_disallows
-        .into_iter()
-        .filter(|d| d != "/")
-        .collect();
+    let non_root: Vec<String> = active_disallows.into_iter().filter(|d| d != "/").collect();
     if non_root.is_empty() {
         BlockScope::None
     } else {
@@ -618,7 +612,10 @@ mod tests {
             BlockScope::Full
         );
         assert_eq!(
-            robots.effective_group("OAI-SearchBot").unwrap().block_scope(),
+            robots
+                .effective_group("OAI-SearchBot")
+                .unwrap()
+                .block_scope(),
             BlockScope::Partial(vec!["/admin/".to_string()])
         );
         assert_eq!(
@@ -638,11 +635,17 @@ mod tests {
              User-agent: OAI-SearchBot\nAllow: /\n",
         );
         assert_eq!(
-            robots.effective_group("OAI-SearchBot").unwrap().block_scope(),
+            robots
+                .effective_group("OAI-SearchBot")
+                .unwrap()
+                .block_scope(),
             BlockScope::None
         );
         assert_eq!(
-            robots.effective_group("PerplexityBot").unwrap().block_scope(),
+            robots
+                .effective_group("PerplexityBot")
+                .unwrap()
+                .block_scope(),
             BlockScope::Full
         );
     }
