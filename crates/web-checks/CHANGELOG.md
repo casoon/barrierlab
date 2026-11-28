@@ -5,6 +5,27 @@ Alle nennenswerten Änderungen an `web-checks` stehen hier. Das Format folgt
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-28
+
+### Breaking
+
+- **robots:** `RobotsTxt` hat das neue öffentliche Feld `content_signals`; wer die Struktur selbst baut, ergänzt es oder nutzt `..Default::default()` (casoon/barrierlab#288).
+- **robots:** Die Bot-Liste folgt der aktuellen Doku der Betreiber: `ClaudeBot` gilt als `AiTraining`, `ChatGPT-User` als `AiCitation`, `Google-Extended` als `AiMixed`, `Applebot` und `GoogleOther` als `SearchEngine`. Dazu kommen `Perplexity-User` und KI-Crawler aus 2025/2026. Bestehende Robots-Befunde können sich dadurch ändern (casoon/barrierlab#288).
+
+### Added
+
+- **robots:** `Content-Signal:`-Zeilen landen in `RobotsTxt::content_signals` (casoon/barrierlab#288).
+- **structured_data:** `relative_url_fields()` findet URL-Eigenschaften in JSON-LD, deren Wert nicht absolut ist (casoon/barrierlab#289).
+
+### Changed
+
+- **structured_data:** Das Profil `WebSite` empfiehlt `potentialAction` nicht mehr, weil Google die Sitelinks-Suchbox im November 2024 eingestellt hat. Stattdessen wird `alternateName` empfohlen, das Google für Website-Namen auswertet (casoon/barrierlab#289).
+
+### Fixed
+
+- **robots:** Eine reine Kommentarzeile beendet keine `User-agent`-Gruppe mehr, und Kommentare am Zeilenende werden abgeschnitten (RFC 9309) (casoon/barrierlab#288).
+- **robots:** Ein leeres `Disallow:` sperrt in `RobotsTxt::blocks()` nichts mehr, die Gruppen bleiben trotzdem getrennt (casoon/barrierlab#288).
+
 ## [0.8.0] - 2026-11-26
 
 ### Added

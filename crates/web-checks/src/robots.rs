@@ -85,25 +85,25 @@ const SEARCH_BOTS: &[&str] = &[
 
 /// Sammelt Trainingsdaten. Eine Sperre ist verbreitet und unauffällig.
 const AI_TRAINING_BOTS: &[&str] = &[
-    "gptbot",                       // OpenAI — Training. Nicht die Suche, die heißt oai-searchbot.
-    "claudebot",                    // Anthropic — Training (getrennt von claude-searchbot / claude-user)
-    "applebot-extended",            // Apple — Training
-    "bytespider",                   // ByteDance — Training
-    "tiktokspider",                 // ByteDance — Training
-    "ccbot",                        // Common Crawl — Training
-    "omgili",                       // Webz.io
-    "mistralai-training",           // Mistral AI — Training
-    "grokbot",                      // xAI — Training
-    "deepseekbot",                  // DeepSeek — Training
-    "kimibot",                      // Moonshot AI — Training
-    "qwenbot",                      // Alibaba — Training
-    "hunyuan",                      // Tencent — Training
-    "erniebot",                     // Baidu — Training
-    "pangubot",                     // Huawei — Training
+    "gptbot",             // OpenAI — Training. Nicht die Suche, die heißt oai-searchbot.
+    "claudebot",          // Anthropic — Training (getrennt von claude-searchbot / claude-user)
+    "applebot-extended",  // Apple — Training
+    "bytespider",         // ByteDance — Training
+    "tiktokspider",       // ByteDance — Training
+    "ccbot",              // Common Crawl — Training
+    "omgili",             // Webz.io
+    "mistralai-training", // Mistral AI — Training
+    "grokbot",            // xAI — Training
+    "deepseekbot",        // DeepSeek — Training
+    "kimibot",            // Moonshot AI — Training
+    "qwenbot",            // Alibaba — Training
+    "hunyuan",            // Tencent — Training
+    "erniebot",           // Baidu — Training
+    "pangubot",           // Huawei — Training
     "cohere-training-data-crawler", // Cohere — Training
-    "yandexadditional",             // Yandex — Training
-    "ai2bot",                       // Allen Institute for AI — Training
-    "icc-crawler",                  // NICT — Training
+    "yandexadditional",   // Yandex — Training
+    "ai2bot",             // Allen Institute for AI — Training
+    "icc-crawler",        // NICT — Training
 ];
 
 /// Antwortet mit Quellenangabe oder ruft auf Nutzeranfrage ab. Eine Sperre kostet KI-Sichtbarkeit.
