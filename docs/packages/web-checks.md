@@ -48,13 +48,18 @@ they would have reported opposite things:
 | Bot | auditmysite | astro-post-audit | now |
 |---|---|---|---|
 | GPTBot | Training | **Citation** | Training |
-| ClaudeBot | Mixed | **Citation** | Mixed |
+| ClaudeBot | Mixed | **Citation** | Training |
 | anthropic-ai | Mixed | **Citation** | Mixed |
 
 What counts is what the vendors themselves write: OpenAI separates `GPTBot`
 (training) from `OAI-SearchBot` (search), Anthropic `ClaudeBot` from
 `Claude-SearchBot` and `Claude-User`. The search variants were missing from both
 registries and are now included.
+
+Since 0.9.0 the registry follows the current operator documentation:
+`ClaudeBot` counts as training, `ChatGPT-User` as citation, `Google-Extended`
+as mixed, `Applebot` and `GoogleOther` as search engines. `Content-Signal:`
+lines are kept in `RobotsTxt::content_signals`.
 
 That is the yield of this slice: not fewer lines, but **one** answer
 instead of two contradictory ones. For astro-post-audit the findings change
@@ -91,7 +96,7 @@ feature and carries the table's version. The decisions in detail:
 | Organization, Person, WebSite | `name` (and `url`) required | recommendations only | recommendations only (as Google documents it) |
 | Article | `headline` required | recommendations only | recommendations only |
 | NewsArticle `publisher` | required | — | recommended |
-| WebSite `potentialAction` | low | — | recommended; the sitelinks search box no longer exists since 2024, the host decides the weight |
+| WebSite `potentialAction` | low | — | not checked since 0.9.0 (sitelinks search box retired in 2024); `alternateName` is recommended instead (Google site names) |
 | LocalBusiness | `name` required | `name`, `address` required | `name`, `address` required |
 | FAQPage | `acceptedAnswer` per question | only `mainEntity` | both, plus `name` per question and `text` per answer (Google FAQ) |
 | BreadcrumbList | `name` also via `item.name` | ≥ 2 entries, `item` except for the last, `name` directly | ≥ 2 entries, `item` except for the last, `name` also via `item.name` |
