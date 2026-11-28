@@ -326,7 +326,7 @@ pub fn assess_node(
             SchemaFeature::WebSite,
             SchemaFeatureAvailability::ContextDependent,
             &[],
-            &["name", "url", "inLanguage", "publisher", "potentialAction"],
+            &["name", "url", "alternateName", "inLanguage", "publisher"],
             content,
             WEBSITE_SOURCE,
         )],
@@ -427,7 +427,7 @@ pub fn inventory_fields(schema_type: &str) -> &'static [&'static str] {
         "CollectionPage" => &["name", "url", "mainEntity", "hasPart"],
         "ItemList" => &["name", "itemListElement", "numberOfItems"],
         "Person" => &["name", "url", "image", "jobTitle", "worksFor", "sameAs"],
-        "WebSite" => &["name", "url", "potentialAction"],
+        "WebSite" => &["name", "url", "alternateName"],
         "WebPage" => &[
             "name",
             "description",
@@ -983,6 +983,74 @@ fn is_non_empty(value: &Value) -> bool {
     }
 }
 
+/// URL-Eigenschaften, für die Google Search Central absolute `http(s)://`-URLs verlangt.
+const URL_FIELDS: &[&str] = &[
+    "url",
+    "image",
+    "logo",
+    "thumbnailUrl",
+    "contentUrl",
+    "embedUrl",
+    "item",
+    "sameAs",
+    "publishingPrinciples",
+];
+
+/// Findet relative (nicht mit `http://` oder `https://` beginnende) URL-Werte in
+/// bekannten schema.org-URL-Eigenschaften eines JSON-LD-Knotens.
+///
+/// Gibt `(pfad, wert)`-Paare zurück, z. B. `("image.url", "/img/hero.jpg")` oder
+/// `("itemListElement[0].item", "/blog/")`.
+pub fn relative_url_fields(content: &Value) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    collect_relative_urls(content, "", false, &mut out);
+    out
+}
+
+fn collect_relative_urls(
+    value: &Value,
+    prefix: &str,
+    expect_url: bool,
+    out: &mut Vec<(String, String)>,
+) {
+    match value {
+        Value::String(s) if expect_url => {
+            let trimmed = s.trim();
+            if !trimmed.is_empty()
+                && !trimmed.starts_with("https://")
+                && !trimmed.starts_with("http://")
+            {
+                out.push((prefix.to_string(), trimmed.to_string()));
+            }
+        }
+        Value::Array(items) => {
+            for (idx, item) in items.iter().enumerate() {
+                let path = if prefix.is_empty() {
+                    format!("[{idx}]")
+                } else {
+                    format!("{prefix}[{idx}]")
+                };
+                collect_relative_urls(item, &path, expect_url, out);
+            }
+        }
+        Value::Object(map) => {
+            for (key, val) in map {
+                if key.starts_with('@') {
+                    continue;
+                }
+                let path = if prefix.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{prefix}.{key}")
+                };
+                let is_url_field = URL_FIELDS.contains(&key.as_str());
+                collect_relative_urls(val, &path, is_url_field, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn values_at<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
     match value.get(key) {
         Some(Value::Array(values)) => values.iter().collect(),
@@ -1254,10 +1322,10 @@ mod tests {
                 serde_json::json!({}),
                 serde_json::json!({
                     "name": "Example",
+                    "alternateName": "Ex",
                     "url": "https://example.com",
                     "inLanguage": "en",
-                    "publisher": {"@type": "Organization", "name": "Example"},
-                    "potentialAction": {"@type": "SearchAction"}
+                    "publisher": {"@type": "Organization", "name": "Example"}
                 }),
             ),
             (
@@ -1441,10 +1509,10 @@ mod tests {
         }
     }
 
-    /// D6: `potentialAction` ist für WebSite empfohlen (Gewicht entscheidet
-    /// der Host; Google hat die Sitelinks-Suchbox 2024 eingestellt).
+    /// D6: Google hat die Sitelinks-Suchbox im November 2024 eingestellt; `potentialAction`
+    /// wird nicht mehr empfohlen, stattdessen `alternateName` (Google Site Names).
     #[test]
-    fn website_recommends_potential_action() {
+    fn website_recommends_alternate_name_not_potential_action() {
         let result = assess(
             "WebSite",
             serde_json::json!({
@@ -1454,8 +1522,28 @@ mod tests {
                 "publisher": {"name": "Example"}
             }),
         );
-        assert_eq!(result[0].missing_recommended, ["potentialAction"]);
+        assert_eq!(result[0].missing_recommended, ["alternateName"]);
         assert_eq!(result[0].quality_score, Some(80));
+    }
+
+    #[test]
+    fn detects_relative_urls_in_json_ld() {
+        let node = serde_json::json!({
+            "@type": "Article",
+            "image": {"@type": "ImageObject", "url": "/images/hero.jpg"},
+            "publisher": {"@type": "Organization", "logo": {"@type": "ImageObject", "url": "https://example.com/logo.png"}},
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Blog", "item": "/blog/"}
+            ]
+        });
+        let rel = relative_url_fields(&node);
+        assert_eq!(
+            rel,
+            vec![
+                ("image.url".to_string(), "/images/hero.jpg".to_string()),
+                ("itemListElement[0].item".to_string(), "/blog/".to_string()),
+            ]
+        );
     }
 
     #[test]

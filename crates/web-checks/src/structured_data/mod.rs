@@ -28,6 +28,7 @@ pub use parse::{
 pub use rules::{
     ManualReview, ProductRuleContext, RULESET_VERSION, SchemaFeature, SchemaFeatureAvailability,
     SchemaRequirementStatus, SchemaRuleAssessment, assess_node, inventory_fields,
+    relative_url_fields,
 };
 
 #[cfg(test)]

@@ -420,8 +420,8 @@ fn faelle() -> Vec<Fall> {
         na(F::WebPage, r#"{"@context":"https://schema.org","@type":"WebSite","name":"Site"}"#, WP),
         // --- web_site ---
         nur_empfehlung(F::WebSite, r#"{"@context":"https://schema.org","@type":"WebSite","name":"Site"}"#,
-            &["url", "inLanguage", "publisher", "potentialAction"], WS).nicht_empfohlen(&["name"]),
-        vollstaendig(F::WebSite, r#"{"@context":"https://schema.org","@type":"WebSite","name":"Site","url":"https://example.com","inLanguage":"en","publisher":{"@type":"Organization"},"potentialAction":{"@type":"SearchAction"}}"#, WS),
+            &["url", "alternateName", "inLanguage", "publisher"], WS).nicht_empfohlen(&["name"]),
+        vollstaendig(F::WebSite, r#"{"@context":"https://schema.org","@type":"WebSite","name":"Site","alternateName":"S","url":"https://example.com","inLanguage":"en","publisher":{"@type":"Organization"}}"#, WS),
         na(F::WebSite, r#"{"@context":"https://schema.org","@type":"WebPage","name":"Home"}"#, WS),
         // --- person ---
         nur_empfehlung(F::Person, r#"{"@context":"https://schema.org","@type":"Person","name":"Ada"}"#,

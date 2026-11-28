@@ -299,6 +299,24 @@ mod tests {
             let block = parse(item["payload"].clone());
             assert!(!block.nodes.is_empty(), "{} inline", item["component"]);
             assert!(block.issues.is_empty(), "{} inline", item["component"]);
+            for (idx, node) in block.nodes.iter().enumerate() {
+                for schema_type in &node.types {
+                    for assessment in crate::structured_data::assess_node(
+                        idx,
+                        schema_type,
+                        &node.content,
+                        crate::structured_data::ProductRuleContext::Indeterminate,
+                    ) {
+                        assert_ne!(
+                            assessment.requirement_status,
+                            crate::structured_data::SchemaRequirementStatus::MissingRequiredProperties,
+                            "{} ({schema_type}) missing required: {:?}",
+                            item["component"],
+                            assessment.missing_required
+                        );
+                    }
+                }
+            }
         }
 
         let graph = parse(fixture["useGraph"].clone());

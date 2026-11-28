@@ -304,7 +304,7 @@ file = "src/structured_data/rules.rs"
 kind = "drop-recommendation"
 test = "korpus"
 find = '''
-            &["name", "url", "inLanguage", "publisher", "potentialAction"],'''
+            &["name", "url", "alternateName", "inLanguage", "publisher"],'''
 replace = '''
             &["name", "url", "inLanguage", "publisher"],'''
 expect = "killed"

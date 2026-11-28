@@ -15,6 +15,9 @@ pub struct RobotsTxt {
     pub groups: Vec<Group>,
     /// `Sitemap:`-Angaben, in der Reihenfolge des Vorkommens.
     pub sitemaps: Vec<String>,
+    /// `Content-Signal:`-Direktiven (IETF AI Preferences / Cloudflare), in der Reihenfolge des Vorkommens.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub content_signals: Vec<String>,
 }
 
 /// Eine Regelgruppe: ein `User-agent` mit seinen Regeln.
@@ -67,7 +70,9 @@ pub enum BotClass {
 
 const SEARCH_BOTS: &[&str] = &[
     "googlebot",
+    "googleother",
     "bingbot",
+    "applebot",
     "slurp",
     "duckduckbot",
     "baiduspider",
@@ -80,45 +85,78 @@ const SEARCH_BOTS: &[&str] = &[
 
 /// Sammelt Trainingsdaten. Eine Sperre ist verbreitet und unauffällig.
 const AI_TRAINING_BOTS: &[&str] = &[
-    "gptbot",            // OpenAI — Training. Nicht die Suche, die heißt oai-searchbot.
-    "google-extended",   // Google — Training
-    "applebot-extended", // Apple — Training
-    "bytespider",        // ByteDance
-    "ccbot",             // Common Crawl
-    "omgili",            // Webz.io
+    "gptbot",                       // OpenAI — Training. Nicht die Suche, die heißt oai-searchbot.
+    "claudebot",                    // Anthropic — Training (getrennt von claude-searchbot / claude-user)
+    "applebot-extended",            // Apple — Training
+    "bytespider",                   // ByteDance — Training
+    "tiktokspider",                 // ByteDance — Training
+    "ccbot",                        // Common Crawl — Training
+    "omgili",                       // Webz.io
+    "mistralai-training",           // Mistral AI — Training
+    "grokbot",                      // xAI — Training
+    "deepseekbot",                  // DeepSeek — Training
+    "kimibot",                      // Moonshot AI — Training
+    "qwenbot",                      // Alibaba — Training
+    "hunyuan",                      // Tencent — Training
+    "erniebot",                     // Baidu — Training
+    "pangubot",                     // Huawei — Training
+    "cohere-training-data-crawler", // Cohere — Training
+    "yandexadditional",             // Yandex — Training
+    "ai2bot",                       // Allen Institute for AI — Training
+    "icc-crawler",                  // NICT — Training
 ];
 
-/// Antwortet mit Quellenangabe. Eine Sperre kostet Sichtbarkeit.
+/// Antwortet mit Quellenangabe oder ruft auf Nutzeranfrage ab. Eine Sperre kostet KI-Sichtbarkeit.
 const AI_CITATION_BOTS: &[&str] = &[
     "perplexitybot",
+    "perplexity-user",
     "youbot",
     "amazonbot",
-    "oai-searchbot",    // OpenAI — Suche, getrennt vom trainierenden gptbot
-    "claude-searchbot", // Anthropic — Suche
-    "claude-user",      // Anthropic — vom Nutzer ausgelöster Abruf
-    "claude-web",       // Anthropic — älterer Name desselben Zwecks
+    "bedrockbot",
+    "oai-searchbot",         // OpenAI — Suche, getrennt vom trainierenden gptbot
+    "chatgpt-user",          // OpenAI — vom Nutzer ausgelöster Live-Abruf (kein Training)
+    "claude-searchbot",      // Anthropic — Suche
+    "claude-user",           // Anthropic — vom Nutzer ausgelöster Abruf
+    "claude-web",            // Anthropic — älterer Name desselben Zwecks
+    "duckassistbot",         // DuckDuckGo — KI-Antworten
+    "mistralai-index",       // Mistral AI — Suche
+    "mistralai-user",        // Mistral AI — Nutzerabruf
+    "kimi-searchbot",        // Moonshot AI — Suche
+    "kimi-user",             // Moonshot AI — Nutzerabruf
+    "tongyibot",             // Alibaba — Nutzerabruf
+    "petalbot",              // Huawei — Suche/KI
+    "cohere-ai",             // Cohere — Nutzerabruf
+    "doubaobot",             // ByteDance — Nutzerabruf
+    "meta-externalfetcher",  // Meta — Nutzerabruf
+    "meta-webindexer",       // Meta — Suche
+    "kagi-fetcher",          // Kagi — Nutzerabruf
+    "google-cloudvertexbot", // Google — Vertex AI Grounding
 ];
 
-/// Beides: Trainingsdaten und Antworten.
+/// Beides: Trainingsdaten und Antworten/Grounding.
 const AI_MIXED_BOTS: &[&str] = &[
-    "claudebot",
+    "google-extended", // Google — Gemini-Training UND Gemini-App/Vertex-Grounding (nicht Google Search / AI Overviews)
     "anthropic-ai",
-    "chatgpt-user",
+    "xai-grok",
     "meta-externalagent",
     "facebookbot",
-    "cohere-ai",
     "diffbot",
 ];
 
 /// Unverifizierte Scraper und SEO-Bots.
 const UNKNOWN_AI_BOTS: &[&str] = &[
     "dotbot",
-    "petalbot",
     "wpbot",
     "semrushbot",
     "ahrefsbot",
     "mj12bot",
     "rogerbot",
+    "webzio-extended",
+    "imagesiftbot",
+    "timpibot",
+    "firecrawlagent",
+    "crawlspace",
+    "velenpublicwebcrawler",
 ];
 
 const GENERAL_BOTS: &[&str] = &[
@@ -174,11 +212,13 @@ pub fn parse(text: &str) -> RobotsTxt {
     let mut allows: Vec<String> = Vec::new();
     let mut disallows: Vec<String> = Vec::new();
     let mut delay: Option<u32> = None;
+    let mut saw_rule = false;
 
     let abschliessen = |agents: &mut Vec<String>,
                         allows: &mut Vec<String>,
                         disallows: &mut Vec<String>,
                         delay: &mut Option<u32>,
+                        saw_rule: &mut bool,
                         groups: &mut Vec<Group>| {
         for agent in agents.drain(..) {
             groups.push(Group {
@@ -192,22 +232,30 @@ pub fn parse(text: &str) -> RobotsTxt {
         allows.clear();
         disallows.clear();
         *delay = None;
+        *saw_rule = false;
     };
 
-    for line in text.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+    for raw_line in text.lines() {
+        let trimmed = raw_line.trim();
+        if trimmed.is_empty() {
             if !agents.is_empty() {
                 abschliessen(
                     &mut agents,
                     &mut allows,
                     &mut disallows,
                     &mut delay,
+                    &mut saw_rule,
                     &mut robots.groups,
                 );
             }
             continue;
         }
+        // Reine Kommentarzeilen beenden keinen Block (RFC 9309).
+        if trimmed.starts_with('#') {
+            continue;
+        }
+        // Inline-Kommentare abschneiden.
+        let line = trimmed.split('#').next().unwrap_or("").trim();
 
         let Some(trenner) = line.find(':') else {
             continue;
@@ -218,12 +266,13 @@ pub fn parse(text: &str) -> RobotsTxt {
         match key.as_str() {
             "user-agent" => {
                 // Ein neuer Agent nach Regeln beginnt einen neuen Block.
-                if !allows.is_empty() || !disallows.is_empty() || delay.is_some() {
+                if saw_rule {
                     abschliessen(
                         &mut agents,
                         &mut allows,
                         &mut disallows,
                         &mut delay,
+                        &mut saw_rule,
                         &mut robots.groups,
                     );
                 }
@@ -231,10 +280,24 @@ pub fn parse(text: &str) -> RobotsTxt {
                     agents.push(value);
                 }
             }
-            "allow" if !value.is_empty() => allows.push(value),
-            "disallow" => disallows.push(value),
+            "allow" => {
+                saw_rule = true;
+                if !value.is_empty() {
+                    allows.push(value);
+                }
+            }
+            "disallow" => {
+                saw_rule = true;
+                if !value.is_empty() {
+                    disallows.push(value);
+                }
+            }
             "sitemap" if !value.is_empty() => robots.sitemaps.push(value),
-            "crawl-delay" => delay = value.parse().ok(),
+            "content-signal" if !value.is_empty() => robots.content_signals.push(value),
+            "crawl-delay" => {
+                saw_rule = true;
+                delay = value.parse().ok();
+            }
             _ => {}
         }
     }
@@ -244,6 +307,7 @@ pub fn parse(text: &str) -> RobotsTxt {
             &mut allows,
             &mut disallows,
             &mut delay,
+            &mut saw_rule,
             &mut robots.groups,
         );
     }
@@ -287,7 +351,7 @@ impl RobotsTxt {
     pub fn blocks(&self, class: BotClass) -> bool {
         self.groups
             .iter()
-            .any(|g| g.bot_class == class && !g.disallows.is_empty())
+            .any(|g| g.bot_class == class && g.disallows.iter().any(|d| !d.is_empty()))
     }
 
     /// `(User-agent, Sekunden)` aller `Crawl-delay`-Angaben.
@@ -394,14 +458,44 @@ mod tests {
     fn openai_trainiert_und_sucht_unter_verschiedenen_namen() {
         assert_eq!(classify_bot("GPTBot"), BotClass::AiTraining);
         assert_eq!(classify_bot("OAI-SearchBot"), BotClass::AiCitation);
-        assert_eq!(classify_bot("ChatGPT-User"), BotClass::AiMixed);
+        assert_eq!(classify_bot("ChatGPT-User"), BotClass::AiCitation);
     }
 
     #[test]
     fn anthropic_ebenso() {
-        assert_eq!(classify_bot("ClaudeBot"), BotClass::AiMixed);
+        assert_eq!(classify_bot("ClaudeBot"), BotClass::AiTraining);
         assert_eq!(classify_bot("Claude-SearchBot"), BotClass::AiCitation);
         assert_eq!(classify_bot("Claude-User"), BotClass::AiCitation);
+    }
+
+    #[test]
+    fn google_extended_und_neue_bots() {
+        assert_eq!(classify_bot("Google-Extended"), BotClass::AiMixed);
+        assert_eq!(classify_bot("Applebot"), BotClass::SearchEngine);
+        assert_eq!(classify_bot("Applebot-Extended"), BotClass::AiTraining);
+        assert_eq!(classify_bot("Perplexity-User"), BotClass::AiCitation);
+        assert_eq!(classify_bot("DuckAssistBot"), BotClass::AiCitation);
+        assert_eq!(classify_bot("MistralAI-Training"), BotClass::AiTraining);
+        assert_eq!(classify_bot("MistralAI-User"), BotClass::AiCitation);
+    }
+
+    #[test]
+    fn kommentare_im_block_und_inline_kommentare() {
+        let robots = parse(
+            "User-agent: *\n# Admin-Bereich sperren\nDisallow: /admin/ # intern\nContent-Signal: ai-train=no, search=yes, ai-input=yes\n",
+        );
+        assert_eq!(robots.groups.len(), 1);
+        assert_eq!(robots.groups[0].disallows, ["/admin/"]);
+        assert_eq!(
+            robots.content_signals,
+            ["ai-train=no, search=yes, ai-input=yes"]
+        );
+    }
+
+    #[test]
+    fn leeres_disallow_zaehlt_nicht_als_sperre() {
+        let robots = parse("User-agent: GPTBot\nDisallow:\n");
+        assert!(!robots.blocks(BotClass::AiTraining));
     }
 
     #[test]
