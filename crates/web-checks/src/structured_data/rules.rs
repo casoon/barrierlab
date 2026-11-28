@@ -340,8 +340,34 @@ pub fn assess_node(
             content,
             PERSON_SOURCE,
         )],
+        other if super::vocab::is_subtype_of(other, "LocalBusiness") => {
+            assess_as_parent(node_index, schema_type, "LocalBusiness", content, product_context)
+        }
+        other if super::vocab::is_subtype_of(other, "WebPage") => {
+            assess_as_parent(node_index, schema_type, "WebPage", content, product_context)
+        }
+        other if super::vocab::is_subtype_of(other, "Organization") => {
+            assess_as_parent(node_index, schema_type, "Organization", content, product_context)
+        }
+        other if super::vocab::is_subtype_of(other, "Article") => {
+            assess_as_parent(node_index, schema_type, "Article", content, product_context)
+        }
         _ => Vec::new(),
     }
+}
+
+fn assess_as_parent(
+    node_index: usize,
+    concrete_type: &str,
+    parent_type: &str,
+    content: &Value,
+    product_context: ProductRuleContext,
+) -> Vec<SchemaRuleAssessment> {
+    let mut results = assess_node(node_index, parent_type, content, product_context);
+    for result in &mut results {
+        result.schema_type = concrete_type.to_string();
+    }
+    results
 }
 
 /// Die Felder, die ein Host für einen Typ im Inventar zeigt — unabhängig

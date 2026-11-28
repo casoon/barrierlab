@@ -20,6 +20,7 @@
 
 mod parse;
 mod rules;
+mod vocab;
 
 pub use parse::{
     Block, DuplicateType, Node, StructuralIssue, duplicate_types, extract_types,
@@ -29,6 +30,10 @@ pub use rules::{
     ManualReview, ProductRuleContext, RULESET_VERSION, SchemaFeature, SchemaFeatureAvailability,
     SchemaRequirementStatus, SchemaRuleAssessment, assess_node, inventory_fields,
     relative_url_fields,
+};
+pub use vocab::{
+    EntitySummary, SCHEMA_ORG_VERSION, VocabIssue, extract_entity_summary, is_known_type,
+    is_subtype_of, parent_types, suggest_property, suggest_type, validate_vocabulary,
 };
 
 #[cfg(test)]

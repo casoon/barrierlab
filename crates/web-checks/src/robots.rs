@@ -33,6 +33,18 @@ pub struct Group {
     pub crawl_delay: Option<u32>,
 }
 
+/// Umfang einer Sperre für eine Regelgruppe.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "scope", content = "paths", rename_all = "snake_case")]
+pub enum BlockScope {
+    /// Keine wirksame Sperre (`Disallow` leer oder durch `Allow: /` aufgehoben).
+    None,
+    /// Teilsperre bestimmter Pfade oder Vollsperre mit `Allow`-Ausnahmen.
+    Partial(Vec<String>),
+    /// Vollständige Sperre (`Disallow: /` ohne aufhebendes `Allow`).
+    Full,
+}
+
 impl Group {
     /// `Disallow: /` — die Gruppe sperrt alles.
     pub fn disallows_all(&self) -> bool {
@@ -43,6 +55,49 @@ impl Group {
     pub fn disallows_path(&self, path: &str) -> bool {
         path_is_disallowed(&self.disallows, &self.allows, path)
     }
+
+    /// Sperrumfang dieser Gruppe unter Berücksichtigung von `Allow`-Ausnahmen
+    /// und RFC-9309-Spezifität.
+    pub fn block_scope(&self) -> BlockScope {
+        block_scope(self)
+    }
+}
+
+/// Berechnet den Sperrumfang einer Regelgruppe (`None`, `Partial(paths)`, `Full`).
+pub fn block_scope(group: &Group) -> BlockScope {
+    let active_disallows: Vec<String> = group
+        .disallows
+        .iter()
+        .filter(|d| !d.is_empty())
+        .cloned()
+        .collect();
+    if active_disallows.is_empty() {
+        return BlockScope::None;
+    }
+
+    let root_blocked = path_is_disallowed(&active_disallows, &group.allows, "/");
+    if root_blocked {
+        // Gibt es spezifische Allow-Ausnahmen unterhalb von `/`?
+        let has_subpath_allow = group
+            .allows
+            .iter()
+            .any(|a| !a.is_empty() && a != "/");
+        if has_subpath_allow {
+            return BlockScope::Partial(active_disallows);
+        }
+        return BlockScope::Full;
+    }
+
+    // Root selbst ist nicht gesperrt (entweder nur Teilpfade oder `Allow: /` hebt `Disallow: /` auf).
+    let non_root: Vec<String> = active_disallows
+        .into_iter()
+        .filter(|d| d != "/")
+        .collect();
+    if non_root.is_empty() {
+        BlockScope::None
+    } else {
+        BlockScope::Partial(non_root)
+    }
 }
 
 /// Die Art eines Bots. **Daten, keine Wertung** — ob eine Sperre sinnvoll ist,
@@ -52,17 +107,21 @@ impl Group {
 pub enum BotClass {
     /// `*`
     Wildcard,
-    /// Suchmaschine (Googlebot, Bingbot, …)
+    /// Suchmaschine (Googlebot, Bingbot, Applebot, …)
     SearchEngine,
-    /// Sammelt Trainingsdaten (GPTBot, Google-Extended, CCBot, …)
+    /// Sammelt Trainingsdaten (GPTBot, ClaudeBot, CCBot, …)
     AiTraining,
-    /// Beantwortet Fragen mit Quellenangabe (PerplexityBot, OAI-SearchBot, …)
+    /// KI-Suchindexierung für Antworten mit Quellenangabe (OAI-SearchBot, PerplexityBot, Claude-SearchBot, …)
     AiCitation,
-    /// Beides (ClaudeBot, meta-externalagent, …)
+    /// Vom Nutzer ausgelöster Live-Abruf durch Assistenten (ChatGPT-User, Claude-User, Perplexity-User, …)
+    UserFetch,
+    /// Beides: Trainingsdaten und Antworten/Grounding (Google-Extended, meta-externalagent, …)
     AiMixed,
+    /// Web-Archiv (ia_archiver, archive.org_bot)
+    Archive,
     /// Unverifizierter Scraper oder SEO-Bot
     UnknownAi,
-    /// Bekannter Bot ohne KI-Bezug
+    /// Bekannter Bot ohne KI-Bezug (Social-Preview etc.)
     General,
     /// Nicht zuzuordnen
     Unknown,
@@ -106,31 +165,35 @@ const AI_TRAINING_BOTS: &[&str] = &[
     "icc-crawler",        // NICT — Training
 ];
 
-/// Antwortet mit Quellenangabe oder ruft auf Nutzeranfrage ab. Eine Sperre kostet KI-Sichtbarkeit.
+/// KI-Suchindexierung für Antworten mit Quellenangabe. Eine Sperre kostet KI-Suchsichtbarkeit.
 const AI_CITATION_BOTS: &[&str] = &[
-    "perplexitybot",
-    "perplexity-user",
-    "youbot",
-    "amazonbot",
-    "bedrockbot",
-    "oai-searchbot",         // OpenAI — Suche, getrennt vom trainierenden gptbot
-    "chatgpt-user",          // OpenAI — vom Nutzer ausgelöster Live-Abruf (kein Training)
-    "claude-searchbot",      // Anthropic — Suche
-    "claude-user",           // Anthropic — vom Nutzer ausgelöster Abruf
+    "perplexitybot",    // Perplexity — Suchindex
+    "youbot",           // You.com — Suche
+    "amazonbot",        // Amazon — Suche/Alexa
+    "oai-searchbot",    // OpenAI — Suche, getrennt vom trainierenden gptbot
+    "claude-searchbot", // Anthropic — Suche
+    "mistralai-index",  // Mistral AI — Suche
+    "kimi-searchbot",   // Moonshot AI — Suche
+    "petalbot",         // Huawei — Suche/KI
+    "meta-webindexer",  // Meta — Suche
+];
+
+/// Vom Nutzer ausgelöster Live-Abruf durch KI-Assistenten/Agenten (kein Modelltraining).
+const USER_FETCH_BOTS: &[&str] = &[
+    "chatgpt-user",          // OpenAI — Nutzerabruf
+    "claude-user",           // Anthropic — Nutzerabruf
     "claude-web",            // Anthropic — älterer Name desselben Zwecks
+    "perplexity-user",       // Perplexity — Nutzerabruf
     "duckassistbot",         // DuckDuckGo — KI-Antworten
-    "mistralai-index",       // Mistral AI — Suche
     "mistralai-user",        // Mistral AI — Nutzerabruf
-    "kimi-searchbot",        // Moonshot AI — Suche
     "kimi-user",             // Moonshot AI — Nutzerabruf
     "tongyibot",             // Alibaba — Nutzerabruf
-    "petalbot",              // Huawei — Suche/KI
     "cohere-ai",             // Cohere — Nutzerabruf
     "doubaobot",             // ByteDance — Nutzerabruf
     "meta-externalfetcher",  // Meta — Nutzerabruf
-    "meta-webindexer",       // Meta — Suche
     "kagi-fetcher",          // Kagi — Nutzerabruf
     "google-cloudvertexbot", // Google — Vertex AI Grounding
+    "bedrockbot",            // Amazon — Bedrock Live-Abruf
 ];
 
 /// Beides: Trainingsdaten und Antworten/Grounding.
@@ -141,6 +204,12 @@ const AI_MIXED_BOTS: &[&str] = &[
     "meta-externalagent",
     "facebookbot",
     "diffbot",
+];
+
+/// Web-Archive.
+const ARCHIVE_BOTS: &[&str] = &[
+    "archive.org_bot", // Internet Archive
+    "ia_archiver",     // Internet Archive
 ];
 
 /// Unverifizierte Scraper und SEO-Bots.
@@ -159,12 +228,7 @@ const UNKNOWN_AI_BOTS: &[&str] = &[
     "velenpublicwebcrawler",
 ];
 
-const GENERAL_BOTS: &[&str] = &[
-    "archive.org_bot",
-    "ia_archiver",
-    "linkedinbot",
-    "twitterbot",
-];
+const GENERAL_BOTS: &[&str] = &["linkedinbot", "twitterbot"];
 
 /// Ordnet einen `User-agent` ein.
 ///
@@ -183,7 +247,9 @@ pub fn classify_bot(user_agent: &str) -> BotClass {
         (SEARCH_BOTS, BotClass::SearchEngine),
         (AI_TRAINING_BOTS, BotClass::AiTraining),
         (AI_CITATION_BOTS, BotClass::AiCitation),
+        (USER_FETCH_BOTS, BotClass::UserFetch),
         (AI_MIXED_BOTS, BotClass::AiMixed),
+        (ARCHIVE_BOTS, BotClass::Archive),
         (UNKNOWN_AI_BOTS, BotClass::UnknownAi),
         (GENERAL_BOTS, BotClass::General),
     ];
@@ -354,6 +420,64 @@ impl RobotsTxt {
             .any(|g| g.bot_class == class && g.disallows.iter().any(|d| !d.is_empty()))
     }
 
+    /// Ermittelt nach RFC 9309 die tatsächlich geltende Regelgruppe für `user_agent`:
+    /// die spezifischste passende Gruppe (längster Präfix-Treffer, mehrere Gruppen
+    /// desselben Agenten zusammengeführt), sonst Fallback auf `*`.
+    pub fn effective_group(&self, user_agent: &str) -> Option<Group> {
+        let ua_lower = user_agent.trim().to_ascii_lowercase();
+        let mut best_len: usize = 0;
+        let mut matched: Vec<&Group> = Vec::new();
+
+        for g in &self.groups {
+            if g.bot_class == BotClass::Wildcard {
+                continue;
+            }
+            let pat = g.user_agent.trim().to_ascii_lowercase();
+            if pat.is_empty() {
+                continue;
+            }
+            if ua_lower.starts_with(&pat) {
+                if pat.len() > best_len {
+                    best_len = pat.len();
+                    matched.clear();
+                    matched.push(g);
+                } else if pat.len() == best_len {
+                    matched.push(g);
+                }
+            }
+        }
+
+        if matched.is_empty() {
+            matched = self
+                .groups
+                .iter()
+                .filter(|g| g.bot_class == BotClass::Wildcard)
+                .collect();
+        }
+        if matched.is_empty() {
+            return None;
+        }
+
+        let mut allows = Vec::new();
+        let mut disallows = Vec::new();
+        let mut crawl_delay = None;
+        for g in &matched {
+            allows.extend(g.allows.iter().cloned());
+            disallows.extend(g.disallows.iter().cloned());
+            if crawl_delay.is_none() {
+                crawl_delay = g.crawl_delay;
+            }
+        }
+
+        Some(Group {
+            user_agent: matched[0].user_agent.clone(),
+            bot_class: matched[0].bot_class,
+            allows,
+            disallows,
+            crawl_delay,
+        })
+    }
+
     /// `(User-agent, Sekunden)` aller `Crawl-delay`-Angaben.
     pub fn crawl_delays(&self) -> Vec<(String, u32)> {
         self.groups
@@ -458,14 +582,14 @@ mod tests {
     fn openai_trainiert_und_sucht_unter_verschiedenen_namen() {
         assert_eq!(classify_bot("GPTBot"), BotClass::AiTraining);
         assert_eq!(classify_bot("OAI-SearchBot"), BotClass::AiCitation);
-        assert_eq!(classify_bot("ChatGPT-User"), BotClass::AiCitation);
+        assert_eq!(classify_bot("ChatGPT-User"), BotClass::UserFetch);
     }
 
     #[test]
     fn anthropic_ebenso() {
         assert_eq!(classify_bot("ClaudeBot"), BotClass::AiTraining);
         assert_eq!(classify_bot("Claude-SearchBot"), BotClass::AiCitation);
-        assert_eq!(classify_bot("Claude-User"), BotClass::AiCitation);
+        assert_eq!(classify_bot("Claude-User"), BotClass::UserFetch);
     }
 
     #[test]
@@ -473,10 +597,54 @@ mod tests {
         assert_eq!(classify_bot("Google-Extended"), BotClass::AiMixed);
         assert_eq!(classify_bot("Applebot"), BotClass::SearchEngine);
         assert_eq!(classify_bot("Applebot-Extended"), BotClass::AiTraining);
-        assert_eq!(classify_bot("Perplexity-User"), BotClass::AiCitation);
-        assert_eq!(classify_bot("DuckAssistBot"), BotClass::AiCitation);
+        assert_eq!(classify_bot("Perplexity-User"), BotClass::UserFetch);
+        assert_eq!(classify_bot("DuckAssistBot"), BotClass::UserFetch);
         assert_eq!(classify_bot("MistralAI-Training"), BotClass::AiTraining);
-        assert_eq!(classify_bot("MistralAI-User"), BotClass::AiCitation);
+        assert_eq!(classify_bot("MistralAI-User"), BotClass::UserFetch);
+        assert_eq!(classify_bot("ia_archiver"), BotClass::Archive);
+        assert_eq!(classify_bot("archive.org_bot"), BotClass::Archive);
+    }
+
+    #[test]
+    fn block_scope_unterscheidet_voll_teilweise_und_keine() {
+        let robots = parse(
+            "User-agent: GPTBot\nDisallow: /\n\n\
+             User-agent: OAI-SearchBot\nDisallow: /admin/\n\n\
+             User-agent: ClaudeBot\nDisallow: /\nAllow: /public/\n\n\
+             User-agent: Googlebot\nAllow: /\n",
+        );
+        assert_eq!(
+            robots.effective_group("GPTBot").unwrap().block_scope(),
+            BlockScope::Full
+        );
+        assert_eq!(
+            robots.effective_group("OAI-SearchBot").unwrap().block_scope(),
+            BlockScope::Partial(vec!["/admin/".to_string()])
+        );
+        assert_eq!(
+            robots.effective_group("ClaudeBot").unwrap().block_scope(),
+            BlockScope::Partial(vec!["/".to_string()])
+        );
+        assert_eq!(
+            robots.effective_group("Googlebot").unwrap().block_scope(),
+            BlockScope::None
+        );
+    }
+
+    #[test]
+    fn effective_group_bevorzugt_eigene_gruppe_vor_wildcard() {
+        let robots = parse(
+            "User-agent: *\nDisallow: /\n\n\
+             User-agent: OAI-SearchBot\nAllow: /\n",
+        );
+        assert_eq!(
+            robots.effective_group("OAI-SearchBot").unwrap().block_scope(),
+            BlockScope::None
+        );
+        assert_eq!(
+            robots.effective_group("PerplexityBot").unwrap().block_scope(),
+            BlockScope::Full
+        );
     }
 
     #[test]
